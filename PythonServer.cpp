@@ -6,10 +6,7 @@
 #include <boost/thread.hpp>
 #include <boost/array.hpp>
 #include <boost/property_tree/json_parser.hpp>
-
-#undef _DEBUG
 #include <Python.h>
-#define _DEBUG
 
 
 using namespace std;
@@ -24,7 +21,7 @@ public:
 	Request()
 	: requestLength_( 0 ),
 	 bytesRead_( 0 ),
-	 firstRead( true )
+	 firstRead_( true )
 	{
 	}
 
@@ -60,10 +57,10 @@ public:
 	{
 		int skip_offset = 0;
 
-		if ( firstRead )
+		if ( firstRead_ )
 		{
 			skip_offset = ReadMessageLength( buf, bytes_transferred );
-			firstRead = false;
+			firstRead_ = false;
 		}
 
 		std::copy( buf.begin() + skip_offset, buf.begin() + bytes_transferred, back_inserter( request_ ) );
@@ -85,7 +82,7 @@ private:
 	std::string request_;
 	int	requestLength_;
 	int bytesRead_;
-	bool firstRead;
+	bool firstRead_;
 };
 
 class IActionStrategy
