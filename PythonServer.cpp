@@ -30,11 +30,11 @@ public:
 		int offset = 0;
 		std::string length;
 
-		BufferT::iterator it = std::find( buf.begin(), buf.begin() + bytes_transferred, '\n' );
+		typename BufferT::iterator it = std::find( buf.begin(), buf.begin() + bytes_transferred, '\n' );
 		if ( it != buf.end() )
 		{
 			offset = (int)std::distance( buf.begin(), it );
-			std::copy_n( buf.begin(), offset, back_inserter( length ) );
+			std::copy( buf.begin(), buf.begin() + offset, back_inserter( length ) );
 
 			try
 			{
@@ -246,6 +246,15 @@ private:
 
 } // namespace python_server
 
+class Test
+{
+public:
+  void m1(){}
+  void m2(){}
+  void m3(){}
+  void c1() const {}
+};
+
 
 int main(int argc, char* argv[])
 {
@@ -278,7 +287,8 @@ int main(int argc, char* argv[])
 		{
 			numThread = vm["num_thread"].as<int>();
 		}
-
+		Test t;
+		
 		// start accepting client connections
 		boost::asio::io_service io_service;
 

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <istream>
 #include <ostream>
+#include <fstream>
 #include <string>
 #include <boost/filesystem.hpp>
 #include <boost/asio.hpp>
@@ -27,7 +28,7 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 
-		std::ifstream ifs( filePath );
+		  std::ifstream ifs( filePath.c_str(), std::ifstream::in );
 		std::string content( ( std::istreambuf_iterator<char>( ifs ) ), std::istreambuf_iterator<char>() );
 
 		// send file content to python server
