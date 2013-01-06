@@ -5,7 +5,7 @@ INCLUDE_PATH := -I/home/Andrew/dev/boost_1_51_0 -I/usr/include/python2.7
 RM := rm -rf
 
 LIBS := -lboost_system -lboost_thread -lboost_program_options -lboost_filesystem -lpython2.7 -lpthread
-LIB_PATH := 
+LIB_PATH := /home/Andrew/dev/boost_1_51_0/stage/lib
 
 objdir := objs
 OUT := PythonServer PythonSender
