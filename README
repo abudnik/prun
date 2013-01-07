@@ -1,0 +1,28 @@
+== Python Server ==
+
+Tiny server for python script execution.
+
+== Usage example ==
+
+After building program using GNU Make utility, two files are created:
+PythonServer - python script execution server
+and
+PythonSender - program for sending python files to PythonServer for execution.
+
+1. Start python server in shell:
+	cd ~/PythonServer
+	./PythonServer --num_thread 5
+
+   or start python server as a daemon:
+	./PythonServer --num_thread 5 --d
+
+   and stop PythonServer daemon:
+	./PythonServer --stop
+
+2. Send python script from file "example.py":
+	cd ~/PythonServer
+	./PythonSender localhost 5555 example.py
+
+
+Shell command for getting additional information about command line parameters:
+	./PythonServer --help
