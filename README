@@ -2,12 +2,13 @@
 
 Tiny server for python script execution.
 
-== Usage example ==
+== Overview ==
 
 After building program using GNU Make utility, two files are created:
-PythonServer - python script execution server
-and
-PythonSender - program for sending python files to PythonServer for execution.
+1. PythonServer - python script execution server.
+2. PythonSender - program for sending python files to PythonServer for execution.
+
+== Usage example ==
 
 1. Start python server in shell:
 	cd ~/PythonServer
