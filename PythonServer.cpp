@@ -287,16 +287,16 @@ int StartAsDaemon()
 	// on a mounted filesystem, which means that the running daemon would
 	// prevent this filesystem from being unmounted. Changing to the root
 	// directory avoids this problem.
-    chdir("/");
+	chdir("/");
 
 	// The file mode creation mask is also inherited from the parent process.
 	// We don't want to restrict the permissions on files created by the
 	// daemon, so the mask is cleared.
-    umask(0);
+	umask(0);
 
-    close(STDIN_FILENO);
-    close(STDOUT_FILENO);
-    close(STDERR_FILENO);
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
 
 	return sid;
 //#endif
