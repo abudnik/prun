@@ -254,72 +254,72 @@ bool isDaemon;
 
 int StartAsDaemon()
 {
-  //#ifdef _BSD_SOURCE || (_XOPEN_SOURCE && _XOPEN_SOURCE < 500)
-  //return daemon(1, 1);
-  //#else
-  pid_t parpid, sid;
+//#ifdef _BSD_SOURCE || (_XOPEN_SOURCE && _XOPEN_SOURCE < 500)
+	//return daemon(1, 1);
+//#else
+	pid_t parpid, sid;
 
-  // Fork the process and have the parent exit. If the process was started
-  // from a shell, this returns control to the user. Forking a new process is
-  // also a prerequisite for the subsequent call to setsid().
-  parpid = fork();
-  if ( parpid < 0 )
-  {
-	cout << "fork() failed: " << strerror(errno) << endl;
-	exit( parpid );
-  }
-  else
-  if ( parpid > 0 )
-  {
-	exit( 0 );
-  }
+	// Fork the process and have the parent exit. If the process was started
+	// from a shell, this returns control to the user. Forking a new process is
+	// also a prerequisite for the subsequent call to setsid().
+	parpid = fork();
+	if ( parpid < 0 )
+	{
+		cout << "fork() failed: " << strerror(errno) << endl;
+		exit( parpid );
+	}
+	else
+	if ( parpid > 0 )
+	{
+		exit( 0 );
+	}
 
-  // Make the process a new session leader. This detaches it from the
-  // terminal.
-  sid = setsid();
-  if ( sid < 0 )
-  {
-	cout << "setsid() failed: " << strerror(errno) << endl;
-	exit( 1 );
-  }
+	// Make the process a new session leader. This detaches it from the
+	// terminal.
+	sid = setsid();
+	if ( sid < 0 )
+	{
+		cout << "setsid() failed: " << strerror(errno) << endl;
+		exit( 1 );
+	}
 
-    // A process inherits its working directory from its parent. This could be
-    // on a mounted filesystem, which means that the running daemon would
-    // prevent this filesystem from being unmounted. Changing to the root
-    // directory avoids this problem.
+	// A process inherits its working directory from its parent. This could be
+	// on a mounted filesystem, which means that the running daemon would
+	// prevent this filesystem from being unmounted. Changing to the root
+	// directory avoids this problem.
     chdir("/");
 
-    // The file mode creation mask is also inherited from the parent process.
-    // We don't want to restrict the permissions on files created by the
-    // daemon, so the mask is cleared.
+	// The file mode creation mask is also inherited from the parent process.
+	// We don't want to restrict the permissions on files created by the
+	// daemon, so the mask is cleared.
     umask(0);
 
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
 
-  return sid;
-  //#endif
+	return sid;
+//#endif
 }
 
 int StopDaemon()
 {
-  char line[256];
+	char line[256];
 
-  std::ostringstream command;
-  command << "pidof -s -o " << getpid() << " PythonServer";
+	std::ostringstream command;
+	command << "pidof -s -o " << getpid() << " PythonServer";
 
-  FILE *cmd = popen( command.str().c_str(), "r" );
-  fgets( line, sizeof(line), cmd );
-  pid_t pid = strtoul( line, NULL, 10 );
-  pclose( cmd );
+	FILE *cmd = popen( command.str().c_str(), "r" );
+	fgets( line, sizeof(line), cmd );
+	pid_t pid = strtoul( line, NULL, 10 );
+	pclose( cmd );
 
-  return kill( pid, SIGTERM );
+	return kill( pid, SIGTERM );
 }
 
 void SigTermHandler(int s)
 {
-  //exit(0);
+	//exit(0);
 }
 
 void SetupSignalHandlers()
@@ -335,7 +335,7 @@ void SetupSignalHandlers()
 
 void UserInteraction()
 {
-  while( !getchar() );
+	while( !getchar() );
 }
 
 int main(int argc, char* argv[])
@@ -357,8 +357,8 @@ int main(int argc, char* argv[])
 		descr.add_options()
 			("help", "Print help")
 			("num_thread", po::value<int>(), "thread pool size")
-		  ("d", "Run as a daemon")
-		  ("stop", "Stop daemon");
+			("d", "Run as a daemon")
+			("stop", "Stop daemon");
 		
 		po::variables_map vm;
 		po::store( po::parse_command_line( argc, argv, descr ), vm );
@@ -372,13 +372,13 @@ int main(int argc, char* argv[])
 
 	    if ( vm.count( "stop" ) )
 		{
-		  return StopDaemon();
+			return StopDaemon();
 		}
 
 		if ( vm.count( "d" ) )
 		{
-		  StartAsDaemon();
-		  python_server::isDaemon = true;
+			StartAsDaemon();
+			python_server::isDaemon = true;
 		}
 
 		if ( vm.count( "num_thread" ) )
@@ -403,17 +403,17 @@ int main(int argc, char* argv[])
 		// todo: user interaction
 		if ( !python_server::isDaemon )
 		{
-		  UserInteraction();
+			UserInteraction();
 		}
 		else
 		{
-		  syslog( LOG_INFO | LOG_USER, "PythonServer daemon started" );
+			syslog( LOG_INFO | LOG_USER, "PythonServer daemon started" );
 
-		  sigset_t waitset;
-		  int sig;
-		  sigemptyset( &waitset );
-		  sigaddset( &waitset, SIGTERM );
-		  sigwait( &waitset, &sig );
+			sigset_t waitset;
+			int sig;
+			sigemptyset( &waitset );
+			sigaddset( &waitset, SIGTERM );
+			sigwait( &waitset, &sig );
 		}
 
 		io_service.stop();
@@ -427,7 +427,7 @@ int main(int argc, char* argv[])
 	Py_Finalize();
 
 	if ( python_server::isDaemon )
-	   syslog( LOG_INFO | LOG_USER, "PythonServer daemon stopped" );
+		syslog( LOG_INFO | LOG_USER, "PythonServer daemon stopped" );
 
 	cout << "done..." << endl;
 	return 0;
