@@ -370,7 +370,7 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 
-	    if ( vm.count( "stop" ) )
+		if ( vm.count( "stop" ) )
 		{
 			return StopDaemon();
 		}
