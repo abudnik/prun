@@ -322,7 +322,7 @@ int StopDaemon()
 	return kill( pid, SIGTERM );
 }
 
-void VerifyDaemonParams()
+void VerifyCommandlineParams()
 {
 	if ( python_server::uid )
 	{
@@ -423,10 +423,10 @@ int main( int argc, char* argv[], char **envp )
 		{
 			python_server::uid = vm[ "u" ].as<int>();
 		}
+		VerifyCommandlineParams();
 
 		if ( vm.count( "d" ) )
 		{
-			VerifyDaemonParams();
 			StartAsDaemon();
 			python_server::isDaemon = true;
 		}
