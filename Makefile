@@ -1,5 +1,5 @@
 CC := g++
-CFLAGS := -Wall -pedantic -g
+CFLAGS := -Wall -pedantic
 INCLUDE_PATH := -I/home/Andrew/dev/boost_1_51_0 -I/usr/include/python2.7
 
 RM := rm -rf

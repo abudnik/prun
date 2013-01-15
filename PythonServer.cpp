@@ -18,6 +18,10 @@ using boost::asio::ip::tcp;
 
 namespace python_server {
 
+bool isDaemon;
+uid_t uid;
+
+
 template< typename BufferT >
 class Request
 {
@@ -248,9 +252,10 @@ private:
 	tcp::acceptor acceptor_;
 };
 
-bool isDaemon;
-
 } // namespace python_server
+
+
+namespace {
 
 int StartAsDaemon()
 {
@@ -304,7 +309,7 @@ int StartAsDaemon()
 
 int StopDaemon()
 {
-	char line[256];
+	char line[256] = { '\0' };
 
 	std::ostringstream command;
 	command << "pidof -s -o " << getpid() << " PythonServer";
@@ -317,7 +322,41 @@ int StopDaemon()
 	return kill( pid, SIGTERM );
 }
 
-void SigTermHandler(int s)
+void VerifyDaemonParams()
+{
+	if ( python_server::uid )
+	{
+		char line[256] = { '\0' };
+
+		std::ostringstream command;
+		command << "getent passwd " << python_server::uid << "|cut -d: -f1";
+
+		FILE *cmd = popen( command.str().c_str(), "r" );
+		fgets( line, sizeof(line), cmd );
+		pclose( cmd );
+
+		if ( !strlen( line ) )
+		{
+			std::cout << "Unknown uid: " << python_server::uid << std::endl;
+			exit( 1 );
+		}
+	}
+	else
+	{
+		if ( getuid() == 0 )
+		{
+			std::cout << "Could not execute python code due to security issues" << std::endl <<
+				"Please use --u command line parameter for using uid of non-privileged user" << std::endl;
+			exit( 1 );			
+		}
+		else
+		{
+			python_server::uid = getuid();
+		}
+	}
+}
+
+void SigTermHandler( int s )
 {
 	//exit(0);
 }
@@ -338,7 +377,9 @@ void UserInteraction()
 	while( !getchar() );
 }
 
-int main(int argc, char* argv[])
+} // anonymous namespace
+
+int main( int argc, char* argv[], char **envp )
 {
 	SetupSignalHandlers();
 
@@ -346,6 +387,7 @@ int main(int argc, char* argv[])
 
 	try
 	{
+		// initialization
 		int numThread = 2;
 		python_server::isDaemon = false;
 
@@ -356,9 +398,10 @@ int main(int argc, char* argv[])
 
 		descr.add_options()
 			("help", "Print help")
-			("num_thread", po::value<int>(), "thread pool size")
+			("num_thread", po::value<int>(), "Thread pool size")
 			("d", "Run as a daemon")
-			("stop", "Stop daemon");
+			("stop", "Stop daemon")
+			("u", po::value<int>(), "Start as a specific non-root user");
 		
 		po::variables_map vm;
 		po::store( po::parse_command_line( argc, argv, descr ), vm );
@@ -375,15 +418,22 @@ int main(int argc, char* argv[])
 			return StopDaemon();
 		}
 
+		python_server::uid = 0;
+		if ( vm.count( "u" ) )
+		{
+			python_server::uid = vm[ "u" ].as<int>();
+		}
+
 		if ( vm.count( "d" ) )
 		{
+			VerifyDaemonParams();
 			StartAsDaemon();
 			python_server::isDaemon = true;
 		}
 
 		if ( vm.count( "num_thread" ) )
 		{
-			numThread = vm["num_thread"].as<int>();
+			numThread = vm[ "num_thread" ].as<int>();
 		}
 		
 		// start accepting client connections
@@ -400,7 +450,6 @@ int main(int argc, char* argv[])
 			);
 		}
 
-		// todo: user interaction
 		if ( !python_server::isDaemon )
 		{
 			UserInteraction();
