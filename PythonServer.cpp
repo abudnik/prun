@@ -7,10 +7,12 @@
 #include <boost/thread.hpp>
 #include <boost/array.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <Python.h>
+#include <boost/interprocess/shared_memory_object.hpp>
 #include <unistd.h>
 #include <syslog.h>
 #include <csignal>
+#include <cstdlib>
+#include "Common.h"
 
 
 using namespace std;
@@ -20,6 +22,18 @@ namespace python_server {
 
 bool isDaemon;
 uid_t uid;
+gid_t gid;
+unsigned int numThread;
+pid_t pyexecPid;
+
+struct CommPort
+{
+	boost::interprocess::shared_memory_object *shmem;
+	//
+};
+
+typedef std::map< boost::thread::id, CommPort > ShmemPoolType;
+ShmemPoolType sharedMemPool;
 
 
 template< typename BufferT >
@@ -100,15 +114,12 @@ public:
 	virtual const std::string &GetResponse() const = 0;
 };
 
-class ExecutePython : public IActionStrategy
+class SendToPyExec : public IActionStrategy
 {
 public:
 	virtual void HandleRequest( const std::string &requestStr )
 	{
-		//using namespace boost::python;
-		//exec( str( requestStr ) );
-		int ret = PyRun_SimpleString( requestStr.c_str() );
-
+		int ret = 0;
 		ptree_.put( "response", ret ? "FAILED" : "OK" );
 	}
 
@@ -144,7 +155,7 @@ public:
 
 class Session : public boost::enable_shared_from_this< Session >
 {
-	typedef boost::array< char, 8192 > BufferType;
+	typedef boost::array< char, 32 * 1024 > BufferType;
 
 public:
 	Session( boost::asio::io_service &io_service )
@@ -209,7 +220,7 @@ protected:
 	tcp::socket socket_;
 	BufferType buffer_;
 	Request< BufferType > request_;
-	Action< ExecutePython > action_;
+	Action< SendToPyExec > action_;
 };
 
 
@@ -270,7 +281,7 @@ int StartAsDaemon()
 	parpid = fork();
 	if ( parpid < 0 )
 	{
-		cout << "fork() failed: " << strerror(errno) << endl;
+		cout << "StartAsDaemon: fork() failed: " << strerror(errno) << endl;
 		exit( parpid );
 	}
 	else
@@ -284,7 +295,7 @@ int StartAsDaemon()
 	sid = setsid();
 	if ( sid < 0 )
 	{
-		cout << "setsid() failed: " << strerror(errno) << endl;
+		cout << "StartAsDaemon: setsid() failed: " << strerror(errno) << endl;
 		exit( 1 );
 	}
 
@@ -326,6 +337,7 @@ void VerifyCommandlineParams()
 {
 	if ( python_server::uid )
 	{
+		// check uid existance
 		char line[256] = { '\0' };
 
 		std::ostringstream command;
@@ -340,6 +352,25 @@ void VerifyCommandlineParams()
 			std::cout << "Unknown uid: " << python_server::uid << std::endl;
 			exit( 1 );
 		}
+
+		// extract gid
+		line[0] = '\0';
+		command.str("");
+		command.clear();
+
+		command << "getent passwd " << python_server::uid << "|cut -d: -f4";
+
+	    cmd = popen( command.str().c_str(), "r" );
+		fgets( line, sizeof(line), cmd );
+		pclose( cmd );
+
+		if ( !strlen( line ) )
+		{
+			std::cout << "Could not extract gid value" << std::endl;
+			exit( 1 );
+		}
+
+		python_server::gid = strtoul( line, NULL, 10 );
 	}
 	else
 	{
@@ -347,7 +378,7 @@ void VerifyCommandlineParams()
 		{
 			std::cout << "Could not execute python code due to security issues" << std::endl <<
 				"Please use --u command line parameter for using uid of non-privileged user" << std::endl;
-			exit( 1 );			
+			exit( 1 );
 		}
 		else
 		{
@@ -377,18 +408,73 @@ void UserInteraction()
 	while( !getchar() );
 }
 
+void RunPyExecProcess()
+{
+	pid_t pid = fork();
+
+	if ( pid < 0 )
+	{
+		cout << "RunPyExecProcess: fork() failed: " << strerror(errno) << endl;
+		exit( pid );
+	}
+	else
+	if ( pid == 0 )
+	{
+		execl( "PyExec", "", NULL );
+	}
+	else
+	if ( pid > 0 )
+	{
+		python_server::pyexecPid = pid;
+	}
+}
+
+void SetupPyExecIPC( const boost::thread *thread )
+{
+	namespace ipc = boost::interprocess;
+
+	static int commCnt = 0;
+	std::string shmemName( "PyExec" + boost::lexical_cast<std::string>( commCnt++ ) );
+
+	ipc::shared_memory_object::remove( shmemName.c_str() );
+
+	python_server::CommPort port;
+    port.shmem = new ipc::shared_memory_object( ipc::create_only, shmemName.c_str(), ipc::read_write );
+
+	python_server::sharedMemPool[ thread->get_id() ] = port;
+}
+
+void AtExit()
+{
+	namespace ipc = boost::interprocess;
+	python_server::ShmemPoolType::iterator it;
+
+	for( it = python_server::sharedMemPool.begin();
+		 it != python_server::sharedMemPool.end();
+	   ++it )
+	{
+		if ( it->second.shmem )
+		{
+			ipc::shared_memory_object::remove( it->second.shmem->get_name() );
+			delete it->second.shmem;
+			it->second.shmem = NULL;
+		}
+	}
+}
+
 } // anonymous namespace
 
+// TODO: normal logging system
+// TODO: auto dependency generation in makefile
 int main( int argc, char* argv[], char **envp )
 {
 	SetupSignalHandlers();
-
-	Py_Initialize();
+	atexit( AtExit );
 
 	try
 	{
 		// initialization
-		int numThread = 2;
+	    python_server::numThread = 2;
 		python_server::isDaemon = false;
 
 		// parse input command line options
@@ -398,7 +484,7 @@ int main( int argc, char* argv[], char **envp )
 
 		descr.add_options()
 			("help", "Print help")
-			("num_thread", po::value<int>(), "Thread pool size")
+			("num_thread", po::value<unsigned int>(), "Thread pool size")
 			("d", "Run as a daemon")
 			("stop", "Stop daemon")
 			("u", po::value<int>(), "Start as a specific non-root user");
@@ -433,8 +519,10 @@ int main( int argc, char* argv[], char **envp )
 
 		if ( vm.count( "num_thread" ) )
 		{
-			numThread = vm[ "num_thread" ].as<int>();
+			python_server::numThread = vm[ "num_thread" ].as<unsigned int>();
 		}
+
+		RunPyExecProcess();
 		
 		// start accepting client connections
 		boost::asio::io_service io_service;
@@ -443,12 +531,15 @@ int main( int argc, char* argv[], char **envp )
 
 		// create thread pool
 		boost::thread_group worker_threads;
-		for( int i = 0; i < numThread; ++i )
+		for( unsigned int i = 0; i < python_server::numThread; ++i )
 		{
-			worker_threads.create_thread(
+			boost::thread *thread = worker_threads.create_thread(
 				boost::bind( &boost::asio::io_service::run, &io_service )
 			);
+			SetupPyExecIPC( thread );
 		}
+
+		// TODO: send signal to PyExec for starting
 
 		if ( !python_server::isDaemon )
 		{
@@ -472,8 +563,6 @@ int main( int argc, char* argv[], char **envp )
 	{
 		cout << e.what() << endl;
 	}
-
-	Py_Finalize();
 
 	if ( python_server::isDaemon )
 		syslog( LOG_INFO | LOG_USER, "PythonServer daemon stopped" );

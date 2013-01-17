@@ -4,11 +4,11 @@ INCLUDE_PATH := -I/home/Andrew/dev/boost_1_51_0 -I/usr/include/python2.7
 
 RM := rm -rf
 
-LIBS := -lboost_system -lboost_thread -lboost_program_options -lboost_filesystem -lpython2.7 -lpthread
+LIBS := -lboost_system -lboost_thread -lboost_program_options -lboost_filesystem -lpython2.7 -lpthread -lrt
 LIB_PATH := /home/Andrew/dev/boost_1_51_0/stage/lib
 
 objdir := objs
-OUT := PythonServer PythonSender
+OUT := PythonServer PyExec PythonSender
 OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(OUT)))
 
 all: installdirs $(OUT)
