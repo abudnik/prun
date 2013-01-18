@@ -21,7 +21,7 @@ namespace python_server {
 
 bool isDaemon;
 uid_t uid;
-gid_t gid;
+unsigned int numThread;
 
 
 template< typename BufferT >
@@ -110,9 +110,7 @@ public:
 		//using namespace boost::python;
 		//exec( str( requestStr ) );
 
-		EnterNonPrivilegedMode();
 		int ret = PyRun_SimpleString( requestStr.c_str() );
-		ExitNonPrivilegedMode();
 
 		ptree_.put( "response", ret ? "FAILED" : "OK" );
 	}
@@ -125,62 +123,9 @@ public:
 		return response_;
 	}
 
-	void EnterNonPrivilegedMode()
-	{
-		system( "cat /etc/shadow" );
-		ruid = getuid();
-		rgid = getgid();
-
-		if ( ruid == python_server::uid )
-			return;
-
-		int	status = setegid( python_server::gid );
-		if ( status < 0 )
-		{
-			std::cout << "EnterNonPrivilegedMode: setegid failed: " << status <<  python_server::gid << std::endl;
-			exit( status );
-		}
-
-		status = seteuid( python_server::uid );
-		if ( status < 0 )
-		{
-			std::cout << "EnterNonPrivilegedMode: seteuid failed: " << status << std::endl;
-			exit( status );
-		}
-
-		status = system( "cat /etc/shadow" );
-		std::cout << status << " " << getuid() << std::endl;
-
-		//char cwd[1024];
-		//getcwd(cwd, sizeof(cwd));
-		//std::cout << getuid() << " : " << cwd << std::endl;
-	}
-
-	void ExitNonPrivilegedMode()
-	{
-		if ( ruid == python_server::uid )
-			return;
-
-		int status = seteuid( ruid );
-		if ( status < 0 )
-		{
-			std::cout << "ExitNonPrivilegedMode: seteuid failed: " << status << std::endl;
-			exit( status );
-		}
-
-		status = setegid( rgid );
-		if ( status < 0 )
-		{
-			std::cout << "EnterNonPrivilegedMode: setegid failed: " << status << std::endl;
-			exit( status );
-		}
-	}
-
 private:
 	boost::property_tree::ptree ptree_;
 	mutable std::string response_;
-	uid_t ruid;
-	gid_t rgid;
 };
 
 template< typename ActionPolicy >
@@ -315,125 +260,6 @@ private:
 
 namespace {
 
-int StartAsDaemon()
-{
-//#ifdef _BSD_SOURCE || (_XOPEN_SOURCE && _XOPEN_SOURCE < 500)
-	//return daemon(1, 1);
-//#else
-	pid_t parpid, sid;
-
-	// Fork the process and have the parent exit. If the process was started
-	// from a shell, this returns control to the user. Forking a new process is
-	// also a prerequisite for the subsequent call to setsid().
-	parpid = fork();
-	if ( parpid < 0 )
-	{
-		cout << "fork() failed: " << strerror(errno) << endl;
-		exit( parpid );
-	}
-	else
-	if ( parpid > 0 )
-	{
-		exit( 0 );
-	}
-
-	// Make the process a new session leader. This detaches it from the
-	// terminal.
-	sid = setsid();
-	if ( sid < 0 )
-	{
-		cout << "setsid() failed: " << strerror(errno) << endl;
-		exit( 1 );
-	}
-
-	// A process inherits its working directory from its parent. This could be
-	// on a mounted filesystem, which means that the running daemon would
-	// prevent this filesystem from being unmounted. Changing to the root
-	// directory avoids this problem.
-	chdir("/");
-
-	// The file mode creation mask is also inherited from the parent process.
-	// We don't want to restrict the permissions on files created by the
-	// daemon, so the mask is cleared.
-	umask(0);
-
-	close(STDIN_FILENO);
-	close(STDOUT_FILENO);
-	close(STDERR_FILENO);
-
-	return sid;
-//#endif
-}
-
-int StopDaemon()
-{
-	char line[256] = { '\0' };
-
-	std::ostringstream command;
-	command << "pidof -s -o " << getpid() << " PythonServer";
-
-	FILE *cmd = popen( command.str().c_str(), "r" );
-	fgets( line, sizeof(line), cmd );
-	pid_t pid = strtoul( line, NULL, 10 );
-	pclose( cmd );
-
-	return kill( pid, SIGTERM );
-}
-
-void VerifyCommandlineParams()
-{
-	if ( python_server::uid )
-	{
-		// check uid existance
-		char line[256] = { '\0' };
-
-		std::ostringstream command;
-		command << "getent passwd " << python_server::uid << "|cut -d: -f1";
-
-		FILE *cmd = popen( command.str().c_str(), "r" );
-		fgets( line, sizeof(line), cmd );
-		pclose( cmd );
-
-		if ( !strlen( line ) )
-		{
-			std::cout << "Unknown uid: " << python_server::uid << std::endl;
-			exit( 1 );
-		}
-
-		// extract gid
-		line[0] = '\0';
-		command.str("");
-		command.clear();
-
-		command << "getent passwd " << python_server::uid << "|cut -d: -f4";
-
-	    cmd = popen( command.str().c_str(), "r" );
-		fgets( line, sizeof(line), cmd );
-		pclose( cmd );
-
-		if ( !strlen( line ) )
-		{
-			std::cout << "Could not extract gid value" << std::endl;
-			exit( 1 );
-		}
-
-		python_server::gid = strtoul( line, NULL, 10 );
-	}
-	else
-	{
-		// if ( getuid() == 0 )
-		// {
-		// 	std::cout << "Could not execute python code due to security issues" << std::endl <<
-		// 		"Please use --u command line parameter for using uid of non-privileged user" << std::endl;
-		// 	exit( 1 );
-		// }
-		// else
-		// {
-			python_server::uid = getuid();
-		// }
-	}
-}
-
 void SigTermHandler( int s )
 {
 	//exit(0);
@@ -450,24 +276,25 @@ void SetupSignalHandlers()
 	sigaction( SIGTERM, &sigHandler, 0 );
 }
 
-void UserInteraction()
+void AtExit()
 {
-	while( !getchar() );
 }
 
 } // anonymous namespace
 
+
 int main( int argc, char* argv[], char **envp )
 {
 	SetupSignalHandlers();
+	atexit( AtExit );
 
 	Py_Initialize();
 
-	/*try
+	try
 	{
 		// initialization
-		int numThread = 2;
 		python_server::isDaemon = false;
+		python_server::uid = 0;
 
 		// parse input command line options
 		namespace po = boost::program_options;
@@ -475,66 +302,58 @@ int main( int argc, char* argv[], char **envp )
 		po::options_description descr;
 
 		descr.add_options()
-			("help", "Print help")
-			("num_thread", po::value<int>(), "Thread pool size")
+			("num_thread", po::value<unsigned int>(), "Thread pool size")
 			("d", "Run as a daemon")
-			("stop", "Stop daemon")
-			("u", po::value<int>(), "Start as a specific non-root user");
+			("u", po::value<uid_t>(), "Start as a specific non-root user");
 		
 		po::variables_map vm;
 		po::store( po::parse_command_line( argc, argv, descr ), vm );
-		po::notify( vm );    
+		po::notify( vm );
 
-		if ( vm.count( "help" ) )
-		{
-			cout << descr << endl;
-			return 1;
-		}
-
-		if ( vm.count( "stop" ) )
-		{
-			return StopDaemon();
-		}
-
-		python_server::uid = 0;
 		if ( vm.count( "u" ) )
 		{
-			python_server::uid = vm[ "u" ].as<int>();
+			python_server::uid = vm[ "u" ].as<uid_t>();
+			setuid( python_server::uid );
 		}
-		VerifyCommandlineParams();
 
 		if ( vm.count( "d" ) )
 		{
-			StartAsDaemon();
 			python_server::isDaemon = true;
 		}
 
 		if ( vm.count( "num_thread" ) )
 		{
-			numThread = vm[ "num_thread" ].as<int>();
+			python_server::numThread = vm[ "num_thread" ].as<unsigned int>();
 		}
 		
-		// start accepting client connections
+		// start accepting connections
 		boost::asio::io_service io_service;
 
-		python_server::ConnectionAcceptor acceptor( io_service, 5555 );
+		python_server::ConnectionAcceptor acceptor( io_service, python_server::defaultPyExecPort );
 
 		// create thread pool
 		boost::thread_group worker_threads;
-		for( int i = 0; i < numThread; ++i )
+		for( unsigned int i = 0; i < python_server::numThread; ++i )
 		{
 			worker_threads.create_thread(
 				boost::bind( &boost::asio::io_service::run, &io_service )
 			);
 		}
 
+		// signal parent process to say that PyExec has been initialized
+		kill( getppid(), SIGUSR1 );
+
 		if ( !python_server::isDaemon )
 		{
-			UserInteraction();
+			sigset_t waitset;
+			int sig;
+			sigemptyset( &waitset );
+			sigaddset( &waitset, SIGINT );
+			sigwait( &waitset, &sig );
 		}
 		else
 		{
-			syslog( LOG_INFO | LOG_USER, "PythonServer daemon started" );
+			syslog( LOG_INFO | LOG_USER, "PyExec daemon started" );
 
 			sigset_t waitset;
 			int sig;
@@ -549,18 +368,12 @@ int main( int argc, char* argv[], char **envp )
 	catch( std::exception &e )
 	{
 		cout << e.what() << endl;
-		}*/
-    
-			sigset_t waitset;
-			int sig;
-			sigemptyset( &waitset );
-			sigaddset( &waitset, SIGINT );
-			sigwait( &waitset, &sig );
+	}
 
 	Py_Finalize();
 
-	//if ( python_server::isDaemon )
-	//	syslog( LOG_INFO | LOG_USER, "PythonServer daemon stopped" );
+	if ( python_server::isDaemon )
+		syslog( LOG_INFO | LOG_USER, "PyExec daemon stopped" );
 
 	cout << "done..." << endl;
 	return 0;

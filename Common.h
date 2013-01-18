@@ -1,5 +1,11 @@
 namespace python_server {
 
-const int sharedMemSize = 512 * 1024;
+const unsigned int shmemBlockSize = 512 * 1024;
+const unsigned int maxScriptSize = shmemBlockSize;
+
+const unsigned short defaultPort = 5555;
+const unsigned short defaultPyExecPort = defaultPort + 1;
+
+const char *const shmemName = "PyExec";
 
 } // namespace python_server

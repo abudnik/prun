@@ -22,18 +22,19 @@ namespace python_server {
 
 bool isDaemon;
 uid_t uid;
-gid_t gid;
 unsigned int numThread;
 pid_t pyexecPid;
 
-struct CommPort
+boost::interprocess::shared_memory_object *sharedMemPool;
+
+struct ThreadComm
 {
-	boost::interprocess::shared_memory_object *shmem;
+	int shmemBlock;
 	//
 };
 
-typedef std::map< boost::thread::id, CommPort > ShmemPoolType;
-ShmemPoolType sharedMemPool;
+typedef std::map< boost::thread::id, ThreadComm > CommParams;
+CommParams commParams;
 
 
 template< typename BufferT >
@@ -120,6 +121,15 @@ public:
 	virtual void HandleRequest( const std::string &requestStr )
 	{
 		int ret = 0;
+
+		if ( requestStr.size() <= maxScriptSize )
+		{
+		}
+		else
+		{
+			ret = -1;
+		}
+
 		ptree_.put( "response", ret ? "FAILED" : "OK" );
 	}
 
@@ -352,42 +362,17 @@ void VerifyCommandlineParams()
 			std::cout << "Unknown uid: " << python_server::uid << std::endl;
 			exit( 1 );
 		}
-
-		// extract gid
-		line[0] = '\0';
-		command.str("");
-		command.clear();
-
-		command << "getent passwd " << python_server::uid << "|cut -d: -f4";
-
-	    cmd = popen( command.str().c_str(), "r" );
-		fgets( line, sizeof(line), cmd );
-		pclose( cmd );
-
-		if ( !strlen( line ) )
-		{
-			std::cout << "Could not extract gid value" << std::endl;
-			exit( 1 );
-		}
-
-		python_server::gid = strtoul( line, NULL, 10 );
 	}
 	else
+	if ( getuid() == 0 )
 	{
-		if ( getuid() == 0 )
-		{
-			std::cout << "Could not execute python code due to security issues" << std::endl <<
-				"Please use --u command line parameter for using uid of non-privileged user" << std::endl;
-			exit( 1 );
-		}
-		else
-		{
-			python_server::uid = getuid();
-		}
+		std::cout << "Could not execute python code due to security issues" << std::endl <<
+			"Please use --u command line parameter for using uid of non-privileged user" << std::endl;
+		exit( 1 );
 	}
 }
 
-void SigTermHandler( int s )
+void SigHandler( int s )
 {
 	//exit(0);
 }
@@ -396,11 +381,12 @@ void SetupSignalHandlers()
 {
 	struct sigaction sigHandler;
 	memset( &sigHandler, 0, sizeof( sigHandler ) );
-	sigHandler.sa_handler = SigTermHandler;
+	sigHandler.sa_handler = SigHandler;
 	sigemptyset(&sigHandler.sa_mask);
 	sigHandler.sa_flags = 0;
 
 	sigaction( SIGTERM, &sigHandler, 0 );
+	sigaction( SIGUSR1, &sigHandler, 0 );
 }
 
 void UserInteraction()
@@ -420,52 +406,68 @@ void RunPyExecProcess()
 	else
 	if ( pid == 0 )
 	{
-		execl( "PyExec", "", NULL );
+		std::ostringstream args;
+		args << "--num_thread " << python_server::numThread;
+		if ( python_server::isDaemon ) args << " --d ";
+		if ( python_server::uid != 0 ) args << " --u " << python_server::uid;
+
+		execl( "PyExec", args.str().c_str(), NULL );
 	}
 	else
 	if ( pid > 0 )
 	{
 		python_server::pyexecPid = pid;
+
+		// wait while PyExec completes initialization
+		sigset_t waitset;
+		siginfo_t info;
+		sigemptyset( &waitset );
+		sigaddset( &waitset, SIGUSR1 );
+		while( ( sigwaitinfo( &waitset, &info ) <= 0 ) && ( info.si_pid != pid ) );
 	}
 }
 
-void SetupPyExecIPC( const boost::thread *thread )
+void SetupPyExecIPC()
 {
 	namespace ipc = boost::interprocess;
 
-	static int commCnt = 0;
-	std::string shmemName( "PyExec" + boost::lexical_cast<std::string>( commCnt++ ) );
+	ipc::shared_memory_object::remove( python_server::shmemName );
 
-	ipc::shared_memory_object::remove( shmemName.c_str() );
-
-	python_server::CommPort port;
-    port.shmem = new ipc::shared_memory_object( ipc::create_only, shmemName.c_str(), ipc::read_write );
-
-	python_server::sharedMemPool[ thread->get_id() ] = port;
+    python_server::sharedMemPool = new ipc::shared_memory_object( ipc::create_only, python_server::shmemName, ipc::read_write );
 }
 
 void AtExit()
 {
 	namespace ipc = boost::interprocess;
-	python_server::ShmemPoolType::iterator it;
 
-	for( it = python_server::sharedMemPool.begin();
-		 it != python_server::sharedMemPool.end();
-	   ++it )
+    // send stop signal to PyExec proccess
+	kill( python_server::pyexecPid, SIGINT );
+
+	// remove shared memory
+	ipc::shared_memory_object::remove( python_server::shmemName );
+
+	if ( python_server::sharedMemPool )
 	{
-		if ( it->second.shmem )
-		{
-			ipc::shared_memory_object::remove( it->second.shmem->get_name() );
-			delete it->second.shmem;
-			it->second.shmem = NULL;
-		}
+		delete python_server::sharedMemPool;
+		python_server::sharedMemPool = NULL;
 	}
+}
+
+void OnThreadCreate( const boost::thread *thread )
+{
+	static int commCnt = 0;
+
+	python_server::ThreadComm threadComm;
+	threadComm.shmemBlock = commCnt++;
+
+	python_server::commParams[ thread->get_id() ] = threadComm;
 }
 
 } // anonymous namespace
 
 // TODO: normal logging system
 // TODO: auto dependency generation in makefile
+// TODO: read directly to shmem, avoiding memory copying
 int main( int argc, char* argv[], char **envp )
 {
 	SetupSignalHandlers();
@@ -476,6 +478,7 @@ int main( int argc, char* argv[], char **envp )
 		// initialization
 	    python_server::numThread = 2;
 		python_server::isDaemon = false;
+		python_server::uid = 0;
 
 		// parse input command line options
 		namespace po = boost::program_options;
@@ -487,11 +490,11 @@ int main( int argc, char* argv[], char **envp )
 			("num_thread", po::value<unsigned int>(), "Thread pool size")
 			("d", "Run as a daemon")
 			("stop", "Stop daemon")
-			("u", po::value<int>(), "Start as a specific non-root user");
+			("u", po::value<uid_t>(), "Start as a specific non-root user");
 		
 		po::variables_map vm;
 		po::store( po::parse_command_line( argc, argv, descr ), vm );
-		po::notify( vm );    
+		po::notify( vm );
 
 		if ( vm.count( "help" ) )
 		{
@@ -504,10 +507,9 @@ int main( int argc, char* argv[], char **envp )
 			return StopDaemon();
 		}
 
-		python_server::uid = 0;
 		if ( vm.count( "u" ) )
 		{
-			python_server::uid = vm[ "u" ].as<int>();
+			python_server::uid = vm[ "u" ].as<uid_t>();
 		}
 		VerifyCommandlineParams();
 
@@ -522,12 +524,13 @@ int main( int argc, char* argv[], char **envp )
 			python_server::numThread = vm[ "num_thread" ].as<unsigned int>();
 		}
 
+		SetupPyExecIPC();
 		RunPyExecProcess();
 		
 		// start accepting client connections
 		boost::asio::io_service io_service;
 
-		python_server::ConnectionAcceptor acceptor( io_service, 5555 );
+		python_server::ConnectionAcceptor acceptor( io_service, python_server::defaultPort );
 
 		// create thread pool
 		boost::thread_group worker_threads;
@@ -536,10 +539,8 @@ int main( int argc, char* argv[], char **envp )
 			boost::thread *thread = worker_threads.create_thread(
 				boost::bind( &boost::asio::io_service::run, &io_service )
 			);
-			SetupPyExecIPC( thread );
+			OnThreadCreate( thread );
 		}
-
-		// TODO: send signal to PyExec for starting
 
 		if ( !python_server::isDaemon )
 		{
