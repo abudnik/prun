@@ -8,6 +8,7 @@
 #include <boost/array.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/mapped_region.hpp>
 #include <unistd.h>
 #include <syslog.h>
 #include <csignal>
@@ -26,11 +27,12 @@ unsigned int numThread;
 pid_t pyexecPid;
 
 boost::interprocess::shared_memory_object *sharedMemPool;
+boost::interprocess::mapped_region *mappedRegion;
 
 struct ThreadComm
 {
 	int shmemBlock;
-	//
+	char *shmemAddr;
 };
 
 typedef std::map< boost::thread::id, ThreadComm > CommParams;
@@ -44,11 +46,11 @@ public:
 	Request()
 	: requestLength_( 0 ),
 	 bytesRead_( 0 ),
-	 firstRead_( true )
+	 headerOffset_( 0 )
 	{
 	}
 
-	int ReadMessageLength( BufferT &buf, size_t bytes_transferred  )
+	int ParseRequestHeader( BufferT &buf, size_t bytes_transferred  )
 	{
 		int offset = 0;
 		std::string length;
@@ -61,7 +63,7 @@ public:
 
 			try
 			{
-				requestLength_ = boost::lexical_cast<int>( length );
+				requestLength_ = boost::lexical_cast<unsigned int>( length );
 			}
 			catch( boost::bad_lexical_cast &e )
 			{
@@ -78,17 +80,24 @@ public:
 
 	void OnRead( BufferT &buf, size_t bytes_transferred  )
 	{
-		int skip_offset = 0;
+		std::copy( buf.begin() + headerOffset_, buf.begin() + bytes_transferred, back_inserter( request_ ) );
 
-		if ( firstRead_ )
-		{
-			skip_offset = ReadMessageLength( buf, bytes_transferred );
-			firstRead_ = false;
-		}
+		bytesRead_ += bytes_transferred - headerOffset_;
+	}
 
-		std::copy( buf.begin() + skip_offset, buf.begin() + bytes_transferred, back_inserter( request_ ) );
+	int CheckHeader()
+	{
+		// TODO: Error codes
+		if ( headerOffset_ > maxScriptSize )
+			return -1;
 
-		bytesRead_ += bytes_transferred - skip_offset;
+		return 0;
+	}
+
+	int OnFirstRead( BufferT &buf, size_t bytes_transferred  )
+	{
+		headerOffset_ = ParseRequestHeader( buf, bytes_transferred );
+		return CheckHeader();
 	}
 
 	bool IsReadCompleted() const
@@ -105,14 +114,15 @@ private:
 	std::string request_;
 	int	requestLength_;
 	int bytesRead_;
-	bool firstRead_;
+	unsigned int headerOffset_;
 };
 
 class IActionStrategy
 {
 public:
 	virtual void HandleRequest( const std::string &requestStr ) = 0;
-	virtual const std::string &GetResponse() const = 0;
+	virtual const std::string &GetResponse() = 0;
+	virtual void OnError( int err ) = 0;
 };
 
 class SendToPyExec : public IActionStrategy
@@ -122,28 +132,33 @@ public:
 	{
 		int ret = 0;
 
-		if ( requestStr.size() <= maxScriptSize )
-		{
-		}
-		else
-		{
-			ret = -1;
-		}
+		ThreadComm &threadComm = commParams[ boost::this_thread::get_id() ];
+		memcpy( threadComm.shmemAddr, requestStr.c_str(), requestStr.size() );
 
-		ptree_.put( "response", ret ? "FAILED" : "OK" );
+		errCode_ = ret;
 	}
 
-	virtual const std::string &GetResponse() const
+	virtual const std::string &GetResponse()
 	{
 		std::stringstream ss;
+
+		// TODO: full error code description
+		ptree_.put( "response", errCode_ ? "FAILED" : "OK" );
+
 		boost::property_tree::write_json( ss, ptree_, false );
 		response_ = ss.str();
 		return response_;
 	}
 
+	virtual void OnError( int err )
+	{
+		errCode_ = err;
+	}
+
 private:
 	boost::property_tree::ptree ptree_;
-	mutable std::string response_;
+	std::string response_;
+	int errCode_;
 };
 
 template< typename ActionPolicy >
@@ -157,9 +172,14 @@ public:
 		ActionPolicy::HandleRequest( requestStr );
 	}
 
-	virtual const std::string &GetResponse() const
+	virtual const std::string &GetResponse()
 	{
 		return ActionPolicy::GetResponse();
+	}
+
+	virtual void OnError( int err )
+	{
+		ActionPolicy::OnError( err );
 	}
 };
 
@@ -181,7 +201,7 @@ public:
 	virtual void Start()
 	{
 		socket_.async_read_some( boost::asio::buffer( buffer_ ),
-								 boost::bind( &Session::HandleRead, shared_from_this(),
+								 boost::bind( &Session::FirstRead, shared_from_this(),
 											boost::asio::placeholders::error,
 											boost::asio::placeholders::bytes_transferred ) );
 	}
@@ -189,6 +209,22 @@ public:
 	tcp::socket &GetSocket()
 	{
 		return socket_;
+	}
+
+	virtual void FirstRead( const boost::system::error_code& error, size_t bytes_transferred )
+	{
+		if ( !error )
+		{
+			int ret = request_.OnFirstRead( buffer_, bytes_transferred );
+			if ( ret < 0 )
+			{
+				action_.OnError( ret );
+				WriteResponse();
+				return;
+			}
+		}
+
+		HandleRead( error, bytes_transferred );
 	}
 
 	virtual void HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
@@ -207,19 +243,23 @@ public:
 			else
 			{
 				action_.HandleRequest( request_ );
-
-				const std::string &response = action_.GetResponse();
-
-				boost::asio::async_write( socket_,
-										boost::asio::buffer( response ),
-										boost::bind( &Session::HandleWrite, shared_from_this(),
-										boost::asio::placeholders::error ) );
+				WriteResponse();
 			}
 		}
 		else
 		{
 			//HandleError( error );
 		}
+	}
+
+	virtual void WriteResponse()
+	{
+		const std::string &response = action_.GetResponse();
+
+		boost::asio::async_write( socket_,
+								boost::asio::buffer( response ),
+	   							boost::bind( &Session::HandleWrite, shared_from_this(),
+								boost::asio::placeholders::error ) );
 	}
 
 	virtual void HandleWrite( const boost::system::error_code& error )
@@ -419,10 +459,13 @@ void RunPyExecProcess()
 		python_server::pyexecPid = pid;
 
 		// wait while PyExec completes initialization
+
 		sigset_t waitset;
 		siginfo_t info;
 		sigemptyset( &waitset );
 		sigaddset( &waitset, SIGUSR1 );
+
+		// TODO: sigtaimedwait && kill( pid, 0 )
 		while( ( sigwaitinfo( &waitset, &info ) <= 0 ) && ( info.si_pid != pid ) );
 	}
 }
@@ -434,6 +477,11 @@ void SetupPyExecIPC()
 	ipc::shared_memory_object::remove( python_server::shmemName );
 
     python_server::sharedMemPool = new ipc::shared_memory_object( ipc::create_only, python_server::shmemName, ipc::read_write );
+
+	size_t shmemSize = python_server::numThread * python_server::shmemBlockSize;
+	python_server::sharedMemPool->truncate( shmemSize );
+
+	python_server::mappedRegion = new ipc::mapped_region( *python_server::sharedMemPool, ipc::read_write );
 }
 
 void AtExit()
@@ -445,6 +493,12 @@ void AtExit()
 
 	// remove shared memory
 	ipc::shared_memory_object::remove( python_server::shmemName );
+
+	if ( python_server::mappedRegion )
+	{
+		delete python_server::mappedRegion;
+		python_server::mappedRegion = NULL;
+	}
 
 	if ( python_server::sharedMemPool )
 	{
@@ -458,7 +512,9 @@ void OnThreadCreate( const boost::thread *thread )
 	static int commCnt = 0;
 
 	python_server::ThreadComm threadComm;
-	threadComm.shmemBlock = commCnt++;
+	threadComm.shmemBlock = commCnt;
+	threadComm.shmemAddr = (char*)python_server::mappedRegion->get_address() + commCnt * python_server::shmemBlockSize;
+	++commCnt;
 
 	python_server::commParams[ thread->get_id() ] = threadComm;
 }

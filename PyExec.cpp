@@ -375,6 +375,5 @@ int main( int argc, char* argv[], char **envp )
 	if ( python_server::isDaemon )
 		syslog( LOG_INFO | LOG_USER, "PyExec daemon stopped" );
 
-	cout << "done..." << endl;
 	return 0;
 }
