@@ -25,6 +25,7 @@ bool isDaemon;
 uid_t uid;
 unsigned int numThread;
 pid_t pyexecPid;
+char exeDir[256];
 
 boost::interprocess::shared_memory_object *sharedMemPool;
 boost::interprocess::mapped_region *mappedRegion;
@@ -50,6 +51,35 @@ public:
 	{
 	}
 
+	void OnRead( BufferT &buf, size_t bytes_transferred  )
+	{
+		std::copy( buf.begin() + headerOffset_, buf.begin() + bytes_transferred, back_inserter( request_ ) );
+
+		bytesRead_ += bytes_transferred - headerOffset_;
+	}
+
+	int OnFirstRead( BufferT &buf, size_t bytes_transferred  )
+	{
+		headerOffset_ = ParseRequestHeader( buf, bytes_transferred );
+		return CheckHeader();
+	}
+
+	bool IsReadCompleted() const
+	{
+		return bytesRead_ >= requestLength_;
+	}
+
+	const std::string &GetRequestString() const
+	{
+		return request_;
+	}
+
+	int GetRequestLength() const
+	{
+		return requestLength_;
+	}
+
+private:
 	int ParseRequestHeader( BufferT &buf, size_t bytes_transferred  )
 	{
 		int offset = 0;
@@ -78,13 +108,6 @@ public:
 		return offset;
 	}
 
-	void OnRead( BufferT &buf, size_t bytes_transferred  )
-	{
-		std::copy( buf.begin() + headerOffset_, buf.begin() + bytes_transferred, back_inserter( request_ ) );
-
-		bytesRead_ += bytes_transferred - headerOffset_;
-	}
-
 	int CheckHeader()
 	{
 		// TODO: Error codes
@@ -92,22 +115,6 @@ public:
 			return -1;
 
 		return 0;
-	}
-
-	int OnFirstRead( BufferT &buf, size_t bytes_transferred  )
-	{
-		headerOffset_ = ParseRequestHeader( buf, bytes_transferred );
-		return CheckHeader();
-	}
-
-	bool IsReadCompleted() const
-	{
-		return bytesRead_ >= requestLength_;
-	}
-
-	const std::string &GetRequestString() const
-	{
-		return request_;
 	}
 
 private:
@@ -183,13 +190,73 @@ public:
 	}
 };
 
+class PyExecConnection
+{
+	typedef boost::array< char, 1024 > BufferType;
+
+public:
+	PyExecConnection( boost::asio::io_service &io_service )
+	: socket_( io_service )
+	{
+		boost::system::error_code ec;
+
+		tcp::resolver resolver( io_service );
+		tcp::resolver::query query( tcp::v4(), "localhost", boost::lexical_cast<std::string>( python_server::defaultPyExecPort ) );
+		tcp::resolver::iterator iterator = resolver.resolve( query );
+		socket_.connect( *iterator, ec );
+		// TODO: log if ec
+
+		memset( buffer_.c_array(), 0, buffer_.size() );
+	}
+
+	template< typename T >
+	int Send( const Request< T > &request )
+	{
+		int ret = 0;
+
+		try
+		{
+			std::stringstream ss, ss2, ss3;
+
+		    ThreadComm &threadComm = commParams[ boost::this_thread::get_id() ];
+			ptree_.put( "id", threadComm.shmemBlock );
+
+			boost::property_tree::write_json( ss, ptree_, false );
+			ss2 << ss.str().size() << '\n' << ss.str();
+
+		    socket_.send( boost::asio::buffer( ss2.str(), ss2.str().size() ) );
+
+			socket_.receive( boost::asio::buffer( buffer_.c_array(), buffer_.size() ) );
+
+			ptree_.clear();
+			ss3 << buffer_.c_array();
+			boost::property_tree::read_json( ss3, ptree_ );
+			ret = ptree_.get<int>( "err" );
+		}
+		catch( boost::system::system_error &e )
+		{
+			cout << e.what() << endl;
+			ret = -1;
+		}
+		
+		return ret;
+	}
+
+protected:
+	boost::property_tree::ptree ptree_;
+	tcp::socket socket_;
+	BufferType buffer_;
+};
+
 class Session : public boost::enable_shared_from_this< Session >
 {
+public:
 	typedef boost::array< char, 32 * 1024 > BufferType;
 
 public:
 	Session( boost::asio::io_service &io_service )
-	: socket_( io_service )
+	: socket_( io_service ),
+	 io_service_( io_service )
 	{
 	}
 
@@ -211,6 +278,7 @@ public:
 		return socket_;
 	}
 
+protected:
 	virtual void FirstRead( const boost::system::error_code& error, size_t bytes_transferred )
 	{
 		if ( !error )
@@ -242,14 +310,22 @@ public:
 			}
 			else
 			{
-				action_.HandleRequest( request_ );
-				WriteResponse();
+				HandleRequest();
 			}
 		}
 		else
 		{
 			//HandleError( error );
 		}
+	}
+
+	virtual void HandleRequest()
+	{
+		action_.HandleRequest( request_ );
+		PyExecConnection pyExecConnection( io_service_ );
+		int ret = pyExecConnection.Send( request_ );
+		action_.OnError( ret );
+		WriteResponse();
 	}
 
 	virtual void WriteResponse()
@@ -271,6 +347,7 @@ protected:
 	BufferType buffer_;
 	Request< BufferType > request_;
 	Action< SendToPyExec > action_;
+	boost::asio::io_service &io_service_;
 };
 
 
@@ -294,6 +371,7 @@ public:
 											session, boost::asio::placeholders::error ) );
 	}
 
+private:
 	void HandleAccept( session_ptr session, const boost::system::error_code &error )
 	{
 		if ( !error )
@@ -446,12 +524,15 @@ void RunPyExecProcess()
 	else
 	if ( pid == 0 )
 	{
-		std::ostringstream args;
-		args << "--num_thread " << python_server::numThread;
-		if ( python_server::isDaemon ) args << " --d ";
-		if ( python_server::uid != 0 ) args << " --u " << python_server::uid;
+		std::string exePath( python_server::exeDir );
+		exePath += "/PyExec";
 
-		execl( "PyExec", args.str().c_str(), NULL );
+		execl( exePath.c_str(), "./PyExec", "--num_thread",
+			   ( boost::lexical_cast<std::string>( python_server::numThread ) ).c_str(),
+			   python_server::isDaemon ? "--d" : " ",
+			   python_server::uid != 0 ? "--u" : " ",
+			   python_server::uid != 0 ? ( boost::lexical_cast<std::string>( python_server::uid ) ).c_str() : " ",
+			   NULL );
 	}
 	else
 	if ( pid > 0 )
@@ -459,7 +540,6 @@ void RunPyExecProcess()
 		python_server::pyexecPid = pid;
 
 		// wait while PyExec completes initialization
-
 		sigset_t waitset;
 		siginfo_t info;
 		sigemptyset( &waitset );
@@ -489,7 +569,7 @@ void AtExit()
 	namespace ipc = boost::interprocess;
 
     // send stop signal to PyExec proccess
-	kill( python_server::pyexecPid, SIGINT );
+	kill( python_server::pyexecPid, SIGTERM );
 
 	// remove shared memory
 	ipc::shared_memory_object::remove( python_server::shmemName );
@@ -514,6 +594,7 @@ void OnThreadCreate( const boost::thread *thread )
 	python_server::ThreadComm threadComm;
 	threadComm.shmemBlock = commCnt;
 	threadComm.shmemAddr = (char*)python_server::mappedRegion->get_address() + commCnt * python_server::shmemBlockSize;
+	memset( threadComm.shmemAddr, 0, python_server::shmemBlockSize );
 	++commCnt;
 
 	python_server::commParams[ thread->get_id() ] = threadComm;
@@ -528,6 +609,8 @@ int main( int argc, char* argv[], char **envp )
 {
 	SetupSignalHandlers();
 	atexit( AtExit );
+
+	getcwd( python_server::exeDir, sizeof( python_server::exeDir ) );
 
 	try
 	{

@@ -7,6 +7,8 @@
 #include <boost/thread.hpp>
 #include <boost/array.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/mapped_region.hpp>
 #include <Python.h>
 #include <unistd.h>
 #include <syslog.h>
@@ -23,6 +25,9 @@ bool isDaemon;
 uid_t uid;
 unsigned int numThread;
 
+boost::interprocess::shared_memory_object *sharedMemPool;
+boost::interprocess::mapped_region *mappedRegion;
+
 
 template< typename BufferT >
 class Request
@@ -31,11 +36,40 @@ public:
 	Request()
 	: requestLength_( 0 ),
 	 bytesRead_( 0 ),
-	 firstRead_( true )
+	 headerOffset_( 0 )
 	{
 	}
 
-	int ReadMessageLength( BufferT &buf, size_t bytes_transferred  )
+	void OnRead( BufferT &buf, size_t bytes_transferred  )
+	{
+		std::copy( buf.begin() + headerOffset_, buf.begin() + bytes_transferred, back_inserter( request_ ) );
+
+		bytesRead_ += bytes_transferred - headerOffset_;
+	}
+
+	int OnFirstRead( BufferT &buf, size_t bytes_transferred  )
+	{
+		headerOffset_ = ParseRequestHeader( buf, bytes_transferred );
+		return CheckHeader();
+	}
+
+	bool IsReadCompleted() const
+	{
+		return bytesRead_ >= requestLength_;
+	}
+
+	const std::string &GetRequestString() const
+	{
+		return request_;
+	}
+
+	int GetRequestLength() const
+	{
+		return requestLength_;
+	}
+
+private:
+	int ParseRequestHeader( BufferT &buf, size_t bytes_transferred  )
 	{
 		int offset = 0;
 		std::string length;
@@ -48,7 +82,7 @@ public:
 
 			try
 			{
-				requestLength_ = boost::lexical_cast<int>( length );
+				requestLength_ = boost::lexical_cast<unsigned int>( length );
 			}
 			catch( boost::bad_lexical_cast &e )
 			{
@@ -63,43 +97,27 @@ public:
 		return offset;
 	}
 
-	void OnRead( BufferT &buf, size_t bytes_transferred  )
+	int CheckHeader()
 	{
-		int skip_offset = 0;
+		// TODO: Error codes
+		if ( headerOffset_ > maxScriptSize )
+			return -1;
 
-		if ( firstRead_ )
-		{
-			skip_offset = ReadMessageLength( buf, bytes_transferred );
-			firstRead_ = false;
-		}
-
-		std::copy( buf.begin() + skip_offset, buf.begin() + bytes_transferred, back_inserter( request_ ) );
-
-		bytesRead_ += bytes_transferred - skip_offset;
-	}
-
-	bool IsReadCompleted() const
-	{
-		return bytesRead_ >= requestLength_;
-	}
-
-	const std::string &GetRequestString() const
-	{
-		return request_;
+		return 0;
 	}
 
 private:
 	std::string request_;
 	int	requestLength_;
 	int bytesRead_;
-	bool firstRead_;
+	unsigned int headerOffset_;
 };
 
 class IActionStrategy
 {
 public:
 	virtual void HandleRequest( const std::string &requestStr ) = 0;
-	virtual const std::string &GetResponse() const = 0;
+	virtual const std::string &GetResponse() = 0;
 };
 
 class ExecutePython : public IActionStrategy
@@ -110,22 +128,39 @@ public:
 		//using namespace boost::python;
 		//exec( str( requestStr ) );
 
-		int ret = PyRun_SimpleString( requestStr.c_str() );
+		std::stringstream ss;
+		ss << requestStr;
 
-		ptree_.put( "response", ret ? "FAILED" : "OK" );
+		boost::property_tree::read_json( ss, ptree_ );
+		int id = ptree_.get<int>( "id" );
+
+		size_t offset = id * python_server::shmemBlockSize;
+		char *addr = (char*)python_server::mappedRegion->get_address() + offset;
+
+	    errCode_ = PyRun_SimpleString( addr );
 	}
 
-	virtual const std::string &GetResponse() const
+	virtual const std::string &GetResponse()
 	{
 		std::stringstream ss;
+
+		// TODO: full error code description
+		ptree_.put( "err", errCode_ );
+
 		boost::property_tree::write_json( ss, ptree_, false );
 		response_ = ss.str();
 		return response_;
 	}
 
+	virtual void OnError( int err )
+	{
+		errCode_ = err;
+	}
+
 private:
 	boost::property_tree::ptree ptree_;
-	mutable std::string response_;
+	std::string response_;
+	int errCode_;
 };
 
 template< typename ActionPolicy >
@@ -139,15 +174,20 @@ public:
 		ActionPolicy::HandleRequest( requestStr );
 	}
 
-	virtual const std::string &GetResponse() const
+	virtual const std::string &GetResponse()
 	{
 		return ActionPolicy::GetResponse();
+	}
+
+	virtual void OnError( int err )
+	{
+		ActionPolicy::OnError( err );
 	}
 };
 
 class Session : public boost::enable_shared_from_this< Session >
 {
-	typedef boost::array< char, 8192 > BufferType;
+	typedef boost::array< char, 8 * 1024 > BufferType;
 
 public:
 	Session( boost::asio::io_service &io_service )
@@ -163,7 +203,7 @@ public:
 	virtual void Start()
 	{
 		socket_.async_read_some( boost::asio::buffer( buffer_ ),
-								 boost::bind( &Session::HandleRead, shared_from_this(),
+								 boost::bind( &Session::FirstRead, shared_from_this(),
 											boost::asio::placeholders::error,
 											boost::asio::placeholders::bytes_transferred ) );
 	}
@@ -171,6 +211,23 @@ public:
 	tcp::socket &GetSocket()
 	{
 		return socket_;
+	}
+
+protected:
+	virtual void FirstRead( const boost::system::error_code& error, size_t bytes_transferred )
+	{
+		if ( !error )
+		{
+			int ret = request_.OnFirstRead( buffer_, bytes_transferred );
+			if ( ret < 0 )
+			{
+				action_.OnError( ret );
+				WriteResponse();
+				return;
+			}
+		}
+
+		HandleRead( error, bytes_transferred );
 	}
 
 	virtual void HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
@@ -188,20 +245,29 @@ public:
 			}
 			else
 			{
-				action_.HandleRequest( request_ );
-
-				const std::string &response = action_.GetResponse();
-
-				boost::asio::async_write( socket_,
-										boost::asio::buffer( response ),
-										boost::bind( &Session::HandleWrite, shared_from_this(),
-										boost::asio::placeholders::error ) );
+				HandleRequest();
 			}
 		}
 		else
 		{
 			//HandleError( error );
 		}
+	}
+
+	virtual void HandleRequest()
+	{
+		action_.HandleRequest( request_ );
+		WriteResponse();
+	}
+
+	virtual void WriteResponse()
+	{
+		const std::string &response = action_.GetResponse();
+
+		boost::asio::async_write( socket_,
+								boost::asio::buffer( response ),
+	   							boost::bind( &Session::HandleWrite, shared_from_this(),
+								boost::asio::placeholders::error ) );
 	}
 
 	virtual void HandleWrite( const boost::system::error_code& error )
@@ -236,6 +302,7 @@ public:
 											session, boost::asio::placeholders::error ) );
 	}
 
+private:
 	void HandleAccept( session_ptr session, const boost::system::error_code &error )
 	{
 		if ( !error )
@@ -274,6 +341,14 @@ void SetupSignalHandlers()
 	sigHandler.sa_flags = 0;
 
 	sigaction( SIGTERM, &sigHandler, 0 );
+}
+
+void SetupPyExecIPC()
+{
+	namespace ipc = boost::interprocess;
+
+    python_server::sharedMemPool = new ipc::shared_memory_object( ipc::open_only, python_server::shmemName, ipc::read_only );
+	python_server::mappedRegion = new ipc::mapped_region( *python_server::sharedMemPool, ipc::read_only );
 }
 
 void AtExit()
@@ -325,12 +400,14 @@ int main( int argc, char* argv[], char **envp )
 		{
 			python_server::numThread = vm[ "num_thread" ].as<unsigned int>();
 		}
+
+		SetupPyExecIPC();
 		
 		// start accepting connections
 		boost::asio::io_service io_service;
 
 		python_server::ConnectionAcceptor acceptor( io_service, python_server::defaultPyExecPort );
-
+		std::cout << python_server::numThread << std::cout;
 		// create thread pool
 		boost::thread_group worker_threads;
 		for( unsigned int i = 0; i < python_server::numThread; ++i )
@@ -348,7 +425,7 @@ int main( int argc, char* argv[], char **envp )
 			sigset_t waitset;
 			int sig;
 			sigemptyset( &waitset );
-			sigaddset( &waitset, SIGINT );
+			sigaddset( &waitset, SIGTERM );
 			sigwait( &waitset, &sig );
 		}
 		else
