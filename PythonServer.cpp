@@ -141,6 +141,8 @@ public:
 
 		ThreadComm &threadComm = commParams[ boost::this_thread::get_id() ];
 		memcpy( threadComm.shmemAddr, requestStr.c_str(), requestStr.size() );
+		char *addr = threadComm.shmemAddr + requestStr.size();
+		*addr = '\0';
 
 		errCode_ = ret;
 	}
