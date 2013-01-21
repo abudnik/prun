@@ -137,9 +137,9 @@ public:
 		size_t offset = id * python_server::shmemBlockSize;
 		char *addr = (char*)python_server::mappedRegion->get_address() + offset;
 
-		PyCompilerFlags cf;
-		cf.cf_flags = -1; // ignore os._exit()
-	    errCode_ = PyRun_SimpleStringFlags( addr, &cf );
+		//PyCompilerFlags cf;
+		//cf.cf_flags = 0; // TODO: ignore os._exit(), sys.exit(), thread.exit(), etc.
+	    errCode_ = PyRun_SimpleStringFlags( addr, NULL );
 	}
 
 	virtual const std::string &GetResponse()
