@@ -492,7 +492,10 @@ void VerifyCommandlineParams()
 
 void SigHandler( int s )
 {
-	//exit(0);
+	if ( s == SIGTERM )
+	{
+		exit( 0 );
+	}
 }
 
 void SetupSignalHandlers()
@@ -519,6 +522,7 @@ void RunPyExecProcess()
 	if ( pid < 0 )
 	{
 		cout << "RunPyExecProcess: fork() failed: " << strerror(errno) << endl;
+		syslog( LOG_INFO | LOG_USER, "RunPyExecProcess: fork() failed: %s", strerror(errno) );
 		exit( pid );
 	}
 	else
@@ -527,12 +531,19 @@ void RunPyExecProcess()
 		std::string exePath( python_server::exeDir );
 		exePath += "/PyExec";
 
-		execl( exePath.c_str(), "./PyExec", "--num_thread",
-			   ( boost::lexical_cast<std::string>( python_server::numThread ) ).c_str(),
-			   python_server::isDaemon ? "--d" : " ",
-			   python_server::uid != 0 ? "--u" : " ",
-			   python_server::uid != 0 ? ( boost::lexical_cast<std::string>( python_server::uid ) ).c_str() : " ",
-			   NULL );
+		int ret = execl( exePath.c_str(), "./PyExec", "--num_thread",
+						 ( boost::lexical_cast<std::string>( python_server::numThread ) ).c_str(),
+						 python_server::isDaemon ? "--d" : " ",
+						 python_server::uid != 0 ? "--u" : " ",
+						 python_server::uid != 0 ? ( boost::lexical_cast<std::string>( python_server::uid ) ).c_str() : " ",
+						 NULL );
+
+		if ( ret < 0 )
+		{
+			std::cout << "RunPyExecProcess: execl failed: " << strerror(errno) << std::endl;
+			syslog( LOG_INFO | LOG_USER, "RunPyExecProcess: execl failed: %s", strerror(errno) );
+			kill( getppid(), SIGTERM );
+		}
 	}
 	else
 	if ( pid > 0 )
@@ -556,12 +567,21 @@ void SetupPyExecIPC()
 
 	ipc::shared_memory_object::remove( python_server::shmemName );
 
-    python_server::sharedMemPool = new ipc::shared_memory_object( ipc::create_only, python_server::shmemName, ipc::read_write );
+	try
+	{
+		python_server::sharedMemPool = new ipc::shared_memory_object( ipc::create_only, python_server::shmemName, ipc::read_write );
 
-	size_t shmemSize = python_server::numThread * python_server::shmemBlockSize;
-	python_server::sharedMemPool->truncate( shmemSize );
+		size_t shmemSize = python_server::numThread * python_server::shmemBlockSize;
+		python_server::sharedMemPool->truncate( shmemSize );
 
-	python_server::mappedRegion = new ipc::mapped_region( *python_server::sharedMemPool, ipc::read_write );
+		python_server::mappedRegion = new ipc::mapped_region( *python_server::sharedMemPool, ipc::read_write );
+	}
+	catch( std::exception &e )
+	{
+		syslog( LOG_INFO | LOG_USER, "SetupPyExecIPC failed" );
+		std::cout << "SetupPyExecIPC failed: " << e.what() << std::endl;
+		exit( 1 );
+	}
 }
 
 void AtExit()
@@ -607,9 +627,6 @@ void OnThreadCreate( const boost::thread *thread )
 // TODO: read directly to shmem, avoiding memory copying
 int main( int argc, char* argv[], char **envp )
 {
-	SetupSignalHandlers();
-	atexit( AtExit );
-
 	getcwd( python_server::exeDir, sizeof( python_server::exeDir ) );
 
 	try
@@ -662,6 +679,9 @@ int main( int argc, char* argv[], char **envp )
 		{
 			python_server::numThread = vm[ "num_thread" ].as<unsigned int>();
 		}
+
+		SetupSignalHandlers();
+		atexit( AtExit );
 
 		SetupPyExecIPC();
 		RunPyExecProcess();

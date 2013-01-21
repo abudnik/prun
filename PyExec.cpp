@@ -327,16 +327,19 @@ private:
 
 namespace {
 
-void SigTermHandler( int s )
+void SigHandler( int s )
 {
-	//exit(0);
+	if ( s == SIGTERM )
+	{
+		exit( 0 );
+	}
 }
 
 void SetupSignalHandlers()
 {
 	struct sigaction sigHandler;
 	memset( &sigHandler, 0, sizeof( sigHandler ) );
-	sigHandler.sa_handler = SigTermHandler;
+	sigHandler.sa_handler = SigHandler;
 	sigemptyset(&sigHandler.sa_mask);
 	sigHandler.sa_flags = 0;
 
@@ -351,8 +354,22 @@ void SetupPyExecIPC()
 	python_server::mappedRegion = new ipc::mapped_region( *python_server::sharedMemPool, ipc::read_only );
 }
 
+void Impersonate()
+{
+	if ( python_server::uid )
+	{
+		int ret = setuid( python_server::uid );
+		if ( ret < 0 )
+		{
+			syslog( LOG_INFO | LOG_USER, "PyExec daemon impersonate uid=%d failed : %s", python_server::uid, strerror(errno) );
+			exit( 1 );
+		}
+	}
+}
+
 void AtExit()
 {
+	kill( getppid(), SIGTERM );
 }
 
 } // anonymous namespace
@@ -388,7 +405,6 @@ int main( int argc, char* argv[], char **envp )
 		if ( vm.count( "u" ) )
 		{
 			python_server::uid = vm[ "u" ].as<uid_t>();
-			setuid( python_server::uid );
 		}
 
 		if ( vm.count( "d" ) )
@@ -419,6 +435,8 @@ int main( int argc, char* argv[], char **envp )
 
 		// signal parent process to say that PyExec has been initialized
 		kill( getppid(), SIGUSR1 );
+
+		Impersonate();
 
 		if ( !python_server::isDaemon )
 		{
