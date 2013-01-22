@@ -659,7 +659,7 @@ int main( int argc, char* argv[], char **envp )
 	try
 	{
 		// initialization
-	    python_server::numThread = 2;
+	    python_server::numThread = 2 * boost::thread::hardware_concurrency();
 		python_server::isDaemon = false;
 		python_server::uid = 0;
 
