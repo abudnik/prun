@@ -36,6 +36,7 @@ the License.
 #include <csignal>
 #include <cstdlib>
 #include "Common.h"
+#include "Log.h"
 
 
 using namespace std;
@@ -119,12 +120,12 @@ private:
 			}
 			catch( boost::bad_lexical_cast &e )
 			{
-				cout << "Reading request length failed: " << e.what() << endl;
+				PS_LOG( "Reading request length failed: " << e.what() );
 			}
 		}
 		else
 		{
-			cout << "Reading request length failed: new line not found" << endl;
+			PS_LOG( "Reading request length failed: new line not found" );
 		}
 
 		return offset;
@@ -228,7 +229,10 @@ public:
 		tcp::resolver::query query( tcp::v4(), "localhost", boost::lexical_cast<std::string>( python_server::defaultPyExecPort ) );
 		tcp::resolver::iterator iterator = resolver.resolve( query );
 		socket_.connect( *iterator, ec );
-		// TODO: log if ec
+		if ( ec.value() )
+		{
+			PS_LOG( "PyExecConnection: socket_.connect() failed " << ec.value() );
+		}
 
 		memset( buffer_.c_array(), 0, buffer_.size() );
 	}
@@ -259,7 +263,7 @@ public:
 		}
 		catch( boost::system::system_error &e )
 		{
-			cout << e.what() << endl;
+			PS_LOG( e.what() );
 			ret = -1;
 		}
 		
@@ -406,7 +410,7 @@ private:
 		}
 		else
 		{
-			cout << error.message() << endl;
+			PS_LOG( error.message() );
 		}
 	}
 
@@ -545,8 +549,7 @@ void RunPyExecProcess()
 
 	if ( pid < 0 )
 	{
-		cout << "RunPyExecProcess: fork() failed: " << strerror(errno) << endl;
-		syslog( LOG_INFO | LOG_USER, "RunPyExecProcess: fork() failed: %s", strerror(errno) );
+		PS_LOG( "RunPyExecProcess: fork() failed: " << strerror(errno) );
 		exit( pid );
 	}
 	else
@@ -564,8 +567,7 @@ void RunPyExecProcess()
 
 		if ( ret < 0 )
 		{
-			std::cout << "RunPyExecProcess: execl failed: " << strerror(errno) << std::endl;
-			syslog( LOG_INFO | LOG_USER, "RunPyExecProcess: execl failed: %s", strerror(errno) );
+			PS_LOG( "RunPyExecProcess: execl failed: " << strerror(errno) );
 			kill( getppid(), SIGTERM );
 		}
 	}
@@ -602,8 +604,7 @@ void SetupPyExecIPC()
 	}
 	catch( std::exception &e )
 	{
-		syslog( LOG_INFO | LOG_USER, "SetupPyExecIPC failed" );
-		std::cout << "SetupPyExecIPC failed: " << e.what() << std::endl;
+		PS_LOG( "SetupPyExecIPC failed: " << e.what() );
 		exit( 1 );
 	}
 }
@@ -629,6 +630,8 @@ void AtExit()
 		delete python_server::sharedMemPool;
 		python_server::sharedMemPool = NULL;
 	}
+
+	python_server::logger::ShutdownLogger();
 }
 
 void OnThreadCreate( const boost::thread *thread )
@@ -646,7 +649,7 @@ void OnThreadCreate( const boost::thread *thread )
 
 } // anonymous namespace
 
-// TODO: normal logging system
+// TODO: error code description
 // TODO: auto dependency generation in makefile
 // TODO: read directly to shmem, avoiding memory copying
 int main( int argc, char* argv[], char **envp )
@@ -704,6 +707,8 @@ int main( int argc, char* argv[], char **envp )
 			python_server::numThread = vm[ "num_thread" ].as<unsigned int>();
 		}
 
+		python_server::logger::InitLogger( python_server::isDaemon, "PythonServer" );
+
 		SetupSignalHandlers();
 		atexit( AtExit );
 
@@ -731,7 +736,7 @@ int main( int argc, char* argv[], char **envp )
 		}
 		else
 		{
-			syslog( LOG_INFO | LOG_USER, "PythonServer daemon started" );
+			PS_LOG( "started" );
 
 			sigset_t waitset;
 			int sig;
@@ -746,11 +751,10 @@ int main( int argc, char* argv[], char **envp )
 	catch( std::exception &e )
 	{
 		cout << e.what() << endl;
+		PS_LOG( e.what() );
 	}
 
-	if ( python_server::isDaemon )
-		syslog( LOG_INFO | LOG_USER, "PythonServer daemon stopped" );
+	PS_LOG( "stopped" );
 
-	cout << "done..." << endl;
 	return 0;
 }

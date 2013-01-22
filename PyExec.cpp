@@ -36,6 +36,7 @@ the License.
 #include <syslog.h>
 #include <csignal>
 #include "Common.h"
+#include "Log.h"
 
 
 using namespace std;
@@ -108,12 +109,12 @@ private:
 			}
 			catch( boost::bad_lexical_cast &e )
 			{
-				cout << "Reading request length failed: " << e.what() << endl;
+				PS_LOG( "Reading request length failed: " << e.what() );
 			}
 		}
 		else
 		{
-			cout << "Reading request length failed: new line not found" << endl;
+			PS_LOG( "Reading request length failed: new line not found" );
 		}
 
 		return offset;
@@ -337,6 +338,7 @@ private:
 		}
 		else
 		{
+			PS_LOG( error.message() );
 			cout << error.message() << endl;
 		}
 	}
@@ -385,7 +387,7 @@ void Impersonate()
 		int ret = setuid( python_server::uid );
 		if ( ret < 0 )
 		{
-			syslog( LOG_INFO | LOG_USER, "PyExec daemon impersonate uid=%d failed : %s", python_server::uid, strerror(errno) );
+			PS_LOG( "impersonate uid=" << python_server::uid << " failed : " << strerror(errno) );
 			exit( 1 );
 		}
 	}
@@ -394,6 +396,8 @@ void Impersonate()
 void AtExit()
 {
 	kill( getppid(), SIGTERM );
+
+	python_server::logger::ShutdownLogger();
 }
 
 } // anonymous namespace
@@ -441,13 +445,15 @@ int main( int argc, char* argv[], char **envp )
 			python_server::numThread = vm[ "num_thread" ].as<unsigned int>();
 		}
 
+		python_server::logger::InitLogger( python_server::isDaemon, "PyExec" );
+
 		SetupPyExecIPC();
 		
 		// start accepting connections
 		boost::asio::io_service io_service;
 
 		python_server::ConnectionAcceptor acceptor( io_service, python_server::defaultPyExecPort );
-		std::cout << python_server::numThread << std::cout;
+
 		// create thread pool
 		boost::thread_group worker_threads;
 		for( unsigned int i = 0; i < python_server::numThread; ++i )
@@ -472,7 +478,7 @@ int main( int argc, char* argv[], char **envp )
 		}
 		else
 		{
-			syslog( LOG_INFO | LOG_USER, "PyExec daemon started" );
+			PS_LOG( "started" );
 
 			sigset_t waitset;
 			int sig;
@@ -487,12 +493,12 @@ int main( int argc, char* argv[], char **envp )
 	catch( std::exception &e )
 	{
 		cout << e.what() << endl;
+		PS_LOG( e.what() );
 	}
 
 	Py_Finalize();
 
-	if ( python_server::isDaemon )
-		syslog( LOG_INFO | LOG_USER, "PyExec daemon stopped" );
+	PS_LOG( "stopped" );
 
 	return 0;
 }
