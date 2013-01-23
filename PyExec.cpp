@@ -191,7 +191,6 @@ public:
 
 		if ( python_server::forkMode && pid == 0 )
 		{
-			while(1);
 			exit( errCode_ );
 		}
 	}
