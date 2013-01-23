@@ -35,6 +35,7 @@ the License.
 #include <unistd.h>
 #include <csignal>
 #include <sys/wait.h>
+#include <sys/prctl.h>
 #include "Common.h"
 #include "Log.h"
 
@@ -190,6 +191,7 @@ public:
 
 		if ( python_server::forkMode && pid == 0 )
 		{
+			while(1);
 			exit( errCode_ );
 		}
 	}
@@ -216,6 +218,7 @@ public:
 		if ( pid == 0 )
 		{
 			python_server::isFork = true;
+			prctl( PR_SET_PDEATHSIG, SIGHUP );
 		}
 		else
 		{
@@ -433,6 +436,7 @@ void SigHandler( int s )
 			//PS_LOG( "SIGCHLD " << pid );
 			python_server::waitTableMut.lock();
 			boost::thread::id threadId = python_server::waitTable[ pid ];
+			python_server::waitTable.erase( pid );
 			python_server::waitTableMut.unlock();
 
 			python_server::ThreadParams &threadParams = python_server::threadInfo[ threadId ];
@@ -484,6 +488,27 @@ void AtExit()
 
 	kill( getppid(), SIGTERM );
 
+	// cleanup threads
+	python_server::ThreadInfo::iterator it;
+	for( it = python_server::threadInfo.begin();
+		 it != python_server::threadInfo.end();
+	   ++it )
+	{
+		python_server::ThreadParams &threadParams = it->second;
+
+		if ( threadParams.mut )
+		{
+			delete threadParams.mut;
+			threadParams.mut = NULL;
+		}
+
+		if ( threadParams.cond )
+		{
+			delete threadParams.cond;
+			threadParams.cond = NULL;
+		}
+	}
+
 	python_server::logger::ShutdownLogger();
 }
 
@@ -501,6 +526,19 @@ void OnThreadCreate( const boost::thread *thread )
 	++threadCnt;
 
 	python_server::threadInfo[ thread->get_id() ] = threadParams;
+}
+
+void AwakeThreads()
+{
+	python_server::ThreadInfo::iterator it;
+
+	for( it = python_server::threadInfo.begin();
+		 it != python_server::threadInfo.end();
+	   ++it )
+	{
+		python_server::ThreadParams &threadParams = it->second;
+		threadParams.cond->notify_all();
+	}
 }
 
 } // anonymous namespace
@@ -598,6 +636,8 @@ int main( int argc, char* argv[], char **envp )
 			sigaddset( &waitset, SIGTERM );
 			sigwait( &waitset, &sig );
 		}
+
+	    AwakeThreads();
 
 		io_service.stop();
 		worker_threads.join_all();
