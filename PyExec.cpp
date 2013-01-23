@@ -553,6 +553,18 @@ void AwakeThreads()
 	}
 }
 
+void ThreadFun( boost::asio::io_service *io_service )
+{
+	try
+	{
+		io_service->run();
+	}
+	catch( std::exception &e )
+	{
+		PS_LOG( e.what() );
+	}
+}
+
 } // anonymous namespace
 
 
@@ -620,7 +632,7 @@ int main( int argc, char* argv[], char **envp )
 		for( unsigned int i = 0; i < python_server::numThread; ++i )
 		{
 			boost::thread *thread = worker_threads.create_thread(
-				boost::bind( &boost::asio::io_service::run, &io_service )
+				boost::bind( &ThreadFun, &io_service )
 			);
 			OnThreadCreate( thread );
 		}
