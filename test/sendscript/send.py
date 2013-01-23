@@ -22,3 +22,5 @@ Send( msg, 2 )
 #code = open('endless.py', 'r').read()
 #msg = str(len(code)) + "\n" + code
 #Send( msg )
+
+print "done"

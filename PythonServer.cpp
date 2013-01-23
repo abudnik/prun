@@ -266,7 +266,7 @@ public:
 			PS_LOG( e.what() );
 			ret = -1;
 		}
-		
+
 		return ret;
 	}
 
@@ -319,6 +319,10 @@ protected:
 				return;
 			}
 		}
+		else
+		{
+			PS_LOG( "Session::FirstRead error=" << error.value() );
+		}
 
 		HandleRead( error, bytes_transferred );
 	}
@@ -343,6 +347,7 @@ protected:
 		}
 		else
 		{
+			PS_LOG( "Session::HandleRead error=" << error.value() );
 			//HandleError( error );
 		}
 	}
@@ -368,6 +373,10 @@ protected:
 
 	virtual void HandleWrite( const boost::system::error_code& error )
 	{
+		if ( error )
+		{
+			PS_LOG( "Session::HandleWrite error=" << error.value() );
+		}
 	}
 
 protected:

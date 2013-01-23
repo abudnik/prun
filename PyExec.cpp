@@ -313,6 +313,10 @@ protected:
 				return;
 			}
 		}
+		else
+		{
+			PS_LOG( "Session::FirstRead error=" << error.value() );
+		}
 
 		HandleRead( error, bytes_transferred );
 	}
@@ -337,6 +341,7 @@ protected:
 		}
 		else
 		{
+			PS_LOG( "Session::HandleRead error=" << error.value() );
 			//HandleError( error );
 		}
 	}
@@ -359,6 +364,10 @@ protected:
 
 	virtual void HandleWrite( const boost::system::error_code& error )
 	{
+		if ( error )
+		{
+			PS_LOG( "Session::HandleWrite error=" << error.value() );
+		}
 	}
 
 protected:
@@ -536,7 +545,11 @@ void AwakeThreads()
 	   ++it )
 	{
 		python_server::ThreadParams &threadParams = it->second;
-		threadParams.cond->notify_all();
+
+		if ( threadParams.cond )
+		{
+			threadParams.cond->notify_all();
+		}
 	}
 }
 
