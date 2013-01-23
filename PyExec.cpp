@@ -175,21 +175,21 @@ public:
 		int id = ptree_.get<int>( "id" );
 
 		pid_t pid = 0;
-		if ( python_server::forkMode )
+		if ( forkMode )
 		{
 			pid = DoFork();
 			if ( pid > 0 )
 				return;
 		}
 
-		size_t offset = id * python_server::shmemBlockSize;
-		char *addr = (char*)python_server::mappedRegion->get_address() + offset;
+		size_t offset = id * shmemBlockSize;
+		char *addr = (char*)mappedRegion->get_address() + offset;
 
 		//PyCompilerFlags cf;
 		//cf.cf_flags = 0; // TODO: ignore os._exit(), sys.exit(), thread.exit(), etc.
 	    errCode_ = PyRun_SimpleStringFlags( addr, NULL );
 
-		if ( python_server::forkMode && pid == 0 )
+		if ( forkMode && pid == 0 )
 		{
 			exit( errCode_ );
 		}
@@ -216,7 +216,7 @@ public:
 		else
 		if ( pid == 0 )
 		{
-			python_server::isFork = true;
+			isFork = true;
 			prctl( PR_SET_PDEATHSIG, SIGHUP );
 		}
 		else
