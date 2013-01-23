@@ -252,9 +252,9 @@ public:
 			boost::property_tree::write_json( ss, ptree_, false );
 			ss2 << ss.str().size() << '\n' << ss.str();
 
-		    socket_.send( boost::asio::buffer( ss2.str(), ss2.str().size() ) );
+		    socket_.send( boost::asio::buffer( ss2.str() ) );
 
-			socket_.receive( boost::asio::buffer( buffer_.c_array(), buffer_.size() ) );
+			socket_.receive( boost::asio::buffer( buffer_ ) );
 
 			ptree_.clear();
 			ss3 << buffer_.c_array();
