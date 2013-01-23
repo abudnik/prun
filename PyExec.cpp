@@ -33,8 +33,8 @@ the License.
 #include <boost/interprocess/mapped_region.hpp>
 #include <Python.h>
 #include <unistd.h>
-#include <syslog.h>
 #include <csignal>
+#include <sys/wait.h>
 #include "Common.h"
 #include "Log.h"
 
@@ -45,11 +45,27 @@ using boost::asio::ip::tcp;
 namespace python_server {
 
 bool isDaemon;
+bool forkMode;
+bool isFork;
 uid_t uid;
 unsigned int numThread;
 
 boost::interprocess::shared_memory_object *sharedMemPool;
 boost::interprocess::mapped_region *mappedRegion;
+
+struct ThreadParams
+{
+	boost::condition_variable *cond;
+	boost::mutex *mut;
+	pid_t childPid;
+	int errCode;
+};
+
+typedef std::map< boost::thread::id, ThreadParams > ThreadInfo;
+ThreadInfo threadInfo;
+
+boost::mutex waitTableMut;
+std::map< pid_t, boost::thread::id > waitTable;
 
 
 template< typename BufferT >
@@ -157,12 +173,56 @@ public:
 		boost::property_tree::read_json( ss, ptree_ );
 		int id = ptree_.get<int>( "id" );
 
+		pid_t pid = 0;
+		if ( python_server::forkMode )
+		{
+			pid = DoFork();
+			if ( pid > 0 )
+				return;
+		}
+
 		size_t offset = id * python_server::shmemBlockSize;
 		char *addr = (char*)python_server::mappedRegion->get_address() + offset;
 
 		//PyCompilerFlags cf;
 		//cf.cf_flags = 0; // TODO: ignore os._exit(), sys.exit(), thread.exit(), etc.
 	    errCode_ = PyRun_SimpleStringFlags( addr, NULL );
+
+		if ( python_server::forkMode && pid == 0 )
+		{
+			exit( errCode_ );
+		}
+	}
+
+	virtual pid_t DoFork()
+	{
+		pid_t pid;
+
+		pid = fork();
+		if ( pid > 0 )
+		{
+			waitTableMut.lock();
+			waitTable[ pid ] = boost::this_thread::get_id();
+			waitTableMut.unlock();
+
+			//PS_LOG( "wait child " << pid );
+			ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+			boost::unique_lock< boost::mutex > lock( *threadParams.mut );
+			threadParams.cond->wait( lock );
+		    errCode_ = threadParams.errCode;
+			//PS_LOG( "wait child done " << pid );
+		}
+		else
+		if ( pid == 0 )
+		{
+			python_server::isFork = true;
+		}
+		else
+		{
+			PS_LOG( "DoFork: fork() failed " << strerror(errno) );
+		}
+
+		return pid;
 	}
 
 	virtual const std::string &GetResponse()
@@ -359,6 +419,29 @@ void SigHandler( int s )
 	{
 		exit( 0 );
 	}
+
+	if ( s == SIGCHLD && python_server::forkMode )
+	{
+		// On Linux, multiple children terminating will be compressed into a single SIGCHLD
+		while( 1 )
+		{
+			int status;
+			pid_t pid = waitpid( -1, &status, WNOHANG );
+			if ( pid <= 0 )
+				break;
+
+			//PS_LOG( "SIGCHLD " << pid );
+			python_server::waitTableMut.lock();
+			boost::thread::id threadId = python_server::waitTable[ pid ];
+			python_server::waitTableMut.unlock();
+
+			python_server::ThreadParams &threadParams = python_server::threadInfo[ threadId ];
+			boost::unique_lock< boost::mutex > lock( *threadParams.mut );
+			threadParams.errCode = status;
+
+			threadParams.cond->notify_all();
+		}
+	}
 }
 
 void SetupSignalHandlers()
@@ -370,6 +453,7 @@ void SetupSignalHandlers()
 	sigHandler.sa_flags = 0;
 
 	sigaction( SIGTERM, &sigHandler, 0 );
+	sigaction( SIGCHLD, &sigHandler, 0 );
 }
 
 void SetupPyExecIPC()
@@ -395,9 +479,28 @@ void Impersonate()
 
 void AtExit()
 {
+	if ( python_server::isFork )
+		return;
+
 	kill( getppid(), SIGTERM );
 
 	python_server::logger::ShutdownLogger();
+}
+
+void OnThreadCreate( const boost::thread *thread )
+{
+	static int threadCnt = 0;
+
+	python_server::ThreadParams threadParams;
+	memset( &threadParams, 0, sizeof( threadParams ) );
+	if ( python_server::forkMode )
+	{
+		threadParams.cond = new boost::condition_variable();
+		threadParams.mut = new boost::mutex();
+	}
+	++threadCnt;
+
+	python_server::threadInfo[ thread->get_id() ] = threadParams;
 }
 
 } // anonymous namespace
@@ -414,6 +517,8 @@ int main( int argc, char* argv[], char **envp )
 	{
 		// initialization
 		python_server::isDaemon = false;
+		python_server::forkMode = false;
+		python_server::isFork = false;
 		python_server::uid = 0;
 
 		// parse input command line options
@@ -424,7 +529,8 @@ int main( int argc, char* argv[], char **envp )
 		descr.add_options()
 			("num_thread", po::value<unsigned int>(), "Thread pool size")
 			("d", "Run as a daemon")
-			("u", po::value<uid_t>(), "Start as a specific non-root user");
+			("u", po::value<uid_t>(), "Start as a specific non-root user")
+			("f", "Create process for each request");
 		
 		po::variables_map vm;
 		po::store( po::parse_command_line( argc, argv, descr ), vm );
@@ -438,6 +544,11 @@ int main( int argc, char* argv[], char **envp )
 		if ( vm.count( "d" ) )
 		{
 			python_server::isDaemon = true;
+		}
+
+		if ( vm.count( "f" ) )
+		{
+			python_server::forkMode = true;
 		}
 
 		if ( vm.count( "num_thread" ) )
@@ -458,9 +569,10 @@ int main( int argc, char* argv[], char **envp )
 		boost::thread_group worker_threads;
 		for( unsigned int i = 0; i < python_server::numThread; ++i )
 		{
-			worker_threads.create_thread(
+			boost::thread *thread = worker_threads.create_thread(
 				boost::bind( &boost::asio::io_service::run, &io_service )
 			);
+			OnThreadCreate( thread );
 		}
 
 		// signal parent process to say that PyExec has been initialized
