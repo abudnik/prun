@@ -20,6 +20,9 @@ the License.
 ===========================================================================
 */
 
+#include <syslog.h>
+
+
 #define PS_LOG( MSG )\
 {\
 	std::ostringstream os;\
@@ -33,11 +36,13 @@ namespace logger
 {
 
 bool isDaemon = false;
+const char *serviceName = "";
 
 
 void InitLogger( bool isDaemon, const char *serviceName )
 {
 	logger::isDaemon = isDaemon;
+	logger::serviceName = serviceName;
 
 	if ( isDaemon )
 	{
@@ -61,7 +66,7 @@ void Log( const char *msg )
 	}
 	else
 	{
-		std::cout << msg << std::endl;
+		std::cout << serviceName << ": " <<  msg << std::endl;
 	}
 }
 
