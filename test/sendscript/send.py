@@ -13,7 +13,7 @@ def Send(msg, times):
 
 code = open('example.py', 'r').read()
 msg = str(len(code)) + "\n" + code
-Send( msg, 2 )
+Send( msg, 20000 )
 
 code = open('simple.py', 'r').read()
 msg = str(len(code)) + "\n" + code
