@@ -359,10 +359,11 @@ protected:
 		boost::asio::async_write( socket_,
 								boost::asio::buffer( response ),
 	   							boost::bind( &Session::HandleWrite, shared_from_this(),
-								boost::asio::placeholders::error ) );
+											 boost::asio::placeholders::error,
+											 boost::asio::placeholders::bytes_transferred ) );
 	}
 
-	virtual void HandleWrite( const boost::system::error_code& error )
+	virtual void HandleWrite( const boost::system::error_code& error, size_t bytes_transferred )
 	{
 		if ( error )
 		{
@@ -385,8 +386,21 @@ class ConnectionAcceptor
 public:
 	ConnectionAcceptor( boost::asio::io_service &io_service, unsigned short port )
 	: io_service_( io_service ),
-	  acceptor_( io_service, tcp::endpoint( tcp::v4(), port ) )
+	  acceptor_( io_service )
 	{
+		try
+		{
+			boost::asio::ip::tcp::endpoint endpoint( tcp::v4(), port );
+			acceptor_.open( endpoint.protocol() );
+			acceptor_.set_option( boost::asio::ip::tcp::acceptor::reuse_address( true ) );
+			acceptor_.bind( tcp::endpoint( tcp::v4(), port ) );
+			acceptor_.listen();
+		}
+		catch( std::exception &e )
+		{
+			PS_LOG( "ConnectionAcceptor: " << e.what() );
+		}
+
 		StartAccept();
 	}
 

@@ -215,9 +215,12 @@ public:
 	}
 };
 
-class PyExecConnection
+class PyExecConnection : public boost::enable_shared_from_this< PyExecConnection >
 {
 	typedef boost::array< char, 1024 > BufferType;
+
+public:
+	typedef boost::shared_ptr< PyExecConnection > connection_ptr;
 
 public:
 	PyExecConnection( boost::asio::io_service &io_service )
@@ -244,7 +247,7 @@ public:
 
 		try
 		{
-			std::stringstream ss, ss2, ss3;
+			std::stringstream ss, ss2;
 
 			ThreadComm &threadComm = commParams[ boost::this_thread::get_id() ];
 			ptree_.put( "id", threadComm.shmemBlock );
@@ -253,14 +256,16 @@ public:
 			
 			ss2 << ss.str().size() << '\n' << ss.str();
 
-			socket_.send( boost::asio::buffer( ss2.str() ) );
+			boost::asio::async_write( socket_,
+									  boost::asio::buffer( ss2.str() ),
+									  boost::bind( &PyExecConnection::HandleWrite, shared_from_this(),
+												   boost::asio::placeholders::error,
+												   boost::asio::placeholders::bytes_transferred ) );
 
-			socket_.receive( boost::asio::buffer( buffer_ ) );
+			boost::unique_lock< boost::mutex > lock( mut );
+		    cond.wait( lock );
 
-			ptree_.clear();
-			ss3 << buffer_.c_array();
-			boost::property_tree::read_json( ss3, ptree_ );
-			ret = ptree_.get<int>( "err" );
+			ret = errCode_;
 		}
 		catch( boost::system::system_error &e )
 		{
@@ -271,10 +276,47 @@ public:
 		return ret;
 	}
 
+	virtual void HandleWrite( const boost::system::error_code& error, size_t bytes_transferred )
+	{
+		if ( error )
+		{
+			PS_LOG( "PyExecConnection::HandleWrite error=" << error.value() );
+		}
+		else
+		{
+			socket_.async_read_some( boost::asio::buffer( buffer_ ),
+									 boost::bind( &PyExecConnection::HandleRead, shared_from_this(),
+												  boost::asio::placeholders::error,
+												  boost::asio::placeholders::bytes_transferred ) );
+		}
+	}
+
+	virtual void HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
+	{
+		if ( error )
+		{
+			PS_LOG( "PyExecConnection::HandleRead error=" << error.value() );
+		}
+		else
+		{
+			std::stringstream ss;
+			ptree_.clear();
+			ss << buffer_.c_array();
+		    boost::property_tree::read_json( ss, ptree_ );
+			errCode_ = ptree_.get<int>( "err" );
+		}
+
+		boost::unique_lock< boost::mutex > lock( mut );
+		cond.notify_all();
+	}
+
 protected:
 	boost::property_tree::ptree ptree_;
 	tcp::socket socket_;
 	BufferType buffer_;
+	boost::condition_variable cond;
+	boost::mutex mut;
+	int errCode_;
 };
 
 class Session : public boost::enable_shared_from_this< Session >
@@ -356,8 +398,8 @@ protected:
 	virtual void HandleRequest()
 	{
 		action_.HandleRequest( request_ );
-		PyExecConnection pyExecConnection( io_service_ );
-		int ret = pyExecConnection.Send( request_ );
+		PyExecConnection::connection_ptr pyExecConnection( new PyExecConnection( io_service_ ) );
+		int ret = pyExecConnection->Send( request_ );
 		action_.OnError( ret );
 		WriteResponse();
 	}
@@ -396,8 +438,21 @@ class ConnectionAcceptor
 public:
 	ConnectionAcceptor( boost::asio::io_service &io_service, unsigned short port )
 	: io_service_( io_service ),
-	  acceptor_( io_service, tcp::endpoint( tcp::v4(), port ) )
+	  acceptor_( io_service )
 	{
+		try
+		{
+			boost::asio::ip::tcp::endpoint endpoint( tcp::v4(), port );
+			acceptor_.open( endpoint.protocol() );
+			acceptor_.set_option( boost::asio::ip::tcp::acceptor::reuse_address( true ) );
+			acceptor_.bind( tcp::endpoint( tcp::v4(), port ) );
+			acceptor_.listen();
+		}
+		catch( std::exception &e )
+		{
+			PS_LOG( "ConnectionAcceptor: " << e.what() );
+		}
+
 		StartAccept();
 	}
 
