@@ -390,9 +390,10 @@ public:
 	{
 		try
 		{
-			boost::asio::ip::tcp::endpoint endpoint( tcp::v4(), port );
+		    tcp::endpoint endpoint( tcp::v4(), port );
 			acceptor_.open( endpoint.protocol() );
-			acceptor_.set_option( boost::asio::ip::tcp::acceptor::reuse_address( true ) );
+			acceptor_.set_option( tcp::acceptor::reuse_address( true ) );
+			acceptor_.set_option( tcp::no_delay( true ) );
 			acceptor_.bind( tcp::endpoint( tcp::v4(), port ) );
 			acceptor_.listen();
 		}

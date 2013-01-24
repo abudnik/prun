@@ -324,7 +324,7 @@ protected:
 	boost::condition_variable cond;
 	boost::mutex mut;
 	int errCode_;
-	const int responseTimeout = 10 * 1000; // 10 sec
+	const static int responseTimeout = 10 * 1000; // 10 sec
 };
 
 class Session : public boost::enable_shared_from_this< Session >
@@ -450,9 +450,10 @@ public:
 	{
 		try
 		{
-			boost::asio::ip::tcp::endpoint endpoint( tcp::v4(), port );
+		    tcp::endpoint endpoint( tcp::v4(), port );
 			acceptor_.open( endpoint.protocol() );
-			acceptor_.set_option( boost::asio::ip::tcp::acceptor::reuse_address( true ) );
+			acceptor_.set_option( tcp::acceptor::reuse_address( true ) );
+			acceptor_.set_option( tcp::no_delay( true ) );
 			acceptor_.bind( tcp::endpoint( tcp::v4(), port ) );
 			acceptor_.listen();
 		}
