@@ -274,7 +274,7 @@ public:
 
 class Session : public boost::enable_shared_from_this< Session >
 {
-	typedef boost::array< char, 8 * 1024 > BufferType;
+	typedef boost::array< char, 1024 > BufferType;
 
 public:
 	Session( boost::asio::io_service &io_service )
@@ -284,7 +284,7 @@ public:
 
 	virtual ~Session()
 	{
-		cout << "~Session()" << endl;
+		cout << "E: ~Session()" << endl;
 	}
 
 	virtual void Start()
@@ -409,8 +409,7 @@ private:
 		}
 		else
 		{
-			PS_LOG( error.message() );
-			cout << error.message() << endl;
+			PS_LOG( "HandleAccept: " << error.message() );
 		}
 	}
 
@@ -561,7 +560,7 @@ void ThreadFun( boost::asio::io_service *io_service )
 	}
 	catch( std::exception &e )
 	{
-		PS_LOG( e.what() );
+		PS_LOG( "ThreadFun: " << e.what() );
 	}
 }
 

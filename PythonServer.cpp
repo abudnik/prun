@@ -246,13 +246,14 @@ public:
 		{
 			std::stringstream ss, ss2, ss3;
 
-		    ThreadComm &threadComm = commParams[ boost::this_thread::get_id() ];
+			ThreadComm &threadComm = commParams[ boost::this_thread::get_id() ];
 			ptree_.put( "id", threadComm.shmemBlock );
 
 			boost::property_tree::write_json( ss, ptree_, false );
+			
 			ss2 << ss.str().size() << '\n' << ss.str();
 
-		    socket_.send( boost::asio::buffer( ss2.str() ) );
+			socket_.send( boost::asio::buffer( ss2.str() ) );
 
 			socket_.receive( boost::asio::buffer( buffer_ ) );
 
@@ -263,7 +264,7 @@ public:
 		}
 		catch( boost::system::system_error &e )
 		{
-			PS_LOG( e.what() );
+			PS_LOG( "PyExecConnection::Send() failed: " << e.what() );
 			ret = -1;
 		}
 
@@ -290,7 +291,7 @@ public:
 
 	virtual ~Session()
 	{
-		cout << "~Session()" << endl;
+		cout << "S: ~Session()" << endl;
 	}
 
 	virtual void Start()
@@ -419,7 +420,7 @@ private:
 		}
 		else
 		{
-			PS_LOG( error.message() );
+			PS_LOG( "HandleAccept: " << error.message() );
 		}
 	}
 
@@ -665,7 +666,7 @@ void ThreadFun( boost::asio::io_service *io_service )
 	}
 	catch( std::exception &e )
 	{
-		PS_LOG( e.what() );
+		PS_LOG( "ThreadFun: " << e.what() );
 	}
 }
 
