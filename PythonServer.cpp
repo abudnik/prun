@@ -262,10 +262,17 @@ public:
 												   boost::asio::placeholders::error,
 												   boost::asio::placeholders::bytes_transferred ) );
 
-			boost::unique_lock< boost::mutex > lock( mut );
-		    cond.wait( lock );
+			const boost::system_time timeout = boost::get_system_time() + boost::posix_time::milliseconds( responseTimeout );
 
-			ret = errCode_;
+			boost::unique_lock< boost::mutex > lock( mut );
+		    if ( cond.timed_wait( lock, timeout ) )
+			{
+				ret = errCode_;
+			}
+			else
+			{
+				ret = -1;
+			}
 		}
 		catch( boost::system::system_error &e )
 		{
@@ -317,6 +324,7 @@ protected:
 	boost::condition_variable cond;
 	boost::mutex mut;
 	int errCode_;
+	const int responseTimeout = 10 * 1000; // 10 sec
 };
 
 class Session : public boost::enable_shared_from_this< Session >
