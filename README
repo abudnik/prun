@@ -5,22 +5,29 @@ Tiny server for python script execution.
 == Overview ==
 
 After building program using GNU Make utility, two files are created:
-1. PythonServer - python script execution server.
-2. PythonSender - program for sending python files to PythonServer for execution.
+1. PythonServer - python script connection manager.
+2. PyExec       - python script execution server.
+3. PythonSender - program for sending python files to PythonServer for execution.
 
 == Usage example ==
 
 1. Start python server in shell:
 	cd ~/PythonServer
-	./PythonServer --num_thread 5
+	./PythonServer
 
    or start python server as a daemon:
-	./PythonServer --num_thread 5 --d
+	./PythonServer --d
 
    and stop PythonServer daemon:
 	./PythonServer --stop
 
-2. Send python script from file "example.py":
+   start python server as a daemon with root privileges, while PyExec will be running with user (uid=1000) privileges:
+	sudo ./PythonServer --d --u 1000
+
+   start python server in fork mode: every python script will be executed as a separate process (forked):
+	./PythonServer --f
+
+2. Send python script "example.py":
 	cd ~/PythonServer
 	./PythonSender localhost 5555 example.py
 
