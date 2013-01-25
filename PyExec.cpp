@@ -354,10 +354,10 @@ protected:
 
 	virtual void WriteResponse()
 	{
-		const std::string &response = action_.GetResponse();
+	    response_ = action_.GetResponse();
 
 		boost::asio::async_write( socket_,
-								boost::asio::buffer( response ),
+								boost::asio::buffer( response_ ),
 	   							boost::bind( &Session::HandleWrite, shared_from_this(),
 											 boost::asio::placeholders::error,
 											 boost::asio::placeholders::bytes_transferred ) );
@@ -376,6 +376,7 @@ protected:
 	BufferType buffer_;
 	Request< BufferType > request_;
 	Action< ExecutePython > action_;
+	std::string response_;
 };
 
 
