@@ -16,15 +16,17 @@ LIBS := -lboost_system -lboost_thread-mt -lboost_program_options -lboost_filesys
 LIB_PATH := /usr/lib
 
 objdir := objs
+depdir := deps
 OUT := PythonServer PyExec PythonSender
 OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(OUT)))
+DEPENDS := $(addprefix $(depdir)/, $(addsuffix .d, $(OUT)))
 
-all: installdirs $(OUT)
+all: installdirs $(DEPENDS) $(OUT)
 
 debug: all
 
 installdirs:
-	mkdir -p $(objdir)
+	mkdir -p $(objdir) $(depdir)
 
 $(OUT): $(OBJS)
 	$(eval main_obj= $(addprefix $(objdir)/, $(addsuffix .o, $@)))
@@ -34,8 +36,15 @@ $(objdir)/%.o: %.cpp
 	@echo Compiling $<
 	$(CC) $(INCLUDE_PATH) $(CFLAGS) -c $< -o $@
 
+$(depdir)/%.d: %.cpp
+	$(CC) -MM $< > $@
+	@sed -i "s/^/$(objdir)\//" $@
+	@cat $@ >> $(depdir)/.depend
+
+-include $(depdir)/.depend
+
 clean:
-	$(RM) $(OUT) $(objdir)
+	$(RM) $(OUT) $(objdir) $(depdir)
 
 
 .PHONY: all clean installdirs debug

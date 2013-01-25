@@ -414,10 +414,10 @@ protected:
 
 	virtual void WriteResponse()
 	{
-		const std::string &response = action_.GetResponse();
+	    response_ = action_.GetResponse();
 
 		boost::asio::async_write( socket_,
-								boost::asio::buffer( response ),
+								boost::asio::buffer( response_ ),
 	   							boost::bind( &Session::HandleWrite, shared_from_this(),
 								boost::asio::placeholders::error ) );
 	}
@@ -435,6 +435,7 @@ protected:
 	BufferType buffer_;
 	Request< BufferType > request_;
 	Action< SendToPyExec > action_;
+	std::string response_;
 	boost::asio::io_service &io_service_;
 };
 
@@ -737,7 +738,6 @@ void ThreadFun( boost::asio::io_service *io_service )
 } // anonymous namespace
 
 // TODO: error code description
-// TODO: auto dependency generation in makefile
 // TODO: read directly to shmem, avoiding memory copying
 int main( int argc, char* argv[], char **envp )
 {
