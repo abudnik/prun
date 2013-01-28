@@ -1,6 +1,6 @@
 CC := g++
-RFLAGS := -Wall -pedantic -O3
-DFLAGS := -Wall -pedantic -g
+RFLAGS := -Wall -pedantic -pthread -O3
+DFLAGS := -Wall -pedantic -pthread -g
 
 ifneq ($(MAKECMDGOALS),debug)
 	CFLAGS := $(RFLAGS)
@@ -12,7 +12,7 @@ INCLUDE_PATH := -I/usr/include/boost -I/usr/include/python2.7
 
 RM := rm -rf
 
-LIBS := -lboost_system -lboost_thread-mt -lboost_program_options -lboost_filesystem -lpython2.7 -lpthread -lrt
+LIBS := -lboost_system -lboost_thread-mt -lboost_program_options -lboost_filesystem -lpython2.7 -pthread -lrt
 LIB_PATH := /usr/lib
 
 objdir := objs
