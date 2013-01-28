@@ -108,6 +108,12 @@ public:
 		return requestLength_;
 	}
 
+	void Reset()
+	{
+		request_.clear();
+		requestLength_ = bytesRead_ = headerOffset_ = 0;
+	}
+
 private:
 	int ParseRequestHeader( BufferT &buf, size_t bytes_transferred  )
 	{
@@ -289,6 +295,7 @@ public:
 
 	virtual void Start()
 	{
+	    memset( buffer_.c_array(), 0, buffer_.size() );
 		socket_.async_read_some( boost::asio::buffer( buffer_ ),
 								 boost::bind( &Session::FirstRead, shared_from_this(),
 											boost::asio::placeholders::error,
@@ -365,7 +372,12 @@ protected:
 
 	virtual void HandleWrite( const boost::system::error_code& error, size_t bytes_transferred )
 	{
-		if ( error )
+		if ( !error )
+		{
+			request_.Reset();
+			Start();
+		}
+		else
 		{
 			PS_LOG( "Session::HandleWrite error=" << error.value() );
 		}
@@ -487,8 +499,16 @@ void SetupPyExecIPC()
 {
 	namespace ipc = boost::interprocess;
 
-    python_server::sharedMemPool = new ipc::shared_memory_object( ipc::open_only, python_server::shmemName, ipc::read_only );
-	python_server::mappedRegion = new ipc::mapped_region( *python_server::sharedMemPool, ipc::read_only );
+	try
+	{
+		python_server::sharedMemPool = new ipc::shared_memory_object( ipc::open_only, python_server::shmemName, ipc::read_only );
+		python_server::mappedRegion = new ipc::mapped_region( *python_server::sharedMemPool, ipc::read_only );
+	}
+	catch( std::exception &e )
+	{
+		PS_LOG( "SetupPyExecIPC failed: " << e.what() );
+		exit( 1 );
+	}
 }
 
 void Impersonate()

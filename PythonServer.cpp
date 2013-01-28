@@ -57,6 +57,7 @@ struct ThreadComm
 {
 	int shmemBlock;
 	char *shmemAddr;
+	tcp::socket *socket;
 };
 
 typedef std::map< boost::thread::id, ThreadComm > CommParams;
@@ -224,19 +225,8 @@ public:
 
 public:
 	PyExecConnection( boost::asio::io_service &io_service )
-	: socket_( io_service )
 	{
-		boost::system::error_code ec;
-
-		tcp::resolver resolver( io_service );
-		tcp::resolver::query query( tcp::v4(), "localhost", boost::lexical_cast<std::string>( python_server::defaultPyExecPort ) );
-		tcp::resolver::iterator iterator = resolver.resolve( query );
-		socket_.connect( *iterator, ec );
-		if ( ec.value() )
-		{
-			PS_LOG( "PyExecConnection: socket_.connect() failed " << ec.value() );
-		}
-
+		socket_ = commParams[ boost::this_thread::get_id() ].socket;
 		memset( buffer_.c_array(), 0, buffer_.size() );
 	}
 
@@ -256,7 +246,7 @@ public:
 			
 			ss2 << ss.str().size() << '\n' << ss.str();
 
-			boost::asio::async_write( socket_,
+			boost::asio::async_write( *socket_,
 									  boost::asio::buffer( ss2.str() ),
 									  boost::bind( &PyExecConnection::HandleWrite, shared_from_this(),
 												   boost::asio::placeholders::error,
@@ -291,7 +281,7 @@ public:
 		}
 		else
 		{
-			socket_.async_read_some( boost::asio::buffer( buffer_ ),
+			socket_->async_read_some( boost::asio::buffer( buffer_ ),
 									 boost::bind( &PyExecConnection::HandleRead, shared_from_this(),
 												  boost::asio::placeholders::error,
 												  boost::asio::placeholders::bytes_transferred ) );
@@ -319,7 +309,7 @@ public:
 
 protected:
 	boost::property_tree::ptree ptree_;
-	tcp::socket socket_;
+	tcp::socket *socket_;
 	BufferType buffer_;
 	boost::condition_variable cond;
 	boost::mutex mut;
@@ -692,6 +682,21 @@ void AtExit()
     // send stop signal to PyExec proccess
 	kill( python_server::pyexecPid, SIGTERM );
 
+	// cleanup threads
+	python_server::CommParams::iterator it;
+	for( it = python_server::commParams.begin();
+		 it != python_server::commParams.end();
+	   ++it )
+	{
+		python_server::ThreadComm &threadComm = it->second;
+
+		if ( threadComm.socket )
+		{
+			delete threadComm.socket;
+			threadComm.socket = NULL;
+		}
+	}
+
 	// remove shared memory
 	ipc::shared_memory_object::remove( python_server::shmemName );
 
@@ -710,7 +715,7 @@ void AtExit()
 	python_server::logger::ShutdownLogger();
 }
 
-void OnThreadCreate( const boost::thread *thread )
+void OnThreadCreate( const boost::thread *thread, boost::asio::io_service *io_service )
 {
 	static int commCnt = 0;
 
@@ -718,6 +723,21 @@ void OnThreadCreate( const boost::thread *thread )
 	threadComm.shmemBlock = commCnt;
 	threadComm.shmemAddr = (char*)python_server::mappedRegion->get_address() + commCnt * python_server::shmemBlockSize;
 	memset( threadComm.shmemAddr, 0, python_server::shmemBlockSize );
+
+	boost::system::error_code ec;
+
+	tcp::resolver resolver( *io_service );
+	tcp::resolver::query query( tcp::v4(), "localhost", boost::lexical_cast<std::string>( python_server::defaultPyExecPort ) );
+	tcp::resolver::iterator iterator = resolver.resolve( query );
+
+	threadComm.socket = new tcp::socket( *io_service );
+	threadComm.socket->connect( *iterator, ec );
+	if ( ec.value() )
+	{
+		PS_LOG( "OnThreadCreate: socket_.connect() failed " << ec.value() );
+		exit( 1 );
+	}
+
 	++commCnt;
 
 	python_server::commParams[ thread->get_id() ] = threadComm;
@@ -821,7 +841,7 @@ int main( int argc, char* argv[], char **envp )
 			boost::thread *thread = worker_threads.create_thread(
 				boost::bind( &ThreadFun, &io_service )
 			);
-			OnThreadCreate( thread );
+			OnThreadCreate( thread, &io_service );
 		}
 
 		if ( !python_server::isDaemon )
