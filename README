@@ -4,8 +4,8 @@ Tiny server for python script execution.
 
 == Overview ==
 
-After building program using GNU Make utility, two files are created:
-1. PythonServer - python script connection manager.
+After building program using Make utility, further executables are generated:
+1. PythonServer - connection manager.
 2. PyExec       - python script execution server.
 3. PythonSender - program for sending python files to PythonServer for execution.
 
