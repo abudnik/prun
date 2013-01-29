@@ -682,21 +682,6 @@ void AtExit()
     // send stop signal to PyExec proccess
 	kill( python_server::pyexecPid, SIGTERM );
 
-	// cleanup threads
-	python_server::CommParams::iterator it;
-	for( it = python_server::commParams.begin();
-		 it != python_server::commParams.end();
-	   ++it )
-	{
-		python_server::ThreadComm &threadComm = it->second;
-
-		if ( threadComm.socket )
-		{
-			delete threadComm.socket;
-			threadComm.socket = NULL;
-		}
-	}
-
 	// remove shared memory
 	ipc::shared_memory_object::remove( python_server::shmemName );
 
@@ -741,6 +726,23 @@ void OnThreadCreate( const boost::thread *thread, boost::asio::io_service *io_se
 	++commCnt;
 
 	python_server::commParams[ thread->get_id() ] = threadComm;
+}
+
+void CleanupThreads()
+{
+	python_server::CommParams::iterator it;
+	for( it = python_server::commParams.begin();
+		 it != python_server::commParams.end();
+	   ++it )
+	{
+		python_server::ThreadComm &threadComm = it->second;
+
+		if ( threadComm.socket )
+		{
+			delete threadComm.socket;
+			threadComm.socket = NULL;
+		}
+	}
 }
 
 void ThreadFun( boost::asio::io_service *io_service )
@@ -861,6 +863,8 @@ int main( int argc, char* argv[], char **envp )
 
 		io_service.stop();
 		worker_threads.join_all();
+
+		CleanupThreads();
 	}
 	catch( std::exception &e )
 	{
