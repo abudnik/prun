@@ -246,6 +246,13 @@ public:
 			
 			ss2 << ss.str().size() << '\n' << ss.str();
 
+			socket_->async_read_some( boost::asio::buffer( buffer_ ),
+									 boost::bind( &PyExecConnection::HandleRead, shared_from_this(),
+												  boost::asio::placeholders::error,
+												  boost::asio::placeholders::bytes_transferred ) );
+
+			boost::unique_lock< boost::mutex > lock( mut );
+
 			boost::asio::async_write( *socket_,
 									  boost::asio::buffer( ss2.str() ),
 									  boost::bind( &PyExecConnection::HandleWrite, shared_from_this(),
@@ -254,13 +261,13 @@ public:
 
 			const boost::system_time timeout = boost::get_system_time() + boost::posix_time::milliseconds( responseTimeout );
 
-			boost::unique_lock< boost::mutex > lock( mut );
 		    if ( cond.timed_wait( lock, timeout ) )
 			{
 				ret = errCode_;
 			}
 			else
 			{
+				PS_LOG( "PyExecConnection::Send(): timed out" );
 				ret = -1;
 			}
 		}
@@ -278,13 +285,6 @@ public:
 		if ( error )
 		{
 			PS_LOG( "PyExecConnection::HandleWrite error=" << error.value() );
-		}
-		else
-		{
-			socket_->async_read_some( boost::asio::buffer( buffer_ ),
-									 boost::bind( &PyExecConnection::HandleRead, shared_from_this(),
-												  boost::asio::placeholders::error,
-												  boost::asio::placeholders::bytes_transferred ) );
 		}
 	}
 
