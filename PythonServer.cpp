@@ -63,6 +63,9 @@ struct ThreadComm
 typedef std::map< boost::thread::id, ThreadComm > CommParams;
 CommParams commParams;
 
+boost::mutex *rParserMut;
+boost::mutex *wParserMut;
+
 
 template< typename BufferT >
 class Request
@@ -242,7 +245,9 @@ public:
 			ThreadComm &threadComm = commParams[ boost::this_thread::get_id() ];
 			ptree_.put( "id", threadComm.shmemBlock );
 
+			wParserMut->lock();
 			boost::property_tree::write_json( ss, ptree_, false );
+			wParserMut->unlock();
 			
 			ss2 << ss.str().size() << '\n' << ss.str();
 
@@ -299,7 +304,10 @@ public:
 			std::stringstream ss;
 			ptree_.clear();
 			ss << buffer_.c_array();
+
+			rParserMut->lock();
 		    boost::property_tree::read_json( ss, ptree_ );
+			rParserMut->unlock();
 			errCode_ = ptree_.get<int>( "err" );
 		}
 
@@ -697,6 +705,18 @@ void AtExit()
 		python_server::sharedMemPool = NULL;
 	}
 
+	if ( python_server::rParserMut )
+	{
+		delete python_server::rParserMut;
+		python_server::rParserMut = NULL;
+	}
+
+	if ( python_server::wParserMut )
+	{
+		delete python_server::wParserMut;
+		python_server::wParserMut = NULL;
+	}
+
 	python_server::logger::ShutdownLogger();
 }
 
@@ -835,6 +855,9 @@ int main( int argc, char* argv[], char **envp )
 		boost::asio::io_service io_service;
 
 		python_server::ConnectionAcceptor acceptor( io_service, python_server::defaultPort );
+
+		python_server::rParserMut = new boost::mutex();
+		python_server::wParserMut = new boost::mutex();
 
 		// create thread pool
 		boost::thread_group worker_threads;

@@ -70,6 +70,9 @@ ThreadInfo threadInfo;
 boost::mutex *waitTableMut;
 std::map< pid_t, boost::thread::id > waitTable;
 
+boost::mutex *rParserMut;
+boost::mutex *wParserMut;
+
 
 template< typename BufferT >
 class Request
@@ -179,7 +182,9 @@ public:
 		std::stringstream ss;
 		ss << requestStr;
 
+		rParserMut->lock();
 		boost::property_tree::read_json( ss, ptree_ );
+		rParserMut->unlock();
 		int id = ptree_.get<int>( "id" );
 
 		pid_t pid = 0;
@@ -230,6 +235,7 @@ public:
 		{
 			isFork = true;
 			prctl( PR_SET_PDEATHSIG, SIGHUP );
+			PyOS_AfterFork();
 		}
 		else
 		{
@@ -247,7 +253,9 @@ public:
 		// TODO: full error code description
 		ptree_.put( "err", errCode_ );
 
+		wParserMut->lock();
 		boost::property_tree::write_json( ss, ptree_, false );
+		wParserMut->unlock();
 		response_ = ss.str();
 		return response_;
 	}
@@ -363,6 +371,10 @@ protected:
 	virtual void HandleRequest()
 	{
 		action_.HandleRequest( request_ );
+
+		request_.Reset();
+		Start();
+
 		WriteResponse();
 	}
 
@@ -379,12 +391,7 @@ protected:
 
 	virtual void HandleWrite( const boost::system::error_code& error, size_t bytes_transferred )
 	{
-		if ( !error )
-		{
-			request_.Reset();
-			Start();
-		}
-		else
+		if ( error )
 		{
 			PS_LOG( "Session::HandleWrite error=" << error.value() );
 		}
@@ -576,6 +583,18 @@ void AtExit()
 		python_server::waitTableMut = NULL;
 	}
 
+	if ( python_server::rParserMut )
+	{
+		delete python_server::rParserMut;
+		python_server::rParserMut = NULL;
+	}
+
+	if ( python_server::wParserMut )
+	{
+		delete python_server::wParserMut;
+		python_server::wParserMut = NULL;
+	}
+
 	python_server::logger::ShutdownLogger();
 }
 
@@ -632,6 +651,7 @@ int main( int argc, char* argv[], char **envp )
 	SetupSignalHandlers();
 	atexit( AtExit );
 
+	PyEval_InitThreads();
 	Py_Initialize();
 
 	try
@@ -687,6 +707,8 @@ int main( int argc, char* argv[], char **envp )
 		python_server::ConnectionAcceptor acceptor( io_service, python_server::defaultPyExecPort );
 
 		python_server::waitTableMut = new boost::mutex();
+		python_server::rParserMut = new boost::mutex();
+		python_server::wParserMut = new boost::mutex();
 
 		// create thread pool
 		boost::thread_group worker_threads;
