@@ -51,6 +51,7 @@ bool isFork;
 uid_t uid;
 unsigned int numThread;
 
+boost::asio::io_service *io_service;
 boost::asio::io_service *io_service_sighandler; // for sigchild use only
 
 boost::interprocess::shared_memory_object *sharedMemPool;
@@ -60,15 +61,13 @@ struct ThreadParams
 {
 	boost::condition_variable *cond;
 	boost::mutex *mut;
+	pid_t pid;
 	pid_t childPid;
 	int errCode;
 };
 
 typedef std::map< boost::thread::id, ThreadParams > ThreadInfo;
 ThreadInfo threadInfo;
-
-boost::mutex *waitTableMut;
-std::map< pid_t, boost::thread::id > waitTable;
 
 boost::mutex *rParserMut;
 boost::mutex *wParserMut;
@@ -212,20 +211,19 @@ public:
 	{
 		pid_t pid;
 
-		waitTableMut->lock();
+		ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+		boost::unique_lock< boost::mutex > lock( *threadParams.mut );
+
+		io_service->notify_fork( boost::asio::io_service::fork_prepare );
 
 		pid = fork();
 
 		if ( pid > 0 )
 		{
-			waitTable[ pid ] = boost::this_thread::get_id();
+		    io_service->notify_fork( boost::asio::io_service::fork_parent );
 
 			//PS_LOG( "wait child " << pid );
-			ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
-			boost::unique_lock< boost::mutex > lock( *threadParams.mut );
-
-			waitTableMut->unlock();
-
+		    threadParams.pid = pid;
 			threadParams.cond->wait( lock );
 		    errCode_ = threadParams.errCode;
 			//PS_LOG( "wait child done " << pid );
@@ -239,7 +237,6 @@ public:
 		}
 		else
 		{
-			waitTableMut->unlock();
 			PS_LOG( "DoFork: fork() failed " << strerror(errno) );
 		}
 
@@ -468,21 +465,20 @@ namespace {
 void OnSigChild( pid_t pid, int status )
 {
 	//PS_LOG( "SIGCHLD " << pid );
-	python_server::waitTableMut->lock();
-	boost::thread::id threadId = python_server::waitTable[ pid ];
-	python_server::waitTable.erase( pid );
-	python_server::waitTableMut->unlock();
 
-	if ( python_server::threadInfo.count( threadId ) )
+	python_server::ThreadInfo::iterator it;
+	for( it = python_server::threadInfo.begin();
+		 it != python_server::threadInfo.end();
+	   ++it )
 	{
-		python_server::ThreadParams &threadParams = python_server::threadInfo[ threadId ];
-		boost::unique_lock< boost::mutex > lock( *threadParams.mut );
-		threadParams.errCode = status;
-		threadParams.cond->notify_all();
-	}
-	else
-	{
-		PS_LOG( "SigHandler: waitpid(), unknown returned pid= " << pid );
+		python_server::ThreadParams &threadParams = it->second;
+
+	    boost::unique_lock< boost::mutex > lock( *threadParams.mut );
+		if ( threadParams.pid == pid )
+		{
+			threadParams.errCode = status;
+			threadParams.cond->notify_all();
+		}
 	}
 }
 
@@ -575,12 +571,6 @@ void AtExit()
 			delete threadParams.cond;
 			threadParams.cond = NULL;
 		}
-	}
-
-	if ( python_server::waitTableMut )
-	{
-		delete python_server::waitTableMut;
-		python_server::waitTableMut = NULL;
 	}
 
 	if ( python_server::rParserMut )
@@ -703,10 +693,10 @@ int main( int argc, char* argv[], char **envp )
 		
 		// start accepting connections
 		boost::asio::io_service io_service;
+		python_server::io_service = &io_service;
 
 		python_server::ConnectionAcceptor acceptor( io_service, python_server::defaultPyExecPort );
 
-		python_server::waitTableMut = new boost::mutex();
 		python_server::rParserMut = new boost::mutex();
 		python_server::wParserMut = new boost::mutex();
 
