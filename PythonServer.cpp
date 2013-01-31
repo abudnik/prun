@@ -77,15 +77,19 @@ public:
 	Request()
 	: requestLength_( 0 ),
 	 bytesRead_( 0 ),
-	 headerOffset_( 0 )
+	 headerOffset_( 0 ),
+	 skipHeader_( true )
 	{
 	}
 
 	void OnRead( BufferT &buf, size_t bytes_transferred  )
 	{
-		std::copy( buf.begin() + headerOffset_, buf.begin() + bytes_transferred, back_inserter( request_ ) );
+		unsigned int offset = skipHeader_ ? headerOffset_ : 0;
 
-		bytesRead_ += bytes_transferred - headerOffset_;
+		std::copy( buf.begin() + offset, buf.begin() + bytes_transferred, back_inserter( request_ ) );
+
+		bytesRead_ += bytes_transferred - offset;
+		skipHeader_ = false;
 	}
 
 	int OnFirstRead( BufferT &buf, size_t bytes_transferred  )
@@ -104,15 +108,15 @@ public:
 		return request_;
 	}
 
-	int GetRequestLength() const
+	unsigned int GetRequestLength() const
 	{
 		return requestLength_;
 	}
 
 private:
-	int ParseRequestHeader( BufferT &buf, size_t bytes_transferred  )
+	unsigned int ParseRequestHeader( BufferT &buf, size_t bytes_transferred  )
 	{
-		int offset = 0;
+		unsigned int offset = 0;
 		std::string length;
 
 		typename BufferT::iterator it = std::find( buf.begin(), buf.begin() + bytes_transferred, '\n' );
@@ -141,7 +145,7 @@ private:
 	int CheckHeader()
 	{
 		// TODO: Error codes
-		if ( headerOffset_ > maxScriptSize )
+		if ( requestLength_ > maxScriptSize )
 			return -1;
 
 		return 0;
@@ -149,9 +153,10 @@ private:
 
 private:
 	std::string request_;
-	int	requestLength_;
-	int bytesRead_;
+	unsigned int requestLength_;
+	unsigned int bytesRead_;
 	unsigned int headerOffset_;
+	bool skipHeader_;
 };
 
 class IActionStrategy
@@ -900,6 +905,9 @@ int main( int argc, char* argv[], char **envp )
 		}
 
 		io_service.stop();
+
+		python_server::taskSem->Notify();
+
 		worker_threads.join_all();
 
 		CleanupThreads();

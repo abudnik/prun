@@ -507,6 +507,8 @@ void Impersonate()
 			PS_LOG( "impersonate uid=" << python_server::uid << " failed : " << strerror(errno) );
 			exit( 1 );
 		}
+
+		PS_LOG( "successfully impersonated, uid=" << python_server::uid );
 	}
 }
 
