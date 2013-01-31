@@ -24,9 +24,6 @@ After building program using Make utility, further executables are generated:
    start python server as a daemon with root privileges, while PyExec will be running with user (uid=1000) privileges:
 	sudo ./PythonServer --d --u 1000
 
-   start python server in fork mode: every python script will be executed as a separate process (forked):
-	./PythonServer --f
-
 2. Send python script "example.py":
 	cd ~/PythonServer
 	./PythonSender localhost 5555 example.py
