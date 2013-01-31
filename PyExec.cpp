@@ -51,19 +51,13 @@ bool isFork;
 uid_t uid;
 unsigned int numThread;
 
-boost::asio::io_service *io_service;
-boost::asio::io_service *io_service_sighandler; // for sigchild use only
-
 boost::interprocess::shared_memory_object *sharedMemPool;
 boost::interprocess::mapped_region *mappedRegion;
 
 struct ThreadParams
 {
-	boost::condition_variable *cond;
-	boost::mutex *mut;
+	int pipefd[2];
 	pid_t pid;
-	pid_t childPid;
-	int errCode;
 };
 
 typedef std::map< boost::thread::id, ThreadParams > ThreadInfo;
@@ -203,29 +197,22 @@ public:
 
 		if ( forkMode && pid == 0 )
 		{
+			ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+		    write( threadParams.pipefd[1], &errCode_, sizeof( errCode_ ) );
 			exit( errCode_ );
 		}
 	}
 
 	virtual pid_t DoFork()
 	{
-		pid_t pid;
-
-		ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
-		boost::unique_lock< boost::mutex > lock( *threadParams.mut );
-
-		io_service->notify_fork( boost::asio::io_service::fork_prepare );
-
-		pid = fork();
+		pid_t pid = fork();
 
 		if ( pid > 0 )
 		{
-		    io_service->notify_fork( boost::asio::io_service::fork_parent );
-
 			//PS_LOG( "wait child " << pid );
+			ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 		    threadParams.pid = pid;
-			threadParams.cond->wait( lock );
-		    errCode_ = threadParams.errCode;
+		    read( threadParams.pipefd[0], &errCode_, sizeof( errCode_ ) );
 			//PS_LOG( "wait child done " << pid );
 		}
 		else
@@ -462,26 +449,6 @@ private:
 
 namespace {
 
-void OnSigChild( pid_t pid, int status )
-{
-	//PS_LOG( "SIGCHLD " << pid );
-
-	python_server::ThreadInfo::iterator it;
-	for( it = python_server::threadInfo.begin();
-		 it != python_server::threadInfo.end();
-	   ++it )
-	{
-		python_server::ThreadParams &threadParams = it->second;
-
-	    boost::unique_lock< boost::mutex > lock( *threadParams.mut );
-		if ( threadParams.pid == pid )
-		{
-			threadParams.errCode = status;
-			threadParams.cond->notify_all();
-		}
-	}
-}
-
 void SigHandler( int s )
 {
 	if ( s == SIGTERM )
@@ -498,8 +465,6 @@ void SigHandler( int s )
 			pid_t pid = waitpid( -1, &status, WNOHANG );
 			if ( pid <= 0 )
 				break;
-
-			python_server::io_service_sighandler->post( boost::bind( &OnSigChild, pid, status ) );
 		}
 	}
 }
@@ -560,17 +525,8 @@ void AtExit()
 	{
 		python_server::ThreadParams &threadParams = it->second;
 
-		if ( threadParams.mut )
-		{
-			delete threadParams.mut;
-			threadParams.mut = NULL;
-		}
-
-		if ( threadParams.cond )
-		{
-			delete threadParams.cond;
-			threadParams.cond = NULL;
-		}
+		close( threadParams.pipefd[0] );
+		close( threadParams.pipefd[1] );
 	}
 
 	if ( python_server::rParserMut )
@@ -596,29 +552,11 @@ void OnThreadCreate( const boost::thread *thread )
 	memset( &threadParams, 0, sizeof( threadParams ) );
 	if ( python_server::forkMode )
 	{
-		threadParams.cond = new boost::condition_variable();
-		threadParams.mut = new boost::mutex();
+		pipe( threadParams.pipefd );
 	}
 	++threadCnt;
 
 	python_server::threadInfo[ thread->get_id() ] = threadParams;
-}
-
-void AwakeThreads()
-{
-	python_server::ThreadInfo::iterator it;
-
-	for( it = python_server::threadInfo.begin();
-		 it != python_server::threadInfo.end();
-	   ++it )
-	{
-		python_server::ThreadParams &threadParams = it->second;
-
-		if ( threadParams.cond )
-		{
-			threadParams.cond->notify_all();
-		}
-	}
 }
 
 void ThreadFun( boost::asio::io_service *io_service )
@@ -693,7 +631,6 @@ int main( int argc, char* argv[], char **envp )
 		
 		// start accepting connections
 		boost::asio::io_service io_service;
-		python_server::io_service = &io_service;
 
 		python_server::ConnectionAcceptor acceptor( io_service, python_server::defaultPyExecPort );
 
@@ -709,15 +646,6 @@ int main( int argc, char* argv[], char **envp )
 			);
 			OnThreadCreate( thread );
 		}
-
-		// create sighandler worker thread
-		boost::asio::io_service io_service_sighandler;
-		python_server::io_service_sighandler = &io_service_sighandler;
-
-	    boost::shared_ptr< boost::asio::io_service::work > sighandlerWork(
-                new boost::asio::io_service::work( io_service_sighandler )
-        );
-		worker_threads.create_thread( boost::bind( &ThreadFun, &io_service_sighandler ) );
 
 		// signal parent process to say that PyExec has been initialized
 		kill( getppid(), SIGUSR1 );
@@ -743,9 +671,6 @@ int main( int argc, char* argv[], char **envp )
 			sigwait( &waitset, &sig );
 		}
 
-	    AwakeThreads();
-
-		sighandlerWork.reset();
 		io_service.stop();
 		worker_threads.join_all();
 	}
