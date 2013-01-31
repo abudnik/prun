@@ -586,7 +586,7 @@ int main( int argc, char* argv[], char **envp )
 	{
 		// initialization
 		python_server::isDaemon = false;
-		python_server::forkMode = false;
+		python_server::forkMode = true;
 		python_server::isFork = false;
 		python_server::uid = 0;
 
@@ -615,9 +615,9 @@ int main( int argc, char* argv[], char **envp )
 			python_server::isDaemon = true;
 		}
 
-		if ( vm.count( "f" ) )
+		if ( vm.count( "t" ) )
 		{
-			python_server::forkMode = true;
+			python_server::forkMode = false;
 		}
 
 		if ( vm.count( "num_thread" ) )

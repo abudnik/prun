@@ -35,6 +35,7 @@ the License.
 #include <csignal>
 #include <cstdlib>
 #include "Common.h"
+#include "Helper.h"
 #include "Log.h"
 
 
@@ -65,6 +66,8 @@ CommParams commParams;
 
 boost::mutex *rParserMut;
 boost::mutex *wParserMut;
+
+Semaphore *taskSem;
 
 
 template< typename BufferT >
@@ -322,7 +325,7 @@ protected:
 	boost::condition_variable cond;
 	boost::mutex mut;
 	int errCode_;
-	const static int responseTimeout = 10 * 1000; // 10 sec
+	const static int responseTimeout = 60 * 1000; // 60 sec
 };
 
 class Session : public boost::enable_shared_from_this< Session >
@@ -339,6 +342,7 @@ public:
 
 	virtual ~Session()
 	{
+		taskSem->Notify();
 		cout << "S: ~Session()" << endl;
 	}
 
@@ -478,6 +482,7 @@ private:
 		if ( !error )
 		{
 			cout << "connection accepted..." << endl;
+			taskSem->Wait();
 			io_service_.post( boost::bind( &Session::Start, session ) );
 			StartAccept();
 		}
@@ -636,7 +641,7 @@ void RunPyExecProcess()
 						 python_server::isDaemon ? "--d" : " ",
 						 python_server::uid != 0 ? "--u" : " ",
 						 python_server::uid != 0 ? ( boost::lexical_cast<std::string>( python_server::uid ) ).c_str() : " ",
-						 python_server::forkMode ? "--f" : " ",
+						 python_server::forkMode ? " " : "--t",
 						 NULL );
 
 		if ( ret < 0 )
@@ -703,6 +708,12 @@ void AtExit()
 	{
 		delete python_server::sharedMemPool;
 		python_server::sharedMemPool = NULL;
+	}
+
+	if ( python_server::taskSem )
+	{
+		delete python_server::taskSem;
+		python_server::taskSem = NULL;
 	}
 
 	if ( python_server::rParserMut )
@@ -790,7 +801,7 @@ int main( int argc, char* argv[], char **envp )
 		// initialization
 	    python_server::numThread = 2 * boost::thread::hardware_concurrency();
 		python_server::isDaemon = false;
-		python_server::forkMode = false;
+		python_server::forkMode = true;
 		python_server::uid = 0;
 
 		// parse input command line options
@@ -804,7 +815,7 @@ int main( int argc, char* argv[], char **envp )
 			("d", "Run as a daemon")
 			("stop", "Stop daemon")
 			("u", po::value<uid_t>(), "Start as a specific non-root user")
-			("f", "Create process for each request");
+			("t", "Process each request in a unique thread (unsafe experimental feature)");
 		
 		po::variables_map vm;
 		po::store( po::parse_command_line( argc, argv, descr ), vm );
@@ -833,15 +844,17 @@ int main( int argc, char* argv[], char **envp )
 			python_server::isDaemon = true;
 		}
 
-		if ( vm.count( "f" ) )
+		if ( vm.count( "t" ) )
 		{
-			python_server::forkMode = true;
+			python_server::forkMode = false;
 		}
 
 		if ( vm.count( "num_thread" ) )
 		{
 			python_server::numThread = vm[ "num_thread" ].as<unsigned int>();
 		}
+		// accept thread & additional worker thread for async reading results from pyexec
+		python_server::numThread += 2;
 
 		python_server::logger::InitLogger( python_server::isDaemon, "PythonServer" );
 
@@ -850,14 +863,16 @@ int main( int argc, char* argv[], char **envp )
 
 		SetupPyExecIPC();
 		RunPyExecProcess();
-		
+
 		// start accepting client connections
 		boost::asio::io_service io_service;
 
-		python_server::ConnectionAcceptor acceptor( io_service, python_server::defaultPort );
+		python_server::taskSem = new python_server::Semaphore( python_server::numThread - 2 );
 
 		python_server::rParserMut = new boost::mutex();
 		python_server::wParserMut = new boost::mutex();
+
+		python_server::ConnectionAcceptor acceptor( io_service, python_server::defaultPort );
 
 		// create thread pool
 		boost::thread_group worker_threads;
