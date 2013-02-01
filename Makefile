@@ -15,6 +15,7 @@ RM := rm -rf
 LIBS := -lboost_system -lboost_thread-mt -lboost_program_options -lboost_filesystem -lpython2.7 -pthread -lrt
 LIB_PATH := /usr/lib
 
+srcdir := src
 objdir := objs
 depdir := deps
 OUT := PythonServer PyExec PythonSender
@@ -32,11 +33,11 @@ $(OUT): $(OBJS)
 	$(eval main_obj= $(addprefix $(objdir)/, $(addsuffix .o, $@)))
 	$(CC) $(INCLUDE_PATH) -L$(LIB_PATH) $(LIBS) $(CFLAGS)  $(main_obj) -o $@
 
-$(objdir)/%.o: %.cpp
+$(objdir)/%.o: $(srcdir)/%.cpp
 	@echo Compiling $<
 	$(CC) $(INCLUDE_PATH) $(CFLAGS) -c $< -o $@
 
-$(depdir)/%.d: %.cpp
+$(depdir)/%.d: $(srcdir)/%.cpp
 	$(CC) -MM $< > $@
 	@sed -i "s/^/$(objdir)\//" $@
 	@cat $@ >> $(depdir)/.depend
