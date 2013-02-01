@@ -18,7 +18,7 @@ LIB_PATH := /usr/lib
 srcdir := src
 objdir := objs
 depdir := deps
-OUT := PythonServer PyExec PythonSender
+OUT := PyServer PyExec PySender
 OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(OUT)))
 DEPENDS := $(addprefix $(depdir)/, $(addsuffix .d, $(OUT)))
 
@@ -27,7 +27,7 @@ all: installdirs $(DEPENDS) $(OUT)
 debug: all
 
 installdirs:
-	mkdir -p $(objdir) $(depdir)
+	@mkdir -p $(objdir) $(depdir)
 
 $(OUT): $(OBJS)
 	$(eval main_obj= $(addprefix $(objdir)/, $(addsuffix .o, $@)))

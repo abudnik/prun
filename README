@@ -5,29 +5,29 @@ Tiny server for python script execution.
 == Overview ==
 
 After building program using Make utility, further executables are generated:
-1. PythonServer - connection manager.
-2. PyExec       - python script execution server.
-3. PythonSender - program for sending python files to PythonServer for execution.
+1. PyServer - connection manager.
+2. PyExec   - python script execution server.
+3. PySender - program for sending python files to PythonServer for execution.
 
 == Usage example ==
 
 1. Start python server in shell:
 	cd ~/PythonServer
-	./PythonServer
+	./PyServer
 
    or start python server as a daemon:
-	./PythonServer --d
+	./PyServer --d
 
    and stop PythonServer daemon:
-	./PythonServer --stop
+	./PyServer --stop
 
    start python server as a daemon with root privileges, while PyExec will be running with user (uid=1000) privileges:
-	sudo ./PythonServer --d --u 1000
+	sudo ./PyServer --d --u 1000
 
 2. Send python script "example.py":
 	cd ~/PythonServer
-	./PythonSender localhost 5555 example.py
+	./PySender localhost 5555 example.py
 
 
 Shell command for getting additional information about command line parameters:
-	./PythonServer --help
+	./PyServer --help
