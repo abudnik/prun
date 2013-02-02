@@ -74,18 +74,22 @@ public:
 	Request()
 	: requestLength_( 0 ),
 	 bytesRead_( 0 ),
-	 headerOffset_( 0 )
+	 headerOffset_( 0 ),
+	 skipHeader_( true )
 	{
 	}
 
 	void OnRead( BufferT &buf, size_t bytes_transferred  )
 	{
-		std::copy( buf.begin() + headerOffset_, buf.begin() + bytes_transferred, back_inserter( request_ ) );
+		unsigned int offset = skipHeader_ ? headerOffset_ : 0;
 
-		bytesRead_ += bytes_transferred - headerOffset_;
+		std::copy( buf.begin() + offset, buf.begin() + bytes_transferred, back_inserter( request_ ) );
+
+		bytesRead_ += bytes_transferred - offset;
+		skipHeader_ = false;
 	}
 
-	int OnFirstRead( BufferT &buf, size_t bytes_transferred  )
+    int OnFirstRead( BufferT &buf, size_t bytes_transferred  )
 	{
 		headerOffset_ = ParseRequestHeader( buf, bytes_transferred );
 		return CheckHeader();
@@ -101,7 +105,7 @@ public:
 		return request_;
 	}
 
-	int GetRequestLength() const
+	unsigned int GetRequestLength() const
 	{
 		return requestLength_;
 	}
@@ -110,18 +114,19 @@ public:
 	{
 		request_.clear();
 		requestLength_ = bytesRead_ = headerOffset_ = 0;
+		skipHeader_ = true;
 	}
 
 private:
-	int ParseRequestHeader( BufferT &buf, size_t bytes_transferred  )
+	unsigned int ParseRequestHeader( BufferT &buf, size_t bytes_transferred  )
 	{
-		int offset = 0;
+		unsigned int offset = 0;
 		std::string length;
 
 		typename BufferT::iterator it = std::find( buf.begin(), buf.begin() + bytes_transferred, '\n' );
 		if ( it != buf.end() )
 		{
-			offset = (int)std::distance( buf.begin(), it );
+			offset = (unsigned int)std::distance( buf.begin(), it );
 			std::copy( buf.begin(), buf.begin() + offset, back_inserter( length ) );
 
 			try
@@ -144,7 +149,7 @@ private:
 	int CheckHeader()
 	{
 		// TODO: Error codes
-		if ( headerOffset_ > maxScriptSize )
+		if ( requestLength_ > maxScriptSize )
 			return -1;
 
 		return 0;
@@ -152,9 +157,10 @@ private:
 
 private:
 	std::string request_;
-	int	requestLength_;
-	int bytesRead_;
+	unsigned int requestLength_;
+	unsigned int bytesRead_;
 	unsigned int headerOffset_;
+	bool skipHeader_;
 };
 
 class IActionStrategy
@@ -416,6 +422,7 @@ public:
 		StartAccept();
 	}
 
+private:
 	void StartAccept()
 	{
 		session_ptr session( new Session( io_service_ ) );
@@ -424,7 +431,6 @@ public:
 											session, boost::asio::placeholders::error ) );
 	}
 
-private:
 	void HandleAccept( session_ptr session, const boost::system::error_code &error )
 	{
 		if ( !error )

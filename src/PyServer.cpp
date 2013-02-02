@@ -49,7 +49,7 @@ bool forkMode;
 uid_t uid;
 unsigned int numThread;
 pid_t pyexecPid;
-char exeDir[256];
+char exeDir[PATH_MAX];
 
 boost::interprocess::shared_memory_object *sharedMemPool;
 boost::interprocess::mapped_region *mappedRegion;
@@ -122,7 +122,7 @@ private:
 		typename BufferT::iterator it = std::find( buf.begin(), buf.begin() + bytes_transferred, '\n' );
 		if ( it != buf.end() )
 		{
-			offset = (int)std::distance( buf.begin(), it );
+			offset = (unsigned int)std::distance( buf.begin(), it );
 			std::copy( buf.begin(), buf.begin() + offset, back_inserter( length ) );
 
 			try
@@ -172,14 +172,10 @@ class SendToPyExec : public IActionStrategy
 public:
 	virtual void HandleRequest( const std::string &requestStr )
 	{
-		int ret = 0;
-
 		ThreadComm &threadComm = commParams[ boost::this_thread::get_id() ];
 		memcpy( threadComm.shmemAddr, requestStr.c_str(), requestStr.size() );
-		char *addr = threadComm.shmemAddr + requestStr.size();
-		*addr = '\0';
-
-		errCode_ = ret;
+		char *shmemRequestEnd = threadComm.shmemAddr + requestStr.size();
+		*shmemRequestEnd = '\0';
 	}
 
 	virtual const std::string &GetResponse()
@@ -473,6 +469,7 @@ public:
 		StartAccept();
 	}
 
+private:
 	void StartAccept()
 	{
 		session_ptr session( new Session( io_service_ ) );
@@ -481,7 +478,6 @@ public:
 											session, boost::asio::placeholders::error ) );
 	}
 
-private:
 	void HandleAccept( session_ptr session, const boost::system::error_code &error )
 	{
 		if ( !error )
@@ -740,6 +736,7 @@ void OnThreadCreate( const boost::thread *thread, boost::asio::io_service *io_se
 {
 	static int commCnt = 0;
 
+	// init shmem block associated with created thread
 	python_server::ThreadComm threadComm;
 	threadComm.shmemBlock = commCnt;
 	threadComm.shmemAddr = (char*)python_server::mappedRegion->get_address() + commCnt * python_server::shmemBlockSize;
@@ -747,6 +744,7 @@ void OnThreadCreate( const boost::thread *thread, boost::asio::io_service *io_se
 
 	boost::system::error_code ec;
 
+	// open socket to pyexec
 	tcp::resolver resolver( *io_service );
 	tcp::resolver::query query( tcp::v4(), "localhost", boost::lexical_cast<std::string>( python_server::defaultPyExecPort ) );
 	tcp::resolver::iterator iterator = resolver.resolve( query );
