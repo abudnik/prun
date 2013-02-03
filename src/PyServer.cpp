@@ -559,13 +559,14 @@ int StopDaemon()
 	char line[256] = { '\0' };
 
 	std::ostringstream command;
-	command << "pidof -s -o " << getpid() << " PythonServer";
+	command << "pidof -s -o " << getpid() << " PyServer";
 
 	FILE *cmd = popen( command.str().c_str(), "r" );
 	fgets( line, sizeof(line), cmd );
 	pid_t pid = strtoul( line, NULL, 10 );
 	pclose( cmd );
 
+	std::cout << "sending SIGTERM to " << pid << std::endl;
 	return kill( pid, SIGTERM );
 }
 
@@ -618,6 +619,11 @@ void SigHandler( int s )
 			PS_LOG( "PyExec proccess stopped (" << status << ")" );
 		}
 	}
+
+	if ( s == SIGHUP )
+	{
+		PS_LOG( "Ignoring SIGHUP" );
+	}
 }
 
 void SetupSignalHandlers()
@@ -631,6 +637,7 @@ void SetupSignalHandlers()
 	sigaction( SIGTERM, &sigHandler, 0 );
 	sigaction( SIGUSR1, &sigHandler, 0 );
 	sigaction( SIGCHLD, &sigHandler, 0 );
+	sigaction( SIGHUP, &sigHandler, 0 );
 }
 
 void UserInteraction()

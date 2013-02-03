@@ -473,6 +473,11 @@ void SigHandler( int s )
 				break;
 		}
 	}
+
+	if ( s == SIGHUP )
+	{
+		PS_LOG( "Ignoring SIGHUP" );
+	}
 }
 
 void SetupSignalHandlers()
@@ -485,6 +490,7 @@ void SetupSignalHandlers()
 
 	sigaction( SIGTERM, &sigHandler, 0 );
 	sigaction( SIGCHLD, &sigHandler, 0 );
+	sigaction( SIGHUP, &sigHandler, 0 );
 }
 
 void SetupPyExecIPC()
