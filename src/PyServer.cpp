@@ -33,6 +33,7 @@ the License.
 #include <boost/interprocess/mapped_region.hpp>
 #include <unistd.h>
 #include <csignal>
+#include <sys/wait.h>
 #include <cstdlib>
 #include "Common.h"
 #include "Helper.h"
@@ -603,6 +604,20 @@ void SigHandler( int s )
 	{
 		exit( 0 );
 	}
+
+	if ( s == SIGCHLD )
+	{
+	    int status;
+		pid_t pid = waitpid( python_server::pyexecPid, &status, WNOHANG );
+		if ( pid != python_server::pyexecPid )
+		{
+			PS_LOG( "SigHandler: waitpid() failed, pid= " << python_server::pyexecPid << ", err= " << strerror(errno) );
+		}
+		else
+		{
+			PS_LOG( "PyExec proccess stopped (" << status << ")" );
+		}
+	}
 }
 
 void SetupSignalHandlers()
@@ -615,6 +630,7 @@ void SetupSignalHandlers()
 
 	sigaction( SIGTERM, &sigHandler, 0 );
 	sigaction( SIGUSR1, &sigHandler, 0 );
+	sigaction( SIGCHLD, &sigHandler, 0 );
 }
 
 void UserInteraction()
