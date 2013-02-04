@@ -610,19 +610,14 @@ void SigHandler( int s )
 	{
 	    int status;
 		pid_t pid = waitpid( python_server::pyexecPid, &status, WNOHANG );
-		if ( pid != python_server::pyexecPid )
-		{
-			PS_LOG( "SigHandler: waitpid() failed, pid= " << python_server::pyexecPid << ", err= " << strerror(errno) );
-		}
-		else
-		{
-			PS_LOG( "PyExec proccess stopped (" << status << ")" );
-		}
-	}
-
-	if ( s == SIGHUP )
-	{
-		PS_LOG( "Ignoring SIGHUP" );
+		// if ( pid != python_server::pyexecPid )
+		// {
+		// 	PS_LOG( "SigHandler: waitpid() failed, pid= " << python_server::pyexecPid << ", err= " << strerror(errno) );
+		// }
+		// else
+		// {
+		// 	PS_LOG( "PyExec proccess stopped (" << status << ")" );
+		// }
 	}
 }
 

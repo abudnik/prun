@@ -473,11 +473,6 @@ void SigHandler( int s )
 				break;
 		}
 	}
-
-	if ( s == SIGHUP )
-	{
-		PS_LOG( "Ignoring SIGHUP" );
-	}
 }
 
 void SetupSignalHandlers()
