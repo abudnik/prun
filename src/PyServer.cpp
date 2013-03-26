@@ -166,6 +166,7 @@ public:
 	virtual void HandleRequest( const std::string &requestStr ) = 0;
 	virtual const std::string &GetResponse() = 0;
 	virtual void OnError( int err ) = 0;
+	virtual ~IActionStrategy() {}
 };
 
 class SendToPyExec : public IActionStrategy
@@ -717,35 +718,20 @@ void AtExit()
 	// remove shared memory
 	ipc::shared_memory_object::remove( python_server::shmemName );
 
-	if ( python_server::mappedRegion )
-	{
-		delete python_server::mappedRegion;
-		python_server::mappedRegion = NULL;
-	}
+	delete python_server::mappedRegion;
+	python_server::mappedRegion = NULL;
 
-	if ( python_server::sharedMemPool )
-	{
-		delete python_server::sharedMemPool;
-		python_server::sharedMemPool = NULL;
-	}
+	delete python_server::sharedMemPool;
+	python_server::sharedMemPool = NULL;
 
-	if ( python_server::taskSem )
-	{
-		delete python_server::taskSem;
-		python_server::taskSem = NULL;
-	}
+	delete python_server::taskSem;
+	python_server::taskSem = NULL;
 
-	if ( python_server::rParserMut )
-	{
-		delete python_server::rParserMut;
-		python_server::rParserMut = NULL;
-	}
+	delete python_server::rParserMut;
+	python_server::rParserMut = NULL;
 
-	if ( python_server::wParserMut )
-	{
-		delete python_server::wParserMut;
-		python_server::wParserMut = NULL;
-	}
+	delete python_server::wParserMut;
+	python_server::wParserMut = NULL;
 
 	python_server::logger::ShutdownLogger();
 }

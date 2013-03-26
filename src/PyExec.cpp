@@ -538,17 +538,11 @@ void AtExit()
 		close( threadParams.pipefd[1] );
 	}
 
-	if ( python_server::rParserMut )
-	{
-		delete python_server::rParserMut;
-		python_server::rParserMut = NULL;
-	}
+	delete python_server::rParserMut;
+	python_server::rParserMut = NULL;
 
-	if ( python_server::wParserMut )
-	{
-		delete python_server::wParserMut;
-		python_server::wParserMut = NULL;
-	}
+	delete python_server::wParserMut;
+	python_server::wParserMut = NULL;
 
 	python_server::logger::ShutdownLogger();
 }
