@@ -62,7 +62,7 @@ void Log( const char *msg )
 {
 	if ( isDaemon )
 	{
-		syslog( LOG_INFO, msg );
+		syslog( LOG_INFO, "%s", msg );
 	}
 	else
 	{
