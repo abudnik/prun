@@ -5,29 +5,35 @@ Tiny server for python script execution.
 == Overview ==
 
 After building program using Make utility, further executables are generated:
-1. PyServer - connection manager.
-2. PyExec   - python script execution server.
-3. PySender - program for sending python files to PythonServer for execution.
+1. pyserver - connection manager.
+2. pyexec   - python script execution server.
+3. pysender - program for sending python files to pyserver for execution.
+
+== Installation ==
+
+1. Install Boost C++ libraries (see http://www.boost.org/)
+2. Install Python 2 (only python version 2.x is supported)
+3. Run Make utility in a PythonServer directory to build python server executables
 
 == Usage example ==
 
 1. Start python server in shell:
 	cd ~/PythonServer
-	./PyServer
+	./pyserver
 
    or start python server as a daemon:
-	./PyServer --d
+	./pyserver --d
 
-   and stop PythonServer daemon:
-	./PyServer --stop
+   and stop python server daemon:
+	./pyserver --stop
 
-   start python server as a daemon with root privileges, while PyExec will be running with user (uid=1000) privileges:
-	sudo ./PyServer --d --u 1000
+   start python server as a daemon with root privileges, while pyexec will be running with user (uid=1000) privileges:
+	sudo ./pyserver --d --u 1000
 
 2. Send python script "example.py":
 	cd ~/PythonServer
-	./PySender localhost 5555 example.py
+	./pysender localhost 5555 example.py
 
 
 Shell command for getting additional information about command line parameters:
-	./PyServer --help
+	./pyserver --help
