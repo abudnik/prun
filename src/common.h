@@ -22,12 +22,12 @@ the License.
 
 namespace python_server {
 
-const unsigned int shmemBlockSize = 512 * 1024;
-const unsigned int maxScriptSize = shmemBlockSize - 1;
+extern unsigned int shmemBlockSize;
+extern unsigned int maxScriptSize;
 
-const unsigned short defaultPort = 5555;
-const unsigned short defaultPyExecPort = defaultPort + 1;
+extern unsigned short defaultPort;
+extern unsigned short defaultPyExecPort;
 
-const char *const shmemName = "PyExec";
+extern char *const shmemName;
 
 } // namespace python_server

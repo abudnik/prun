@@ -20,24 +20,48 @@ the License.
 ===========================================================================
 */
 
+#include <syslog.h>
 
-#define PS_LOG( MSG )\
-{\
-	std::ostringstream os;\
-	os << MSG;\
-	python_server::logger::Log( os.str().c_str() );	\
-}
 
 namespace python_server {
 
 namespace logger
 {
 
-void InitLogger( bool isDaemon, const char *serviceName );
+bool isDaemon = false;
+const char *serviceName = "";
 
-void ShutdownLogger();
 
-void Log( const char *msg );
+void InitLogger( bool isDaemon, const char *serviceName )
+{
+	logger::isDaemon = isDaemon;
+	logger::serviceName = serviceName;
+
+	if ( isDaemon )
+	{
+		openlog( serviceName, LOG_CONS, LOG_DAEMON );
+	}
+}
+
+void ShutdownLogger()
+{
+	if ( isDaemon )
+	{
+		closelog();
+	}
+}
+
+void Log( const char *msg )
+{
+	if ( isDaemon )
+	{
+		syslog( LOG_INFO, "%s", msg );
+	}
+	else
+	{
+		std::cout << serviceName << ": " <<  msg << std::endl;
+	}
+}
 
 } // namespace logger
 

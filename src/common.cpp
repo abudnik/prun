@@ -20,25 +20,16 @@ the License.
 ===========================================================================
 */
 
-
-#define PS_LOG( MSG )\
-{\
-	std::ostringstream os;\
-	os << MSG;\
-	python_server::logger::Log( os.str().c_str() );	\
-}
+#include "common.h"
 
 namespace python_server {
 
-namespace logger
-{
+unsigned int shmemBlockSize = 512 * 1024;
+unsigned int maxScriptSize = shmemBlockSize - 1;
 
-void InitLogger( bool isDaemon, const char *serviceName );
+unsigned short defaultPort = 5555;
+unsigned short defaultPyExecPort = defaultPort + 1;
 
-void ShutdownLogger();
-
-void Log( const char *msg );
-
-} // namespace logger
+char *const shmemName = "pyexec";
 
 } // namespace python_server
