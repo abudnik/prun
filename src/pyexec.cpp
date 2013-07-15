@@ -168,6 +168,7 @@ class IActionStrategy
 public:
 	virtual void HandleRequest( const std::string &requestStr ) = 0;
 	virtual const std::string &GetResponse() = 0;
+	virtual ~IActionStrategy() {}
 };
 
 class ExecutePython : public IActionStrategy

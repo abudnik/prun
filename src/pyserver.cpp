@@ -654,9 +654,9 @@ void RunPyExecProcess()
 	if ( pid == 0 )
 	{
 		std::string exePath( python_server::exeDir );
-		exePath += "/PyExec";
+		exePath += "/pyexec";
 
-		int ret = execl( exePath.c_str(), "./PyExec", "--num_thread",
+		int ret = execl( exePath.c_str(), "./pyexec", "--num_thread",
 						 ( boost::lexical_cast<std::string>( python_server::numThread ) ).c_str(),
 						 python_server::isDaemon ? "--d" : " ",
 						 python_server::uid != 0 ? "--u" : " ",
