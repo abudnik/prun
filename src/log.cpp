@@ -22,6 +22,7 @@ the License.
 
 #include <iostream>
 #include <syslog.h>
+#include "log.h"
 
 
 namespace python_server {

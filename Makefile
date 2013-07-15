@@ -22,7 +22,8 @@ OUT := pyserver pyexec pysender
 OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(OUT)))
 COMMON := common log
 COMMON_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(COMMON)))
-DEPENDS := $(addprefix $(depdir)/, $(addsuffix .d, $(OUT)))
+ALL_CPP := $(COMMON) $(OUT)
+DEPENDS := $(addprefix $(depdir)/, $(addsuffix .d, $(ALL_CPP)))
 
 all: installdirs $(DEPENDS) $(OUT)
 
