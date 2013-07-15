@@ -20,6 +20,8 @@ objdir := objs
 depdir := deps
 OUT := pyserver pyexec pysender
 OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(OUT)))
+COMMON := common log
+COMMON_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(COMMON)))
 DEPENDS := $(addprefix $(depdir)/, $(addsuffix .d, $(OUT)))
 
 all: installdirs $(DEPENDS) $(OUT)
@@ -29,9 +31,9 @@ debug: all
 installdirs:
 	@mkdir -p $(objdir) $(depdir)
 
-$(OUT): $(OBJS)
+$(OUT): $(COMMON_OBJS) $(OBJS)
 	$(eval main_obj= $(addprefix $(objdir)/, $(addsuffix .o, $@)))
-	$(CC) $(main_obj) -o $@ $(INCLUDE_PATH) -L$(LIB_PATH) $(LIBS) $(CFLAGS)
+	$(CC) $(main_obj) $(COMMON_OBJS) -o $@ $(INCLUDE_PATH) -L$(LIB_PATH) $(LIBS) $(CFLAGS)
 
 $(objdir)/%.o: $(srcdir)/%.cpp
 	@echo Compiling $<
