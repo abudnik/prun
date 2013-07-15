@@ -57,7 +57,7 @@ boost::interprocess::mapped_region *mappedRegion;
 
 struct ThreadComm
 {
-	int shmemBlock;
+	int shmemBlockId;
 	char *shmemAddr;
 	tcp::socket *socket;
 };
@@ -244,17 +244,19 @@ public:
 	{
 		int ret = 0;
 
+        execCompleted_ = false;
+
 		try
 		{
 			std::stringstream ss, ss2;
 
 			ThreadComm &threadComm = commParams[ boost::this_thread::get_id() ];
-			ptree_.put( "id", threadComm.shmemBlock );
+			ptree_.put( "id", threadComm.shmemBlockId );
 
 			wParserMut->lock();
 			boost::property_tree::write_json( ss, ptree_, false );
 			wParserMut->unlock();
-			
+
 			ss2 << ss.str().size() << '\n' << ss.str();
 
 			socket_->async_read_some( boost::asio::buffer( buffer_ ),
@@ -262,25 +264,28 @@ public:
 												  boost::asio::placeholders::error,
 												  boost::asio::placeholders::bytes_transferred ) );
 
-			boost::unique_lock< boost::mutex > lock( mut );
-
 			boost::asio::async_write( *socket_,
 									  boost::asio::buffer( ss2.str() ),
 									  boost::bind( &PyExecConnection::HandleWrite, shared_from_this(),
 												   boost::asio::placeholders::error,
 												   boost::asio::placeholders::bytes_transferred ) );
 
-			const boost::system_time timeout = boost::get_system_time() + boost::posix_time::milliseconds( responseTimeout );
-
-		    if ( cond.timed_wait( lock, timeout ) )
-			{
-				ret = errCode_;
-			}
-			else
-			{
-				PS_LOG( "PyExecConnection::Send(): timed out" );
-				ret = -1;
-			}
+			boost::unique_lock< boost::mutex > lock( responseMut_ );
+            while( !execCompleted_ )
+            {
+                const boost::system_time timeout = boost::get_system_time() + boost::posix_time::milliseconds( responseTimeout );
+                if ( responseCond_.timed_wait( lock, timeout ) )
+                {
+                    ret = errCode_;
+                    break;
+                }
+                else
+                {
+                    PS_LOG( "PyExecConnection::Send(): timed out" );
+                    ret = -1;
+                    //break;
+                }
+            }
 		}
 		catch( boost::system::system_error &e )
 		{
@@ -317,16 +322,18 @@ public:
 			errCode_ = ptree_.get<int>( "err" );
 		}
 
-		boost::unique_lock< boost::mutex > lock( mut );
-		cond.notify_all();
+        execCompleted_ = true;
+		boost::unique_lock< boost::mutex > lock( responseMut_ );
+		responseCond_.notify_all();
 	}
 
 protected:
 	boost::property_tree::ptree ptree_;
 	tcp::socket *socket_;
 	BufferType buffer_;
-	boost::condition_variable cond;
-	boost::mutex mut;
+    bool execCompleted_; // true, if pyexec completed script execution
+	boost::condition_variable responseCond_;
+	boost::mutex responseMut_;
 	int errCode_;
 	const static int responseTimeout = 60 * 1000; // 60 sec
 };
@@ -560,7 +567,7 @@ int StopDaemon()
 	char line[256] = { '\0' };
 
 	std::ostringstream command;
-	command << "pidof -s -o " << getpid() << " PyServer";
+	command << "pidof -s -o " << getpid() << " pyserver";
 
 	FILE *cmd = popen( command.str().c_str(), "r" );
 	fgets( line, sizeof(line), cmd );
@@ -742,7 +749,7 @@ void OnThreadCreate( const boost::thread *thread, boost::asio::io_service *io_se
 
 	// init shmem block associated with created thread
 	python_server::ThreadComm threadComm;
-	threadComm.shmemBlock = commCnt;
+	threadComm.shmemBlockId = commCnt;
 	threadComm.shmemAddr = (char*)python_server::mappedRegion->get_address() + commCnt * python_server::shmemBlockSize;
 	memset( threadComm.shmemAddr, 0, python_server::shmemBlockSize );
 
