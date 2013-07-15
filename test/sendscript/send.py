@@ -1,7 +1,7 @@
 from socket import *               
 
 def Send(msg, times):
-	for i in range(1, times):
+	for i in range(times):
 		try:
 			s = socket( AF_INET, SOCK_STREAM )
 			s.connect( ('127.0.0.1', 5555) )
@@ -17,7 +17,7 @@ Send( msg, 20000 )
 
 code = open('simple.py', 'r').read()
 msg = str(len(code)) + "\n" + code
-Send( msg, 2 )
+Send( msg, 1 )
 
 #code = open('endless.py', 'r').read()
 #msg = str(len(code)) + "\n" + code
