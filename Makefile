@@ -12,7 +12,7 @@ INCLUDE_PATH := -I/usr/include/boost -I/usr/include/python2.7
 
 RM := rm -rf
 
-LIBS := -lboost_system -lboost_thread-mt -lboost_program_options -lboost_filesystem -lpython2.7 -pthread -lrt
+LIBS := -lboost_system -lboost_thread -lboost_program_options -lboost_filesystem -lpython2.7 -lrt
 LIB_PATH := /usr/lib
 
 srcdir := src
@@ -31,7 +31,7 @@ installdirs:
 
 $(OUT): $(OBJS)
 	$(eval main_obj= $(addprefix $(objdir)/, $(addsuffix .o, $@)))
-	$(CC) $(INCLUDE_PATH) -L$(LIB_PATH) $(LIBS) $(CFLAGS)  $(main_obj) -o $@
+	$(CC) $(main_obj) -o $@ $(INCLUDE_PATH) -L$(LIB_PATH) $(LIBS) $(CFLAGS)
 
 $(objdir)/%.o: $(srcdir)/%.cpp
 	@echo Compiling $<
