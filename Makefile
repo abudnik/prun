@@ -18,7 +18,7 @@ LIB_PATH := /usr/lib
 srcdir := src
 objdir := objs
 depdir := deps
-OUT := PyServer PyExec PySender
+OUT := pyserver pyexec pysender
 OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(OUT)))
 DEPENDS := $(addprefix $(depdir)/, $(addsuffix .d, $(OUT)))
 

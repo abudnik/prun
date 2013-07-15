@@ -36,8 +36,8 @@ the License.
 #include <csignal>
 #include <sys/wait.h>
 #include <sys/prctl.h>
-#include "Common.h"
-#include "Log.h"
+#include "common.h"
+#include "log.h"
 
 
 using namespace std;

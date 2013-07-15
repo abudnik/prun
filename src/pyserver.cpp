@@ -35,9 +35,9 @@ the License.
 #include <csignal>
 #include <sys/wait.h>
 #include <cstdlib>
-#include "Common.h"
-#include "Helper.h"
-#include "Log.h"
+#include "common.h"
+#include "helper.h"
+#include "log.h"
 
 
 using namespace std;
