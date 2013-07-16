@@ -12,7 +12,7 @@ After building program using Make utility, further executables are generated:
 == Installation ==
 
 1. Install Boost C++ libraries (see http://www.boost.org/)
-2. Install Python 2 (only python version 2.x is supported)
+2. Install Python
 3. Run Make utility in a PythonServer directory to build python server executables
 
 == Usage example ==
