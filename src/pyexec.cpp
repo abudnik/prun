@@ -79,6 +79,11 @@ public:
 class ExecutePython : public IActionStrategy
 {
 public:
+	ExecutePython()
+	{
+		exePath = Config::Instance().Get<string>( "python" );
+	}
+
 	virtual void HandleRequest( const std::string &requestStr )
 	{
 		std::stringstream ss;
@@ -98,13 +103,13 @@ public:
 
         ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 
-        string exePath( Config::Instance().Get<string>( "python" ) );
         int ret = execl( exePath.c_str(), "python",
-                         nodeScriptName, threadParams.fifoName.c_str() );
+                         nodeScriptName, threadParams.fifoName.c_str(), NULL );
 		if ( ret < 0 )
 		{
 			PS_LOG( "HandleRequest: execl failed: " << strerror(errno) );
         }
+		::exit( 1 );
 	}
 
 	virtual pid_t DoFork()
@@ -117,7 +122,7 @@ public:
 			ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 		    threadParams.pid = pid;
 
-            int readfd = open( threadParams.fifoName.c_str(), O_RDONLY );
+            int readfd = open( threadParams.fifoName.c_str(), O_RDONLY | O_NONBLOCK );
             if ( readfd == -1 )
             {
                 PS_LOG( "DoFork: open() failed " << strerror(errno) );
@@ -134,7 +139,7 @@ public:
 		if ( pid == 0 )
 		{
 			isFork = true;
-			prctl( PR_SET_PDEATHSIG, SIGHUP );
+			prctl( PR_SET_PDEATHSIG, SIGHUP ); // ?
 		}
 		else
 		{
@@ -167,6 +172,7 @@ private:
 	boost::property_tree::ptree ptree_;
 	std::string response_;
 	int errCode_;
+	std::string exePath;
 };
 
 template< typename ActionPolicy >
@@ -465,6 +471,9 @@ void OnThreadCreate( const boost::thread *thread )
     std::stringstream ss;
     ss << python_server::fifoName << threadCnt;
     threadParams.fifoName = ss.str();
+
+	unlink( threadParams.fifoName.c_str() );
+
     int ret = mkfifo( threadParams.fifoName.c_str(), S_IRWXU );
     if ( ret )
     {

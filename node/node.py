@@ -1,5 +1,4 @@
 import sys
-import os
 import struct
 
 
@@ -9,7 +8,6 @@ def Main():
         fifo = open( fifoName, "wb" )
         print >> fifo, struct.pack('i', 0)
         fifo.close()
-        exit(0)
     except Exception as e:
         print e
 
