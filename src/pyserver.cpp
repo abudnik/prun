@@ -47,7 +47,6 @@ using boost::asio::ip::tcp;
 namespace python_server {
 
 bool isDaemon;
-bool forkMode;
 uid_t uid;
 unsigned int numThread;
 pid_t pyexecPid;
@@ -580,7 +579,6 @@ void RunPyExecProcess()
 						 python_server::isDaemon ? "--d" : " ",
 						 python_server::uid != 0 ? "--u" : " ",
 						 python_server::uid != 0 ? ( boost::lexical_cast<std::string>( python_server::uid ) ).c_str() : " ",
-						 python_server::forkMode ? " " : "--t",
 						 NULL );
 
 		if ( ret < 0 )
@@ -727,7 +725,6 @@ int main( int argc, char* argv[], char **envp )
 		// initialization
 	    python_server::numThread = 2 * boost::thread::hardware_concurrency();
 		python_server::isDaemon = false;
-		python_server::forkMode = true;
 		python_server::uid = 0;
 
 		// parse input command line options
@@ -740,8 +737,7 @@ int main( int argc, char* argv[], char **envp )
 			("num_thread", po::value<unsigned int>(), "Thread pool size")
 			("d", "Run as a daemon")
 			("stop", "Stop daemon")
-			("u", po::value<uid_t>(), "Start as a specific non-root user")
-			("t", "Process each request in a unique thread (unsafe experimental feature)");
+			("u", po::value<uid_t>(), "Start as a specific non-root user");
 		
 		po::variables_map vm;
 		po::store( po::parse_command_line( argc, argv, descr ), vm );
@@ -768,11 +764,6 @@ int main( int argc, char* argv[], char **envp )
 		{
 			StartAsDaemon();
 			python_server::isDaemon = true;
-		}
-
-		if ( vm.count( "t" ) )
-		{
-			python_server::forkMode = false;
 		}
 
 		if ( vm.count( "num_thread" ) )

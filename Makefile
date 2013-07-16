@@ -1,6 +1,6 @@
 CC := g++
 RFLAGS := -Wall -pedantic -pthread -O3
-DFLAGS := -Wall -pedantic -pthread -g
+DFLAGS := -Wall -pedantic -pthread -ggdb -O0
 
 ifneq ($(MAKECMDGOALS),debug)
 	CFLAGS := $(RFLAGS)
@@ -8,11 +8,11 @@ else
 	CFLAGS := $(DFLAGS)
 endif
 
-INCLUDE_PATH := -I/usr/include/boost -I/usr/include/python2.7
+INCLUDE_PATH := -I/usr/include/boost
 
 RM := rm -rf
 
-LIBS := -lboost_system -lboost_thread -lboost_program_options -lboost_filesystem -lpython2.7 -lrt
+LIBS := -lboost_system -lboost_thread -lboost_program_options -lboost_filesystem -lrt
 LIB_PATH := /usr/lib
 
 srcdir := src
@@ -20,7 +20,7 @@ objdir := objs
 depdir := deps
 OUT := pyserver pyexec pysender
 OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(OUT)))
-COMMON := common log
+COMMON := common log config
 COMMON_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(COMMON)))
 ALL_CPP := $(COMMON) $(OUT)
 DEPENDS := $(addprefix $(depdir)/, $(addsuffix .d, $(ALL_CPP)))

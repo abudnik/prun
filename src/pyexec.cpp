@@ -31,7 +31,6 @@ the License.
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
-#include <Python.h>
 #include <unistd.h>
 #include <csignal>
 #include <sys/wait.h>
@@ -39,6 +38,7 @@ the License.
 #include "request.h"
 #include "common.h"
 #include "log.h"
+#include "config.h"
 
 
 using namespace std;
@@ -47,7 +47,6 @@ using boost::asio::ip::tcp;
 namespace python_server {
 
 bool isDaemon;
-bool forkMode;
 bool isFork;
 uid_t uid;
 unsigned int numThread;
@@ -57,8 +56,9 @@ boost::interprocess::mapped_region *mappedRegion;
 
 struct ThreadParams
 {
-	int pipefd[2];
+    string fifoName;
 	pid_t pid;
+    int readfd;
 };
 
 typedef std::map< boost::thread::id, ThreadParams > ThreadInfo;
@@ -81,9 +81,6 @@ class ExecutePython : public IActionStrategy
 public:
 	virtual void HandleRequest( const std::string &requestStr )
 	{
-		//using namespace boost::python;
-		//exec( str( requestStr ) );
-
 		std::stringstream ss;
 		ss << requestStr;
 
@@ -92,27 +89,22 @@ public:
 		rParserMut->unlock();
 		int id = ptree_.get<int>( "id" );
 
-		pid_t pid = 0;
-		if ( forkMode )
-		{
-			pid = DoFork();
-			if ( pid > 0 )
-				return;
-		}
+		pid_t pid = DoFork();
+        if ( pid > 0 )
+            return;
 
 		size_t offset = id * shmemBlockSize;
 		char *addr = (char*)mappedRegion->get_address() + offset;
 
-		//PyCompilerFlags cf;
-		//cf.cf_flags = 0; // TODO: ignore os._exit(), sys.exit(), thread.exit(), etc.
-	    errCode_ = PyRun_SimpleStringFlags( addr, NULL );
+        ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 
-		if ( forkMode && pid == 0 )
+        string exePath( Config::Instance().Get<string>( "python" ) );
+        int ret = execl( exePath.c_str(), "python",
+                         nodeScriptName, threadParams.fifoName.c_str() );
+		if ( ret < 0 )
 		{
-			ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
-		    write( threadParams.pipefd[1], &errCode_, sizeof( errCode_ ) );
-			exit( errCode_ );
-		}
+			PS_LOG( "HandleRequest: execl failed: " << strerror(errno) );
+        }
 	}
 
 	virtual pid_t DoFork()
@@ -124,7 +116,18 @@ public:
 			//PS_LOG( "wait child " << pid );
 			ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 		    threadParams.pid = pid;
-		    read( threadParams.pipefd[0], &errCode_, sizeof( errCode_ ) );
+
+            int readfd = open( threadParams.fifoName.c_str(), O_RDONLY );
+            if ( readfd == -1 )
+            {
+                PS_LOG( "DoFork: open() failed " << strerror(errno) );
+                errCode_ = -1;
+            }
+            else
+            {
+                read( readfd, &errCode_, sizeof( errCode_ ) );
+                close( readfd );
+            }
 			//PS_LOG( "wait child done " << pid );
 		}
 		else
@@ -132,7 +135,6 @@ public:
 		{
 			isFork = true;
 			prctl( PR_SET_PDEATHSIG, SIGHUP );
-			PyOS_AfterFork();
 		}
 		else
 		{
@@ -368,7 +370,7 @@ void SigHandler( int s )
 		exit( 0 );
 	}
 
-	if ( s == SIGCHLD && python_server::forkMode )
+	if ( s == SIGCHLD )
 	{
 		// On Linux, multiple children terminating will be compressed into a single SIGCHLD
 		while( 1 )
@@ -440,8 +442,8 @@ void AtExit()
 	{
 		python_server::ThreadParams &threadParams = it->second;
 
-		close( threadParams.pipefd[0] );
-		close( threadParams.pipefd[1] );
+        if ( !threadParams.fifoName.empty() )
+            unlink( threadParams.fifoName.c_str() );
 	}
 
 	delete python_server::rParserMut;
@@ -458,11 +460,17 @@ void OnThreadCreate( const boost::thread *thread )
 	static int threadCnt = 0;
 
 	python_server::ThreadParams threadParams;
-	memset( &threadParams, 0, sizeof( threadParams ) );
-	if ( python_server::forkMode )
-	{
-		pipe( threadParams.pipefd );
-	}
+    threadParams.readfd = -1;
+
+    std::stringstream ss;
+    ss << python_server::fifoName << threadCnt;
+    threadParams.fifoName = ss.str();
+    int ret = mkfifo( threadParams.fifoName.c_str(), S_IRWXU );
+    if ( ret )
+    {
+        PS_LOG( "OnThreadCreate: mkfifo failed " << strerror(errno) );
+        threadParams.fifoName.clear();
+    }
 	++threadCnt;
 
 	python_server::threadInfo[ thread->get_id() ] = threadParams;
@@ -488,14 +496,10 @@ int main( int argc, char* argv[], char **envp )
 	SetupSignalHandlers();
 	atexit( AtExit );
 
-	PyEval_InitThreads();
-	Py_Initialize();
-
 	try
 	{
 		// initialization
 		python_server::isDaemon = false;
-		python_server::forkMode = true;
 		python_server::isFork = false;
 		python_server::uid = 0;
 
@@ -524,15 +528,12 @@ int main( int argc, char* argv[], char **envp )
 			python_server::isDaemon = true;
 		}
 
-		if ( vm.count( "t" ) )
-		{
-			python_server::forkMode = false;
-		}
-
 		if ( vm.count( "num_thread" ) )
 		{
 			python_server::numThread = vm[ "num_thread" ].as<unsigned int>();
 		}
+
+        python_server::Config::Instance().ParseConfig();
 
 		python_server::logger::InitLogger( python_server::isDaemon, "PyExec" );
 
@@ -588,8 +589,6 @@ int main( int argc, char* argv[], char **envp )
 		cout << e.what() << endl;
 		PS_LOG( e.what() );
 	}
-
-	Py_Finalize();
 
 	PS_LOG( "stopped" );
 

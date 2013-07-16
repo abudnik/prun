@@ -31,5 +31,8 @@ unsigned short defaultPort = 5555;
 unsigned short defaultPyExecPort = defaultPort + 1;
 
 char *const shmemName = "pyexec";
+char *const fifoName = "/tmp/pyexec";
+
+char *const nodeScriptName = "node/node.py";
 
 } // namespace python_server

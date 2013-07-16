@@ -29,5 +29,8 @@ extern unsigned short defaultPort;
 extern unsigned short defaultPyExecPort;
 
 extern char *const shmemName;
+extern char *const fifoName;
+
+extern char *const nodeScriptName;
 
 } // namespace python_server
