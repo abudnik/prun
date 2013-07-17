@@ -18,14 +18,17 @@ public:
         return ptree_.get<T>( key );
     }
 
-    bool ParseConfig( const char *cfgName = defaultCfgName )
+    bool ParseConfig( const char *cfgPath = "", const char *cfgName = defaultCfgName )
     {
-        configName_ = cfgName;
+        configPath_ = cfgPath;
+        if ( !configPath_.empty() )
+            configPath_ += '/';
+        configPath_ += cfgName;
 
-        ifstream file( configName_.c_str() );
+        ifstream file( configPath_.c_str() );
         if ( !file.is_open() )
         {
-			PS_LOG( "Config::ParseConfig: couldn't open " << configName_ );
+			PS_LOG( "Config::ParseConfig: couldn't open " << configPath_ );
             return false;
         }
         try
@@ -48,7 +51,7 @@ public:
     }
 
 private:
-    string configName_;
+    string configPath_;
 	boost::property_tree::ptree ptree_;
 };
 

@@ -50,6 +50,8 @@ bool isDaemon;
 bool isFork;
 uid_t uid;
 unsigned int numThread;
+string exeDir;
+string nodeScriptPath;
 
 boost::interprocess::shared_memory_object *sharedMemPool;
 boost::interprocess::mapped_region *mappedRegion;
@@ -58,7 +60,6 @@ struct ThreadParams
 {
     string fifoName;
 	pid_t pid;
-    int readfd;
 };
 
 typedef std::map< boost::thread::id, ThreadParams > ThreadInfo;
@@ -104,7 +105,7 @@ public:
         ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 
         int ret = execl( exePath.c_str(), "python",
-                         nodeScriptName, threadParams.fifoName.c_str(), NULL );
+                         nodeScriptPath.c_str(), threadParams.fifoName.c_str(), NULL );
 		if ( ret < 0 )
 		{
 			PS_LOG( "HandleRequest: execl failed: " << strerror(errno) );
@@ -122,7 +123,7 @@ public:
 			ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 		    threadParams.pid = pid;
 
-            int readfd = open( threadParams.fifoName.c_str(), O_RDONLY | O_NONBLOCK );
+            int readfd = open( threadParams.fifoName.c_str(), O_RDONLY );
             if ( readfd == -1 )
             {
                 PS_LOG( "DoFork: open() failed " << strerror(errno) );
@@ -466,7 +467,6 @@ void OnThreadCreate( const boost::thread *thread )
 	static int threadCnt = 0;
 
 	python_server::ThreadParams threadParams;
-    threadParams.readfd = -1;
 
     std::stringstream ss;
     ss << python_server::fifoName << threadCnt;
@@ -519,6 +519,7 @@ int main( int argc, char* argv[], char **envp )
 
 		descr.add_options()
 			("num_thread", po::value<unsigned int>(), "Thread pool size")
+			("exe_dir", po::value<std::string>(), "Executable working directory")
 			("d", "Run as a daemon")
 			("u", po::value<uid_t>(), "Start as a specific non-root user")
 			("f", "Create process for each request");
@@ -527,14 +528,16 @@ int main( int argc, char* argv[], char **envp )
 		po::store( po::parse_command_line( argc, argv, descr ), vm );
 		po::notify( vm );
 
-		if ( vm.count( "u" ) )
-		{
-			python_server::uid = vm[ "u" ].as<uid_t>();
-		}
-
 		if ( vm.count( "d" ) )
 		{
 			python_server::isDaemon = true;
+		}
+
+		python_server::logger::InitLogger( python_server::isDaemon, "PyExec" );
+
+		if ( vm.count( "u" ) )
+		{
+			python_server::uid = vm[ "u" ].as<uid_t>();
 		}
 
 		if ( vm.count( "num_thread" ) )
@@ -542,9 +545,14 @@ int main( int argc, char* argv[], char **envp )
 			python_server::numThread = vm[ "num_thread" ].as<unsigned int>();
 		}
 
-        python_server::Config::Instance().ParseConfig();
+		if ( vm.count( "exe_dir" ) )
+		{
+			python_server::exeDir = vm[ "exe_dir" ].as<std::string>();
+            python_server::nodeScriptPath = python_server::exeDir + '/';
+		}
+        python_server::nodeScriptPath += python_server::nodeScriptName;
 
-		python_server::logger::InitLogger( python_server::isDaemon, "PyExec" );
+        python_server::Config::Instance().ParseConfig( python_server::exeDir.c_str() );
 
 		SetupPyExecIPC();
 		
@@ -595,8 +603,8 @@ int main( int argc, char* argv[], char **envp )
 	}
 	catch( std::exception &e )
 	{
-		cout << e.what() << endl;
-		PS_LOG( e.what() );
+		cout << "Exception: " << e.what() << endl;
+		PS_LOG( "Exception: " << e.what() );
 	}
 
 	PS_LOG( "stopped" );

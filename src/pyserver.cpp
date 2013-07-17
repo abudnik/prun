@@ -31,6 +31,7 @@ the License.
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
+#include <boost/filesystem/operations.hpp>
 #include <unistd.h>
 #include <csignal>
 #include <sys/wait.h>
@@ -50,7 +51,7 @@ bool isDaemon;
 uid_t uid;
 unsigned int numThread;
 pid_t pyexecPid;
-char exeDir[PATH_MAX];
+string exeDir;
 
 boost::interprocess::shared_memory_object *sharedMemPool;
 boost::interprocess::mapped_region *mappedRegion;
@@ -576,6 +577,7 @@ void RunPyExecProcess()
 
 		int ret = execl( exePath.c_str(), "./pyexec", "--num_thread",
 						 ( boost::lexical_cast<std::string>( python_server::numThread ) ).c_str(),
+						 "--exe_dir", python_server::exeDir.c_str(),
 						 python_server::isDaemon ? "--d" : " ",
 						 python_server::uid != 0 ? "--u" : " ",
 						 python_server::uid != 0 ? ( boost::lexical_cast<std::string>( python_server::uid ) ).c_str() : " ",
@@ -718,14 +720,14 @@ void ThreadFun( boost::asio::io_service *io_service )
 // TODO: read directly to shmem, avoiding memory copying
 int main( int argc, char* argv[], char **envp )
 {
-	getcwd( python_server::exeDir, sizeof( python_server::exeDir ) );
-
 	try
 	{
 		// initialization
 	    python_server::numThread = 2 * boost::thread::hardware_concurrency();
 		python_server::isDaemon = false;
 		python_server::uid = 0;
+
+        python_server::exeDir = boost::filesystem::system_complete( argv[0] ).branch_path().string();
 
 		// parse input command line options
 		namespace po = boost::program_options;
@@ -826,8 +828,8 @@ int main( int argc, char* argv[], char **envp )
 	}
 	catch( std::exception &e )
 	{
-		cout << e.what() << endl;
-		PS_LOG( e.what() );
+		cout << "Exception: " << e.what() << endl;
+		PS_LOG( "Exception: " << e.what() );
 	}
 
 	PS_LOG( "stopped" );
