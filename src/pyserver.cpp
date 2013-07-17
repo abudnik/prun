@@ -186,7 +186,7 @@ public:
 			boost::unique_lock< boost::mutex > lock( responseMut_ );
             while( !execCompleted_ )
             {
-                const boost::system_time timeout = boost::get_system_time() + boost::posix_time::milliseconds( responseTimeout );
+                const boost::system_time timeout = boost::get_system_time() + boost::posix_time::milliseconds( RESPONSE_TIMEOUT );
                 if ( responseCond_.timed_wait( lock, timeout ) )
                 {
                     ret = errCode_;
@@ -248,7 +248,7 @@ protected:
 	boost::condition_variable responseCond_;
 	boost::mutex responseMut_;
 	int errCode_;
-	const static int responseTimeout = 60 * 1000; // 60 sec
+	const static int RESPONSE_TIMEOUT = 60 * 1000; // 60 sec
 };
 
 class Session : public boost::enable_shared_from_this< Session >
@@ -427,9 +427,6 @@ namespace {
 
 int StartAsDaemon()
 {
-//#ifdef _BSD_SOURCE || (_XOPEN_SOURCE && _XOPEN_SOURCE < 500)
-	//return daemon(1, 1);
-//#else
 	pid_t parpid, sid;
 
 	// Fork the process and have the parent exit. If the process was started
@@ -472,7 +469,6 @@ int StartAsDaemon()
 	close(STDERR_FILENO);
 
 	return sid;
-//#endif
 }
 
 int StopDaemon()
@@ -484,8 +480,15 @@ int StopDaemon()
 
 	FILE *cmd = popen( command.str().c_str(), "r" );
 	fgets( line, sizeof(line), cmd );
-	pid_t pid = strtoul( line, NULL, 10 );
 	pclose( cmd );
+
+	if ( !strlen( line ) )
+	{
+		std::cout << "can't get pid of pyserver: " << strerror(errno) << std::endl;
+		exit( 1 );
+	}
+
+	pid_t pid = strtoul( line, NULL, 10 );
 
 	std::cout << "sending SIGTERM to " << pid << std::endl;
 	return kill( pid, SIGTERM );
@@ -576,7 +579,7 @@ void RunPyExecProcess()
 		std::string exePath( python_server::exeDir );
 		exePath += "/pyexec";
 
-		int ret = execl( exePath.c_str(), "./pyexec", "--num_thread",
+		int ret = execl( exePath.c_str(), "pyexec", "--num_thread",
 						 ( boost::lexical_cast<std::string>( python_server::numThread ) ).c_str(),
 						 "--exe_dir", python_server::exeDir.c_str(),
 						 python_server::isDaemon ? "--d" : " ",
@@ -610,13 +613,13 @@ void SetupPyExecIPC()
 {
 	namespace ipc = boost::interprocess;
 
-	ipc::shared_memory_object::remove( python_server::shmemName );
+	ipc::shared_memory_object::remove( python_server::SHMEM_NAME );
 
 	try
 	{
-		python_server::sharedMemPool = new ipc::shared_memory_object( ipc::create_only, python_server::shmemName, ipc::read_write );
+		python_server::sharedMemPool = new ipc::shared_memory_object( ipc::create_only, python_server::SHMEM_NAME, ipc::read_write );
 
-		size_t shmemSize = python_server::numThread * python_server::shmemBlockSize;
+		size_t shmemSize = python_server::numThread * python_server::SHMEM_BLOCK_SIZE;
 		python_server::sharedMemPool->truncate( shmemSize );
 
 		python_server::mappedRegion = new ipc::mapped_region( *python_server::sharedMemPool, ipc::read_write );
@@ -636,7 +639,7 @@ void AtExit()
 	kill( python_server::pyexecPid, SIGTERM );
 
 	// remove shared memory
-	ipc::shared_memory_object::remove( python_server::shmemName );
+	ipc::shared_memory_object::remove( python_server::SHMEM_NAME );
 
 	delete python_server::mappedRegion;
 	python_server::mappedRegion = NULL;
@@ -663,14 +666,14 @@ void OnThreadCreate( const boost::thread *thread, boost::asio::io_service *io_se
 	// init shmem block associated with created thread
 	python_server::ThreadComm threadComm;
 	threadComm.shmemBlockId = commCnt;
-	threadComm.shmemAddr = (char*)python_server::mappedRegion->get_address() + commCnt * python_server::shmemBlockSize;
-	memset( threadComm.shmemAddr, 0, python_server::shmemBlockSize );
+	threadComm.shmemAddr = (char*)python_server::mappedRegion->get_address() + commCnt * python_server::SHMEM_BLOCK_SIZE;
+	memset( threadComm.shmemAddr, 0, python_server::SHMEM_BLOCK_SIZE );
 
 	boost::system::error_code ec;
 
 	// open socket to pyexec
 	tcp::resolver resolver( *io_service );
-	tcp::resolver::query query( tcp::v4(), "localhost", boost::lexical_cast<std::string>( python_server::defaultPyExecPort ) );
+	tcp::resolver::query query( tcp::v4(), "localhost", boost::lexical_cast<std::string>( python_server::DEFAULT_PYEXEC_PORT ) );
 	tcp::resolver::iterator iterator = resolver.resolve( query );
 
 	threadComm.socket = new tcp::socket( *io_service );
@@ -792,7 +795,7 @@ int main( int argc, char* argv[], char **envp )
 		python_server::rParserMut = new boost::mutex();
 		python_server::wParserMut = new boost::mutex();
 
-		python_server::ConnectionAcceptor acceptor( io_service, python_server::defaultPort );
+		python_server::ConnectionAcceptor acceptor( io_service, python_server::DEFAULT_PORT );
 
 		// create thread pool
 		boost::thread_group worker_threads;

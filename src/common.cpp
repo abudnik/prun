@@ -24,15 +24,15 @@ the License.
 
 namespace python_server {
 
-unsigned int shmemBlockSize = 512 * 1024;
-unsigned int maxScriptSize = shmemBlockSize - 1;
+unsigned int SHMEM_BLOCK_SIZE = 512 * 1024;
+unsigned int MAX_SCRIPT_SIZE = SHMEM_BLOCK_SIZE - 1;
 
-unsigned short defaultPort = 5555;
-unsigned short defaultPyExecPort = defaultPort + 1;
+unsigned short DEFAULT_PORT = 5555;
+unsigned short DEFAULT_PYEXEC_PORT = DEFAULT_PORT + 1;
 
-char *const shmemName = "pyexec_shmem";
-char *const fifoName = "/tmp/pyexec";
+char *const SHMEM_NAME = "pyexec_shmem";
+char *const FIFO_NAME = "/tmp/pyexec";
 
-char *const nodeScriptName = "node/node.py";
+char *const NODE_SCRIPT_NAME = "node/node.py";
 
 } // namespace python_server

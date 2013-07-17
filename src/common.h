@@ -22,15 +22,15 @@ the License.
 
 namespace python_server {
 
-extern unsigned int shmemBlockSize;
-extern unsigned int maxScriptSize;
+extern unsigned int SHMEM_BLOCK_SIZE;
+extern unsigned int MAX_SCRIPT_SIZE;
 
-extern unsigned short defaultPort;
-extern unsigned short defaultPyExecPort;
+extern unsigned short DEFAULT_PORT;
+extern unsigned short DEFAULT_PYEXEC_PORT;
 
-extern char *const shmemName;
-extern char *const fifoName;
+extern char *const SHMEM_NAME;
+extern char *const FIFO_NAME;
 
-extern char *const nodeScriptName;
+extern char *const NODE_SCRIPT_NAME;
 
 } // namespace python_server

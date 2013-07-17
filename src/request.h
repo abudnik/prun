@@ -85,7 +85,7 @@ private:
 	int CheckHeader()
 	{
 		// TODO: Error codes
-		if ( requestLength_ > maxScriptSize )
+		if ( requestLength_ > MAX_SCRIPT_SIZE )
 			return -1;
 
 		return 0;

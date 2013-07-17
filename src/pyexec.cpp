@@ -78,7 +78,7 @@ class ExecutePython : public IActionStrategy
 public:
 	ExecutePython()
 	{
-		pythonExePath = Config::Instance().Get<string>( "python" );
+		pythonExePath_ = Config::Instance().Get<string>( "python" );
 	}
 
 	virtual void HandleRequest( const std::string &requestStr )
@@ -96,13 +96,13 @@ public:
 		int id = ptree_.get<int>( "id" );
 		string scriptLength = ptree_.get<std::string>( "len" );
 
-	    size_t offset = id * shmemBlockSize;
+	    size_t offset = id * SHMEM_BLOCK_SIZE;
         ss2 << offset;
         const char *shmemOffset = ss2.str().c_str();
 
         ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 
-        int ret = execl( pythonExePath.c_str(), "python",
+        int ret = execl( pythonExePath_.c_str(), "python",
                          nodeScriptPath.c_str(),
                          threadParams.fifoName.c_str(), shmemPath.c_str(),
                          scriptLength.c_str(), shmemOffset, NULL );
@@ -140,7 +140,7 @@ public:
 		if ( pid == 0 )
 		{
 			isFork = true;
-			prctl( PR_SET_PDEATHSIG, SIGHUP ); // ?
+			prctl( PR_SET_PDEATHSIG, SIGHUP );
 		}
 		else
 		{
@@ -173,7 +173,7 @@ private:
 	boost::property_tree::ptree ptree_;
 	std::string response_;
 	int errCode_;
-	std::string pythonExePath;
+	std::string pythonExePath_;
 };
 
 template< typename ActionPolicy >
@@ -410,7 +410,7 @@ void GetShmemPath()
         // crutch: get shared memory file path 
 		char line[256] = { '\0' };
 		std::ostringstream command;
-		command << "lsof -Fn -p" << getppid() << "|grep " << python_server::shmemName;
+		command << "lsof -Fn -p" << getppid() << "|grep " << python_server::SHMEM_NAME;
 		FILE *cmd = popen( command.str().c_str(), "r" );
 		fgets( line, sizeof(line), cmd );
 		pclose( cmd );
@@ -483,7 +483,7 @@ void OnThreadCreate( const boost::thread *thread )
 	python_server::ThreadParams threadParams;
 
     std::stringstream ss;
-    ss << python_server::fifoName << threadCnt;
+    ss << python_server::FIFO_NAME << threadCnt;
     threadParams.fifoName = ss.str();
 
 	unlink( threadParams.fifoName.c_str() );
@@ -573,7 +573,7 @@ int main( int argc, char* argv[], char **envp )
 			python_server::exeDir = vm[ "exe_dir" ].as<std::string>();
             python_server::nodeScriptPath = python_server::exeDir + '/';
 		}
-        python_server::nodeScriptPath += python_server::nodeScriptName;
+        python_server::nodeScriptPath += python_server::NODE_SCRIPT_NAME;
 
         python_server::Config::Instance().ParseConfig( python_server::exeDir.c_str() );
 
@@ -582,7 +582,7 @@ int main( int argc, char* argv[], char **envp )
 		// start accepting connections
 		boost::asio::io_service io_service;
 
-		python_server::ConnectionAcceptor acceptor( io_service, python_server::defaultPyExecPort );
+		python_server::ConnectionAcceptor acceptor( io_service, python_server::DEFAULT_PYEXEC_PORT );
 
 		python_server::rParserMut = new boost::mutex();
 		python_server::wParserMut = new boost::mutex();
