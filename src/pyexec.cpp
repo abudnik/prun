@@ -29,8 +29,6 @@ the License.
 #include <boost/thread.hpp>
 #include <boost/array.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/interprocess/shared_memory_object.hpp>
-#include <boost/interprocess/mapped_region.hpp>
 #include <unistd.h>
 #include <csignal>
 #include <sys/wait.h>
@@ -52,9 +50,7 @@ uid_t uid;
 unsigned int numThread;
 string exeDir;
 string nodeScriptPath;
-
-boost::interprocess::shared_memory_object *sharedMemPool;
-boost::interprocess::mapped_region *mappedRegion;
+string shmemPath;
 
 struct ThreadParams
 {
@@ -82,30 +78,34 @@ class ExecutePython : public IActionStrategy
 public:
 	ExecutePython()
 	{
-		exePath = Config::Instance().Get<string>( "python" );
+		pythonExePath = Config::Instance().Get<string>( "python" );
 	}
 
 	virtual void HandleRequest( const std::string &requestStr )
 	{
-		std::stringstream ss;
+		pid_t pid = DoFork();
+        if ( pid > 0 )
+            return;
+
+		std::stringstream ss, ss2;
 		ss << requestStr;
 
 		rParserMut->lock();
 		boost::property_tree::read_json( ss, ptree_ );
 		rParserMut->unlock();
 		int id = ptree_.get<int>( "id" );
+		string scriptLength = ptree_.get<std::string>( "len" );
 
-		pid_t pid = DoFork();
-        if ( pid > 0 )
-            return;
-
-		size_t offset = id * shmemBlockSize;
-		char *addr = (char*)mappedRegion->get_address() + offset;
+	    size_t offset = id * shmemBlockSize;
+        ss2 << offset;
+        const char *shmemOffset = ss2.str().c_str();
 
         ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 
-        int ret = execl( exePath.c_str(), "python",
-                         nodeScriptPath.c_str(), threadParams.fifoName.c_str(), NULL );
+        int ret = execl( pythonExePath.c_str(), "python",
+                         nodeScriptPath.c_str(),
+                         threadParams.fifoName.c_str(), shmemPath.c_str(),
+                         scriptLength.c_str(), shmemOffset, NULL );
 		if ( ret < 0 )
 		{
 			PS_LOG( "HandleRequest: execl failed: " << strerror(errno) );
@@ -173,7 +173,7 @@ private:
 	boost::property_tree::ptree ptree_;
 	std::string response_;
 	int errCode_;
-	std::string exePath;
+	std::string pythonExePath;
 };
 
 template< typename ActionPolicy >
@@ -403,14 +403,28 @@ void SetupSignalHandlers()
 	sigaction( SIGHUP, &sigHandler, 0 );
 }
 
-void SetupPyExecIPC()
+void GetShmemPath()
 {
-	namespace ipc = boost::interprocess;
-
 	try
 	{
-		python_server::sharedMemPool = new ipc::shared_memory_object( ipc::open_only, python_server::shmemName, ipc::read_only );
-		python_server::mappedRegion = new ipc::mapped_region( *python_server::sharedMemPool, ipc::read_only );
+        // crutch: get shared memory file path 
+		char line[256] = { '\0' };
+		std::ostringstream command;
+		command << "lsof -Fn -p" << getppid() << "|grep " << python_server::shmemName;
+		FILE *cmd = popen( command.str().c_str(), "r" );
+		fgets( line, sizeof(line), cmd );
+		pclose( cmd );
+
+		if ( !strlen( line ) )
+		{
+		    PS_LOG( "SetupPyExecIPC: error shared memory file not found");
+			exit( 1 );
+		}
+
+        string path( line );
+        size_t pos = path.find_first_of( '/' );
+        size_t end = path.find_first_of( '\n' ) - 1;
+        python_server::shmemPath = path.substr( pos, end );
 	}
 	catch( std::exception &e )
 	{
@@ -554,7 +568,7 @@ int main( int argc, char* argv[], char **envp )
 
         python_server::Config::Instance().ParseConfig( python_server::exeDir.c_str() );
 
-		SetupPyExecIPC();
+	    GetShmemPath();
 		
 		// start accepting connections
 		boost::asio::io_service io_service;

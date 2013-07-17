@@ -30,7 +30,7 @@ unsigned int maxScriptSize = shmemBlockSize - 1;
 unsigned short defaultPort = 5555;
 unsigned short defaultPyExecPort = defaultPort + 1;
 
-char *const shmemName = "pyexec";
+char *const shmemName = "pyexec_shmem";
 char *const fifoName = "/tmp/pyexec";
 
 char *const nodeScriptName = "node/node.py";

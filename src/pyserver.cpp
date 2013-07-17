@@ -164,6 +164,7 @@ public:
 
 			ThreadComm &threadComm = commParams[ boost::this_thread::get_id() ];
 			ptree_.put( "id", threadComm.shmemBlockId );
+			ptree_.put( "len", request.GetRequestLength() );
 
 			wParserMut->lock();
 			boost::property_tree::write_json( ss, ptree_, false );
