@@ -489,7 +489,16 @@ void OnThreadCreate( const boost::thread *thread )
 	unlink( threadParams.fifoName.c_str() );
 
     int ret = mkfifo( threadParams.fifoName.c_str(), S_IRWXU );
-    if ( ret )
+    if ( !ret )
+    {
+        if ( python_server::uid )
+        {
+            ret = chown( threadParams.fifoName.c_str(), python_server::uid, -1 );
+            if ( ret == -1 )
+                PS_LOG( "OnThreadCreate: chown failed " << strerror(errno) );
+        }
+    }
+    else
     {
         PS_LOG( "OnThreadCreate: mkfifo failed " << strerror(errno) );
         threadParams.fifoName.clear();
