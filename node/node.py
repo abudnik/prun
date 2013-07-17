@@ -18,7 +18,7 @@ def Main():
         os.close( shmem )
 
         #print '#'+s+'#'
-        exec s
+        exec s in dict()
     except Exception as e:
         errCode = -1
         print e
