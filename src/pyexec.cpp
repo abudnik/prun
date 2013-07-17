@@ -488,7 +488,7 @@ void OnThreadCreate( const boost::thread *thread )
 
 	unlink( threadParams.fifoName.c_str() );
 
-    int ret = mkfifo( threadParams.fifoName.c_str(), S_IRWXU );
+    int ret = mkfifo( threadParams.fifoName.c_str(), S_IRUSR | S_IWUSR );
     if ( !ret )
     {
         if ( python_server::uid )
