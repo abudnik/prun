@@ -46,23 +46,26 @@ $(OUT): $(COMMON_OBJS) $(WORKER_OBJS)
 	$(eval main_obj= $(addprefix $(objdir)/, $(addsuffix .o, $@)))
 	$(CC) $(main_obj) $(COMMON_OBJS) -o $@ $(INCLUDE_PATH) -L$(LIB_PATH) $(LIBS) $(CFLAGS)
 
-$(objdir)/%.o: $(common_dir)/%.cpp
-	@echo Compiling $<
-	$(CC) $(INCLUDE_PATH) $(CFLAGS) -c $< -o $@
+define BUILD_SRC
+@echo Compiling $<
+$(CC) $(INCLUDE_PATH) $(CFLAGS) -c $< -o $@
+endef
 
+$(objdir)/%.o: $(common_dir)/%.cpp
+	$(BUILD_SRC)
 $(objdir)/%.o: $(worker_dir)/%.cpp
-	@echo Compiling $<
-	$(CC) $(INCLUDE_PATH) $(CFLAGS) -c $< -o $@
+	$(BUILD_SRC)
+
+define BUILD_DEPS
+$(CC) -MM $< > $@ $(INCLUDE_PATH)
+@sed -i "s/^/$(objdir)\//" $@
+@cat $@ >> $(depdir)/.depend
+endef
 
 $(depdir)/%.d: $(common_dir)/%.cpp
-	$(CC) -MM $< > $@ $(INCLUDE_PATH)
-	@sed -i "s/^/$(objdir)\//" $@
-	@cat $@ >> $(depdir)/.depend
-
+	$(BUILD_DEPS)
 $(depdir)/%.d: $(worker_dir)/%.cpp
-	$(CC) -MM $< > $@ $(INCLUDE_PATH)
-	@sed -i "s/^/$(objdir)\//" $@
-	@cat $@ >> $(depdir)/.depend
+	$(BUILD_DEPS)
 
 -include $(depdir)/.depend
 
