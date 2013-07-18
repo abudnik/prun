@@ -35,8 +35,8 @@ the License.
 #include <sys/prctl.h>
 #include "request.h"
 #include "common.h"
-#include "log.h"
-#include "config.h"
+#include "common/log.h"
+#include "common/config.h"
 
 
 using namespace std;

@@ -38,10 +38,10 @@ the License.
 #include <cstdlib>
 #include "request.h"
 #include "common.h"
-#include "helper.h"
-#include "log.h"
-#include "config.h"
-#include "pidfile.h"
+#include "common/helper.h"
+#include "common/log.h"
+#include "common/config.h"
+#include "common/pidfile.h"
 
 
 using namespace std;
