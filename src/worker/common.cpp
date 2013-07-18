@@ -30,9 +30,9 @@ unsigned int MAX_SCRIPT_SIZE = SHMEM_BLOCK_SIZE - 1;
 unsigned short DEFAULT_PORT = 5555;
 unsigned short DEFAULT_PYEXEC_PORT = DEFAULT_PORT + 1;
 
-char *const SHMEM_NAME = "pyexec_shmem";
-char *const FIFO_NAME = "/tmp/pyexec";
+char const SHMEM_NAME[] = "pyexec_shmem";
+char const FIFO_NAME[] = "/tmp/pyexec";
 
-char *const NODE_SCRIPT_NAME = "node/node.py";
+char const NODE_SCRIPT_NAME[] = "node/node.py";
 
 } // namespace python_server

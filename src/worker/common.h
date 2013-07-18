@@ -28,9 +28,9 @@ extern unsigned int MAX_SCRIPT_SIZE;
 extern unsigned short DEFAULT_PORT;
 extern unsigned short DEFAULT_PYEXEC_PORT;
 
-extern char *const SHMEM_NAME;
-extern char *const FIFO_NAME;
+extern const char SHMEM_NAME[];
+extern const char FIFO_NAME[];
 
-extern char *const NODE_SCRIPT_NAME;
+extern const char NODE_SCRIPT_NAME[];
 
 } // namespace python_server
