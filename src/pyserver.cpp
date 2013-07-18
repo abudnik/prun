@@ -40,6 +40,8 @@ the License.
 #include "common.h"
 #include "helper.h"
 #include "log.h"
+#include "config.h"
+#include "pidfile.h"
 
 
 using namespace std;
@@ -780,6 +782,15 @@ int main( int argc, char* argv[], char **envp )
 		python_server::numThread += 2;
 
 		python_server::logger::InitLogger( python_server::isDaemon, "PythonServer" );
+
+        python_server::Config::Instance().ParseConfig( python_server::exeDir.c_str() );
+
+        string pidfilePath = python_server::Config::Instance().Get<string>( "pidfile" );
+        if ( pidfilePath[0] != '/' )
+        {
+            pidfilePath = python_server::exeDir + '/' + pidfilePath;
+        }
+        python_server::Pidfile pidfile( pidfilePath.c_str() );
 
 		SetupSignalHandlers();
 		atexit( AtExit );
