@@ -20,6 +20,8 @@ the License.
 ===========================================================================
 */
 
+#define BOOST_SPIRIT_THREADSAFE
+
 #include <cerrno>
 #include <iostream>
 #include <boost/program_options.hpp>
@@ -61,9 +63,6 @@ struct ThreadParams
 typedef std::map< boost::thread::id, ThreadParams > ThreadInfo;
 ThreadInfo threadInfo;
 
-boost::mutex *rParserMut;
-boost::mutex *wParserMut;
-
 
 class IActionStrategy
 {
@@ -90,9 +89,7 @@ public:
 		std::stringstream ss, ss2;
 		ss << requestStr;
 
-		rParserMut->lock();
 		boost::property_tree::read_json( ss, ptree_ );
-		rParserMut->unlock();
 		int id = ptree_.get<int>( "id" );
 		string scriptLength = ptree_.get<std::string>( "len" );
 
@@ -157,9 +154,7 @@ public:
 		// TODO: full error code description
 		ptree_.put( "err", errCode_ );
 
-		wParserMut->lock();
 		boost::property_tree::write_json( ss, ptree_, false );
-		wParserMut->unlock();
 		response_ = ss.str();
 		return response_;
 	}
@@ -467,12 +462,6 @@ void AtExit()
             unlink( threadParams.fifoName.c_str() );
 	}
 
-	delete python_server::rParserMut;
-	python_server::rParserMut = NULL;
-
-	delete python_server::wParserMut;
-	python_server::wParserMut = NULL;
-
 	python_server::logger::ShutdownLogger();
 }
 
@@ -583,9 +572,6 @@ int main( int argc, char* argv[], char **envp )
 		boost::asio::io_service io_service;
 
 		python_server::ConnectionAcceptor acceptor( io_service, python_server::DEFAULT_PYEXEC_PORT );
-
-		python_server::rParserMut = new boost::mutex();
-		python_server::wParserMut = new boost::mutex();
 
 		// create thread pool
 		boost::thread_group worker_threads;

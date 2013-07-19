@@ -20,6 +20,8 @@ the License.
 ===========================================================================
 */
 
+#define BOOST_SPIRIT_THREADSAFE
+
 #include <cerrno>
 #include <iostream>
 #include <boost/program_options.hpp>
@@ -67,9 +69,6 @@ struct ThreadComm
 
 typedef std::map< boost::thread::id, ThreadComm > CommParams;
 CommParams commParams;
-
-boost::mutex *rParserMut;
-boost::mutex *wParserMut;
 
 Semaphore *taskSem;
 
@@ -168,9 +167,7 @@ public:
 			ptree_.put( "id", threadComm.shmemBlockId );
 			ptree_.put( "len", request.GetRequestLength() );
 
-			wParserMut->lock();
 			boost::property_tree::write_json( ss, ptree_, false );
-			wParserMut->unlock();
 
 			ss2 << ss.str().size() << '\n' << ss.str();
 
@@ -231,9 +228,7 @@ public:
 			ptree_.clear();
 			ss << buffer_.c_array();
 
-			rParserMut->lock();
 		    boost::property_tree::read_json( ss, ptree_ );
-			rParserMut->unlock();
 			errCode_ = ptree_.get<int>( "err" );
 		}
 
@@ -652,12 +647,6 @@ void AtExit()
 	delete python_server::taskSem;
 	python_server::taskSem = NULL;
 
-	delete python_server::rParserMut;
-	python_server::rParserMut = NULL;
-
-	delete python_server::wParserMut;
-	python_server::wParserMut = NULL;
-
 	python_server::logger::ShutdownLogger();
 }
 
@@ -802,9 +791,6 @@ int main( int argc, char* argv[], char **envp )
 		boost::asio::io_service io_service;
 
 		python_server::taskSem = new python_server::Semaphore( python_server::numThread - 2 );
-
-		python_server::rParserMut = new boost::mutex();
-		python_server::wParserMut = new boost::mutex();
 
 		python_server::ConnectionAcceptor acceptor( io_service, python_server::DEFAULT_PORT );
 
