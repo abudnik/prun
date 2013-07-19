@@ -31,6 +31,8 @@ the License.
 #include <boost/thread.hpp>
 #include <boost/array.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/mapped_region.hpp> 
 #include <unistd.h>
 #include <csignal>
 #include <sys/wait.h>
@@ -53,6 +55,9 @@ unsigned int numThread;
 string exeDir;
 string nodeScriptPath;
 string shmemPath;
+
+boost::interprocess::shared_memory_object *sharedMemPool;
+boost::interprocess::mapped_region *mappedRegion; 
 
 struct ThreadParams
 {
@@ -92,6 +97,9 @@ public:
 		boost::property_tree::read_json( ss, ptree_ );
 		int id = ptree_.get<int>( "id" );
 		string scriptLength = ptree_.get<std::string>( "len" );
+
+        //size_t offset = id * shmemBlockSize;
+        //char *addr = (char*)mappedRegion->get_address() + offset;
 
 	    size_t offset = id * SHMEM_BLOCK_SIZE;
         ss2 << offset;
@@ -398,14 +406,19 @@ void SetupSignalHandlers()
 	sigaction( SIGHUP, &sigHandler, 0 );
 }
 
-void GetShmemPath()
+void SetupPyExecIPC()
 {
+    namespace ipc = boost::interprocess; 
+
 	try
 	{
+        python_server::sharedMemPool = new ipc::shared_memory_object( ipc::open_only, python_server::SHMEM_NAME, ipc::read_only );
+        python_server::mappedRegion = new ipc::mapped_region( *python_server::sharedMemPool, ipc::read_only );
+
         // crutch: get shared memory file path 
 		char line[256] = { '\0' };
 		std::ostringstream command;
-		command << "lsof -Fn -p" << getppid() << "|grep " << python_server::SHMEM_NAME;
+		command << "lsof -Fn -p" << getpid() << "|grep " << python_server::SHMEM_NAME;
 		FILE *cmd = popen( command.str().c_str(), "r" );
 		fgets( line, sizeof(line), cmd );
 		pclose( cmd );
@@ -448,8 +461,6 @@ void AtExit()
 	if ( python_server::isFork )
 		return;
 
-	kill( getppid(), SIGTERM );
-
 	// cleanup threads
 	python_server::ThreadInfo::iterator it;
 	for( it = python_server::threadInfo.begin();
@@ -462,7 +473,15 @@ void AtExit()
             unlink( threadParams.fifoName.c_str() );
 	}
 
+	delete python_server::mappedRegion;
+	python_server::mappedRegion = NULL;
+
+	delete python_server::sharedMemPool;
+	python_server::sharedMemPool = NULL;
+
 	python_server::logger::ShutdownLogger();
+
+	kill( getppid(), SIGTERM );
 }
 
 void OnThreadCreate( const boost::thread *thread )
@@ -566,7 +585,7 @@ int main( int argc, char* argv[], char **envp )
 
         python_server::Config::Instance().ParseConfig( python_server::exeDir.c_str() );
 
-	    GetShmemPath();
+	    SetupPyExecIPC();
 		
 		// start accepting connections
 		boost::asio::io_service io_service;
