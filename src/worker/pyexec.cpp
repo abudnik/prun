@@ -69,48 +69,90 @@ typedef std::map< boost::thread::id, ThreadParams > ThreadInfo;
 ThreadInfo threadInfo;
 
 
-class IActionStrategy
+class Job
 {
 public:
-	virtual void HandleRequest( const std::string &requestStr ) = 0;
-	virtual const std::string &GetResponse() = 0;
-	virtual ~IActionStrategy() {}
+	template< typename T >
+	void ParseRequest( Request<T> &request )
+	{
+		const std::string &requestStr = request.GetRequestString();
+	    
+		std::stringstream ss;
+		ss << requestStr;
+
+		boost::property_tree::ptree ptree;
+		boost::property_tree::read_json( ss, ptree );
+
+		jobId_ = ptree.get<int>( "id" );
+	    scriptLength_ = ptree.get<unsigned int>( "len" );
+		language_ = ptree.get<std::string>( "lang" );
+	}
+
+	void GetResponse( std::string &response )
+	{
+		std::stringstream ss;
+		boost::property_tree::ptree ptree;
+
+		ptree.put( "err", errCode_ );
+
+		boost::property_tree::write_json( ss, ptree, false );
+		response = ss.str();
+	}
+
+	void OnError( int err )
+	{
+		errCode_ = err;
+	}
+
+	int GetJobId() const { return jobId_; }
+	unsigned int GetScriptLength() const { return scriptLength_; }
+	const std::string &GetScriptLanguage() const { return language_; }
+
+private:
+	int jobId_;
+	unsigned int scriptLength_;
+	int errCode_;
+	std::string language_;
 };
 
-class ExecutePython : public IActionStrategy
+class ScriptExec
 {
 public:
-	ExecutePython()
+	virtual void Execute( Job *job ) = 0;
+	virtual ~ScriptExec() {}
+};
+
+class PythonExec : public ScriptExec
+{
+public:
+	PythonExec()
 	{
 		pythonExePath_ = Config::Instance().Get<string>( "python" );
 	}
 
-	virtual void HandleRequest( const std::string &requestStr )
+	virtual void Execute( Job *job )
 	{
+		job_ = job;
+
 		pid_t pid = DoFork();
         if ( pid > 0 )
             return;
 
 		std::stringstream ss, ss2;
-		ss << requestStr;
 
-		boost::property_tree::read_json( ss, ptree_ );
-		int id = ptree_.get<int>( "id" );
-		string scriptLength = ptree_.get<std::string>( "len" );
+		ss << job->GetScriptLength();
+		string scriptLength = ss.str();
 
-        //size_t offset = id * shmemBlockSize;
-        //char *addr = (char*)mappedRegion->get_address() + offset;
-
-	    size_t offset = id * SHMEM_BLOCK_SIZE;
+	    size_t offset = job->GetJobId() * SHMEM_BLOCK_SIZE;
         ss2 << offset;
-        const char *shmemOffset = ss2.str().c_str();
+        string shmemOffset = ss2.str();
 
         ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 
         int ret = execl( pythonExePath_.c_str(), "python",
                          nodeScriptPath.c_str(),
                          threadParams.fifoName.c_str(), shmemPath.c_str(),
-                         scriptLength.c_str(), shmemOffset, NULL );
+                         scriptLength.c_str(), shmemOffset.c_str(), NULL );
 		if ( ret < 0 )
 		{
 			PS_LOG( "HandleRequest: execl failed: " << strerror(errno) );
@@ -118,7 +160,7 @@ public:
 		::exit( 1 );
 	}
 
-	virtual pid_t DoFork()
+    pid_t DoFork()
 	{
 		pid_t pid = fork();
 
@@ -132,12 +174,14 @@ public:
             if ( readfd == -1 )
             {
                 PS_LOG( "DoFork: open() failed " << strerror(errno) );
-                errCode_ = -1;
+                job_->OnError( -1 );
             }
             else
             {
-                read( readfd, &errCode_, sizeof( errCode_ ) );
+				int errCode;
+                read( readfd, &errCode, sizeof( errCode ) );
                 close( readfd );
+				job_->OnError( errCode );
             }
 			//PS_LOG( "wait child done " << pid );
 		}
@@ -155,49 +199,19 @@ public:
 		return pid;
 	}
 
-	virtual const std::string &GetResponse()
-	{
-		std::stringstream ss;
-
-		// TODO: full error code description
-		ptree_.put( "err", errCode_ );
-
-		boost::property_tree::write_json( ss, ptree_, false );
-		response_ = ss.str();
-		return response_;
-	}
-
-	virtual void OnError( int err )
-	{
-		errCode_ = err;
-	}
-
 private:
-	boost::property_tree::ptree ptree_;
-	std::string response_;
-	int errCode_;
+	Job *job_;
 	std::string pythonExePath_;
 };
 
-template< typename ActionPolicy >
-class Action : private ActionPolicy
+class ExecCreator
 {
 public:
-	template< typename T >
-	void HandleRequest( Request<T> &request )
+	virtual ScriptExec *Create( const std::string &language )
 	{
-		const std::string &requestStr = request.GetRequestString();
-		ActionPolicy::HandleRequest( requestStr );
-	}
-
-	virtual const std::string &GetResponse()
-	{
-		return ActionPolicy::GetResponse();
-	}
-
-	virtual void OnError( int err )
-	{
-		ActionPolicy::OnError( err );
+		if ( language == "python" )
+			return new PythonExec();
+		return NULL;
 	}
 };
 
@@ -238,7 +252,7 @@ protected:
 			int ret = request_.OnFirstRead( buffer_, bytes_transferred );
 			if ( ret < 0 )
 			{
-				action_.OnError( ret );
+				job_.OnError( ret );
 				WriteResponse();
 				return;
 			}
@@ -278,7 +292,11 @@ protected:
 
 	virtual void HandleRequest()
 	{
-		action_.HandleRequest( request_ );
+	    job_.ParseRequest( request_ );
+
+		boost::scoped_ptr< ScriptExec > scriptExec(
+		    execCreator_.Create( job_.GetScriptLanguage() ) );
+		scriptExec->Execute( &job_ );
 
 		request_.Reset();
 		Start();
@@ -288,7 +306,7 @@ protected:
 
 	virtual void WriteResponse()
 	{
-	    response_ = action_.GetResponse();
+	    job_.GetResponse( response_ );
 
 		boost::asio::async_write( socket_,
 								boost::asio::buffer( response_ ),
@@ -309,7 +327,8 @@ protected:
 	tcp::socket socket_;
 	BufferType buffer_;
 	Request< BufferType > request_;
-	Action< ExecutePython > action_;
+    Job job_;
+	ExecCreator execCreator_;
 	std::string response_;
 };
 

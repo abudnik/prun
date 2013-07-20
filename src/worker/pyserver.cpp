@@ -73,69 +73,53 @@ CommParams commParams;
 Semaphore *taskSem;
 
 
-class IActionStrategy
+class Job
 {
 public:
-	virtual void HandleRequest( const std::string &requestStr ) = 0;
-	virtual const std::string &GetResponse() = 0;
-	virtual void OnError( int err ) = 0;
-	virtual ~IActionStrategy() {}
-};
-
-class SendToPyExec : public IActionStrategy
-{
-public:
-	virtual void HandleRequest( const std::string &requestStr )
+	template< typename T >
+	void ParseRequest( Request<T> &request )
 	{
-		ThreadComm &threadComm = commParams[ boost::this_thread::get_id() ];
-		memcpy( threadComm.shmemAddr, requestStr.c_str(), requestStr.size() );
-		char *shmemRequestEnd = threadComm.shmemAddr + requestStr.size();
-		*shmemRequestEnd = '\0';
+	    script_ = request.GetRequestString();
+		scriptLength_ = script_.size();
+		language_ = "python";
+	    taskType_ = "exec";
 	}
 
-	virtual const std::string &GetResponse()
+	void GetResponse( std::string &response )
 	{
 		std::stringstream ss;
+		boost::property_tree::ptree ptree;
 
 		// TODO: full error code description
-		ptree_.put( "response", errCode_ ? "FAILED" : "OK" );
+		ptree.put( "response", errCode_ ? "FAILED" : "OK" );
 
-		boost::property_tree::write_json( ss, ptree_, false );
-		response_ = ss.str();
-		return response_;
+		boost::property_tree::write_json( ss, ptree, false );
+		response = ss.str();
 	}
 
-	virtual void OnError( int err )
+	void OnError( int err )
 	{
 		errCode_ = err;
 	}
 
+	unsigned int GetScriptLength() const { return scriptLength_; }
+	const std::string &GetScriptLanguage() const { return language_; }
+	const std::string &GetScript() const { return script_; }
+	const std::string &GetTaskType() const { return taskType_; }
+
 private:
-	boost::property_tree::ptree ptree_;
-	std::string response_;
+	unsigned int scriptLength_;
+	std::string language_;
+	std::string script_;
 	int errCode_;
+	std::string taskType_;
 };
 
-template< typename ActionPolicy >
-class Action : private ActionPolicy
+class Action
 {
 public:
-	template< typename T >
-	void HandleRequest( Request<T> &request )
-	{
-		const std::string &requestStr = request.GetRequestString();
-		ActionPolicy::HandleRequest( requestStr );
-	}
-
-	virtual const std::string &GetResponse()
-	{
-		return ActionPolicy::GetResponse();
-	}
-
-	virtual void OnError( int err )
-	{
-		ActionPolicy::OnError( err );
-	}
+	virtual void Execute( Job *job ) = 0;
+	virtual ~Action() {}
 };
 
 class PyExecConnection : public boost::enable_shared_from_this< PyExecConnection >
@@ -146,15 +130,22 @@ public:
 	typedef boost::shared_ptr< PyExecConnection > connection_ptr;
 
 public:
-	PyExecConnection( boost::asio::io_service &io_service )
+	PyExecConnection()
 	{
 		socket_ = commParams[ boost::this_thread::get_id() ].socket;
 		memset( buffer_.c_array(), 0, buffer_.size() );
 	}
 
-	template< typename T >
-	int Send( const Request< T > &request )
+	int Send( Job *job )
 	{
+		job_ = job;
+
+		const std::string &script = job->GetScript();
+		ThreadComm &threadComm = commParams[ boost::this_thread::get_id() ];
+		memcpy( threadComm.shmemAddr, script.c_str(), script.size() );
+		char *shmemRequestEnd = threadComm.shmemAddr + script.size();
+		*shmemRequestEnd = '\0';
+
 		int ret = 0;
 
         execCompleted_ = false;
@@ -165,7 +156,8 @@ public:
 
 			ThreadComm &threadComm = commParams[ boost::this_thread::get_id() ];
 			ptree_.put( "id", threadComm.shmemBlockId );
-			ptree_.put( "len", request.GetRequestLength() );
+			ptree_.put( "len", script.size() );
+			ptree_.put( "lang", job->GetScriptLanguage() );
 
 			boost::property_tree::write_json( ss, ptree_, false );
 
@@ -208,7 +200,8 @@ public:
 		return ret;
 	}
 
-	virtual void HandleWrite( const boost::system::error_code& error, size_t bytes_transferred )
+private:
+	void HandleWrite( const boost::system::error_code& error, size_t bytes_transferred )
 	{
 		if ( error )
 		{
@@ -216,7 +209,7 @@ public:
 		}
 	}
 
-	virtual void HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
+	void HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
 	{
 		if ( error )
 		{
@@ -229,7 +222,10 @@ public:
 			ss << buffer_.c_array();
 
 		    boost::property_tree::read_json( ss, ptree_ );
-			errCode_ = ptree_.get<int>( "err" );
+
+			int errCode;
+			errCode = ptree_.get<int>( "err" );
+			job_->OnError( errCode );
 		}
 
         execCompleted_ = true;
@@ -237,7 +233,7 @@ public:
 		responseCond_.notify_all();
 	}
 
-protected:
+private:
 	boost::property_tree::ptree ptree_;
 	tcp::socket *socket_;
 	BufferType buffer_;
@@ -245,7 +241,28 @@ protected:
 	boost::condition_variable responseCond_;
 	boost::mutex responseMut_;
 	int errCode_;
+	Job *job_;
 	const static int RESPONSE_TIMEOUT = 60 * 1000; // 60 sec
+};
+
+class SendToPyExec : public Action
+{
+	virtual void Execute( Job *job )
+	{
+		PyExecConnection::connection_ptr pyExecConnection( new PyExecConnection() );
+		pyExecConnection->Send( job );
+	}
+};
+
+class ActionCreator
+{
+public:
+	virtual Action *Create( const std::string &taskType )
+	{
+		if ( taskType == "exec" )
+			return new SendToPyExec();
+		return NULL;
+	}
 };
 
 class Session : public boost::enable_shared_from_this< Session >
@@ -287,7 +304,7 @@ protected:
 			int ret = request_.OnFirstRead( buffer_, bytes_transferred );
 			if ( ret < 0 )
 			{
-				action_.OnError( ret );
+			    job_.OnError( ret );
 				WriteResponse();
 				return;
 			}
@@ -327,16 +344,18 @@ protected:
 
 	virtual void HandleRequest()
 	{
-		action_.HandleRequest( request_ );
-		PyExecConnection::connection_ptr pyExecConnection( new PyExecConnection( io_service_ ) );
-		int ret = pyExecConnection->Send( request_ );
-		action_.OnError( ret );
+	    job_.ParseRequest( request_ );
+
+	    boost::scoped_ptr< Action > action(
+		    actionCreator_.Create( job_.GetTaskType() ) );
+		action->Execute( &job_ );
+
 		WriteResponse();
 	}
 
 	virtual void WriteResponse()
 	{
-	    response_ = action_.GetResponse();
+	    job_.GetResponse( response_ );
 
 		boost::asio::async_write( socket_,
 								boost::asio::buffer( response_ ),
@@ -356,7 +375,8 @@ protected:
 	tcp::socket socket_;
 	BufferType buffer_;
 	Request< BufferType > request_;
-	Action< SendToPyExec > action_;
+	Job job_;
+	ActionCreator actionCreator_;
 	std::string response_;
 	boost::asio::io_service &io_service_;
 };
