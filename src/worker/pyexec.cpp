@@ -22,7 +22,6 @@ the License.
 
 #define BOOST_SPIRIT_THREADSAFE
 
-#include <cerrno>
 #include <iostream>
 #include <boost/program_options.hpp>
 #include <boost/bind.hpp>
