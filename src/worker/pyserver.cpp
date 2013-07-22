@@ -738,7 +738,7 @@ int main( int argc, char* argv[], char **envp )
 	try
 	{
 		// initialization
-	    python_server::numThread = 2 * boost::thread::hardware_concurrency();
+        unsigned int numJobThreads = 2 * boost::thread::hardware_concurrency();
 		python_server::isDaemon = false;
 		python_server::uid = 0;
 
@@ -751,7 +751,7 @@ int main( int argc, char* argv[], char **envp )
 
 		descr.add_options()
 			("help", "Print help")
-			("num_thread", po::value<unsigned int>(), "Thread pool size")
+			("num_thread", po::value<unsigned int>(), "Jobs thread pool size")
 			("d", "Run as a daemon")
 			("stop", "Stop daemon")
 			("u", po::value<uid_t>(), "Start as a specific non-root user");
@@ -785,10 +785,10 @@ int main( int argc, char* argv[], char **envp )
 
 		if ( vm.count( "num_thread" ) )
 		{
-			python_server::numThread = vm[ "num_thread" ].as<unsigned int>();
+		    numJobThreads = vm[ "num_thread" ].as<unsigned int>();
 		}
 		// accept thread & additional worker thread for async reading results from pyexec
-		python_server::numThread += 2;
+		python_server::numThread = numJobThreads + 2;
 
 		python_server::logger::InitLogger( python_server::isDaemon, "PythonServer" );
 
