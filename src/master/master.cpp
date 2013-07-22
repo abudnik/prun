@@ -23,6 +23,8 @@ the License.
 #include <iostream>
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
+#include <csignal>
+#include <sys/wait.h>
 #include "common/log.h"
 #include "common/daemon.h"
 #include "common/config.h"
@@ -40,6 +42,14 @@ string exeDir;
 
 } // namespace master
 
+namespace {
+
+void UserInteraction()
+{
+	while( !getchar() );
+}
+
+} // anonymous namespace
 
 int main( int argc, char* argv[], char **envp )
 {
@@ -91,6 +101,21 @@ int main( int argc, char* argv[], char **envp )
             pidfilePath = master::exeDir + '/' + pidfilePath;
         }
         python_server::Pidfile pidfile( pidfilePath.c_str() );
+
+		if ( !master::isDaemon )
+		{
+			UserInteraction();
+		}
+		else
+		{
+			PS_LOG( "started" );
+
+			sigset_t waitset;
+			int sig;
+			sigemptyset( &waitset );
+			sigaddset( &waitset, SIGTERM );
+			sigwait( &waitset, &sig );
+		}
 	}
 	catch( std::exception &e )
 	{
