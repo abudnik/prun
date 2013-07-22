@@ -22,29 +22,41 @@ depdir := deps
 
 common_dir := $(srcdir)/common
 worker_dir := $(srcdir)/worker
+master_dir := $(srcdir)/master
 
-COMMON := log config common
-COMMON_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(COMMON)))
+COMMON_WORKER := log daemon config common
+COMMON_WORKER_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(COMMON_WORKER)))
 
 WORKER := pyexec pyserver
 WORKER_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(WORKER)))
 
-OUT := pyserver pyexec
+COMMON_MASTER := log daemon config job worker
+COMMON_MASTER_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(COMMON_MASTER)))
 
-ALL_CPP := $(COMMON) $(WORKER)
+MASTER := master
+MASTER_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(MASTER)))
+
+OUT_WORKER := pyserver pyexec
+OUT_MASTER := master
+
+ALL_CPP := $(COMMON_WORKER) $(COMMON_MASTER) $(WORKER) $(MASTER)
 DEPENDS := $(addprefix $(depdir)/, $(addsuffix .d, $(ALL_CPP)))
 
 
-all: installdirs $(DEPENDS) $(OUT)
+all: installdirs $(DEPENDS) $(OUT_WORKER) $(OUT_MASTER)
 
 debug: all
 
 installdirs:
 	@mkdir -p $(objdir) $(depdir)
 
-$(OUT): $(COMMON_OBJS) $(WORKER_OBJS)
+$(OUT_WORKER): $(COMMON_WORKER_OBJS) $(WORKER_OBJS)
 	$(eval main_obj= $(addprefix $(objdir)/, $(addsuffix .o, $@)))
-	$(CC) $(main_obj) $(COMMON_OBJS) -o $@ $(INCLUDE_PATH) -L$(LIB_PATH) $(LIBS) $(CFLAGS)
+	$(CC) $(main_obj) $(COMMON_WORKER_OBJS) -o $@ $(INCLUDE_PATH) -L$(LIB_PATH) $(LIBS) $(CFLAGS)
+
+$(OUT_MASTER): $(COMMON_MASTER_OBJS) $(MASTER_OBJS)
+	$(eval main_obj= $(addprefix $(objdir)/, $(addsuffix .o, $@)))
+	$(CC) $(main_obj) $(COMMON_MASTER_OBJS) -o $@ $(INCLUDE_PATH) -L$(LIB_PATH) $(LIBS) $(CFLAGS)
 
 define BUILD_SRC
 @echo Compiling $<
@@ -54,6 +66,8 @@ endef
 $(objdir)/%.o: $(common_dir)/%.cpp
 	$(BUILD_SRC)
 $(objdir)/%.o: $(worker_dir)/%.cpp
+	$(BUILD_SRC)
+$(objdir)/%.o: $(master_dir)/%.cpp
 	$(BUILD_SRC)
 
 define BUILD_DEPS
@@ -65,6 +79,8 @@ endef
 $(depdir)/%.d: $(common_dir)/%.cpp
 	$(BUILD_DEPS)
 $(depdir)/%.d: $(worker_dir)/%.cpp
+	$(BUILD_DEPS)
+$(depdir)/%.d: $(master_dir)/%.cpp
 	$(BUILD_DEPS)
 
 -include $(depdir)/.depend
