@@ -185,7 +185,18 @@ public:
             else
             {
 				int errCode;
-                while( read( fifo, &errCode, sizeof( errCode ) ) == 0 );
+                while( 1 )
+                {
+                    int ret = read( fifo, &errCode, sizeof( errCode ) );
+                    if ( ret > 0 )
+                        break;
+                    if ( ret < 0 )
+                    {
+                        PS_LOG( "read fifo failed: " << strerror(errno) );
+                        errCode = -1;
+                        break;
+                    }
+                }
                 close( fifo );
 				job_->OnError( errCode );
             }
