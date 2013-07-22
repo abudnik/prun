@@ -23,7 +23,7 @@ except Exception as e:
 
 try:
     fifoName = sys.argv[1]
-    fifo = os.open( fifoName, os.O_WRONLY | os.O_NONBLOCK )
+    fifo = os.open( fifoName, os.O_WRONLY )
     os.write( fifo, struct.pack('i', errCode) )
     os.close( fifo )
 except Exception as e:

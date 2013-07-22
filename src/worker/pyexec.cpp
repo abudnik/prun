@@ -170,8 +170,14 @@ public:
 			ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 		    threadParams.pid = pid;
 
-            int readfd = open( threadParams.fifoName.c_str(), O_RDONLY );
-            if ( readfd == -1 )
+            sigset_t sigset, oldset;
+
+            sigemptyset( &sigset );
+            sigaddset( &sigset, SIGCHLD );
+            sigprocmask( SIG_BLOCK, &sigset, &oldset );
+
+            int fifo = open( threadParams.fifoName.c_str(), O_RDONLY );
+            if ( fifo == -1 )
             {
                 PS_LOG( "DoFork: open() failed " << strerror(errno) );
                 job_->OnError( -1 );
@@ -179,10 +185,12 @@ public:
             else
             {
 				int errCode;
-                read( readfd, &errCode, sizeof( errCode ) );
-                close( readfd );
+                while( read( fifo, &errCode, sizeof( errCode ) ) == 0 );
+                close( fifo );
 				job_->OnError( errCode );
             }
+
+            sigprocmask( SIG_BLOCK, &oldset, NULL );
 			//PS_LOG( "wait child done " << pid );
 		}
 		else
