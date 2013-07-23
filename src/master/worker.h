@@ -38,42 +38,13 @@ public:
     : numWorkers_( 0 )
     {}
 
-    void AddWorker( Worker *worker )
-    {
-        workers_.push_back( worker );
-        ++numWorkers_;
-    }
+    void AddWorker( Worker *worker );
 
-    void RemoveWorker( const char *host )
-    {
-        WorkerContainer::iterator it = workers_.begin();
-        for( ; it != workers_.end(); ++it )
-        {
-            if ( (*it)->GetHost() == host )
-            {
-                workers_.erase( it );
-                --numWorkers_;
-                break;
-            }
-        }
-    }
+    void RemoveWorker( const char *host );
 
-    void Clear()
-    {
-        workers_.clear();
-        numWorkers_ = 0;
-    }
+    void Clear();
 
-    Worker *GetWorker( const char *host ) const
-    {
-        WorkerContainer::const_iterator it = workers_.begin();
-        for( ; it != workers_.end(); ++it )
-        {
-            if ( (*it)->GetHost() == host )
-                return *it;
-        }
-        return NULL;
-    }
+    Worker *GetWorker( const char *host ) const;
 
     template< template< class W > class List >
     void GetWorkerList( List< Worker * > &list, int stateMask ) const
