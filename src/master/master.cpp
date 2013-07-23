@@ -22,6 +22,8 @@ the License.
 
 #include <iostream>
 #include <list>
+#include <boost/asio.hpp>
+#include <boost/thread.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
 #include <csignal>
@@ -40,6 +42,7 @@ using namespace std;
 namespace master {
 
 bool isDaemon;
+unsigned int numThread;
 string exeDir;
 
 } // namespace master
@@ -60,6 +63,18 @@ void InitWorkerManager()
 void UserInteraction()
 {
 	while( !getchar() );
+}
+
+void ThreadFun( boost::asio::io_service *io_service )
+{
+	try
+	{
+		io_service->run();
+	}
+	catch( std::exception &e )
+	{
+		PS_LOG( "ThreadFun: " << e.what() );
+	}
 }
 
 } // anonymous namespace
@@ -104,6 +119,9 @@ int main( int argc, char* argv[], char **envp )
 			master::isDaemon = true;
 		}
 
+        int numPingThread = 1;
+        master::numThread = numPingThread;
+
 		python_server::logger::InitLogger( master::isDaemon, "Master" );
 
 		python_server::Config::Instance().ParseConfig( master::exeDir.c_str() );
@@ -116,6 +134,18 @@ int main( int argc, char* argv[], char **envp )
         python_server::Pidfile pidfile( pidfilePath.c_str() );
 
         InitWorkerManager();
+
+		boost::asio::io_service io_service;
+
+		// create thread pool
+		boost::thread_group worker_threads;
+		for( unsigned int i = 0; i < master::numThread; ++i )
+		{
+			boost::thread *thread = worker_threads.create_thread(
+				boost::bind( &ThreadFun, &io_service )
+			);
+			//OnThreadCreate( thread, &io_service );
+		}
 
 		if ( !master::isDaemon )
 		{
@@ -131,6 +161,10 @@ int main( int argc, char* argv[], char **envp )
 			sigaddset( &waitset, SIGTERM );
 			sigwait( &waitset, &sig );
 		}
+
+		io_service.stop();
+
+		worker_threads.join_all();
 
         master::WorkerManager::Instance().Shutdown();
 	}
