@@ -50,8 +50,8 @@ public:
 
     Worker *GetWorker( const char *host ) const;
 
-    template< template< class, class > class List >
-    void GetWorkerList( List< Worker *, std::allocator< Worker * > > &workers, int stateMask ) const
+    template< class Container >
+    void GetWorkerList( Container &workers, int stateMask ) const
     {
         WorkerContainer::const_iterator it = workers_.begin();
         for( ; it != workers_.end(); ++it )

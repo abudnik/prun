@@ -6,10 +6,10 @@ namespace master {
 class WorkerManager
 {
 public:
-    template< template< class, class > class List >
-    void Initialize( const List< std::string, std::allocator< std::string > > &hosts )
+    template< class Container >
+    void Initialize( const Container &hosts )
     {
-        typename List< std::string, std::allocator< std::string > >::const_iterator it = hosts.begin();
+        typename Container::const_iterator it = hosts.begin();
         for( ; it != hosts.end(); ++it )
         {
             workers_.AddWorker( new Worker( (*it).c_str() ) );
