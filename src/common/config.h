@@ -2,8 +2,6 @@
 #include <fstream>
 #include "log.h"
 
-using namespace std;
-
 
 namespace python_server {
 
@@ -25,7 +23,7 @@ public:
             configPath_ += '/';
         configPath_ += cfgName;
 
-        ifstream file( configPath_.c_str() );
+        std::ifstream file( configPath_.c_str() );
         if ( !file.is_open() )
         {
 			PS_LOG( "Config::ParseConfig: couldn't open " << configPath_ );
@@ -51,7 +49,7 @@ public:
     }
 
 private:
-    string configPath_;
+    std::string configPath_;
 	boost::property_tree::ptree ptree_;
 };
 
