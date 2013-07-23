@@ -14,6 +14,10 @@ enum WorkerState
 class Worker
 {
 public:
+    Worker( const char *host )
+    : host_( host ), state_( WORKER_STATE_NOT_AVAIL )
+    {}
+
     Worker()
     : state_( WORKER_STATE_NOT_AVAIL )
     {}
@@ -40,14 +44,14 @@ public:
 
     void AddWorker( Worker *worker );
 
-    void RemoveWorker( const char *host );
+    Worker *RemoveWorker( const char *host );
 
-    void Clear();
+    void Clear( bool doDelete = true );
 
     Worker *GetWorker( const char *host ) const;
 
-    template< template< class W > class List >
-    void GetWorkerList( List< Worker * > &list, int stateMask ) const
+    template< template< class, class > class List >
+    void GetWorkerList( List< Worker *, std::allocator< Worker * > > &workers, int stateMask ) const
     {
         WorkerContainer::const_iterator it = workers_.begin();
         for( ; it != workers_.end(); ++it )
@@ -55,7 +59,7 @@ public:
             int state = (int)(*it)->GetState();
             if ( state & stateMask )
             {
-                list.push_back( *it );
+                workers.push_back( *it );
             }
         }
     }

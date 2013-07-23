@@ -21,6 +21,7 @@ the License.
 */
 
 #include <iostream>
+#include <list>
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
 #include <csignal>
@@ -30,7 +31,8 @@ the License.
 #include "common/config.h"
 #include "common/pidfile.h"
 #include "job.h"
-#include "worker.h"
+#include "worker_manager.h"
+#include "defines.h"
 
 using namespace std;
 
@@ -43,6 +45,17 @@ string exeDir;
 } // namespace master
 
 namespace {
+
+void InitWorkerManager()
+{
+    string hostsPath = master::exeDir + '/' + master::HOSTS_FILE_NAME;
+    list< string > hosts;
+
+    if ( master::ReadHosts( hostsPath.c_str(), hosts ) )
+    {
+        master::WorkerManager::Instance().Initialize( hosts );
+    }
+}
 
 void UserInteraction()
 {
@@ -102,6 +115,8 @@ int main( int argc, char* argv[], char **envp )
         }
         python_server::Pidfile pidfile( pidfilePath.c_str() );
 
+        InitWorkerManager();
+
 		if ( !master::isDaemon )
 		{
 			UserInteraction();
@@ -116,6 +131,8 @@ int main( int argc, char* argv[], char **envp )
 			sigaddset( &waitset, SIGTERM );
 			sigwait( &waitset, &sig );
 		}
+
+        master::WorkerManager::Instance().Shutdown();
 	}
 	catch( std::exception &e )
 	{

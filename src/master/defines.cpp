@@ -20,26 +20,12 @@ the License.
 ===========================================================================
 */
 
-#include <sstream>
+#include "defines.h"
 
-#define PS_LOG( MSG )\
-{\
-	std::ostringstream os;\
-	os << MSG;\
-	python_server::logger::Log( os.str().c_str() );	\
-}
+namespace master {
 
-namespace python_server {
+unsigned short NODE_PORT = 5555;
 
-namespace logger
-{
+char const HOSTS_FILE_NAME[] = "hosts";
 
-void InitLogger( bool isDaemon, const char *serviceName );
-
-void ShutdownLogger();
-
-void Log( const char *msg );
-
-} // namespace logger
-
-} // namespace python_server
+} // namespace master

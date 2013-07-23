@@ -8,22 +8,32 @@ void WorkerList::AddWorker( Worker *worker )
     ++numWorkers_;
 }
 
-void WorkerList::RemoveWorker( const char *host )
+Worker *WorkerList::RemoveWorker( const char *host )
 {
     WorkerContainer::iterator it = workers_.begin();
     for( ; it != workers_.end(); ++it )
     {
         if ( (*it)->GetHost() == host )
         {
+            Worker *w = *it;
             workers_.erase( it );
             --numWorkers_;
-            break;
+            return w;
         }
     }
+    return NULL;
 }
 
-void WorkerList::Clear()
+void WorkerList::Clear( bool doDelete )
 {
+    if ( doDelete )
+    {
+        WorkerContainer::iterator it = workers_.begin();
+        for( ; it != workers_.end(); ++it )
+        {
+            delete *it;
+        }
+    }
     workers_.clear();
     numWorkers_ = 0;
 }
