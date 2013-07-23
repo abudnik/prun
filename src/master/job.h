@@ -11,7 +11,7 @@ enum JobPriority
 class Job
 {
 public:
-    Job( const char *script, const char *scriptLanguage, unsigned int maxNodes,
+    Job( const char *script, const char *scriptLanguage, int maxNodes,
 		 int timeout, JobPriority priority )
     : script_( script ), scriptLanguage_( scriptLanguage ), maxNodes_( maxNodes ),
 	 timeout_( timeout ), priority_( priority )
@@ -23,7 +23,7 @@ public:
 	const std::string &GetScriptLanguage() const { return scriptLanguage_; }
 	unsigned int GetScriptLength() const { return scriptLength_; }
 
-    unsigned int GetMaxNodes() const { return maxNodes_; }
+    int GetMaxNodes() const { return maxNodes_; }
     int GetTimeout() const { return timeout_; }
     JobPriority GetPriority() const { return priority_; }
 
@@ -32,7 +32,7 @@ private:
     std::string scriptLanguage_;
     unsigned int scriptLength_;
 
-    unsigned int maxNodes_;
+    int maxNodes_;
     int timeout_;
     JobPriority priority_;
 };
