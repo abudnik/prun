@@ -5,7 +5,6 @@ namespace master {
 void WorkerList::AddWorker( Worker *worker )
 {
     workers_.push_back( worker );
-    ++numWorkers_;
 }
 
 Worker *WorkerList::RemoveWorker( const char *host )
@@ -17,7 +16,6 @@ Worker *WorkerList::RemoveWorker( const char *host )
         {
             Worker *w = *it;
             workers_.erase( it );
-            --numWorkers_;
             return w;
         }
     }
@@ -35,7 +33,6 @@ void WorkerList::Clear( bool doDelete )
         }
     }
     workers_.clear();
-    numWorkers_ = 0;
 }
 
 Worker *WorkerList::GetWorker( const char *host ) const
@@ -47,6 +44,19 @@ Worker *WorkerList::GetWorker( const char *host ) const
             return *it;
     }
     return NULL;
+}
+
+int WorkerList::GetNumWorkers( int stateMask ) const
+{
+    int num = 0;
+    WorkerContainer::const_iterator it = workers_.begin();
+    for( ; it != workers_.end(); ++it )
+    {
+        int state = (int)(*it)->GetState();
+        if ( state & stateMask )
+            ++num;
+    }
+    return num;
 }
 
 } // namespace master

@@ -35,13 +35,10 @@ private:
 
 class WorkerList
 {
+public:
     typedef std::vector< Worker* > WorkerContainer;
 
 public:
-    WorkerList()
-    : numWorkers_( 0 )
-    {}
-
     void AddWorker( Worker *worker );
 
     Worker *RemoveWorker( const char *host );
@@ -64,9 +61,14 @@ public:
         }
     }
 
+    WorkerContainer &GetWorkers() { return workers_; }
+
+    int GetTotalWorkers() const { return workers_.size(); }
+
+    int GetNumWorkers( int stateMask ) const;
+
 private:
     WorkerContainer workers_;
-    int numWorkers_;
 };
 
 } // namespace master
