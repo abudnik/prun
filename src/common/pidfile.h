@@ -4,7 +4,6 @@
 #include <fstream>
 #include "log.h"
 
-using namespace std;
 using namespace boost::interprocess;
 
 namespace python_server {
@@ -58,7 +57,7 @@ private:
     bool afterFail_;
     std::string filePath_;
     file_lock f_lock_;
-    ofstream file_;
+    std::ofstream file_;
 };
 
 } // namespace python_server
