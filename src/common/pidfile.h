@@ -1,3 +1,6 @@
+#ifndef __PIDFILE_H
+#define __PIDFILE_H
+
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <boost/move/move.hpp>
 #include <boost/filesystem.hpp>
@@ -61,3 +64,5 @@ private:
 };
 
 } // namespace python_server
+
+#endif

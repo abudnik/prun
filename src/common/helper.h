@@ -19,6 +19,8 @@ the License.
 
 ===========================================================================
 */
+#ifndef __HELPER_H
+#define __HELPER_H
 
 #include <boost/thread/condition.hpp>
 #include <boost/thread/mutex.hpp>
@@ -54,3 +56,5 @@ private:
 };
 
 } // namespace python_server
+
+#endif

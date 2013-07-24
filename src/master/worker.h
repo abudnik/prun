@@ -1,3 +1,6 @@
+#ifndef __WORKER_H
+#define __WORKER_H
+
 #include <vector>
 #include <string>
 
@@ -72,3 +75,5 @@ private:
 };
 
 } // namespace master
+
+#endif

@@ -19,6 +19,8 @@ the License.
 
 ===========================================================================
 */
+#ifndef __COMMON_H
+#define __COMMON_H
 
 namespace python_server {
 
@@ -34,3 +36,5 @@ extern const char FIFO_NAME[];
 extern const char NODE_SCRIPT_NAME[];
 
 } // namespace python_server
+
+#endif

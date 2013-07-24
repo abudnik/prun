@@ -1,3 +1,6 @@
+#ifndef __WORKER_MANAGER_H
+#define __WORKER_MANAGER_H
+
 #include <list>
 #include "worker.h"
 
@@ -21,6 +24,8 @@ public:
         workers_.Clear();
     }
 
+    WorkerList::WorkerContainer &GetWorkers() { return workers_.GetWorkers(); }
+
     static WorkerManager &Instance()
     {
         static WorkerManager instance_;
@@ -34,3 +39,5 @@ private:
 bool ReadHosts( const char *filePath, std::list< std::string > &hosts );
 
 } // namespace master
+
+#endif

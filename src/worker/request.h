@@ -1,3 +1,6 @@
+#ifndef __REQUEST_H
+#define __REQUEST_H
+
 #include "common/log.h"
 #include "common.h"
 
@@ -100,3 +103,5 @@ private:
 };
 
 } // namespace python_server
+
+#endif

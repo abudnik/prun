@@ -1,3 +1,6 @@
+#ifndef __JOB_H
+#define __JOB_H
+
 #include <list>
 #include <boost/thread/mutex.hpp>
 
@@ -53,3 +56,5 @@ private:
 };
 
 } // namespace master
+
+#endif

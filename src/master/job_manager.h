@@ -1,3 +1,6 @@
+#ifndef __JOB_MANAGER_H
+#define __JOB_MANAGER_H
+
 namespace master {
 
 class JobManager
@@ -7,3 +10,5 @@ private:
 };
 
 } // namespace master
+
+#endif

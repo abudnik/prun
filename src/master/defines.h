@@ -19,6 +19,8 @@ the License.
 
 ===========================================================================
 */
+#ifndef __DEFINES_H
+#define __DEFINES_H
 
 namespace master {
 
@@ -27,3 +29,5 @@ extern unsigned short NODE_PORT;
 extern const char HOSTS_FILE_NAME[];
 
 } // namespace master
+
+#endif

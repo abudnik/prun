@@ -1,3 +1,6 @@
+#ifndef __CONFIG_H
+#define __CONFIG_H
+
 #include <boost/property_tree/json_parser.hpp>
 #include <fstream>
 #include "log.h"
@@ -54,3 +57,5 @@ private:
 };
 
 } // namespace python_server
+
+#endif
