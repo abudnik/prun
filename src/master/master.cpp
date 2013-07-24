@@ -32,6 +32,7 @@ the License.
 #include "common/daemon.h"
 #include "common/config.h"
 #include "common/pidfile.h"
+#include "ping.h"
 #include "job.h"
 #include "worker_manager.h"
 #include "defines.h"
@@ -58,6 +59,13 @@ void InitWorkerManager()
     {
         master::WorkerManager::Instance().Initialize( hosts );
     }
+}
+
+void AtExit()
+{
+    master::WorkerManager::Instance().Shutdown();
+
+	python_server::logger::ShutdownLogger();
 }
 
 void UserInteraction()
@@ -135,17 +143,24 @@ int main( int argc, char* argv[], char **envp )
 
         InitWorkerManager();
 
+		atexit( AtExit );
+
 		boost::asio::io_service io_service;
 
 		// create thread pool
 		boost::thread_group worker_threads;
 		for( unsigned int i = 0; i < master::numThread; ++i )
 		{
-			boost::thread *thread = worker_threads.create_thread(
+		    worker_threads.create_thread(
 				boost::bind( &ThreadFun, &io_service )
 			);
-			//OnThreadCreate( thread, &io_service );
 		}
+
+        boost::scoped_ptr< master::Pinger > pinger(
+            new master::PingerBoost( master::WorkerManager::Instance(),
+                                     io_service ) );
+
+        pinger->StartPing();
 
 		if ( !master::isDaemon )
 		{
@@ -165,8 +180,6 @@ int main( int argc, char* argv[], char **envp )
 		io_service.stop();
 
 		worker_threads.join_all();
-
-        master::WorkerManager::Instance().Shutdown();
 	}
 	catch( std::exception &e )
 	{
