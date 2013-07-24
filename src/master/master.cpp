@@ -57,7 +57,9 @@ void InitWorkerManager()
 
     if ( master::ReadHosts( hostsPath.c_str(), hosts ) )
     {
-        master::WorkerManager::Instance().Initialize( hosts );
+		master::WorkerManager &mgr = master::WorkerManager::Instance();
+		mgr.Initialize( hosts );
+	    mgr.SetHostIP( python_server::Config::Instance().Get<string>( "host_ip" ) );
     }
 }
 

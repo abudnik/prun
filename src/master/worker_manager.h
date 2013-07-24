@@ -24,6 +24,9 @@ public:
         workers_.Clear();
     }
 
+	void SetHostIP( const std::string &ip ) { hostIP_ = ip; }
+	const std::string &GetHostIP() const { return hostIP_; }
+
     WorkerList::WorkerContainer &GetWorkers() { return workers_.GetWorkers(); }
 
     static WorkerManager &Instance()
@@ -34,6 +37,7 @@ public:
 
 private:
     WorkerList workers_;
+	std::string hostIP_;
 };
 
 bool ReadHosts( const char *filePath, std::list< std::string > &hosts );

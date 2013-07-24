@@ -5,6 +5,7 @@
 #include <sstream>
 #include "worker_manager.h"
 #include "common/helper.h"
+#include "common/protocol.h"
 #include "defines.h"
 
 namespace master {
@@ -14,7 +15,14 @@ class Pinger
 public:
     Pinger( WorkerManager &workerMgr, int pingTimeout )
     : workerMgr_( workerMgr ), pingTimeout_( pingTimeout )
-    {}
+    {
+		protocol_ = new python_server::ProtocolJson;
+	}
+
+	virtual ~Pinger()
+	{
+		delete protocol_;
+	}
 
     virtual void StartPing() = 0;
 
@@ -24,12 +32,18 @@ protected:
     void PingWorkers();
     virtual void PingWorker( Worker *worker ) = 0;
 
+	const std::string &GetHostIP() const
+	{
+		return workerMgr_.GetHostIP();
+	}
+
 private:
     WorkerManager &workerMgr_;
 
 protected:
     python_server::SyncTimer timer_;
     int pingTimeout_;
+	python_server::Protocol *protocol_;
 };
 
 

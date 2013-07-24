@@ -54,7 +54,11 @@ void PingerBoost::PingWorker( Worker *worker )
         it = p.first;
     }
 
+	std::string msg;
+	protocol_->NodePing( msg, GetHostIP() );
+	PS_LOG( msg );
     PS_LOG( it->second );
+	PS_LOG( socket_.send_to( boost::asio::buffer( msg ), it->second ) );
 }
 
 } // namespace master
