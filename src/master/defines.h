@@ -25,6 +25,7 @@ the License.
 namespace master {
 
 extern unsigned short NODE_PORT;
+extern unsigned short NODE_UDP_PORT;
 
 extern const char HOSTS_FILE_NAME[];
 

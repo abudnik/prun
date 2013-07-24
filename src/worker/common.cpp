@@ -28,6 +28,7 @@ unsigned int SHMEM_BLOCK_SIZE = 512 * 1024;
 unsigned int MAX_SCRIPT_SIZE = SHMEM_BLOCK_SIZE - 1;
 
 unsigned short DEFAULT_PORT = 5555;
+unsigned short DEFAULT_UDP_PORT = DEFAULT_PORT - 1;
 unsigned short DEFAULT_PYEXEC_PORT = DEFAULT_PORT + 1;
 
 char const SHMEM_NAME[] = "pyexec_shmem";
