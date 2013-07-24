@@ -132,7 +132,7 @@ int main( int argc, char* argv[], char **envp )
 
 		python_server::logger::InitLogger( master::isDaemon, "Master" );
 
-		python_server::Config::Instance().ParseConfig( master::exeDir.c_str() );
+		python_server::Config::Instance().ParseConfig( master::exeDir.c_str(), "master.cfg" );
 
         string pidfilePath = python_server::Config::Instance().Get<string>( "pidfile" );
         if ( pidfilePath[0] != '/' )
@@ -146,6 +146,8 @@ int main( int argc, char* argv[], char **envp )
 		atexit( AtExit );
 
 		boost::asio::io_service io_service;
+        boost::scoped_ptr<boost::asio::io_service::work> work(
+            new boost::asio::io_service::work( io_service ) );
 
 		// create thread pool
 		boost::thread_group worker_threads;
@@ -156,9 +158,10 @@ int main( int argc, char* argv[], char **envp )
 			);
 		}
 
+        int pingTimeout = python_server::Config::Instance().Get<int>( "ping_timeout" );
         boost::scoped_ptr< master::Pinger > pinger(
             new master::PingerBoost( master::WorkerManager::Instance(),
-                                     io_service ) );
+                                     io_service, pingTimeout ) );
 
         pinger->StartPing();
 
@@ -177,6 +180,9 @@ int main( int argc, char* argv[], char **envp )
 			sigwait( &waitset, &sig );
 		}
 
+        pinger->Stop();
+
+        work.reset();
 		io_service.stop();
 
 		worker_threads.join_all();

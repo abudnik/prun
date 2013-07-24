@@ -815,6 +815,8 @@ int main( int argc, char* argv[], char **envp )
 
 		// start accepting client connections
 		boost::asio::io_service io_service;
+        boost::scoped_ptr<boost::asio::io_service::work> work(
+            new boost::asio::io_service::work( io_service ) );
 
 		python_server::commDescrPool = new python_server::CommDescrPool( python_server::numJobThreads );
 
@@ -848,6 +850,7 @@ int main( int argc, char* argv[], char **envp )
 			sigwait( &waitset, &sig );
 		}
 
+        work.reset();
 		io_service.stop();
 
 		python_server::taskSem->Notify();
