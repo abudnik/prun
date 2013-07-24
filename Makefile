@@ -36,7 +36,7 @@ COMMON_MASTER_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(COMMON_MASTER)))
 MASTER := master
 MASTER_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(MASTER)))
 
-OUT_WORKER := #pyserver pyexec
+OUT_WORKER := pyserver pyexec
 OUT_MASTER := master
 
 ALL_CPP := $(COMMON_WORKER) $(COMMON_MASTER) $(WORKER) $(MASTER)
@@ -86,7 +86,7 @@ $(depdir)/%.d: $(master_dir)/%.cpp
 -include $(depdir)/.depend
 
 clean:
-	$(RM) $(OUT) $(objdir) $(depdir)
+	$(RM) $(OUT_WORKER) $(OUT_MASTER) $(objdir) $(depdir)
 
 
 .PHONY: all clean installdirs debug
