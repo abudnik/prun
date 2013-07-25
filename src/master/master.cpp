@@ -33,6 +33,7 @@ the License.
 #include "common/config.h"
 #include "common/pidfile.h"
 #include "ping.h"
+#include "node_ping.h"
 #include "job.h"
 #include "worker_manager.h"
 #include "defines.h"
@@ -130,7 +131,8 @@ int main( int argc, char* argv[], char **envp )
 		}
 
         int numPingThread = 1;
-        master::numThread = numPingThread;
+		int numPingReceiverThread = 2;
+        master::numThread = numPingThread + numPingReceiverThread;
 
 		python_server::logger::InitLogger( master::isDaemon, "Master" );
 
@@ -167,7 +169,15 @@ int main( int argc, char* argv[], char **envp )
             new master::PingerBoost( master::WorkerManager::Instance(),
                                      io_service, pingTimeout, maxDroped ) );
 
-        pinger->StartPing();
+		for( int i = 0; i < numPingThread; ++i )
+			pinger->StartPing();
+
+        boost::scoped_ptr< master::PingReceiver > pingReceiver(
+            new master::PingReceiverBoost( master::WorkerManager::Instance(),
+										   io_service ) );
+
+		for( int i = 0; i < numPingReceiverThread; ++i )
+			pingReceiver->Start();
 
 		if ( !master::isDaemon )
 		{

@@ -30,7 +30,7 @@ COMMON_WORKER_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(COMMON_WORKER)))
 WORKER := pyexec pyserver
 WORKER_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(WORKER)))
 
-COMMON_MASTER := log daemon config defines ping job worker job_manager worker_manager sheduler
+COMMON_MASTER := log daemon config defines ping node_ping job worker job_manager worker_manager sheduler
 COMMON_MASTER_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(COMMON_MASTER)))
 
 MASTER := master
