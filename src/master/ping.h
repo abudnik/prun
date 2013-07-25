@@ -13,8 +13,9 @@ namespace master {
 class Pinger
 {
 public:
-    Pinger( WorkerManager &workerMgr, int pingTimeout )
-    : workerMgr_( workerMgr ), pingTimeout_( pingTimeout )
+    Pinger( WorkerManager &workerMgr, int pingTimeout, int maxDroped )
+    : workerMgr_( workerMgr ), pingTimeout_( pingTimeout ), maxDroped_( maxDroped ),
+     numPings_( 0 )
     {
 		protocol_ = new python_server::ProtocolJson;
 	}
@@ -28,9 +29,13 @@ public:
 
     void Stop();
 
+    void Run();
+
 protected:
     void PingWorkers();
     virtual void PingWorker( Worker *worker ) = 0;
+
+    void CheckDropedPingResponses();
 
 	const std::string &GetHostIP() const
 	{
@@ -43,6 +48,8 @@ private:
 protected:
     python_server::SyncTimer timer_;
     int pingTimeout_;
+    int maxDroped_;
+    int numPings_;
 	python_server::Protocol *protocol_;
 };
 
@@ -54,8 +61,9 @@ class PingerBoost : public Pinger
     typedef std::map< std::string, udp::endpoint > EndpointMap;
 
 public:
-    PingerBoost( WorkerManager &workerMgr, boost::asio::io_service &io_service, int pingTimeout )
-    : Pinger( workerMgr, pingTimeout ), io_service_( io_service ),
+    PingerBoost( WorkerManager &workerMgr, boost::asio::io_service &io_service, int pingTimeout, int maxDroped )
+    : Pinger( workerMgr, pingTimeout, maxDroped ),
+     io_service_( io_service ),
      socket_( io_service, udp::endpoint( udp::v4(), 0 ) ),
      resolver_( io_service )
     {
@@ -67,7 +75,6 @@ public:
     virtual void StartPing();
 
 private:
-    void Run();
     virtual void PingWorker( Worker *worker );
 
 private:

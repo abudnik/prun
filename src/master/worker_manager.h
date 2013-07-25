@@ -24,6 +24,10 @@ public:
         workers_.Clear();
     }
 
+    void CheckDropedPingResponses();
+
+    void OnHostPingResponse( const std::string &host );
+
 	void SetHostIP( const std::string &ip ) { hostIP_ = ip; }
 	const std::string &GetHostIP() const { return hostIP_; }
 

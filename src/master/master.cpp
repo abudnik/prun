@@ -134,9 +134,10 @@ int main( int argc, char* argv[], char **envp )
 
 		python_server::logger::InitLogger( master::isDaemon, "Master" );
 
-		python_server::Config::Instance().ParseConfig( master::exeDir.c_str(), "master.cfg" );
+        python_server::Config &cfg = python_server::Config::Instance();
+		cfg.ParseConfig( master::exeDir.c_str(), "master.cfg" );
 
-        string pidfilePath = python_server::Config::Instance().Get<string>( "pidfile" );
+        string pidfilePath = cfg.Get<string>( "pidfile" );
         if ( pidfilePath[0] != '/' )
         {
             pidfilePath = master::exeDir + '/' + pidfilePath;
@@ -160,10 +161,11 @@ int main( int argc, char* argv[], char **envp )
 			);
 		}
 
-        int pingTimeout = python_server::Config::Instance().Get<int>( "ping_timeout" );
+        int pingTimeout = cfg.Get<int>( "ping_timeout" );
+        int maxDroped = cfg.Get<int>( "ping_max_droped" );
         boost::scoped_ptr< master::Pinger > pinger(
             new master::PingerBoost( master::WorkerManager::Instance(),
-                                     io_service, pingTimeout ) );
+                                     io_service, pingTimeout, maxDroped ) );
 
         pinger->StartPing();
 

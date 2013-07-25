@@ -18,20 +18,31 @@ void Pinger::PingWorkers()
     {
         PingWorker( *it );
     }
+    ++numPings_;
 }
 
-void PingerBoost::StartPing()
-{
-    io_service_.post( boost::bind( &PingerBoost::Run, this ) );
-}
-
-void PingerBoost::Run()
+void Pinger::Run()
 {
     do
     {
         PingWorkers();
+        CheckDropedPingResponses();
     }
     while( timer_.Wait( pingTimeout_ * 1000 ) );
+}
+
+void Pinger::CheckDropedPingResponses()
+{
+    if ( numPings_ < maxDroped_ + 1 )
+        return;
+
+    workerMgr_.CheckDropedPingResponses();
+    numPings_ = 0;
+}
+
+void PingerBoost::StartPing()
+{
+    io_service_.post( boost::bind( &Pinger::Run, this ) );
 }
 
 void PingerBoost::PingWorker( Worker *worker )
@@ -58,7 +69,15 @@ void PingerBoost::PingWorker( Worker *worker )
 	protocol_->NodePing( msg, GetHostIP() );
 	PS_LOG( msg );
     PS_LOG( it->second );
-	PS_LOG( socket_.send_to( boost::asio::buffer( msg ), it->second ) );
+
+    try
+    {
+        socket_.send_to( boost::asio::buffer( msg ), it->second );
+    }
+    catch( boost::system::system_error &e )
+    {
+        PS_LOG( "PingerBoost::PingWorker: send_to failed, host : " << worker->GetHost() );
+    }
 }
 
 } // namespace master

@@ -18,22 +18,27 @@ class Worker
 {
 public:
     Worker( const char *host )
-    : host_( host ), state_( WORKER_STATE_NOT_AVAIL )
+    : host_( host ), state_( WORKER_STATE_NOT_AVAIL ),
+     numPingResponse_( 0 )
     {}
 
     Worker()
-    : state_( WORKER_STATE_NOT_AVAIL )
+    : state_( WORKER_STATE_NOT_AVAIL ),
+     numPingResponse_( 0 )
     {}
 
     void SetHost( const char *host ) { host_ = host; }
     void SetState( WorkerState state ) { state_ = state; }
+    void SetNumPingResponse( int num ) { numPingResponse_ = num; }
 
 	const std::string &GetHost() const { return host_; }
 	WorkerState GetState() const { return state_; }
+    int GetNumPingResponse() const { return numPingResponse_; }
 
 private:
     std::string host_;
-    WorkerState state_;    
+    WorkerState state_;
+    int numPingResponse_;
 };
 
 class WorkerList
