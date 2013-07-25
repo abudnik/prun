@@ -24,7 +24,7 @@ common_dir := $(srcdir)/common
 worker_dir := $(srcdir)/worker
 master_dir := $(srcdir)/master
 
-COMMON_WORKER := log daemon config common
+COMMON_WORKER := log daemon config common master_ping
 COMMON_WORKER_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(COMMON_WORKER)))
 
 WORKER := pyexec pyserver
