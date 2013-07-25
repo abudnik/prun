@@ -37,13 +37,14 @@ the License.
 #include <csignal>
 #include <sys/wait.h>
 #include <cstdlib>
-#include "request.h"
-#include "common.h"
 #include "common/helper.h"
 #include "common/log.h"
 #include "common/config.h"
 #include "common/pidfile.h"
 #include "common/daemon.h"
+#include "request.h"
+#include "common.h"
+#include "master_ping.h"
 
 
 using namespace std;
@@ -793,8 +794,10 @@ int main( int argc, char* argv[], char **envp )
 		{
 		    python_server::numJobThreads = vm[ "num_thread" ].as<unsigned int>();
 		}
-		// accept thread & additional worker thread for async reading results from pyexec
-		python_server::numThread = python_server::numJobThreads + 2;
+		// 1. accept thread
+        // 2. additional worker thread for async reading results from pyexec
+        // 3. master ping thread
+		python_server::numThread = python_server::numJobThreads + 3;
 
 		python_server::logger::InitLogger( python_server::isDaemon, "PythonServer" );
 
@@ -824,8 +827,6 @@ int main( int argc, char* argv[], char **envp )
 
 		python_server::taskSem = new python_server::Semaphore( python_server::numJobThreads );
 
-		python_server::ConnectionAcceptor acceptor( io_service, python_server::DEFAULT_PORT );
-
 		// create thread pool
 		boost::thread_group worker_threads;
 		for( unsigned int i = 0; i < python_server::numThread; ++i )
@@ -834,6 +835,12 @@ int main( int argc, char* argv[], char **envp )
 				boost::bind( &ThreadFun, &io_service )
 			);
 		}
+
+		python_server::ConnectionAcceptor acceptor( io_service, python_server::DEFAULT_PORT );
+
+        boost::scoped_ptr< python_server::MasterPing > masterPing(
+            new python_server::MasterPingBoost( io_service ) );
+        masterPing->Start();
 
 		if ( !python_server::isDaemon )
 		{

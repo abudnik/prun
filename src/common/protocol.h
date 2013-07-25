@@ -10,6 +10,7 @@ class Protocol
 public:
 	virtual ~Protocol() {}
 	virtual bool NodePing( std::string &msg, const std::string &hostName ) = 0;
+	virtual bool NodeResponsePing( std::string &msg ) = 0;
 };
 
 class ProtocolJson : public Protocol
@@ -21,6 +22,12 @@ public:
 		AddHeader( msg );
 		return true;
 	}
+
+    virtual bool NodeResponsePing( std::string &msg )
+    {
+		AddHeader( msg );
+		return true;
+    }
 
 private:
 	void AddHeader( std::string &msg )

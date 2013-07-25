@@ -65,10 +65,12 @@ void PingerBoost::PingWorker( Worker *worker )
         it = p.first;
     }
 
+    const std::string &node_ip = it->second.address().to_string();
+
 	std::string msg;
-	protocol_->NodePing( msg, GetHostIP() );
+	protocol_->NodePing( msg, node_ip );
 	PS_LOG( msg );
-    PS_LOG( it->second );
+    PS_LOG( node_ip );
 
     try
     {
@@ -76,7 +78,7 @@ void PingerBoost::PingWorker( Worker *worker )
     }
     catch( boost::system::system_error &e )
     {
-        PS_LOG( "PingerBoost::PingWorker: send_to failed, host : " << worker->GetHost() );
+        PS_LOG( "PingerBoost::PingWorker: send_to failed, host : " << node_ip );
     }
 }
 
