@@ -60,6 +60,7 @@ boost::interprocess::mapped_region *mappedRegion;
 
 struct ThreadParams
 {
+    int fifofd;
     string fifoName;
 	pid_t pid;
 };
@@ -169,38 +170,41 @@ public:
 			ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 		    threadParams.pid = pid;
 
-            sigset_t sigset, oldset;
-
-            sigemptyset( &sigset );
-            sigaddset( &sigset, SIGCHLD );
-            sigprocmask( SIG_BLOCK, &sigset, &oldset );
-
-            int fifo = open( threadParams.fifoName.c_str(), O_RDONLY );
-            if ( fifo == -1 )
+            int fifo = threadParams.fifofd;
+            if ( fifo != -1 )
             {
-                PS_LOG( "DoFork: open() failed " << strerror(errno) );
-                job_->OnError( -1 );
+                sigset_t sigset, oldset;
+                sigemptyset( &sigset );
+                sigaddset( &sigset, SIGCHLD );
+                sigprocmask( SIG_BLOCK, &sigset, &oldset );
+
+                pollfd pfd[1];
+                pfd[0].fd = fifo;
+                pfd[0].events = POLLIN;
+
+				int errCode = -1;
+                int ret = poll( pfd, 1, -1 );
+                if ( ret > 0 )
+                {
+                    ret = read( fifo, &errCode, sizeof( errCode ) );
+                    if ( ret <= 0 )
+                    {
+                        PS_LOG( "read fifo failed: " << strerror(errno) );
+                    }
+                }
+                else
+                {
+                    PS_LOG( "ppoll failed: " << strerror(errno) );
+                }
+				job_->OnError( errCode );
+
+                sigprocmask( SIG_BLOCK, &oldset, NULL );
             }
             else
             {
-				int errCode;
-                while( 1 )
-                {
-                    int ret = read( fifo, &errCode, sizeof( errCode ) );
-                    if ( ret > 0 )
-                        break;
-                    if ( ret < 0 )
-                    {
-                        PS_LOG( "read fifo failed: " << strerror(errno) );
-                        errCode = -1;
-                        break;
-                    }
-                }
-                close( fifo );
-				job_->OnError( errCode );
+                PS_LOG( "DoFork: pipe not opened" );
+                job_->OnError( -1 );
             }
-
-            sigprocmask( SIG_BLOCK, &oldset, NULL );
 			//PS_LOG( "wait child done " << pid );
 		}
 		else
@@ -506,6 +510,9 @@ void AtExit()
 	{
 		python_server::ThreadParams &threadParams = it->second;
 
+        if ( threadParams.fifofd != -1 )
+            close( threadParams.fifofd );
+
         if ( !threadParams.fifoName.empty() )
             unlink( threadParams.fifoName.c_str() );
 	}
@@ -526,6 +533,7 @@ void OnThreadCreate( const boost::thread *thread )
 	static int threadCnt = 0;
 
 	python_server::ThreadParams threadParams;
+    threadParams.fifofd = -1;
 
     std::stringstream ss;
     ss << python_server::FIFO_NAME << threadCnt;
@@ -541,6 +549,12 @@ void OnThreadCreate( const boost::thread *thread )
             ret = chown( threadParams.fifoName.c_str(), python_server::uid, -1 );
             if ( ret == -1 )
                 PS_LOG( "OnThreadCreate: chown failed " << strerror(errno) );
+        }
+
+        threadParams.fifofd = open( threadParams.fifoName.c_str(), O_RDWR | O_NONBLOCK );
+        if ( threadParams.fifofd == -1 )
+        {
+            PS_LOG( "open fifo " << threadParams.fifoName << " failed: " << strerror(errno) );
         }
     }
     else
