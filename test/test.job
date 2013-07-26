@@ -1,0 +1,7 @@
+{
+    "script" : "test/sendscript/example.py",
+    "language" : "python",
+    "timeout" : 60,
+    "priority" : "high",
+    "max_nodes" : -1
+}

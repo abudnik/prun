@@ -21,6 +21,7 @@ the License.
 */
 
 #include <iostream>
+#include <fstream> // for RunTests() only
 #include <list>
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
@@ -34,7 +35,7 @@ the License.
 #include "common/pidfile.h"
 #include "ping.h"
 #include "node_ping.h"
-#include "job.h"
+#include "job_manager.h"
 #include "worker_manager.h"
 #include "defines.h"
 
@@ -61,6 +62,29 @@ void InitWorkerManager()
 		master::WorkerManager &mgr = master::WorkerManager::Instance();
 		mgr.Initialize( hosts );
     }
+}
+
+void InitJobManager()
+{
+    master::JobManager &mgr = master::JobManager::Instance();
+    mgr.SetExeDir( master::exeDir );
+}
+
+void RunTests()
+{
+    // read job description from file
+    string filePath = master::exeDir + "/test/test.job";
+    ifstream file( filePath.c_str() );
+    if ( !file.is_open() )
+    {
+        PS_LOG( "RunTests: couldn't open " << filePath );
+        return;
+    }
+    string job, line;
+    while( getline( file, line ) )
+        job += line;
+    // add job to job queue
+    master::JobManager::Instance().PushJob( job );
 }
 
 void AtExit()
@@ -146,6 +170,7 @@ int main( int argc, char* argv[], char **envp )
         python_server::Pidfile pidfile( pidfilePath.c_str() );
 
         InitWorkerManager();
+        InitJobManager();
 
 		atexit( AtExit );
 
@@ -177,6 +202,8 @@ int main( int argc, char* argv[], char **envp )
 
 		for( int i = 0; i < numPingReceiverThread; ++i )
 			pingReceiver->Start();
+
+        RunTests();
 
 		if ( !master::isDaemon )
 		{

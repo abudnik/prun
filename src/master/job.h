@@ -3,6 +3,7 @@
 
 #include <list>
 #include <boost/thread/mutex.hpp>
+#include <stdint.h> // int64_t
 
 namespace master {
 
@@ -19,7 +20,9 @@ public:
     : script_( script ), scriptLanguage_( scriptLanguage ), maxNodes_( maxNodes ),
 	 timeout_( timeout ), priority_( priority )
     {
+        static int64_t numJobs;
         scriptLength_ = script_.size();
+        id_ = numJobs++;
     }
 
 	const std::string &GetScript() const { return script_; }
@@ -38,6 +41,7 @@ private:
     int maxNodes_;
     int timeout_;
     JobPriority priority_;
+    int64_t id_;
 };
 
 class JobQueue
@@ -51,7 +55,7 @@ public:
 
 private:
     std::list< Job * > jobs_;
-    int numJobs_;
+    unsigned int numJobs_;
     boost::mutex jobsMut_;
 };
 
