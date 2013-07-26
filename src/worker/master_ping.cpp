@@ -22,16 +22,17 @@ void MasterPingBoost::HandleRead( const boost::system::error_code& error, size_t
 {
     if ( !error )
     {
-        std::stringstream ss;
-        ss << buffer_.c_array();
-        PS_LOG( ss.str() );
+        std::string request( buffer_.begin(), buffer_.end() );
+        PS_LOG( request );
 
         std::string msg;
         protocol_->NodeResponsePing( msg );
 
+        udp::endpoint master_endpoint( remote_endpoint_.address(), DEFAULT_MASTER_UDP_PORT );
+
         try
         {
-            socket_.send_to( boost::asio::buffer( msg ), remote_endpoint_ );
+            socket_.send_to( boost::asio::buffer( msg ), master_endpoint );
         }
         catch( boost::system::system_error &e )
         {

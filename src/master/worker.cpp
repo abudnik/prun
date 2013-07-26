@@ -7,21 +7,6 @@ void WorkerList::AddWorker( Worker *worker )
     workers_.push_back( worker );
 }
 
-Worker *WorkerList::RemoveWorker( const char *host )
-{
-    WorkerContainer::iterator it = workers_.begin();
-    for( ; it != workers_.end(); ++it )
-    {
-        if ( (*it)->GetHost() == host )
-        {
-            Worker *w = *it;
-            workers_.erase( it );
-            return w;
-        }
-    }
-    return NULL;
-}
-
 void WorkerList::Clear( bool doDelete )
 {
     if ( doDelete )
@@ -43,6 +28,20 @@ Worker *WorkerList::GetWorker( const char *host ) const
         if ( (*it)->GetHost() == host )
             return *it;
     }
+    return NULL;
+}
+
+void WorkerList::SetWorkerIP( Worker *worker, const std::string &ip )
+{
+    worker->SetIP( ip );
+    ipToWorker_[ip] = worker;
+}
+
+Worker *WorkerList::GetWorkerByIP( const std::string &ip ) const
+{
+    IPToWorker::const_iterator it = ipToWorker_.find( ip );
+    if ( it != ipToWorker_.end() )
+        return it->second;
     return NULL;
 }
 

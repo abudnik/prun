@@ -4,9 +4,10 @@
 
 namespace master {
 
-void PingReceiver::OnNodePing( const std::string &node, const std::string &msg )
+void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg )
 {
-	PS_LOG( node << " : " << msg );
+	PS_LOG( nodeIP << " : " << msg );
+    workerMgr_.OnHostPingResponse( nodeIP );
 }
 
 void PingReceiverBoost::Start()

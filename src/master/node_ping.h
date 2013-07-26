@@ -19,7 +19,7 @@ public:
     virtual void Start() = 0;
 
 protected:
-    void OnNodePing( const std::string &node, const std::string &msg );
+    void OnNodePing( const std::string &nodeIP, const std::string &msg );
 
 private:
     WorkerManager &workerMgr_;

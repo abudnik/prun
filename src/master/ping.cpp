@@ -40,6 +40,11 @@ void Pinger::CheckDropedPingResponses()
     numPings_ = 0;
 }
 
+void Pinger::OnWorkerIPResolve( Worker *worker, const std::string &ip )
+{
+    workerMgr_.SetWorkerIP( worker, ip );
+}
+
 void PingerBoost::StartPing()
 {
     io_service_.post( boost::bind( &Pinger::Run, this ) );
@@ -63,6 +68,8 @@ void PingerBoost::PingWorker( Worker *worker )
         std::pair< EndpointMap::iterator, bool > p = endpoints_.insert(
             std::make_pair( worker->GetHost(), *iterator ) );
         it = p.first;
+
+        OnWorkerIPResolve( worker, it->second.address().to_string() );
     }
 
     const std::string &node_ip = it->second.address().to_string();

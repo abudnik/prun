@@ -37,10 +37,7 @@ protected:
 
     void CheckDropedPingResponses();
 
-	const std::string &GetHostIP() const
-	{
-		return workerMgr_.GetHostIP();
-	}
+    void OnWorkerIPResolve( Worker *worker, const std::string &ip );
 
 private:
     WorkerManager &workerMgr_;

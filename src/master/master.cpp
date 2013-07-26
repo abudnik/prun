@@ -60,7 +60,6 @@ void InitWorkerManager()
     {
 		master::WorkerManager &mgr = master::WorkerManager::Instance();
 		mgr.Initialize( hosts );
-	    mgr.SetHostIP( python_server::Config::Instance().Get<string>( "host_ip" ) );
     }
 }
 

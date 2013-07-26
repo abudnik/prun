@@ -33,7 +33,7 @@ class MasterPingBoost : public MasterPing
 public:
     MasterPingBoost( boost::asio::io_service &io_service )
     : io_service_( io_service ),
-     socket_( io_service, udp::endpoint( udp::v4(), python_server::DEFAULT_UDP_PORT ) )
+     socket_( io_service, udp::endpoint( udp::v4(), DEFAULT_UDP_PORT ) )
     {}
 
     virtual void Start();

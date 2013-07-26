@@ -21,17 +21,51 @@ void WorkerManager::CheckDropedPingResponses()
             {
                 worker->SetState( WORKER_STATE_NOT_AVAIL );
                 stateChanged = true;
+                PS_LOG( "node not available, ip= " << worker->GetIP() );
             }
             if ( state == WORKER_STATE_EXEC )
             {
                 worker->SetState( WORKER_STATE_FAILED );
                 stateChanged = true;
+                PS_LOG( "node job failed, ip= " << worker->GetIP() );
             }
         }
         worker->SetNumPingResponse( 0 );
     }
 
     //if ( stateChanged ) need_reshed();
+}
+
+void WorkerManager::OnHostPingResponse( const std::string &hostIP )
+{
+    Worker *worker = GetWorkerByIP( hostIP );
+    if ( worker )
+    {
+        bool stateChanged = false;
+        worker->IncNumPingResponse();
+        if ( worker->GetState() == WORKER_STATE_NOT_AVAIL )
+        {
+            worker->SetState( WORKER_STATE_READY );
+            stateChanged = true;
+            PS_LOG( "node available, ip= " << worker->GetIP() );
+        }
+
+        //if ( stateChanged ) need_reshed();
+    }
+    else
+    {
+        PS_LOG( "WorkerManager::OnHostPingResponse worker not found, ip= " << hostIP );
+    }
+}
+
+void WorkerManager::SetWorkerIP( Worker *worker, const std::string &ip )
+{
+    workers_.SetWorkerIP( worker, ip );
+}
+
+Worker *WorkerManager::GetWorkerByIP( const std::string &ip ) const
+{
+    return workers_.GetWorkerByIP( ip );
 }
 
 bool ReadHosts( const char *filePath, std::list< std::string > &hosts )

@@ -2,6 +2,7 @@
 #define __WORKER_H
 
 #include <vector>
+#include <map>
 #include <string>
 
 namespace master {
@@ -17,7 +18,7 @@ enum WorkerState
 class Worker
 {
 public:
-    Worker( const char *host )
+    Worker( const std::string &host )
     : host_( host ), state_( WORKER_STATE_NOT_AVAIL ),
      numPingResponse_( 0 )
     {}
@@ -27,33 +28,40 @@ public:
      numPingResponse_( 0 )
     {}
 
-    void SetHost( const char *host ) { host_ = host; }
+    void SetHost( const std::string &host ) { host_ = host; }
+    void SetIP( const std::string &ip ) { ip_ = ip; }
     void SetState( WorkerState state ) { state_ = state; }
     void SetNumPingResponse( int num ) { numPingResponse_ = num; }
+    void IncNumPingResponse() { ++numPingResponse_; }
 
 	const std::string &GetHost() const { return host_; }
+	const std::string &GetIP() const { return ip_; }
 	WorkerState GetState() const { return state_; }
     int GetNumPingResponse() const { return numPingResponse_; }
 
 private:
     std::string host_;
+    std::string ip_;
     WorkerState state_;
     int numPingResponse_;
 };
 
 class WorkerList
 {
+    typedef std::map< std::string, Worker * > IPToWorker;
+
 public:
     typedef std::vector< Worker* > WorkerContainer;
 
 public:
     void AddWorker( Worker *worker );
 
-    Worker *RemoveWorker( const char *host );
-
     void Clear( bool doDelete = true );
 
     Worker *GetWorker( const char *host ) const;
+
+    void SetWorkerIP( Worker *worker, const std::string &ip );
+    Worker *GetWorkerByIP( const std::string &ip ) const;
 
     template< class Container >
     void GetWorkerList( Container &workers, int stateMask ) const
@@ -77,6 +85,7 @@ public:
 
 private:
     WorkerContainer workers_;
+    IPToWorker ipToWorker_;
 };
 
 } // namespace master
