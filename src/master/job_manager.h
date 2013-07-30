@@ -2,10 +2,7 @@
 #define __JOB_MANAGER_H
 
 #include <boost/property_tree/ptree.hpp>
-#include <set>
-#include <queue>
 #include "job.h"
-#include "worker.h"
 
 
 namespace master {
@@ -43,12 +40,6 @@ private:
 private:
     JobQueue jobs_;
     std::string exeDir_;
-
-	IPToWorker busyWorkers, freeWorkers;
-
-	std::map< int64_t, std::set< std::string > > failedWorkers; // job_id -> set(worker_ip)
-
-	std::queue< WorkerJob > needReschedule_;
 };
 
 } // namespace master
