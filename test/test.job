@@ -3,5 +3,6 @@
     "language" : "python",
     "timeout" : 60,
     "priority" : "high",
-    "max_nodes" : -1
+    "num_nodes" : -1,
+	"max_failed_nodes" : 10
 }

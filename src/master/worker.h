@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <stdint.h> // int64_t
 
 namespace master {
 
@@ -13,6 +14,13 @@ enum WorkerState
     WORKER_STATE_READY     = 2,
     WORKER_STATE_EXEC      = 4,
     WORKER_STATE_FAILED    = 8
+};
+
+struct WorkerJob
+{
+	WorkerJob() : jobId_( -1 ), taskId_( 0 ) {}
+	int64_t jobId_;
+	int taskId_;
 };
 
 class Worker
@@ -31,25 +39,28 @@ public:
     void SetHost( const std::string &host ) { host_ = host; }
     void SetIP( const std::string &ip ) { ip_ = ip; }
     void SetState( WorkerState state ) { state_ = state; }
+    void SetJob( const WorkerJob &job ) { job_ = job; }
     void SetNumPingResponse( int num ) { numPingResponse_ = num; }
     void IncNumPingResponse() { ++numPingResponse_; }
 
 	const std::string &GetHost() const { return host_; }
 	const std::string &GetIP() const { return ip_; }
 	WorkerState GetState() const { return state_; }
+	const WorkerJob &GetJob() const { return job_; }
     int GetNumPingResponse() const { return numPingResponse_; }
 
 private:
     std::string host_;
     std::string ip_;
     WorkerState state_;
+	WorkerJob job_;
     int numPingResponse_;
 };
 
+typedef std::map< std::string, Worker * > IPToWorker;
+
 class WorkerList
 {
-    typedef std::map< std::string, Worker * > IPToWorker;
-
 public:
     typedef std::vector< Worker* > WorkerContainer;
 
