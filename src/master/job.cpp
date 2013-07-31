@@ -19,4 +19,18 @@ Job *JobQueue::GetJobById( int64_t jobId )
     return NULL;
 }
 
+void JobQueue::Clear( bool doDelete )
+{
+	if ( doDelete )
+	{
+		std::list< Job * >::iterator it = jobs_.begin();
+		for( ; it != jobs_.end(); ++it )
+		{
+			delete *it;
+		}
+	}
+	jobs_.clear();
+	numJobs_ = 0;
+}
+
 } // namespace master

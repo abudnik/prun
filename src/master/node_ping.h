@@ -30,11 +30,13 @@ using boost::asio::ip::udp;
 class PingReceiverBoost : public PingReceiver
 {
 public:
-    PingReceiverBoost( WorkerManager &workerMgr, boost::asio::io_service &io_service )
+    PingReceiverBoost( WorkerManager &workerMgr, boost::asio::io_service &io_service, udp::socket &socket )
     : PingReceiver( workerMgr ),
 	 io_service_( io_service ),
-     socket_( io_service, udp::endpoint( udp::v4(), master::MASTER_UDP_PORT ) )
-    {}
+     socket_( socket )
+    {
+        memset( buffer_.c_array(), 0, buffer_.size() );
+    }
 
     virtual void Start();
 
@@ -45,7 +47,7 @@ private:
 private:
     boost::asio::io_service &io_service_;
     boost::array< char, 32 * 1024 > buffer_;
-    udp::socket socket_;
+    udp::socket &socket_;
     udp::endpoint remote_endpoint_;
 };
 

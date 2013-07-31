@@ -58,6 +58,8 @@ public:
 
     Job *GetJobById( int64_t jobId );
 
+	void Clear( bool doDelete = true );
+
 private:
     std::list< Job * > jobs_;
     IdToJob idToJob_;

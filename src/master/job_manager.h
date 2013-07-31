@@ -35,6 +35,11 @@ public:
         return instance_;
     }
 
+    void Shutdown()
+    {
+        jobs_.Clear();
+    }
+
 private:
     bool ReadScript( const std::string &fileName, std::string &script ) const;
     Job *CreateJob( boost::property_tree::ptree &ptree ) const;

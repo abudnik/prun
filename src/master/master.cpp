@@ -27,6 +27,7 @@ the License.
 #include <boost/thread.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include <csignal>
 #include <sys/wait.h>
 #include "common/log.h"
@@ -37,6 +38,7 @@ the License.
 #include "node_ping.h"
 #include "job_manager.h"
 #include "worker_manager.h"
+#include "job_sender.h"
 #include "defines.h"
 
 using namespace std;
@@ -90,6 +92,7 @@ void RunTests()
 void AtExit()
 {
     master::WorkerManager::Instance().Shutdown();
+    master::JobManager::Instance().Shutdown();
 
 	python_server::logger::ShutdownLogger();
 }
@@ -153,10 +156,6 @@ int main( int argc, char* argv[], char **envp )
 			master::isDaemon = true;
 		}
 
-        int numPingThread = 1;
-		int numPingReceiverThread = 2;
-        master::numThread = numPingThread + numPingReceiverThread;
-
 		python_server::logger::InitLogger( master::isDaemon, "Master" );
 
         python_server::Config &cfg = python_server::Config::Instance();
@@ -168,6 +167,11 @@ int main( int argc, char* argv[], char **envp )
             pidfilePath = master::exeDir + '/' + pidfilePath;
         }
         python_server::Pidfile pidfile( pidfilePath.c_str() );
+
+        int numPingThread = 1;
+		int numPingReceiverThread = cfg.Get<int>( "num_ping_thread" );
+		int numJobSendThread = cfg.Get<int>( "num_job_send_thread" );
+        master::numThread = numPingThread + numPingReceiverThread + numJobSendThread;
 
         InitWorkerManager();
         InitJobManager();
@@ -187,21 +191,34 @@ int main( int argc, char* argv[], char **envp )
 			);
 		}
 
+		// start ping from nodes receiver threads
+		using boost::asio::ip::udp;
+		udp::socket recvSocket( io_service, udp::endpoint( udp::v4(), master::MASTER_UDP_PORT ) );
+		boost::ptr_vector< master::PingReceiver > pingReceivers;
+		for( int i = 0; i < numPingReceiverThread; ++i )
+		{
+			master::PingReceiver *pingReceiver( new master::PingReceiverBoost( master::WorkerManager::Instance(),
+																			   io_service, recvSocket ) );
+			pingReceivers.push_back( pingReceiver );
+			pingReceiver->Start();
+		}
+
+		// start job sender threads
+		boost::ptr_vector< master::JobSender > jobSenders;
+		for( int i = 0; i < numJobSendThread; ++i )
+		{
+			master::JobSender *jobSender( new master::JobSenderBoost() );
+			jobSenders.push_back( jobSender );
+			jobSender->Start();
+		}
+
+		// start node pinger
         int pingTimeout = cfg.Get<int>( "ping_timeout" );
         int maxDroped = cfg.Get<int>( "ping_max_droped" );
         boost::scoped_ptr< master::Pinger > pinger(
             new master::PingerBoost( master::WorkerManager::Instance(),
                                      io_service, pingTimeout, maxDroped ) );
-
-		for( int i = 0; i < numPingThread; ++i )
-			pinger->StartPing();
-
-        boost::scoped_ptr< master::PingReceiver > pingReceiver(
-            new master::PingReceiverBoost( master::WorkerManager::Instance(),
-										   io_service ) );
-
-		for( int i = 0; i < numPingReceiverThread; ++i )
-			pingReceiver->Start();
+		pinger->StartPing();
 
         RunTests();
 
