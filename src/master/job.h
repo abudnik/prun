@@ -33,6 +33,7 @@ public:
     int GetMaxFailedNodes() const { return maxFailedNodes_; }
     int GetTimeout() const { return timeout_; }
     JobPriority GetPriority() const { return priority_; }
+    int64_t GetJobId() const { return id_; }
 
 private:
     std::string script_;
@@ -48,15 +49,18 @@ private:
 
 class JobQueue
 {
+    typedef std::map< int64_t, Job * > IdToJob;
+
 public:
     JobQueue() : numJobs_( 0 ) {}
 
     void PushJob( Job *job );
-    Job *PopJob();
-    Job *GetTopJob();
+
+    Job *GetJobById( int64_t jobId );
 
 private:
     std::list< Job * > jobs_;
+    IdToJob idToJob_;
     unsigned int numJobs_;
     boost::mutex jobsMut_;
 };

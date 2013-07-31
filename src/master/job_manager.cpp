@@ -36,6 +36,11 @@ bool JobManager::PushJob( const std::string &job_description )
     return true;
 }
 
+Job *JobManager::GetJobById( int64_t jobId )
+{
+    return jobs_.GetJobById( jobId );
+}
+
 bool JobManager::ReadScript( const std::string &fileName, std::string &script ) const
 {
     std::string filePath = exeDir_ + '/' + fileName;

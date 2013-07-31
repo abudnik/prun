@@ -8,7 +8,8 @@ namespace master {
 
 void WorkerManager::CheckDropedPingResponses()
 {
-    bool stateChanged = false;
+    std::vector< Worker * > changedWorkers;
+
     WorkerList::WorkerContainer &workers = workers_.GetWorkers();
     WorkerList::WorkerContainer::const_iterator it = workers.begin();
     for( ; it != workers.end(); ++it )
@@ -20,20 +21,23 @@ void WorkerManager::CheckDropedPingResponses()
             if ( state == WORKER_STATE_READY )
             {
                 worker->SetState( WORKER_STATE_NOT_AVAIL );
-                stateChanged = true;
+                changedWorkers.push_back( worker );
                 PS_LOG( "node not available, ip= " << worker->GetIP() );
             }
             if ( state == WORKER_STATE_EXEC )
             {
                 worker->SetState( WORKER_STATE_FAILED );
-                stateChanged = true;
+                changedWorkers.push_back( worker );
                 PS_LOG( "node job failed, ip= " << worker->GetIP() );
             }
         }
         worker->SetNumPingResponse( 0 );
     }
 
-    //if ( stateChanged ) need_reshed();
+    if ( changedWorkers.size() )
+    {
+        Sheduler::Instance().OnChangedWorkerState( changedWorkers );
+    }
 }
 
 void WorkerManager::OnHostPingResponse( const std::string &hostIP )
@@ -50,7 +54,10 @@ void WorkerManager::OnHostPingResponse( const std::string &hostIP )
             PS_LOG( "node available, ip= " << worker->GetIP() );
         }
 
-        //if ( stateChanged ) need_reshed();
+        if ( stateChanged )
+        {
+            Sheduler::Instance().OnHostAppearance( worker );
+        }
     }
     else
     {

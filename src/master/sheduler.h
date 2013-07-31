@@ -11,6 +11,10 @@ namespace master {
 class Sheduler
 {
 public:
+    void OnHostAppearance( Worker *worker );
+
+    void OnChangedWorkerState( const std::vector< Worker * > &workers );
+
     static Sheduler &Instance()
     {
         static Sheduler instance_;

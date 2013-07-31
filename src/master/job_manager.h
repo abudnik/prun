@@ -27,6 +27,8 @@ public:
 
     void SetExeDir( const std::string &dir ) { exeDir_ = dir; }
 
+    Job *GetJobById( int64_t jobId );
+
     static JobManager &Instance()
     {
         static JobManager instance_;
