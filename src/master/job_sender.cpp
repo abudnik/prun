@@ -2,6 +2,8 @@
 
 namespace master {
 
-
+void JobSenderBoost::Start()
+{
+}
 
 } // namespace master

@@ -1,6 +1,7 @@
 #include "sheduler.h"
-#include "job_manager.h"
 #include "common/log.h"
+#include "job_manager.h"
+#include "worker_manager.h"
 
 namespace master {
 
@@ -53,6 +54,33 @@ void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
             }
         }
     }
+}
+
+void Sheduler::OnNewJob( Job *job )
+{
+    if ( !CanTakeNewJob() )
+        return;
+
+    int numNodes = job->GetNumNodes();
+    if ( numNodes <= 0 )
+        numNodes = WorkerManager::Instance().GetTotalWorkers();
+
+    int64_t jobId = job->GetJobId();
+
+    std::set< int > &tasks = tasksToSend_[ jobId ];
+    for( int i = 0; i < numNodes; ++i )
+    {
+        tasks.insert( i );
+    }
+
+    jobs_[ job ] = numNodes;
+
+    JobManager::Instance().PopJob();
+}
+
+bool Sheduler::CanTakeNewJob() const
+{
+    return freeWorkers.size() > 0;
 }
 
 } // namespace master

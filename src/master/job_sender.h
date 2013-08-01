@@ -1,6 +1,8 @@
 #ifndef __JOB_SENDER_H
 #define __JOB_SENDER_H
 
+#include <boost/asio.hpp>
+
 namespace master {
 
 class JobSender
@@ -16,9 +18,14 @@ private:
 class JobSenderBoost : public JobSender
 {
 public:
-    virtual void Start() {}
+    JobSenderBoost( boost::asio::io_service &io_service )
+    : io_service_( io_service )
+    {}
+
+    virtual void Start();
 
 private:
+    boost::asio::io_service &io_service_;
 };
 
 } // namespace master

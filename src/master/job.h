@@ -56,6 +56,9 @@ public:
 
     void PushJob( Job *job );
 
+    Job *PopJob();
+    Job *GetTopJob();
+
     Job *GetJobById( int64_t jobId );
 
 	void Clear( bool doDelete = true );

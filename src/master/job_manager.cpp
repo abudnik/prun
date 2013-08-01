@@ -1,6 +1,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include "job_manager.h"
 #include "common/log.h"
+#include "sheduler.h"
 
 namespace master {
 
@@ -33,12 +34,25 @@ bool JobManager::PushJob( const std::string &job_description )
 
     PS_LOG( "push job" );
     jobs_.PushJob( job );
+
+    Sheduler::Instance().OnNewJob( job );
+
     return true;
 }
 
 Job *JobManager::GetJobById( int64_t jobId )
 {
     return jobs_.GetJobById( jobId );
+}
+
+Job *JobManager::PopJob()
+{
+    return jobs_.PopJob();
+}
+
+Job *JobManager::GetTopJob()
+{
+    return jobs_.GetTopJob();
 }
 
 bool JobManager::ReadScript( const std::string &fileName, std::string &script ) const

@@ -29,6 +29,9 @@ public:
 
     Job *GetJobById( int64_t jobId );
 
+    Job *PopJob();
+    Job *GetTopJob();
+
     static JobManager &Instance()
     {
         static JobManager instance_;

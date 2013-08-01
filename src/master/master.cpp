@@ -206,7 +206,7 @@ int main( int argc, char* argv[], char **envp )
 		boost::ptr_vector< master::JobSender > jobSenders;
 		for( int i = 0; i < numJobSendThread; ++i )
 		{
-			master::JobSender *jobSender( new master::JobSenderBoost() );
+			master::JobSender *jobSender( new master::JobSenderBoost( io_service ) );
 			jobSenders.push_back( jobSender );
 			jobSender->Start();
 		}
