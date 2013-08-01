@@ -2,15 +2,17 @@
 #define __JOB_SENDER_H
 
 #include <boost/asio.hpp>
+#include "common/observer.h"
 
 namespace master {
 
-class JobSender
+class JobSender : python_server::Observer
 {
 public:
-    virtual ~JobSender() {}
+    void Start();
 
-    virtual void Start() = 0;
+private:
+    virtual void NotifyObserver( int event );
 
 private:
 };
@@ -21,8 +23,6 @@ public:
     JobSenderBoost( boost::asio::io_service &io_service )
     : io_service_( io_service )
     {}
-
-    virtual void Start();
 
 private:
     boost::asio::io_service &io_service_;

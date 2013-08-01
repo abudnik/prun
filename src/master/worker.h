@@ -27,17 +27,19 @@ class Worker
 {
 public:
     Worker( const std::string &host )
-    : host_( host ), state_( WORKER_STATE_NOT_AVAIL ),
-     numPingResponse_( 0 )
+    : host_( host ),
+	 state_( WORKER_STATE_NOT_AVAIL ),
+     numCores_( 1 ), numPingResponse_( 0 )
     {}
 
     Worker()
     : state_( WORKER_STATE_NOT_AVAIL ),
-     numPingResponse_( 0 )
+     numCores_( 1 ), numPingResponse_( 0 )
     {}
 
     void SetHost( const std::string &host ) { host_ = host; }
     void SetIP( const std::string &ip ) { ip_ = ip; }
+    void SetNumCores( int cores ) { numCores_ = cores; }
     void SetState( WorkerState state ) { state_ = state; }
     void SetJob( const WorkerJob &job ) { job_ = job; }
     void SetNumPingResponse( int num ) { numPingResponse_ = num; }
@@ -45,6 +47,7 @@ public:
 
 	const std::string &GetHost() const { return host_; }
 	const std::string &GetIP() const { return ip_; }
+	int GetNumCores() const { return numCores_; }
 	WorkerState GetState() const { return state_; }
 	const WorkerJob &GetJob() const { return job_; }
     int GetNumPingResponse() const { return numPingResponse_; }
@@ -54,6 +57,7 @@ private:
     std::string ip_;
     WorkerState state_;
 	WorkerJob job_;
+	int numCores_;
     int numPingResponse_;
 };
 
@@ -90,7 +94,7 @@ public:
 
     WorkerContainer &GetWorkers() { return workers_; }
 
-    int GetTotalWorkers() const { return workers_.size(); }
+    int GetTotalWorkers() const;
 
     int GetNumWorkers( int stateMask ) const;
 

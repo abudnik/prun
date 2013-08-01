@@ -3,13 +3,14 @@
 
 #include <set>
 #include <queue>
+#include "common/observer.h"
 #include "worker.h"
 #include "job.h"
 
 
 namespace master {
 
-class Sheduler
+class Sheduler : public python_server::Observable< true >
 {
 public:
     void OnHostAppearance( Worker *worker );
@@ -21,6 +22,8 @@ public:
     void OnTaskCompletion(/*args*/);
 
     void OnTaskSend( bool success /*args*/);
+
+	void GetTaskToSend( Worker **worker, Job **job );
 
     static Sheduler &Instance()
     {

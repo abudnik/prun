@@ -45,6 +45,17 @@ Worker *WorkerList::GetWorkerByIP( const std::string &ip ) const
     return NULL;
 }
 
+int WorkerList::GetTotalWorkers() const
+{
+    int num = 0;
+    WorkerContainer::const_iterator it = workers_.begin();
+    for( ; it != workers_.end(); ++it )
+    {
+		num += (*it)->GetNumCores();
+    }
+    return num;
+}
+
 int WorkerList::GetNumWorkers( int stateMask ) const
 {
     int num = 0;
