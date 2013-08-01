@@ -37,7 +37,7 @@ void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
                 if ( job )
                 {
                     size_t failedNodesCnt = failedWorkers[ jobId ].size();
-                    if ( failedNodesCnt < job->GetMaxFailedNodes() )
+                    if ( failedNodesCnt < (size_t)job->GetMaxFailedNodes() )
                     {
                         needReschedule_.push( workerJob );
                     }

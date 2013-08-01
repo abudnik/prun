@@ -197,8 +197,7 @@ int main( int argc, char* argv[], char **envp )
 		boost::ptr_vector< master::PingReceiver > pingReceivers;
 		for( int i = 0; i < numPingReceiverThread; ++i )
 		{
-			master::PingReceiver *pingReceiver( new master::PingReceiverBoost( master::WorkerManager::Instance(),
-																			   io_service, recvSocket ) );
+			master::PingReceiver *pingReceiver( new master::PingReceiverBoost( io_service, recvSocket ) );
 			pingReceivers.push_back( pingReceiver );
 			pingReceiver->Start();
 		}
@@ -216,8 +215,7 @@ int main( int argc, char* argv[], char **envp )
         int pingTimeout = cfg.Get<int>( "ping_timeout" );
         int maxDroped = cfg.Get<int>( "ping_max_droped" );
         boost::scoped_ptr< master::Pinger > pinger(
-            new master::PingerBoost( master::WorkerManager::Instance(),
-                                     io_service, pingTimeout, maxDroped ) );
+            new master::PingerBoost( io_service, pingTimeout, maxDroped ) );
 		pinger->StartPing();
 
         RunTests();

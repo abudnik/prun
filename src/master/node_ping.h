@@ -2,7 +2,6 @@
 #define __NODE_PING_H
 
 #include <boost/asio.hpp>
-#include "worker_manager.h"
 #include "defines.h"
 
 namespace master {
@@ -10,9 +9,7 @@ namespace master {
 class PingReceiver
 {
 public:
-    PingReceiver( WorkerManager &workerMgr )
-	: workerMgr_( workerMgr )
-    {}
+    PingReceiver() {}
 
     virtual ~PingReceiver() {}
 
@@ -20,9 +17,6 @@ public:
 
 protected:
     void OnNodePing( const std::string &nodeIP, const std::string &msg );
-
-private:
-    WorkerManager &workerMgr_;
 };
 
 using boost::asio::ip::udp;
@@ -30,9 +24,8 @@ using boost::asio::ip::udp;
 class PingReceiverBoost : public PingReceiver
 {
 public:
-    PingReceiverBoost( WorkerManager &workerMgr, boost::asio::io_service &io_service, udp::socket &socket )
-    : PingReceiver( workerMgr ),
-	 io_service_( io_service ),
+    PingReceiverBoost( boost::asio::io_service &io_service, udp::socket &socket )
+    : io_service_( io_service ),
      socket_( socket )
     {
         memset( buffer_.c_array(), 0, buffer_.size() );

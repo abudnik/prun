@@ -3,18 +3,18 @@
 
 #include <boost/asio.hpp>
 #include <sstream>
-#include "worker_manager.h"
 #include "common/helper.h"
 #include "common/protocol.h"
 #include "defines.h"
+#include "worker.h"
 
 namespace master {
 
 class Pinger
 {
 public:
-    Pinger( WorkerManager &workerMgr, int pingTimeout, int maxDroped )
-    : workerMgr_( workerMgr ), pingTimeout_( pingTimeout ), maxDroped_( maxDroped ),
+    Pinger( int pingTimeout, int maxDroped )
+    : pingTimeout_( pingTimeout ), maxDroped_( maxDroped ),
      numPings_( 0 )
     {
 		protocol_ = new python_server::ProtocolJson;
@@ -39,9 +39,6 @@ protected:
 
     void OnWorkerIPResolve( Worker *worker, const std::string &ip );
 
-private:
-    WorkerManager &workerMgr_;
-
 protected:
     python_server::SyncTimer timer_;
     int pingTimeout_;
@@ -58,8 +55,8 @@ class PingerBoost : public Pinger
     typedef std::map< std::string, udp::endpoint > EndpointMap;
 
 public:
-    PingerBoost( WorkerManager &workerMgr, boost::asio::io_service &io_service, int pingTimeout, int maxDroped )
-    : Pinger( workerMgr, pingTimeout, maxDroped ),
+    PingerBoost( boost::asio::io_service &io_service, int pingTimeout, int maxDroped )
+    : Pinger( pingTimeout, maxDroped ),
      io_service_( io_service ),
      socket_( io_service, udp::endpoint( udp::v4(), 0 ) ),
      resolver_( io_service )

@@ -1,13 +1,14 @@
 #include <boost/bind.hpp>
 #include "node_ping.h"
 #include "common/log.h"
+#include "worker_manager.h"
 
 namespace master {
 
 void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg )
 {
 	PS_LOG( nodeIP << " : " << msg );
-    workerMgr_.OnHostPingResponse( nodeIP );
+    WorkerManager::Instance().OnHostPingResponse( nodeIP );
 }
 
 void PingReceiverBoost::Start()

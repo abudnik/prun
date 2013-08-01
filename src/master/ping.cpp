@@ -2,6 +2,7 @@
 #include <boost/thread.hpp>
 #include "ping.h"
 #include "common/log.h"
+#include "worker_manager.h"
 
 namespace master {
 
@@ -12,7 +13,7 @@ void Pinger::Stop()
 
 void Pinger::PingWorkers()
 {
-    WorkerList::WorkerContainer &workers = workerMgr_.GetWorkers();
+    WorkerList::WorkerContainer &workers = WorkerManager::Instance().GetWorkers();
     WorkerList::WorkerContainer::iterator it = workers.begin();
     for( ; it != workers.end(); ++it )
     {
@@ -36,13 +37,13 @@ void Pinger::CheckDropedPingResponses()
     if ( numPings_ < maxDroped_ + 1 )
         return;
 
-    workerMgr_.CheckDropedPingResponses();
+    WorkerManager::Instance().CheckDropedPingResponses();
     numPings_ = 0;
 }
 
 void Pinger::OnWorkerIPResolve( Worker *worker, const std::string &ip )
 {
-    workerMgr_.SetWorkerIP( worker, ip );
+    WorkerManager::Instance().SetWorkerIP( worker, ip );
 }
 
 void PingerBoost::StartPing()
