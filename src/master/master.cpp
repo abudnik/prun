@@ -237,6 +237,11 @@ int main( int argc, char* argv[], char **envp )
 
         pinger->Stop();
 
+		for( int i = 0; i < numJobSendThread; ++i )
+		{
+            jobSenders[i].Stop();
+        }
+
         work.reset();
 		io_service.stop();
 

@@ -18,6 +18,7 @@ enum WorkerState
 
 struct WorkerJob
 {
+    WorkerJob( int64_t jobId, int taskId ) : jobId_( jobId ), taskId_( taskId ) {}
 	WorkerJob() : jobId_( -1 ), taskId_( 0 ) {}
 	int64_t jobId_;
 	int taskId_;
