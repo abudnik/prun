@@ -25,6 +25,7 @@ void JobSender::Run()
 		{
 			const WorkerJob &j = worker->GetJob();
 			PS_LOG( "Get task " << j.jobId_ << " : " << j.taskId_ );
+			SendJob( worker, job );
 		}
 		else
 		{
@@ -51,6 +52,12 @@ void JobSender::NotifyObserver( int event )
 void JobSenderBoost::Start()
 {
     io_service_.post( boost::bind( &JobSender::Run, this ) );
+}
+
+void JobSenderBoost::SendJob( const Worker *worker, const Job *job )
+{	
+	sendJobsSem_.Wait();
+	sendJobsSem_.Notify();
 }
 
 } // namespace master

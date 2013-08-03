@@ -6,6 +6,8 @@
 #include <boost/thread/condition.hpp>
 #include "common/observer.h"
 #include "common/helper.h"
+#include "job.h"
+#include "worker.h"
 
 namespace master {
 
@@ -22,6 +24,8 @@ public:
 
 private:
     virtual void NotifyObserver( int event );
+
+	virtual void SendJob( const Worker *worker, const Job *job ) = 0;
 
 private:
     bool stopped_;
@@ -41,6 +45,9 @@ public:
     {}
 
     virtual void Start();
+
+private:
+	virtual void SendJob( const Worker *worker, const Job *job );
 
 private:
     boost::asio::io_service &io_service_;
