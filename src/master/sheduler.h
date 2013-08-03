@@ -33,8 +33,9 @@ public:
     }
 
 private:
+	void PlanJobExecution();
+
     bool CheckIfWorkerFailedJob( Worker *worker, int64_t jobId ) const;
-    Job *GetJobById( int64_t jobId ) const;
     bool CanTakeNewJob() const;
     bool NeedToSendTask() const;
 

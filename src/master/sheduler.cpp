@@ -9,9 +9,11 @@ namespace master {
 
 void Sheduler::OnHostAppearance( Worker *worker )
 {
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
-
-    freeWorkers_[ worker->GetIP() ] = worker;
+	{
+		boost::mutex::scoped_lock scoped_lock( workersMut_ );
+		freeWorkers_[ worker->GetIP() ] = worker;
+	}
+	PlanJobExecution();
 }
 
 void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
@@ -26,11 +28,6 @@ void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
 
         if ( state == WORKER_STATE_NOT_AVAIL )
         {
-            freeWorkers_.erase( worker->GetIP() );
-        }
-
-        if ( state == WORKER_STATE_FAILED )
-        {
             IPToWorker::iterator it = busyWorkers_.find( worker->GetIP() );
             if ( it != busyWorkers_.end() )
             {
@@ -39,6 +36,7 @@ void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
                 int64_t jobId = workerJob.jobId_;
 
                 failedWorkers_[ jobId ].insert( worker->GetIP() );
+				busyWorkers_.erase( worker->GetIP() );
 
                 Job *job = JobManager::Instance().GetJobById( jobId );
                 if ( job )
@@ -59,14 +57,23 @@ void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
                     PS_LOG( "Sheduler::OnChangedWorkerState: Job for jobId=" << jobId << " not found" );
                 }
             }
+			else
+			{
+				freeWorkers_.erase( worker->GetIP() );
+			}
+        }
+
+        if ( state == WORKER_STATE_FAILED )
+        {
         }
     }
 }
 
-void Sheduler::OnNewJob( Job *job )
+void Sheduler::PlanJobExecution()
 {
-    if ( !CanTakeNewJob() )
-        return;
+	Job *job = JobManager::Instance().GetTopJob();
+	if ( !job )
+		return;
 
     int numNodes = job->GetNumNodes();
     if ( numNodes <= 0 )
@@ -88,6 +95,14 @@ void Sheduler::OnNewJob( Job *job )
     }
 
     JobManager::Instance().PopJob();
+
+	NotifyAll();
+}
+
+void Sheduler::OnNewJob( Job *job )
+{
+    if ( CanTakeNewJob() )
+		PlanJobExecution();
 }
 
 bool Sheduler::GetTaskToSend( Worker **worker, Job **job )
@@ -127,7 +142,11 @@ bool Sheduler::GetTaskToSend( Worker **worker, Job **job )
         Worker *w = it->second;
         if ( !CheckIfWorkerFailedJob( w, jobId ) )
         {
-            tasksToSend_[ jobId ].erase( taskId );
+			std::set< int > &tasks = tasksToSend_[ jobId ];
+            tasks.erase( taskId );
+			if ( !tasks.size() )
+				tasksToSend_.erase( jobId );
+
             WorkerJob workerJob( jobId, taskId );
             w->SetJob( workerJob );
             *worker = w;

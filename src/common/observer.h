@@ -32,7 +32,7 @@ public:
 		observers_.erase( observer );
 	}
 
-	void NotifyAll( int event )
+	void NotifyAll( int event = 0 )
 	{
 		Container::iterator it = observers_.begin();
 		for( ; it != observers_.end(); ++it )
@@ -63,7 +63,7 @@ public:
 		observers_.erase( observer );
 	}
 
-	void NotifyAll( int event )
+	void NotifyAll( int event = 0 )
 	{
 		boost::mutex::scoped_lock scoped_lock( mut_ );
 		Container::iterator it = observers_.begin();

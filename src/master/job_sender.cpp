@@ -15,21 +15,37 @@ void JobSender::Run()
 
     while( !stopped_ )
     {
-        if ( sheduler.GetTaskToSend( &worker, &job ) )
-        {
-            const WorkerJob &j = worker->GetJob();
-            PS_LOG( "Get task " << j.jobId_ << " : " << j.taskId_ );
-        }
+		{
+			boost::unique_lock< boost::mutex > lock( awakeMut_ );
+			if ( !newJobAvailable_ )
+				awakeCond_.wait( lock );
+		}
+
+		if ( sheduler.GetTaskToSend( &worker, &job ) )
+		{
+			const WorkerJob &j = worker->GetJob();
+			PS_LOG( "Get task " << j.jobId_ << " : " << j.taskId_ );
+		}
+		else
+		{
+			boost::unique_lock< boost::mutex > lock( awakeMut_ );
+			newJobAvailable_ = false;
+		}
     }
 }
 
 void JobSender::Stop()
 {
     stopped_ = true;
+    boost::unique_lock< boost::mutex > lock( awakeMut_ );
+    awakeCond_.notify_all();
 }
 
 void JobSender::NotifyObserver( int event )
 {
+    boost::unique_lock< boost::mutex > lock( awakeMut_ );
+	newJobAvailable_ = true;
+    awakeCond_.notify_all();
 }
 
 void JobSenderBoost::Start()

@@ -26,9 +26,9 @@ void WorkerManager::CheckDropedPingResponses()
             }
             if ( state == WORKER_STATE_EXEC )
             {
-                worker->SetState( WORKER_STATE_FAILED );
+                worker->SetState( WORKER_STATE_NOT_AVAIL );
                 changedWorkers.push_back( worker );
-                PS_LOG( "node job failed, ip= " << worker->GetIP() );
+                PS_LOG( "node job isn't available, ip= " << worker->GetIP() );
             }
         }
         worker->SetNumPingResponse( 0 );

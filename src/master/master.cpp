@@ -203,10 +203,13 @@ int main( int argc, char* argv[], char **envp )
 		}
 
 		// start job sender threads
+		int sendBufferSize = cfg.Get<int>( "num_ping_thread" );
+		int maxSimultSendingJobs = cfg.Get<int>( "max_simult_sending_jobs" );
 		boost::ptr_vector< master::JobSender > jobSenders;
 		for( int i = 0; i < numJobSendThread; ++i )
 		{
-			master::JobSender *jobSender( new master::JobSenderBoost( io_service ) );
+			master::JobSender *jobSender( new master::JobSenderBoost( io_service,
+																	  sendBufferSize, maxSimultSendingJobs ) );
 			jobSenders.push_back( jobSender );
 			jobSender->Start();
 		}
