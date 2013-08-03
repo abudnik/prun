@@ -147,6 +147,9 @@ bool Sheduler::GetTaskToSend( Worker **worker, Job **job )
 			if ( !tasks.size() )
 				tasksToSend_.erase( jobId );
 
+			freeWorkers_.erase( w->GetIP() );
+			sendingJobWorkers_[ w->GetIP() ] = w;
+
             WorkerJob workerJob( jobId, taskId );
             w->SetJob( workerJob );
             *worker = w;
