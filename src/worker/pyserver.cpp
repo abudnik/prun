@@ -253,6 +253,7 @@ public:
 
 			ss2 << ss.str().size() << '\n' << ss.str();
 
+		    // problem: async_read_some could read only 1 byte or so
 			socket_->async_read_some( boost::asio::buffer( buffer_ ),
 									 boost::bind( &PyExecConnection::HandleRead, shared_from_this(),
 												  boost::asio::placeholders::error,
