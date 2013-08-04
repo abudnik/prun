@@ -197,7 +197,7 @@ int main( int argc, char* argv[], char **envp )
 		boost::ptr_vector< master::PingReceiver > pingReceivers;
 		for( int i = 0; i < numPingReceiverThread; ++i )
 		{
-			master::PingReceiver *pingReceiver( new master::PingReceiverBoost( io_service, recvSocket ) );
+			master::PingReceiver *pingReceiver( new master::PingReceiverBoost( recvSocket ) );
 			pingReceivers.push_back( pingReceiver );
 			pingReceiver->Start();
 		}

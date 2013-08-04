@@ -41,7 +41,7 @@ public:
     JobSenderBoost( boost::asio::io_service &io_service,
 					int sendBufferSize, int maxSimultSendingJobs )
     : io_service_( io_service ), sendBufferSize_( sendBufferSize ),
-	 maxSimultSendingJobs_( maxSimultSendingJobs ), sendJobsSem_( maxSimultSendingJobs )
+	 sendJobsSem_( maxSimultSendingJobs )
     {}
 
     virtual void Start();
@@ -52,7 +52,6 @@ private:
 private:
     boost::asio::io_service &io_service_;
 	int sendBufferSize_;
-	int maxSimultSendingJobs_;
 	python_server::Semaphore sendJobsSem_;
 };
 
