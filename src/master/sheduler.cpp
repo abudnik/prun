@@ -71,7 +71,7 @@ void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
 
 void Sheduler::PlanJobExecution()
 {
-	Job *job = JobManager::Instance().GetTopJob();
+	Job *job = JobManager::Instance().PopJob();
 	if ( !job )
 		return;
 
@@ -93,8 +93,6 @@ void Sheduler::PlanJobExecution()
         jobExecutions_[ jobId ] = numNodes;
         jobs_.push( job );
     }
-
-    JobManager::Instance().PopJob();
 
 	NotifyAll();
 }
@@ -186,6 +184,15 @@ bool Sheduler::CanTakeNewJob() const
 bool Sheduler::NeedToSendTask() const
 {
     return ( freeWorkers_.size() > 0 ) && ( tasksToSend_.size() > 0 || needReschedule_.size() > 0 );
+}
+
+void Sheduler::Shutdown()
+{
+	while( !jobs_.empty() )
+	{
+		delete jobs_.front();
+		jobs_.pop();
+	}
 }
 
 } // namespace master

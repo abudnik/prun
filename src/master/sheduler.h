@@ -32,6 +32,8 @@ public:
         return instance_;
     }
 
+	void Shutdown();
+
 private:
 	void PlanJobExecution();
 

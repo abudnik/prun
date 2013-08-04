@@ -14,7 +14,9 @@ namespace master {
 class JobSender : python_server::Observer
 {
 public:
-    JobSender() : stopped_( false ) {}
+    JobSender()
+	: stopped_( false ), newJobAvailable_( false )
+	{}
 
     virtual void Start() = 0;
 

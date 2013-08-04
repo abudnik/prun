@@ -38,6 +38,7 @@ the License.
 #include "node_ping.h"
 #include "job_manager.h"
 #include "worker_manager.h"
+#include "sheduler.h"
 #include "job_sender.h"
 #include "defines.h"
 
@@ -93,6 +94,7 @@ void AtExit()
 {
     master::WorkerManager::Instance().Shutdown();
     master::JobManager::Instance().Shutdown();
+	master::Sheduler::Instance().Shutdown();
 
 	python_server::logger::ShutdownLogger();
 }
@@ -175,6 +177,7 @@ int main( int argc, char* argv[], char **envp )
 
         InitWorkerManager();
         InitJobManager();
+		master::Sheduler::Instance();
 
 		atexit( AtExit );
 
