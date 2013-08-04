@@ -75,6 +75,11 @@ Worker *WorkerManager::GetWorkerByIP( const std::string &ip ) const
     return workers_.GetWorkerByIP( ip );
 }
 
+void WorkerManager::Shutdown()
+{
+	workers_.Clear();
+}
+
 bool ReadHosts( const char *filePath, std::list< std::string > &hosts )
 {
     int numHosts = 0;

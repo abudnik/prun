@@ -55,6 +55,11 @@ Job *JobManager::GetTopJob()
     return jobs_.GetTopJob();
 }
 
+void JobManager::Shutdown()
+{
+	jobs_.Clear();
+}
+
 bool JobManager::ReadScript( const std::string &fileName, std::string &script ) const
 {
     std::string filePath = exeDir_ + '/' + fileName;

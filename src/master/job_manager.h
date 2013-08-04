@@ -38,10 +38,7 @@ public:
         return instance_;
     }
 
-    void Shutdown()
-    {
-        jobs_.Clear();
-    }
+    void Shutdown();
 
 private:
     bool ReadScript( const std::string &fileName, std::string &script ) const;

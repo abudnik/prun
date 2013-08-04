@@ -2,6 +2,7 @@
 #include "job_sender.h"
 #include "sheduler.h"
 #include "common/log.h"
+#include "defines.h"
 
 namespace master {
 
@@ -49,6 +50,11 @@ void JobSender::NotifyObserver( int event )
     awakeCond_.notify_all();
 }
 
+void JobSender::OnJobSendCompletion( bool success, const Worker *worker, const Job *job )
+{
+
+}
+
 void JobSenderBoost::Start()
 {
     io_service_.post( boost::bind( &JobSender::Run, this ) );
@@ -57,7 +63,38 @@ void JobSenderBoost::Start()
 void JobSenderBoost::SendJob( const Worker *worker, const Job *job )
 {	
 	sendJobsSem_.Wait();
+
+	SenderBoost::sender_ptr sender(
+		new SenderBoost( io_service_, sendBufferSize_, this, worker, job )
+	);
+	sender->Send();
+
 	sendJobsSem_.Notify();
+}
+
+void SenderBoost::Send()
+{
+	tcp::endpoint nodeEndpoint( 
+		boost::asio::ip::address::from_string( worker_->GetIP() ),
+	    NODE_PORT
+    );
+
+    socket_.async_connect( nodeEndpoint,
+						   boost::bind( &SenderBoost::HandleConnect, shared_from_this(),
+										boost::asio::placeholders::error ) );
+}
+
+void SenderBoost::HandleConnect( const boost::system::error_code &error )
+{
+	if ( !error )
+	{
+		PS_LOG("SenderBoost::HandleConnect");
+	}
+	else
+	{
+		PS_LOG( "SenderBoost::HandleConnect error=" << error );
+		sender_->OnJobSendCompletion( false, worker_, job_ );
+	}
 }
 
 } // namespace master

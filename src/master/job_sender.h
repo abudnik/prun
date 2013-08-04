@@ -9,6 +9,8 @@
 #include "job.h"
 #include "worker.h"
 
+using boost::asio::ip::tcp;
+
 namespace master {
 
 class JobSender : python_server::Observer
@@ -24,6 +26,8 @@ public:
 
     void Run();
 
+	void OnJobSendCompletion( bool success, const Worker *worker, const Job *job );
+
 private:
     virtual void NotifyObserver( int event );
 
@@ -35,6 +39,33 @@ private:
     boost::mutex awakeMut_;
     boost::condition_variable awakeCond_;
     bool newJobAvailable_;
+};
+
+class SenderBoost : public boost::enable_shared_from_this< SenderBoost >
+{
+public:
+	typedef boost::shared_ptr< SenderBoost > sender_ptr;
+
+public:
+	SenderBoost( boost::asio::io_service &io_service, int sendBufferSize,
+				 JobSender *sender, const Worker *worker, const Job *job )
+	: io_service_( io_service ), socket_( io_service ),
+	 sendBufferSize_( sendBufferSize ),
+	 sender_( sender ), worker_( worker ), job_( job )
+	{}
+
+	void Send();
+
+private:
+	void HandleConnect( const boost::system::error_code &error );
+
+private:
+    boost::asio::io_service &io_service_;
+	tcp::socket socket_;
+	int sendBufferSize_;
+	JobSender *sender_;
+	const Worker *worker_;
+	const Job *job_;
 };
 
 class JobSenderBoost : public JobSender

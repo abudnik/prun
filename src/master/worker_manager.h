@@ -19,11 +19,6 @@ public:
         }
     }
 
-    void Shutdown()
-    {
-        workers_.Clear();
-    }
-
     void CheckDropedPingResponses();
 
     void OnHostPingResponse( const std::string &hostIP );
@@ -39,6 +34,8 @@ public:
         static WorkerManager instance_;
         return instance_;
     }
+
+    void Shutdown();
 
 private:
     WorkerList workers_;
