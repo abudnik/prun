@@ -376,7 +376,7 @@ public:
 		cout << "S: ~Session()" << endl;
 	}
 
-	virtual void Start()
+	void Start()
 	{
 		socket_.async_read_some( boost::asio::buffer( buffer_ ),
 								 boost::bind( &Session::FirstRead, shared_from_this(),
@@ -390,11 +390,19 @@ public:
 	}
 
 protected:
-	virtual void FirstRead( const boost::system::error_code& error, size_t bytes_transferred )
+	void FirstRead( const boost::system::error_code& error, size_t bytes_transferred )
 	{
 		if ( !error )
 		{
 			int ret = request_.OnFirstRead( buffer_, bytes_transferred );
+			if ( ret == 0 )
+			{
+				socket_.async_read_some( boost::asio::buffer( buffer_ ),
+										 boost::bind( &Session::FirstRead, shared_from_this(),
+													  boost::asio::placeholders::error,
+													  boost::asio::placeholders::bytes_transferred ) );
+				return;
+			}
 			if ( ret < 0 )
 			{
 			    job_.OnError( ret );
@@ -410,7 +418,7 @@ protected:
 		HandleRead( error, bytes_transferred );
 	}
 
-	virtual void HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
+	void HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
 	{
 		if ( !error )
 		{
@@ -435,18 +443,19 @@ protected:
 		}
 	}
 
-	virtual void HandleRequest()
+	void HandleRequest()
 	{
 	    job_.ParseRequest( request_ );
 
 	    boost::scoped_ptr< Action > action(
-		    actionCreator_.Create( job_.GetTaskType() ) );
+		    actionCreator_.Create( job_.GetTaskType() )
+		);
 		action->Execute( &job_ );
 
 		WriteResponse();
 	}
 
-	virtual void WriteResponse()
+	void WriteResponse()
 	{
 	    job_.GetResponse( response_ );
 
@@ -456,7 +465,7 @@ protected:
 								boost::asio::placeholders::error ) );
 	}
 
-	virtual void HandleWrite( const boost::system::error_code& error )
+	void HandleWrite( const boost::system::error_code& error )
 	{
 		if ( error )
 		{
