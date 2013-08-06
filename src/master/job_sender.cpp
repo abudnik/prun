@@ -2,6 +2,7 @@
 #include "job_sender.h"
 #include "sheduler.h"
 #include "common/log.h"
+#include "common/protocol.h"
 #include "defines.h"
 
 namespace master {
@@ -51,7 +52,7 @@ void JobSender::NotifyObserver( int event )
 
 void JobSender::OnJobSendCompletion( bool success, const Worker *worker, const Job *job )
 {
-
+    PS_LOG("JobSender::OnJobSendCompletion");
 }
 
 void JobSenderBoost::Start()
@@ -67,13 +68,17 @@ void JobSenderBoost::SendJob( const Worker *worker, const Job *job )
 		new SenderBoost( io_service_, sendBufferSize_, this, worker, job )
 	);
 	sender->Send();
+}
 
-	sendJobsSem_.Notify();
+void JobSenderBoost::OnJobSendCompletion( bool success, const Worker *worker, const Job *job )
+{
+    sendJobsSem_.Notify();
+    JobSender::OnJobSendCompletion( success, worker, job );
 }
 
 void SenderBoost::Send()
 {
-	tcp::endpoint nodeEndpoint( 
+	tcp::endpoint nodeEndpoint(
 		boost::asio::ip::address::from_string( worker_->GetIP() ),
 	    NODE_PORT
     );
@@ -87,13 +92,37 @@ void SenderBoost::HandleConnect( const boost::system::error_code &error )
 {
 	if ( !error )
 	{
-		PS_LOG("SenderBoost::HandleConnect");
+        MakeRequest();
+        boost::asio::async_write( socket_,
+                                  boost::asio::buffer( request_ ),
+                                  boost::bind( &SenderBoost::HandleWrite, shared_from_this(),
+                                               boost::asio::placeholders::error,
+                                               boost::asio::placeholders::bytes_transferred ) );
 	}
 	else
 	{
 		PS_LOG( "SenderBoost::HandleConnect error=" << error );
 		sender_->OnJobSendCompletion( false, worker_, job_ );
 	}
+}
+
+void SenderBoost::HandleWrite( const boost::system::error_code& error, size_t bytes_transferred )
+{
+    if ( !error )
+    {
+        sender_->OnJobSendCompletion( true, worker_, job_ );
+    }
+    else
+    {
+        PS_LOG( "SenderBoost::HandleWrite error=" << error.value() );
+        sender_->OnJobSendCompletion( false, worker_, job_ );
+    }
+}
+
+void SenderBoost::MakeRequest()
+{
+    python_server::ProtocolJson protocol;
+    protocol.SendScript( request_, job_->GetScriptLanguage(), job_->GetScript() );
 }
 
 } // namespace master

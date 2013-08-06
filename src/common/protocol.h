@@ -11,6 +11,8 @@ public:
 	virtual ~Protocol() {}
 	virtual bool NodePing( std::string &msg, const std::string &hostName ) = 0;
 	virtual bool NodeResponsePing( std::string &msg ) = 0;
+    virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
+                             const std::string &script ) = 0;
 };
 
 class ProtocolJson : public Protocol
@@ -27,6 +29,14 @@ public:
     {
 		AddHeader( msg );
 		return true;
+    }
+
+    virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
+                             const std::string &script )
+    {
+        msg = std::string( "{lang: \"" ) + scriptLanguage + "\",script: \"" + script + "\"}";
+        AddHeader( msg );
+        return true;
     }
 
 private:

@@ -26,7 +26,7 @@ public:
 
     void Run();
 
-	void OnJobSendCompletion( bool success, const Worker *worker, const Job *job );
+	virtual void OnJobSendCompletion( bool success, const Worker *worker, const Job *job );
 
 private:
     virtual void NotifyObserver( int event );
@@ -59,10 +59,15 @@ public:
 private:
 	void HandleConnect( const boost::system::error_code &error );
 
+    void MakeRequest();
+
+    void HandleWrite( const boost::system::error_code& error, size_t bytes_transferred );
+
 private:
     boost::asio::io_service &io_service_;
 	tcp::socket socket_;
 	int sendBufferSize_;
+    std::string request_;
 	JobSender *sender_;
 	const Worker *worker_;
 	const Job *job_;
@@ -81,6 +86,8 @@ public:
 
 private:
 	virtual void SendJob( const Worker *worker, const Job *job );
+
+    virtual void OnJobSendCompletion( bool success, const Worker *worker, const Job *job );
 
 private:
     boost::asio::io_service &io_service_;
