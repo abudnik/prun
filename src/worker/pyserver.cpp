@@ -178,14 +178,13 @@ public:
         ss >> protocol >> version;
         int offset = ss.tellg();
         std::string msg( req.begin() + offset, req.end() );
-        PS_LOG( protocol << "," << version << "   " << msg );
 
         ProtocolCreator protocolCreator;
 	    boost::scoped_ptr< Protocol > parser(
 		    protocolCreator.Create( protocol, version )
 		);
 
-        parser->ParseSendScript( msg, script_, language_ );
+        parser->ParseSendScript( msg, language_, script_ );
 		scriptLength_ = script_.size();
 	    taskType_ = "exec";
 	}

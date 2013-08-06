@@ -24,6 +24,9 @@ the License.
 
 #include <boost/thread/condition.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
 
 namespace python_server {
 
@@ -75,6 +78,26 @@ private:
 	boost::mutex mutex_;
 	boost::condition_variable condition_;
 };
+
+template< typename T >
+void EncodeBase64( const T *data, std::size_t size, std::string &out )
+{
+  using namespace boost::archive::iterators;
+  typedef base64_from_binary< transform_width< char*, 6, 8 > > translate_out;
+  out.append( translate_out( data ), translate_out( data + size ) );
+}
+
+template< typename Container >
+void DecodeBase64( std::string &data, Container &out )
+{
+  using namespace boost::archive::iterators;
+  typedef transform_width< binary_from_base64< std::string::const_iterator >, 8, 6 > translate_in;
+
+  std::size_t padding = data.size() % 4;
+  data.append( padding, std::string::value_type( '=' ) );
+
+  std::copy( translate_in( data.begin() ), translate_in( data.end() - padding ), std::back_inserter( out ) );
+}
 
 } // namespace python_server
 

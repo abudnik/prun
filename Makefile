@@ -24,13 +24,13 @@ common_dir := $(srcdir)/common
 worker_dir := $(srcdir)/worker
 master_dir := $(srcdir)/master
 
-COMMON_WORKER := log daemon config common master_ping
+COMMON_WORKER := log daemon config protocol common master_ping
 COMMON_WORKER_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(COMMON_WORKER)))
 
 WORKER := pyexec pyserver
 WORKER_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(WORKER)))
 
-COMMON_MASTER := log daemon config defines ping node_ping job worker job_manager worker_manager sheduler job_sender
+COMMON_MASTER := log daemon config protocol defines ping node_ping job worker job_manager worker_manager sheduler job_sender
 COMMON_MASTER_OBJS := $(addprefix $(objdir)/, $(addsuffix .o, $(COMMON_MASTER)))
 
 MASTER := master
