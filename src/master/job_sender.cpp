@@ -14,24 +14,23 @@ void JobSender::Run()
     Sheduler &sheduler = Sheduler::Instance();
 	sheduler.Subscribe( this );
 
+    bool getTask = false;
     while( !stopped_ )
     {
+        if ( !getTask )
 		{
 			boost::unique_lock< boost::mutex > lock( awakeMut_ );
 			if ( !newJobAvailable_ )
 				awakeCond_.wait( lock );
+            newJobAvailable_ = false;
 		}
 
-		if ( sheduler.GetTaskToSend( &worker, &job ) )
+        getTask = sheduler.GetTaskToSend( &worker, &job );
+		if ( getTask )
 		{
 			const WorkerJob &j = worker->GetJob();
 			PS_LOG( "Get task " << j.jobId_ << " : " << j.taskId_ );
 			SendJob( worker, job );
-		}
-		else
-		{
-			boost::unique_lock< boost::mutex > lock( awakeMut_ );
-			newJobAvailable_ = false;
 		}
     }
 }
