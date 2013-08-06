@@ -1,4 +1,5 @@
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/algorithm/string.hpp>
 #include "job_manager.h"
 #include "common/log.h"
 #include "sheduler.h"
@@ -72,7 +73,10 @@ bool JobManager::ReadScript( const std::string &fileName, std::string &script ) 
 
     std::string line;
     while( std::getline( file, line ) )
-        script += line;
+    {
+        boost::trim( line );
+        script += line + '\n';
+    }
 
     return true;
 }
