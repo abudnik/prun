@@ -90,7 +90,7 @@ public:
 
 	void GetResponse( std::string &response )
 	{
-		std::stringstream ss;
+		std::ostringstream ss;
 		boost::property_tree::ptree ptree;
 
 		ptree.put( "err", errCode_ );
@@ -141,7 +141,7 @@ public:
         if ( pid > 0 )
             return;
 
-		std::stringstream ss, ss2;
+		std::ostringstream ss, ss2;
 
 		ss << job->GetScriptLength();
 		string scriptLength = ss.str();
@@ -546,7 +546,7 @@ void OnThreadCreate( const boost::thread *thread )
 	python_server::ThreadParams threadParams;
     threadParams.fifofd = -1;
 
-    std::stringstream ss;
+    std::ostringstream ss;
     ss << python_server::FIFO_NAME << threadCnt;
     threadParams.fifoName = ss.str();
 

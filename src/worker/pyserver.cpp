@@ -42,6 +42,7 @@ the License.
 #include "common/config.h"
 #include "common/pidfile.h"
 #include "common/daemon.h"
+#include "common/protocol.h"
 #include "request.h"
 #include "common.h"
 #include "master_ping.h"
@@ -169,15 +170,29 @@ public:
 	template< typename T >
 	void ParseRequest( Request<T> &request )
 	{
-	    script_ = request.GetString();
+        const std::string &req = request.GetString();
+
+        std::istringstream ss( req );
+        std::string protocol;
+        int version;
+        ss >> protocol >> version;
+        int offset = ss.tellg();
+        std::string msg( req.begin() + offset, req.end() );
+        PS_LOG( protocol << "," << version << "   " << msg );
+
+        ProtocolCreator protocolCreator;
+	    boost::scoped_ptr< Protocol > parser(
+		    protocolCreator.Create( protocol, version )
+		);
+
+        parser->ParseSendScript( msg, script_, language_ );
 		scriptLength_ = script_.size();
-		language_ = "python";
 	    taskType_ = "exec";
 	}
 
 	void GetResponse( std::string &response )
 	{
-		std::stringstream ss;
+		std::ostringstream ss;
 		boost::property_tree::ptree ptree;
 
 		// TODO: full error code description
@@ -244,7 +259,7 @@ public:
 
 		try
 		{
-			std::stringstream ss, ss2;
+			std::ostringstream ss, ss2;
 
 			ptree_.put( "id", commDescr.shmemBlockId );
 			ptree_.put( "len", script.size() );
