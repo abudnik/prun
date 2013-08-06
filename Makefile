@@ -1,6 +1,6 @@
 CC := g++
-RFLAGS := -Wall -pedantic -pthread -O3
-DFLAGS := -Wall -pedantic -pthread -O0 -ggdb
+RFLAGS := -Wall -Wextra -pedantic -pthread -O3
+DFLAGS := -Wall -Wextra -pedantic -pthread -O0 -ggdb
 
 ifneq ($(MAKECMDGOALS),debug)
 	CFLAGS := $(RFLAGS)
