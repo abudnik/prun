@@ -169,7 +169,7 @@ public:
 	template< typename T >
 	void ParseRequest( Request<T> &request )
 	{
-	    script_ = request.GetRequestString();
+	    script_ = request.GetString();
 		scriptLength_ = script_.size();
 		language_ = "python";
 	    taskType_ = "exec";
@@ -195,6 +195,7 @@ public:
 	unsigned int GetScriptLength() const { return scriptLength_; }
 	const std::string &GetScriptLanguage() const { return language_; }
 	const std::string &GetScript() const { return script_; }
+    int GetErrorCode() const { return errCode_; }
 	const std::string &GetTaskType() const { return taskType_; }
 
 private:
@@ -253,9 +254,8 @@ public:
 
 			ss2 << ss.str().size() << '\n' << ss.str();
 
-		    // problem: async_read_some could read only 1 byte or so
 			socket_->async_read_some( boost::asio::buffer( buffer_ ),
-									 boost::bind( &PyExecConnection::HandleRead, shared_from_this(),
+									 boost::bind( &PyExecConnection::FirstRead, shared_from_this(),
 												  boost::asio::placeholders::error,
 												  boost::asio::placeholders::bytes_transferred ) );
 
@@ -271,7 +271,7 @@ public:
                 const boost::system_time timeout = boost::get_system_time() + boost::posix_time::milliseconds( RESPONSE_TIMEOUT );
                 if ( responseCond_.timed_wait( lock, timeout ) )
                 {
-                    ret = errCode_;
+                    ret = job->GetErrorCode();
                     break;
                 }
                 else
@@ -300,7 +300,7 @@ private:
 		}
 	}
 
-	void HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
+	void FirstRead( const boost::system::error_code& error, size_t bytes_transferred )
 	{
 		if ( error )
 		{
@@ -308,30 +308,76 @@ private:
 		}
 		else
 		{
-			std::stringstream ss;
-			ptree_.clear();
-			ss << buffer_.c_array();
-
-		    boost::property_tree::read_json( ss, ptree_ );
-
-			int errCode;
-			errCode = ptree_.get<int>( "err" );
-			job_->OnError( errCode );
+            int ret = response_.OnFirstRead( buffer_, bytes_transferred );
+			if ( ret == 0 )
+			{
+				socket_->async_read_some( boost::asio::buffer( buffer_ ),
+										 boost::bind( &PyExecConnection::FirstRead, shared_from_this(),
+													  boost::asio::placeholders::error,
+													  boost::asio::placeholders::bytes_transferred ) );
+				return;
+			}
+			if ( ret < 0 )
+			{
+                job_->OnError( ret );
+                execCompleted_ = true;
+                boost::unique_lock< boost::mutex > lock( responseMut_ );
+                responseCond_.notify_all();
+                return;
+            }
 		}
 
-        execCompleted_ = true;
-		boost::unique_lock< boost::mutex > lock( responseMut_ );
-		responseCond_.notify_all();
+        HandleRead( error, bytes_transferred );
 	}
+
+	void HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
+	{
+		if ( !error )
+		{
+			response_.OnRead( buffer_, bytes_transferred );
+
+			if ( !response_.IsReadCompleted() )
+			{
+				socket_->async_read_some( boost::asio::buffer( buffer_ ),
+										 boost::bind( &PyExecConnection::HandleRead, shared_from_this(),
+													boost::asio::placeholders::error,
+													boost::asio::placeholders::bytes_transferred ) );
+			}
+			else
+			{
+				HandleResponse();
+                execCompleted_ = true;
+                boost::unique_lock< boost::mutex > lock( responseMut_ );
+                responseCond_.notify_all();
+			}
+		}
+		else
+		{
+			PS_LOG( "PyExecConnection::HandleRead error=" << error.value() );
+			//HandleError( error );
+		}
+    }
+
+    void HandleResponse()
+    {
+        std::stringstream ss;
+        ptree_.clear();
+        ss << response_.GetString();
+
+        boost::property_tree::read_json( ss, ptree_ );
+
+        int errCode = ptree_.get<int>( "err" );
+        job_->OnError( errCode );
+    }
 
 private:
 	boost::property_tree::ptree ptree_;
 	tcp::socket *socket_;
 	BufferType buffer_;
+    Request< BufferType > response_;
     bool execCompleted_; // true, if pyexec completed script execution
 	boost::condition_variable responseCond_;
 	boost::mutex responseMut_;
-	int errCode_;
 	Job *job_;
 	const static int RESPONSE_TIMEOUT = 60 * 1000; // 60 sec
 };

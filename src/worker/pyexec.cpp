@@ -75,7 +75,7 @@ public:
 	template< typename T >
 	void ParseRequest( Request<T> &request )
 	{
-		const std::string &requestStr = request.GetRequestString();
+		const std::string &requestStr = request.GetString();
 	    
 		std::stringstream ss;
 		ss << requestStr;
@@ -96,7 +96,10 @@ public:
 		ptree.put( "err", errCode_ );
 
 		boost::property_tree::write_json( ss, ptree, false );
-		response = ss.str();
+        size_t responseLength = ss.str().size();
+        response = boost::lexical_cast< std::string >( responseLength );
+        response += '\n';
+		response += ss.str();
 	}
 
 	void OnError( int err )

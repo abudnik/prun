@@ -40,12 +40,12 @@ public:
 		return bytesRead_ >= requestLength_;
 	}
 
-	const std::string &GetRequestString() const
+	const std::string &GetString() const
 	{
 		return request_;
 	}
 
-	unsigned int GetRequestLength() const
+	unsigned int GetLength() const
 	{
 		return requestLength_;
 	}
