@@ -50,7 +50,6 @@ public:
 	SenderBoost( boost::asio::io_service &io_service, int sendBufferSize,
 				 JobSender *sender, const Worker *worker, const Job *job )
 	: io_service_( io_service ), socket_( io_service ),
-	 sendBufferSize_( sendBufferSize ),
 	 sender_( sender ), worker_( worker ), job_( job )
 	{}
 
@@ -61,13 +60,15 @@ private:
 
     void MakeRequest();
 
-    void HandleWrite( const boost::system::error_code& error, size_t bytes_transferred );
+    void HandleWrite( const boost::system::error_code &error, size_t bytes_transferred );
+
+    void HandleRead( const boost::system::error_code &error, size_t bytes_transferred );
 
 private:
     boost::asio::io_service &io_service_;
 	tcp::socket socket_;
-	int sendBufferSize_;
     std::string request_;
+    char response_;
 	JobSender *sender_;
 	const Worker *worker_;
 	const Job *job_;

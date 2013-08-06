@@ -52,7 +52,7 @@ void JobSender::NotifyObserver( int event )
 
 void JobSender::OnJobSendCompletion( bool success, const Worker *worker, const Job *job )
 {
-    PS_LOG("JobSender::OnJobSendCompletion");
+    PS_LOG("JobSender::OnJobSendCompletion "<<success);
 }
 
 void JobSenderBoost::Start()
@@ -106,7 +106,24 @@ void SenderBoost::HandleConnect( const boost::system::error_code &error )
 	}
 }
 
-void SenderBoost::HandleWrite( const boost::system::error_code& error, size_t bytes_transferred )
+void SenderBoost::HandleWrite( const boost::system::error_code &error, size_t bytes_transferred )
+{
+    if ( !error )
+    {
+        boost::asio::async_read( socket_,
+                                 boost::asio::buffer( &response_, sizeof( response_ ) ),
+                                 boost::bind( &SenderBoost::HandleRead, shared_from_this(),
+                                              boost::asio::placeholders::error,
+                                              boost::asio::placeholders::bytes_transferred ) );
+    }
+    else
+    {
+        PS_LOG( "SenderBoost::HandleWrite error=" << error.value() );
+        sender_->OnJobSendCompletion( false, worker_, job_ );
+    }
+}
+
+void SenderBoost::HandleRead( const boost::system::error_code &error, size_t bytes_transferred )
 {
     if ( !error )
     {
@@ -114,7 +131,7 @@ void SenderBoost::HandleWrite( const boost::system::error_code& error, size_t by
     }
     else
     {
-        PS_LOG( "SenderBoost::HandleWrite error=" << error.value() );
+        PS_LOG( "SenderBoost::HandleRead error=" << error.value() );
         sender_->OnJobSendCompletion( false, worker_, job_ );
     }
 }
