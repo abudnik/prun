@@ -168,7 +168,7 @@ class Job
 {
 public:
 	template< typename T >
-	void ParseRequest( Request<T> &request )
+	bool ParseRequest( Request<T> &request )
 	{
         const std::string &req = request.GetString();
 
@@ -183,6 +183,12 @@ public:
 	    boost::scoped_ptr< Protocol > parser(
 		    protocolCreator.Create( protocol, version )
 		);
+        if ( !parser )
+        {
+            PS_LOG( "Job::ParseRequest: appropriate parser not found for protocol: "
+                    << protocol << " " << version );
+            return false;
+        }
 
         std::string script64;
         parser->ParseSendScript( msg, language_, script64 );
@@ -190,6 +196,7 @@ public:
 
 		scriptLength_ = script_.size();
 	    taskType_ = "exec";
+        return true;
 	}
 
 	void GetResponse( std::string &response )
@@ -508,12 +515,26 @@ protected:
 
 	void HandleRequest()
 	{
-	    job_.ParseRequest( request_ );
-
-	    boost::scoped_ptr< Action > action(
-		    actionCreator_.Create( job_.GetTaskType() )
-		);
-		action->Execute( &job_ );
+	    if ( job_.ParseRequest( request_ ) )
+        {
+            boost::scoped_ptr< Action > action(
+                actionCreator_.Create( job_.GetTaskType() )
+            );
+            if ( action )
+            {
+                action->Execute( &job_ );
+            }
+            else
+            {
+                PS_LOG( "Session::HandleRequest: appropriate action not found for task type: "
+                        << job_.GetTaskType() );
+                job_.OnError( -1 );
+            }
+        }
+        else
+        {
+            job_.OnError( -1 );
+        }
 
 		WriteResponse();
 	}

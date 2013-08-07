@@ -328,8 +328,18 @@ protected:
 	    job_.ParseRequest( request_ );
 
 		boost::scoped_ptr< ScriptExec > scriptExec(
-		    execCreator_.Create( job_.GetScriptLanguage() ) );
-		scriptExec->Execute( &job_ );
+		    execCreator_.Create( job_.GetScriptLanguage() )
+        );
+        if ( scriptExec )
+        {
+            scriptExec->Execute( &job_ );
+        }
+        else
+        {
+            PS_LOG( "Session::HandleRequest: appropriate executor not found for language: "
+                    << job_.GetScriptLanguage() );
+            job_.OnError( -1 );
+        }
 
 		request_.Reset();
 		Start();
