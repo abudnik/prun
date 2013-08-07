@@ -184,7 +184,10 @@ public:
 		    protocolCreator.Create( protocol, version )
 		);
 
-        parser->ParseSendScript( msg, language_, script_ );
+        std::string script64;
+        parser->ParseSendScript( msg, language_, script64 );
+        DecodeBase64( script64, script_ );
+
 		scriptLength_ = script_.size();
 	    taskType_ = "exec";
 	}

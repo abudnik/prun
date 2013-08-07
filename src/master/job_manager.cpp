@@ -2,6 +2,7 @@
 #include <boost/algorithm/string.hpp>
 #include "job_manager.h"
 #include "common/log.h"
+#include "common/helper.h"
 #include "sheduler.h"
 
 namespace master {
@@ -71,12 +72,13 @@ bool JobManager::ReadScript( const std::string &fileName, std::string &script ) 
         return false;
     }
 
-    std::string line;
+    std::string data, line;
     while( std::getline( file, line ) )
     {
         boost::trim( line );
-        script += line + '\n';
+        data += line + '\n';
     }
+    python_server::EncodeBase64( data.c_str(), data.size(), script );
 
     return true;
 }

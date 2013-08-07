@@ -2,7 +2,6 @@
 #include <boost/property_tree/json_parser.hpp>
 #include "protocol.h"
 #include "log.h"
-#include "helper.h"
 
 namespace python_server {
 
@@ -23,9 +22,7 @@ bool ProtocolJson::NodeResponsePing( std::string &msg )
 bool ProtocolJson::SendScript( std::string &msg, const std::string &scriptLanguage,
 						 const std::string &script )
 {
-	std::string script64;
-	EncodeBase64( script.c_str(), script.size(), script64 );
-	msg = std::string( "{\"lang\":\"" ) + scriptLanguage + "\",\"script\":\"" + script64 + "\"}";
+	msg = std::string( "{\"lang\":\"" ) + scriptLanguage + "\",\"script\":\"" + script + "\"}";
 	AddHeader( msg );
 	return true;
 }
@@ -41,8 +38,7 @@ bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptL
 	{
 		boost::property_tree::read_json( ss, ptree );
 		scriptLanguage = ptree.get<std::string>( "lang" );
-		std::string script64 = ptree.get<std::string>( "script" );
-		DecodeBase64( script64, script );
+	    script = ptree.get<std::string>( "script" );
 	}
 	catch( std::exception &e )
 	{
