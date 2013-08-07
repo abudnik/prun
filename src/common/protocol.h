@@ -11,8 +11,10 @@ public:
 	virtual bool NodeResponsePing( std::string &msg ) = 0;
     virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
                              const std::string &script ) = 0;
+    virtual bool GetJobResult( std::string &msg ) = 0;
     virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
                                   std::string &script ) = 0;
+    virtual bool ParseMsgType( const std::string &msg, std::string &type ) = 0;
 };
 
 class ProtocolJson : public Protocol
@@ -25,8 +27,12 @@ public:
     virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
                              const std::string &script );
 
+    virtual bool GetJobResult( std::string &msg );
+
     virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
                                   std::string &script );
+
+    virtual bool ParseMsgType( const std::string &msg, std::string &type );
 
 private:
 	void AddHeader( std::string &msg );

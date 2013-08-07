@@ -171,13 +171,11 @@ public:
 	bool ParseRequest( Request<T> &request )
 	{
         const std::string &req = request.GetString();
-
         std::istringstream ss( req );
-        std::string protocol;
+
+        std::string protocol, msgType;
         int version;
-        ss >> protocol >> version;
-        int offset = ss.tellg();
-        std::string msg( req.begin() + offset, req.end() );
+        ss >> protocol >> version >> msgType;
 
         ProtocolCreator protocolCreator;
 	    boost::scoped_ptr< Protocol > parser(
@@ -190,25 +188,30 @@ public:
             return false;
         }
 
-        std::string script64;
-        parser->ParseSendScript( msg, language_, script64 );
-        DecodeBase64( script64, script_ );
+        parser->ParseMsgType( msgType, taskType_ );
 
-		scriptLength_ = script_.size();
-	    taskType_ = "exec";
-        return true;
+        return ParseRequestBody( ss, req, parser.get() );
 	}
 
-	void GetResponse( std::string &response )
+    void SaveResponse() const
+    {
+        std::ostringstream ss;
+        boost::property_tree::ptree ptree;
+
+        // TODO: full error code description
+        ptree.put( "response", errCode_ ? "FAILED" : "OK" );
+
+        boost::property_tree::write_json( ss, ptree, false );
+        //response = ss.str();
+        // todo: save result to (static?) response_table {(master_ip, job_id, task_id) -> response}
+    }
+
+	void GetResponse( std::string &response ) const
 	{
-		std::ostringstream ss;
-		boost::property_tree::ptree ptree;
-
-		// TODO: full error code description
-		ptree.put( "response", errCode_ ? "FAILED" : "OK" );
-
-		boost::property_tree::write_json( ss, ptree, false );
-		response = ss.str();
+        if ( taskType_ == "get_result" )
+        {
+            // todo: read response from response_table
+        }
 	}
 
 	void OnError( int err )
@@ -221,6 +224,28 @@ public:
 	const std::string &GetScript() const { return script_; }
     int GetErrorCode() const { return errCode_; }
 	const std::string &GetTaskType() const { return taskType_; }
+
+private:
+    bool ParseRequestBody( std::istringstream &ss, const std::string &req, Protocol *parser )
+    {
+        if ( taskType_ == "exec" )
+        {
+            int offset = ss.tellg();
+            std::string msg( req.begin() + offset, req.end() );
+
+            std::string script64;
+            parser->ParseSendScript( msg, language_, script64 );
+            DecodeBase64( script64, script_ );
+
+            scriptLength_ = script_.size();
+            return true;
+        }
+        if ( taskType_ == "get_result" )
+        {
+            return true;
+        }
+        return false;
+    }
 
 private:
 	unsigned int scriptLength_;
@@ -414,7 +439,15 @@ class SendToPyExec : public Action
 		PyExecConnection::connection_ptr pyExecConnection( new PyExecConnection() );
 		pyExecConnection->Send( job );
 		commDescrPool->FreeCommDescr();
+
+        job->SaveResponse();
+        // todo: ping asynchronously master
 	}
+};
+
+class GetJobResult : public Action
+{
+	virtual void Execute( Job *job ) {}
 };
 
 class ActionCreator
@@ -424,6 +457,8 @@ public:
 	{
 		if ( taskType == "exec" )
 			return new SendToPyExec();
+        if ( taskType == "get_result" )
+            return new GetJobResult();
 		return NULL;
 	}
 };
@@ -459,7 +494,7 @@ public:
 		return socket_;
 	}
 
-protected:
+private:
 	void FirstRead( const boost::system::error_code& error, size_t bytes_transferred )
 	{
 		if ( !error )
@@ -475,8 +510,7 @@ protected:
 			}
 			if ( ret < 0 )
 			{
-			    job_.OnError( ret );
-				WriteResponse();
+                OnReadCompletion( false );
 				return;
 			}
 		}
@@ -503,6 +537,7 @@ protected:
 			}
 			else
 			{
+                OnReadCompletion( true );
 				HandleRequest();
 			}
 		}
@@ -510,6 +545,7 @@ protected:
 		{
 			PS_LOG( "Session::HandleRead error=" << error.value() );
 			//HandleError( error );
+            OnReadCompletion( false );
 		}
 	}
 
@@ -539,10 +575,20 @@ protected:
 		WriteResponse();
 	}
 
+    void OnReadCompletion( bool success )
+    {
+        readStatus_ = success ? '1' : '0';
+		boost::asio::async_write( socket_,
+                                  boost::asio::buffer( &readStatus_, sizeof( readStatus_ ) ),
+                                  boost::bind( &Session::HandleWrite, shared_from_this(),
+                                               boost::asio::placeholders::error ) );
+    }
+
 	void WriteResponse()
 	{
 	    job_.GetResponse( response_ );
-
+        if ( response_.empty() )
+            return;
 		boost::asio::async_write( socket_,
 								boost::asio::buffer( response_ ),
 	   							boost::bind( &Session::HandleWrite, shared_from_this(),
@@ -563,6 +609,7 @@ protected:
 	Request< BufferType > request_;
 	Job job_;
 	ActionCreator actionCreator_;
+    char readStatus_;
 	std::string response_;
 	boost::asio::io_service &io_service_;
 };

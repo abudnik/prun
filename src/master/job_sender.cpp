@@ -127,7 +127,8 @@ void SenderBoost::HandleRead( const boost::system::error_code &error, size_t byt
 {
     if ( !error )
     {
-        sender_->OnJobSendCompletion( true, worker_, job_ );
+        bool success = ( response_ == '1' );
+        sender_->OnJobSendCompletion( success, worker_, job_ );
     }
     else
     {
