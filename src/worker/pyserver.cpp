@@ -219,6 +219,11 @@ public:
 		errCode_ = err;
 	}
 
+	bool NeedPingMaster() const
+	{
+		return taskType_ == "exec";
+	}
+
 	unsigned int GetScriptLength() const { return scriptLength_; }
 	const std::string &GetScriptLanguage() const { return language_; }
 	const std::string &GetScript() const { return script_; }
@@ -260,6 +265,11 @@ class Action
 public:
 	virtual void Execute( Job *job ) = 0;
 	virtual ~Action() {}
+};
+
+class NoAction : public Action
+{
+	virtual void Execute( Job *job ) {}
 };
 
 class PyExecConnection : public boost::enable_shared_from_this< PyExecConnection >
@@ -441,13 +451,7 @@ class SendToPyExec : public Action
 		commDescrPool->FreeCommDescr();
 
         job->SaveResponse();
-        // todo: ping asynchronously master
 	}
-};
-
-class GetJobResult : public Action
-{
-	virtual void Execute( Job *job ) {}
 };
 
 class ActionCreator
@@ -458,7 +462,7 @@ public:
 		if ( taskType == "exec" )
 			return new SendToPyExec();
         if ( taskType == "get_result" )
-            return new GetJobResult();
+            return new NoAction();
 		return NULL;
 	}
 };
@@ -586,13 +590,37 @@ private:
 
 	void WriteResponse()
 	{
+		if ( job_.NeedPingMaster() )
+			MasterCompletionPing();
+
 	    job_.GetResponse( response_ );
-        if ( response_.empty() )
-            return;
-		boost::asio::async_write( socket_,
-								boost::asio::buffer( response_ ),
-	   							boost::bind( &Session::HandleWrite, shared_from_this(),
-								boost::asio::placeholders::error ) );
+        if ( !response_.empty() )
+		{
+			boost::asio::async_write( socket_,
+									  boost::asio::buffer( response_ ),
+									  boost::bind( &Session::HandleWrite, shared_from_this(),
+												   boost::asio::placeholders::error ) );
+		}
+	}
+
+	void MasterCompletionPing()
+	{
+		using boost::asio::ip::udp;
+		udp::socket socket( io_service_, udp::endpoint( udp::v4(), 0 ) );
+		udp::endpoint master_endpoint( socket_.remote_endpoint().address(), DEFAULT_MASTER_UDP_PORT );
+
+		ProtocolJson protocol;
+        std::string msg;
+        protocol.MasterJobCompletionPing( msg );
+
+        try
+        {
+            socket.send_to( boost::asio::buffer( msg ), master_endpoint );
+        }
+        catch( boost::system::system_error &e )
+        {
+            PS_LOG( "Session::PingMaster: send_to failed: " << e.what() << ", host : " << master_endpoint );
+        }
 	}
 
 	void HandleWrite( const boost::system::error_code& error )

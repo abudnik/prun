@@ -15,6 +15,14 @@ bool ProtocolJson::NodePing( std::string &msg, const std::string &host )
 
 bool ProtocolJson::NodeResponsePing( std::string &msg )
 {
+	msg = std::string( "{\"type\":\"ping_response\"}" );
+	AddHeader( msg );
+	return true;
+}
+
+bool ProtocolJson::MasterJobCompletionPing( std::string &msg )
+{
+	msg = std::string( "{\"type\":\"job_completion\"}" );
 	AddHeader( msg );
 	return true;
 }

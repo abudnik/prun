@@ -86,7 +86,7 @@ void PingerBoost::PingWorker( Worker *worker )
     }
     catch( boost::system::system_error &e )
     {
-        PS_LOG( "PingerBoost::PingWorker: send_to failed, host : " << node_ip );
+        PS_LOG( "PingerBoost::PingWorker: send_to failed: " << e.what() << ", host : " << node_ip );
     }
 }
 

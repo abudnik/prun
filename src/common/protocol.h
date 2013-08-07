@@ -9,6 +9,7 @@ public:
 	virtual ~Protocol() {}
 	virtual bool NodePing( std::string &msg, const std::string &hostName ) = 0;
 	virtual bool NodeResponsePing( std::string &msg ) = 0;
+	virtual bool MasterJobCompletionPing( std::string &msg ) = 0;
     virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
                              const std::string &script ) = 0;
     virtual bool GetJobResult( std::string &msg ) = 0;
@@ -23,6 +24,8 @@ public:
 	virtual bool NodePing( std::string &msg, const std::string &host );
 
     virtual bool NodeResponsePing( std::string &msg );
+
+	virtual bool MasterJobCompletionPing( std::string &msg );
 
     virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
                              const std::string &script );

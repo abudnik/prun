@@ -36,7 +36,7 @@ void MasterPingBoost::HandleRead( const boost::system::error_code& error, size_t
         }
         catch( boost::system::system_error &e )
         {
-            PS_LOG( "MasterPingBoost::HandleRead: send_to failed, host : " << remote_endpoint_ );
+            PS_LOG( "MasterPingBoost::HandleRead: send_to failed: " << e.what() << ", host : " << remote_endpoint_ );
         }
     }
     else
