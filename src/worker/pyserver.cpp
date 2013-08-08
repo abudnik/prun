@@ -42,10 +42,10 @@ the License.
 #include "common/config.h"
 #include "common/pidfile.h"
 #include "common/daemon.h"
-#include "common/protocol.h"
 #include "request.h"
 #include "common.h"
 #include "master_ping.h"
+#include "node_job.h"
 
 
 using namespace std;
@@ -163,102 +163,6 @@ private:
 
 CommDescrPool *commDescrPool;
 
-
-class Job
-{
-public:
-	template< typename T >
-	bool ParseRequest( Request<T> &request )
-	{
-        const std::string &req = request.GetString();
-        std::istringstream ss( req );
-
-        std::string protocol, msgType;
-        int version;
-        ss >> protocol >> version >> msgType;
-
-        ProtocolCreator protocolCreator;
-	    boost::scoped_ptr< Protocol > parser(
-		    protocolCreator.Create( protocol, version )
-		);
-        if ( !parser )
-        {
-            PS_LOG( "Job::ParseRequest: appropriate parser not found for protocol: "
-                    << protocol << " " << version );
-            return false;
-        }
-
-        parser->ParseMsgType( msgType, taskType_ );
-
-        return ParseRequestBody( ss, req, parser.get() );
-	}
-
-    void SaveResponse() const
-    {
-        std::ostringstream ss;
-        boost::property_tree::ptree ptree;
-
-        // TODO: full error code description
-        ptree.put( "response", errCode_ ? "FAILED" : "OK" );
-
-        boost::property_tree::write_json( ss, ptree, false );
-        //response = ss.str();
-        // todo: save result to (static?) response_table {(master_ip, job_id, task_id) -> response}
-    }
-
-	void GetResponse( std::string &response ) const
-	{
-        if ( taskType_ == "get_result" )
-        {
-            // todo: read response from response_table
-        }
-	}
-
-	void OnError( int err )
-	{
-		errCode_ = err;
-	}
-
-	bool NeedPingMaster() const
-	{
-		return taskType_ == "exec";
-	}
-
-	unsigned int GetScriptLength() const { return scriptLength_; }
-	const std::string &GetScriptLanguage() const { return language_; }
-	const std::string &GetScript() const { return script_; }
-    int GetErrorCode() const { return errCode_; }
-	const std::string &GetTaskType() const { return taskType_; }
-
-private:
-    bool ParseRequestBody( std::istringstream &ss, const std::string &req, Protocol *parser )
-    {
-        if ( taskType_ == "exec" )
-        {
-            int offset = ss.tellg();
-            std::string msg( req.begin() + offset, req.end() );
-
-            std::string script64;
-            parser->ParseSendScript( msg, language_, script64 );
-            DecodeBase64( script64, script_ );
-
-            scriptLength_ = script_.size();
-            return true;
-        }
-        if ( taskType_ == "get_result" )
-        {
-            return true;
-        }
-        return false;
-    }
-
-private:
-	unsigned int scriptLength_;
-	std::string language_;
-	std::string script_;
-	int errCode_;
-	std::string taskType_;
-};
 
 class Action
 {
@@ -611,7 +515,7 @@ private:
 
 		ProtocolJson protocol;
         std::string msg;
-        protocol.MasterJobCompletionPing( msg );
+        protocol.MasterJobCompletionPing( msg, job_.GetJobId(), job_.GetTaskId() );
 
         try
         {

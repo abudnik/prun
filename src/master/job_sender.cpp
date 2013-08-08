@@ -140,7 +140,9 @@ void SenderBoost::HandleRead( const boost::system::error_code &error, size_t byt
 void SenderBoost::MakeRequest()
 {
     python_server::ProtocolJson protocol;
-    protocol.SendScript( request_, job_->GetScriptLanguage(), job_->GetScript() );
+    const WorkerJob &workerJob = worker_->GetJob();
+    protocol.SendScript( request_, job_->GetScriptLanguage(), job_->GetScript(),
+                         workerJob.jobId_, workerJob.taskId_ );
 }
 
 } // namespace master

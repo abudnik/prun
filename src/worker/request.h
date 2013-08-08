@@ -1,8 +1,10 @@
 #ifndef __REQUEST_H
 #define __REQUEST_H
 
+#include <boost/lexical_cast.hpp>
 #include "common/log.h"
 #include "common.h"
+
 
 namespace python_server {
 

@@ -1,6 +1,9 @@
 #ifndef __PROTOCOL_H
 #define __PROTOCOL_H
 
+#include <string>
+#include <stdint.h>
+
 namespace python_server {
 
 class Protocol
@@ -9,12 +12,12 @@ public:
 	virtual ~Protocol() {}
 	virtual bool NodePing( std::string &msg, const std::string &hostName ) = 0;
 	virtual bool NodeResponsePing( std::string &msg ) = 0;
-	virtual bool MasterJobCompletionPing( std::string &msg ) = 0;
+	virtual bool MasterJobCompletionPing( std::string &msg, int64_t jobId, int taskId ) = 0;
     virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
-                             const std::string &script ) = 0;
-    virtual bool GetJobResult( std::string &msg ) = 0;
+                             const std::string &script, int64_t jobId, int taskId ) = 0;
     virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
-                                  std::string &script ) = 0;
+                                  std::string &script, int64_t &jobId, int &taskId ) = 0;
+    virtual bool GetJobResult( std::string &msg ) = 0;
     virtual bool ParseMsgType( const std::string &msg, std::string &type ) = 0;
 };
 
@@ -25,15 +28,15 @@ public:
 
     virtual bool NodeResponsePing( std::string &msg );
 
-	virtual bool MasterJobCompletionPing( std::string &msg );
+	virtual bool MasterJobCompletionPing( std::string &msg, int64_t jobId, int taskId );
 
     virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
-                             const std::string &script );
-
-    virtual bool GetJobResult( std::string &msg );
+                             const std::string &script, int64_t jobId, int taskId );
 
     virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
-                                  std::string &script );
+                                  std::string &script, int64_t &jobId, int &taskId );
+
+    virtual bool GetJobResult( std::string &msg );
 
     virtual bool ParseMsgType( const std::string &msg, std::string &type );
 
