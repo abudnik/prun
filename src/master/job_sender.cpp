@@ -94,6 +94,13 @@ void SenderBoost::HandleConnect( const boost::system::error_code &error )
 	if ( !error )
 	{
         MakeRequest();
+
+        boost::asio::async_read( socket_,
+                                 boost::asio::buffer( &response_, sizeof( response_ ) ),
+                                 boost::bind( &SenderBoost::HandleRead, shared_from_this(),
+                                              boost::asio::placeholders::error,
+                                              boost::asio::placeholders::bytes_transferred ) );
+
         boost::asio::async_write( socket_,
                                   boost::asio::buffer( request_ ),
                                   boost::bind( &SenderBoost::HandleWrite, shared_from_this(),
@@ -109,15 +116,7 @@ void SenderBoost::HandleConnect( const boost::system::error_code &error )
 
 void SenderBoost::HandleWrite( const boost::system::error_code &error, size_t bytes_transferred )
 {
-    if ( !error )
-    {
-        boost::asio::async_read( socket_,
-                                 boost::asio::buffer( &response_, sizeof( response_ ) ),
-                                 boost::bind( &SenderBoost::HandleRead, shared_from_this(),
-                                              boost::asio::placeholders::error,
-                                              boost::asio::placeholders::bytes_transferred ) );
-    }
-    else
+    if ( error )
     {
         PS_LOG( "SenderBoost::HandleWrite error=" << error.value() );
         sender_->OnJobSendCompletion( false, worker_, job_ );
