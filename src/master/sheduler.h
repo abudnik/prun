@@ -20,11 +20,11 @@ public:
 
     void OnNewJob( Job *job );
 
-    void OnTaskCompletion(/*args*/);
-
-    void OnTaskSend( bool success /*args*/);
+    void OnTaskCompletion( const std::string &hostIP, int64_t jobId, int taskId );
 
 	bool GetTaskToSend( Worker **worker, Job **job );
+
+    void OnTaskSendCompletion( bool success, const Worker *worker, const Job *job );
 
     static Sheduler &Instance()
     {

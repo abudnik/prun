@@ -159,6 +159,32 @@ bool Sheduler::GetTaskToSend( Worker **worker, Job **job )
     return false;
 }
 
+void Sheduler::OnTaskSendCompletion( bool success, const Worker *worker, const Job *job )
+{
+    if ( success )
+    {
+        Worker *w = const_cast<Worker *>( worker );
+        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+        sendingJobWorkers_.erase( worker->GetIP() );
+        busyWorkers_[ worker->GetIP() ] = w;
+    }
+    else
+    {
+        const WorkerJob &workerJob = worker->GetJob();
+        Worker *w = const_cast<Worker *>( worker );
+        boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+        failedWorkers_[ workerJob.jobId_ ].insert( worker->GetIP() );
+        // worker is free for now, to get another job
+        sendingJobWorkers_.erase( worker->GetIP() );
+        freeWorkers_[ worker->GetIP() ] = w;
+        // reset worker job
+        w->SetJob( WorkerJob() );
+        // job need to be rescheduled to any other node
+        boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+        needReschedule_.push( workerJob );
+    }
+}
+
 bool Sheduler::CheckIfWorkerFailedJob( Worker *worker, int64_t jobId ) const
 {
     const std::string &ip = worker->GetIP();

@@ -53,6 +53,7 @@ void JobSender::NotifyObserver( int event )
 void JobSender::OnJobSendCompletion( bool success, const Worker *worker, const Job *job )
 {
     PS_LOG("JobSender::OnJobSendCompletion "<<success);
+    Sheduler::Instance().OnTaskSendCompletion( success, worker, job );
 }
 
 void JobSenderBoost::Start()
