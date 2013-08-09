@@ -324,9 +324,8 @@ private:
 
     void HandleResponse()
     {
-        std::stringstream ss;
+        std::istringstream ss( response_.GetString() );
         ptree_.clear();
-        ss << response_.GetString();
 
         boost::property_tree::read_json( ss, ptree_ );
 

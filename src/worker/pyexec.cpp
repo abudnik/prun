@@ -76,9 +76,8 @@ public:
 	void ParseRequest( Request<T> &request )
 	{
 		const std::string &requestStr = request.GetString();
-	    
-		std::stringstream ss;
-		ss << requestStr;
+
+		std::istringstream ss( requestStr );
 
 		boost::property_tree::ptree ptree;
 		boost::property_tree::read_json( ss, ptree );
