@@ -40,7 +40,7 @@ void WorkerManager::CheckDropedPingResponses()
     }
 }
 
-void WorkerManager::OnHostPingResponse( const std::string &hostIP )
+void WorkerManager::OnNodePingResponse( const std::string &hostIP )
 {
     Worker *worker = GetWorkerByIP( hostIP );
     if ( worker )
@@ -63,6 +63,10 @@ void WorkerManager::OnHostPingResponse( const std::string &hostIP )
     {
         PS_LOG( "WorkerManager::OnHostPingResponse worker not found, ip= " << hostIP );
     }
+}
+
+void WorkerManager::OnNodeJobCompletion( const std::string &hostIP, int64_t jobId, int taskId )
+{
 }
 
 void WorkerManager::SetWorkerIP( Worker *worker, const std::string &ip )

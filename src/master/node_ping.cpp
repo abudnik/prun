@@ -1,6 +1,8 @@
 #include <boost/bind.hpp>
+#include <boost/scoped_ptr.hpp>
 #include "node_ping.h"
 #include "common/log.h"
+#include "common/protocol.h"
 #include "worker_manager.h"
 
 namespace master {
@@ -8,7 +10,51 @@ namespace master {
 void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg )
 {
 	PS_LOG( nodeIP << " : " << msg );
-    WorkerManager::Instance().OnHostPingResponse( nodeIP );
+
+    std::string protocol, header, body;
+    int version;
+    if ( !python_server::Protocol::ParseMsg( msg, protocol, version, header, body ) )
+    {
+        PS_LOG( "PingReceiver::OnNodePing: couldn't parse msg: " << msg );
+        return;
+    }
+
+    python_server::ProtocolCreator protocolCreator;
+    boost::scoped_ptr< python_server::Protocol > parser(
+        protocolCreator.Create( protocol, version )
+    );
+    if ( !parser )
+    {
+        PS_LOG( "PingReceiver::OnNodePing: appropriate parser not found for protocol: "
+                << protocol << " " << version );
+        return;
+    }
+
+    std::string type;
+    parser->ParseMsgType( header, type );
+    if ( !parser->ParseMsgType( header, type ) )
+    {
+        PS_LOG( "PingReceiver::OnNodePing: couldn't parse msg type: " << header );
+        return;
+    }
+
+    if ( type == "ping_response" )
+    {
+        WorkerManager::Instance().OnNodePingResponse( nodeIP );
+    }
+    if ( type == "job_completion" )
+    {
+        int64_t jobId;
+        int taskId;
+        if ( parser->ParseJobCompletionPing( body, jobId, taskId ) )
+        {
+            WorkerManager::Instance().OnNodeJobCompletion( nodeIP, jobId, taskId );
+        }
+        else
+        {
+            PS_LOG( "PingReceiver::OnNodePing: couldn't parse msg body: " << body );
+        }
+    }
 }
 
 void PingReceiverBoost::Start()
@@ -29,7 +75,7 @@ void PingReceiverBoost::HandleRead( const boost::system::error_code& error, size
 {
     if ( !error )
     {
-		std::string response( buffer_.begin(), buffer_.end() );
+		std::string response( buffer_.begin(), buffer_.begin() + bytes_transferred );
         OnNodePing( remote_endpoint_.address().to_string(), response );
     }
     else

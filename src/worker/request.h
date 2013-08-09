@@ -12,11 +12,11 @@ template< typename BufferT >
 class Request
 {
 public:
-	Request()
+	Request( bool skipHeader )
 	: requestLength_( 0 ),
 	 bytesRead_( 0 ),
 	 headerOffset_( 0 ),
-	 skipHeader_( true )
+	 skipHeader_( skipHeader )
 	{
 	}
 

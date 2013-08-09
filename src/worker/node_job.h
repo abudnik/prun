@@ -1,6 +1,8 @@
 #ifndef __NODE_JOB_H
 #define __NODE_JOB_H
 
+#define BOOST_SPIRIT_THREADSAFE
+
 #include <boost/property_tree/json_parser.hpp>
 #include "common/protocol.h"
 #include "common/helper.h"
@@ -15,11 +17,14 @@ public:
 	bool ParseRequest( Request<T> &request )
 	{
         const std::string &req = request.GetString();
-        std::istringstream ss( req );
 
-        std::string protocol, msgType;
+        std::string protocol, header, body;
         int version;
-        ss >> protocol >> version >> msgType;
+        if ( !Protocol::ParseMsg( req, protocol, version, header, body ) )
+        {
+            PS_LOG( "Job::ParseRequest: couldn't parse request: " << req );
+            return false;
+        }
 
         ProtocolCreator protocolCreator;
 	    boost::scoped_ptr< Protocol > parser(
@@ -32,9 +37,9 @@ public:
             return false;
         }
 
-        parser->ParseMsgType( msgType, taskType_ );
+        parser->ParseMsgType( header, taskType_ );
 
-        return ParseRequestBody( ss, req, parser.get() );
+        return ParseRequestBody( body, parser.get() );
 	}
 
     void SaveResponse() const
@@ -77,15 +82,12 @@ public:
 	const std::string &GetTaskType() const { return taskType_; }
 
 private:
-    bool ParseRequestBody( std::istringstream &ss, const std::string &req, Protocol *parser )
+    bool ParseRequestBody( const std::string &body, Protocol *parser )
     {
         if ( taskType_ == "exec" )
         {
-            int offset = ss.tellg();
-            std::string msg( req.begin() + offset, req.end() );
-
             std::string script64;
-            parser->ParseSendScript( msg, language_, script64, jobId_, taskId_ );
+            parser->ParseSendScript( body, language_, script64, jobId_, taskId_ );
             DecodeBase64( script64, script_ );
 
             scriptLength_ = script_.size();

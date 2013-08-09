@@ -21,7 +21,9 @@ public:
 
     void CheckDropedPingResponses();
 
-    void OnHostPingResponse( const std::string &hostIP );
+    void OnNodePingResponse( const std::string &hostIP );
+
+    void OnNodeJobCompletion( const std::string &hostIP, int64_t jobId, int taskId );
 
 	void SetWorkerIP( Worker *worker, const std::string &ip );
     Worker *GetWorkerByIP( const std::string &ip ) const;

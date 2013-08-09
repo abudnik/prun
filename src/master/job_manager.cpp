@@ -1,3 +1,5 @@
+#define BOOST_SPIRIT_THREADSAFE
+
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/algorithm/string.hpp>
 #include "job_manager.h"

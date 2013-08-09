@@ -9,8 +9,6 @@ namespace master {
 class PingReceiver
 {
 public:
-    PingReceiver() {}
-
     virtual ~PingReceiver() {}
 
     virtual void Start() = 0;

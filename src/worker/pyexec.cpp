@@ -246,7 +246,7 @@ class Session : public boost::enable_shared_from_this< Session >
 
 public:
 	Session( boost::asio::io_service &io_service )
-	: socket_( io_service )
+	: socket_( io_service ), request_( true )
 	{
 	}
 

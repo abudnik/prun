@@ -185,6 +185,7 @@ public:
 
 public:
 	PyExecConnection()
+    : response_( true )
 	{
 		CommDescr &commDescr = commDescrPool->GetCommDescr();
 		socket_ = commDescr.socket.get();
@@ -379,6 +380,7 @@ public:
 public:
 	Session( boost::asio::io_service &io_service )
 	: socket_( io_service ),
+     request_( false ),
 	 io_service_( io_service )
 	{
 	}
@@ -495,7 +497,7 @@ private:
 	void WriteResponse()
 	{
 		if ( job_.NeedPingMaster() )
-			MasterCompletionPing();
+		    NodeJobCompletionPing();
 
 	    job_.GetResponse( response_ );
         if ( !response_.empty() )
@@ -507,7 +509,7 @@ private:
 		}
 	}
 
-	void MasterCompletionPing()
+	void NodeJobCompletionPing()
 	{
 		using boost::asio::ip::udp;
 		udp::socket socket( io_service_, udp::endpoint( udp::v4(), 0 ) );
@@ -515,7 +517,7 @@ private:
 
 		ProtocolJson protocol;
         std::string msg;
-        protocol.MasterJobCompletionPing( msg, job_.GetJobId(), job_.GetTaskId() );
+        protocol.NodeJobCompletionPing( msg, job_.GetJobId(), job_.GetTaskId() );
 
         try
         {
@@ -523,7 +525,7 @@ private:
         }
         catch( boost::system::system_error &e )
         {
-            PS_LOG( "Session::PingMaster: send_to failed: " << e.what() << ", host : " << master_endpoint );
+            PS_LOG( "Session::NodeJobCompletionPing: send_to failed: " << e.what() << ", host : " << master_endpoint );
         }
 	}
 
