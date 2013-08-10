@@ -42,7 +42,7 @@ the License.
 #include "common/config.h"
 #include "common/pidfile.h"
 #include "common/daemon.h"
-#include "request.h"
+#include "common/request.h"
 #include "common.h"
 #include "master_ping.h"
 #include "node_job.h"

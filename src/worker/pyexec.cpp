@@ -36,8 +36,8 @@ the License.
 #include <csignal>
 #include <sys/wait.h>
 #include <sys/prctl.h>
-#include "request.h"
 #include "common.h"
+#include "common/request.h"
 #include "common/log.h"
 #include "common/config.h"
 

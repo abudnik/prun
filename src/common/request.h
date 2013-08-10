@@ -3,7 +3,6 @@
 
 #include <boost/lexical_cast.hpp>
 #include "common/log.h"
-#include "common.h"
 
 
 namespace python_server {
@@ -91,9 +90,6 @@ private:
 	int CheckHeader() const
 	{
 		// TODO: Error codes
-		if ( requestLength_ > MAX_SCRIPT_SIZE )
-			return -1;
-
 		return requestLength_;
 	}
 

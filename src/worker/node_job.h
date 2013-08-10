@@ -6,7 +6,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include "common/protocol.h"
 #include "common/helper.h"
-#include "request.h"
+#include "common/request.h"
 
 namespace python_server {
 
