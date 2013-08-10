@@ -18,7 +18,7 @@ public:
                              const std::string &script, int64_t jobId, int taskId ) = 0;
     virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
                                   std::string &script, int64_t &jobId, int &taskId ) = 0;
-    virtual bool GetJobResult( std::string &msg ) = 0;
+    virtual bool GetJobResult( std::string &msg, int64_t jobId, int taskId ) = 0;
     virtual bool ParseMsgType( const std::string &msg, std::string &type ) = 0;
 
     static bool ParseMsg( const std::string &msg, std::string &protocol, int &version,
@@ -49,7 +49,7 @@ public:
     virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
                                   std::string &script, int64_t &jobId, int &taskId );
 
-    virtual bool GetJobResult( std::string &msg );
+    virtual bool GetJobResult( std::string &msg, int64_t jobId, int taskId );
 
     virtual bool ParseMsgType( const std::string &msg, std::string &type );
 

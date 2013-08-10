@@ -40,6 +40,7 @@ the License.
 #include "worker_manager.h"
 #include "sheduler.h"
 #include "job_sender.h"
+#include "result_getter.h"
 #include "defines.h"
 
 using namespace std;
@@ -171,9 +172,10 @@ int main( int argc, char* argv[], char **envp )
         python_server::Pidfile pidfile( pidfilePath.c_str() );
 
         int numPingThread = 1;
-		int numPingReceiverThread = cfg.Get<int>( "num_ping_thread" );
+		int numPingReceiverThread = cfg.Get<int>( "num_ping_receiver_thread" );
 		int numJobSendThread = cfg.Get<int>( "num_job_send_thread" );
-        master::numThread = numPingThread + numPingReceiverThread + numJobSendThread;
+		int numResultGetterThread = cfg.Get<int>( "num_result_getter_thread" );
+        master::numThread = numPingThread + numPingReceiverThread + numJobSendThread + numResultGetterThread;
 
         InitWorkerManager();
         InitJobManager();
@@ -205,10 +207,21 @@ int main( int argc, char* argv[], char **envp )
 			pingReceiver->Start();
 		}
 
+		// start result getter threads
+		int maxSimultResultGetters = cfg.Get<int>( "max_simult_result_getters" );
+		boost::ptr_vector< master::ResultGetter > resultGetters;
+		for( int i = 0; i < numResultGetterThread; ++i )
+		{
+			master::ResultGetter *resultGetter( new master::ResultGetterBoost( io_service,
+																			   maxSimultResultGetters ) );
+			resultGetters.push_back( resultGetter );
+			resultGetter->Start();
+		}
+
 		// start job sender threads
-		int sendBufferSize = cfg.Get<int>( "num_ping_thread" );
+		int sendBufferSize = cfg.Get<int>( "send_buffer_size" );
 		int maxSimultSendingJobs = cfg.Get<int>( "max_simult_sending_jobs" );
-		boost::ptr_vector< master::JobSender > jobSenders;
+	    boost::ptr_vector< master::JobSender > jobSenders;
 		for( int i = 0; i < numJobSendThread; ++i )
 		{
 			master::JobSender *jobSender( new master::JobSenderBoost( io_service,
@@ -247,6 +260,11 @@ int main( int argc, char* argv[], char **envp )
 		{
             jobSenders[i].Stop();
         }
+
+		for( int i = 0; i < numResultGetterThread; ++i )
+		{
+            resultGetters[i].Stop();
+		}
 
         work.reset();
 		io_service.stop();

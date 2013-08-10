@@ -20,7 +20,7 @@ public:
 
     void OnNewJob( Job *job );
 
-    void OnTaskCompletion( const std::string &hostIP, int64_t jobId, int taskId );
+    void OnTaskCompletion( const Worker *worker );
 
 	bool GetTaskToSend( Worker **worker, Job **job );
 

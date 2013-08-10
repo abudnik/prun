@@ -67,6 +67,29 @@ void WorkerManager::OnNodePingResponse( const std::string &hostIP )
 
 void WorkerManager::OnNodeJobCompletion( const std::string &hostIP, int64_t jobId, int taskId )
 {
+	Worker *worker = GetWorkerByIP( hostIP );
+	if ( !worker )
+		return;
+
+	{
+        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+		achievedWorkers_.push( worker );
+	}
+	NotifyAll();
+}
+
+bool WorkerManager::GetAchievedWorker( Worker **worker )
+{
+	if ( achievedWorkers_.empty() )
+		return false;
+
+    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+	if ( achievedWorkers_.empty() )
+		return false;
+
+	*worker = achievedWorkers_.front();
+	achievedWorkers_.pop();
+	return true;
 }
 
 void WorkerManager::SetWorkerIP( Worker *worker, const std::string &ip )

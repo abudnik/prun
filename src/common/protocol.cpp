@@ -118,9 +118,11 @@ bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptL
 	return true;
 }
 
-bool ProtocolJson::GetJobResult( std::string &msg )
+bool ProtocolJson::GetJobResult( std::string &msg, int64_t jobId, int taskId )
 {
     msg = std::string( "{\"type\":\"get_result\"}\n" );
+	msg += std::string( "\"job_id\":" ) + boost::lexical_cast<std::string>( jobId ) + ","
+        "\"task_id\":" + boost::lexical_cast<std::string>( taskId ) + "}";
 	AddHeader( msg );
 	return true;
 }

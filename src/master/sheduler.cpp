@@ -103,6 +103,10 @@ void Sheduler::OnNewJob( Job *job )
 		PlanJobExecution();
 }
 
+void Sheduler::OnTaskCompletion( const Worker *worker )
+{
+}
+
 bool Sheduler::GetTaskToSend( Worker **worker, Job **job )
 {
     if ( !NeedToSendTask() )
@@ -209,7 +213,7 @@ bool Sheduler::CanTakeNewJob() const
 
 bool Sheduler::NeedToSendTask() const
 {
-    return ( freeWorkers_.size() > 0 ) && ( tasksToSend_.size() > 0 || needReschedule_.size() > 0 );
+    return ( !freeWorkers_.empty() ) && ( !tasksToSend_.empty() || !needReschedule_.empty() );
 }
 
 void Sheduler::Shutdown()
