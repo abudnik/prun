@@ -291,7 +291,7 @@ protected:
 		}
 		else
 		{
-			PS_LOG( "Session::FirstRead error=" << error.value() );
+			PS_LOG( "Session::FirstRead error=" << error.message() );
 		}
 
 		HandleRead( error, bytes_transferred );
@@ -317,7 +317,7 @@ protected:
 		}
 		else
 		{
-			PS_LOG( "Session::HandleRead error=" << error.value() );
+			PS_LOG( "Session::HandleRead error=" << error.message() );
 			//HandleError( error );
 		}
 	}
@@ -361,7 +361,7 @@ protected:
 	{
 		if ( error )
 		{
-			PS_LOG( "Session::HandleWrite error=" << error.value() );
+			PS_LOG( "Session::HandleWrite error=" << error.message() );
 		}
 	}
 

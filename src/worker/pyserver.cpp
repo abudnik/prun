@@ -261,7 +261,7 @@ private:
 	{
 		if ( error )
 		{
-			PS_LOG( "PyExecConnection::HandleWrite error=" << error.value() );
+			PS_LOG( "PyExecConnection::HandleWrite error=" << error.message() );
 		}
 	}
 
@@ -269,7 +269,7 @@ private:
 	{
 		if ( error )
 		{
-			PS_LOG( "PyExecConnection::HandleRead error=" << error.value() );
+			PS_LOG( "PyExecConnection::HandleRead error=" << error.message() );
 		}
 		else
 		{
@@ -318,7 +318,7 @@ private:
 		}
 		else
 		{
-			PS_LOG( "PyExecConnection::HandleRead error=" << error.value() );
+			PS_LOG( "PyExecConnection::HandleRead error=" << error.message() );
 			//HandleError( error );
 		}
     }
@@ -439,7 +439,7 @@ private:
 		}
 		else
 		{
-			PS_LOG( "Session::FirstRead error=" << error.value() );
+			PS_LOG( "Session::FirstRead error=" << error.message() );
 		}
 
 		HandleRead( error, bytes_transferred );
@@ -466,7 +466,7 @@ private:
 		}
 		else
 		{
-			PS_LOG( "Session::HandleRead error=" << error.value() );
+			PS_LOG( "Session::HandleRead error=" << error.message() );
 			//HandleError( error );
             OnReadCompletion( false );
 		}
@@ -546,7 +546,7 @@ private:
 	{
 		if ( error )
 		{
-			PS_LOG( "Session::HandleWrite error=" << error.value() );
+			PS_LOG( "Session::HandleWrite error=" << error.message() );
 		}
 	}
 
@@ -802,9 +802,9 @@ void InitPyExecComm( boost::asio::io_service *io_service )
 
 		commDescr.socket = boost::shared_ptr< tcp::socket >( new tcp::socket( *io_service ) );
 		commDescr.socket->connect( *iterator, ec );
-		if ( ec.value() )
+		if ( ec )
 		{
-			PS_LOG( "InitPyExecComm: socket_.connect() failed " << ec.value() );
+			PS_LOG( "InitPyExecComm: socket_.connect() failed " << ec.message() );
 			exit( 1 );
 		}
 

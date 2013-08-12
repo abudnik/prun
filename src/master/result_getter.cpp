@@ -97,11 +97,10 @@ void GetterBoost::HandleConnect( const boost::system::error_code &error )
 	{
         MakeRequest();
 
-        boost::asio::async_read( socket_,
-                                 boost::asio::buffer( buffer_ ),
-                                 boost::bind( &GetterBoost::FirstRead, shared_from_this(),
-                                              boost::asio::placeholders::error,
-                                              boost::asio::placeholders::bytes_transferred ) );
+		socket_.async_read_some( boost::asio::buffer( buffer_ ),
+								 boost::bind( &GetterBoost::FirstRead, shared_from_this(),
+											  boost::asio::placeholders::error,
+											  boost::asio::placeholders::bytes_transferred ) );
 
         boost::asio::async_write( socket_,
                                   boost::asio::buffer( request_ ),
@@ -111,7 +110,7 @@ void GetterBoost::HandleConnect( const boost::system::error_code &error )
 	}
 	else
 	{
-		PS_LOG( "GetterBoost::HandleConnect error=" << error );
+		PS_LOG( "GetterBoost::HandleConnect error=" << error.message() );
 		getter_->OnGetJobResult( false, 0, worker_ );
 	}
 }
@@ -120,7 +119,7 @@ void GetterBoost::HandleWrite( const boost::system::error_code &error, size_t by
 {
     if ( error )
     {
-        PS_LOG( "GetterBoost::HandleWrite error=" << error.value() );
+        PS_LOG( "GetterBoost::HandleWrite error=" << error.message() );
         getter_->OnGetJobResult( false, 0, worker_ );
     }
 }
@@ -141,7 +140,7 @@ void GetterBoost::FirstRead( const boost::system::error_code& error, size_t byte
 	}
 	else
 	{
-		PS_LOG( "GetterBoost::FirstRead error=" << error.value() );
+		PS_LOG( "GetterBoost::FirstRead error=" << error.message() );
 	}
 
 	HandleRead( error, bytes_transferred );
@@ -167,7 +166,7 @@ void GetterBoost::HandleRead( const boost::system::error_code& error, size_t byt
 	}
 	else
 	{
-		PS_LOG( "GetterBoost::HandleRead error=" << error.value() );
+		PS_LOG( "GetterBoost::HandleRead error=" << error.message() );
 		getter_->OnGetJobResult( false, 0, worker_ );
 	}
 }

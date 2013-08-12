@@ -109,7 +109,7 @@ void SenderBoost::HandleConnect( const boost::system::error_code &error )
 	}
 	else
 	{
-		PS_LOG( "SenderBoost::HandleConnect error=" << error );
+		PS_LOG( "SenderBoost::HandleConnect error=" << error.message() );
 		sender_->OnJobSendCompletion( false, worker_, job_ );
 	}
 }
@@ -118,7 +118,7 @@ void SenderBoost::HandleWrite( const boost::system::error_code &error, size_t by
 {
     if ( error )
     {
-        PS_LOG( "SenderBoost::HandleWrite error=" << error.value() );
+        PS_LOG( "SenderBoost::HandleWrite error=" << error.message() );
         sender_->OnJobSendCompletion( false, worker_, job_ );
     }
 }
@@ -132,7 +132,7 @@ void SenderBoost::HandleRead( const boost::system::error_code &error, size_t byt
     }
     else
     {
-        PS_LOG( "SenderBoost::HandleRead error=" << error.value() );
+        PS_LOG( "SenderBoost::HandleRead error=" << error.message() );
         sender_->OnJobSendCompletion( false, worker_, job_ );
     }
 }

@@ -7,6 +7,7 @@
 #include "common/protocol.h"
 #include "common/helper.h"
 #include "common/request.h"
+#include "job_completion_table.h"
 
 namespace python_server {
 
@@ -59,7 +60,21 @@ public:
 	{
         if ( taskType_ == "get_result" )
         {
-            // todo: read response from response_table
+			JobDescriptor descr;
+			JobCompletionStat stat;
+			ProtocolJson protocol;
+
+			descr.jobId = GetJobId();
+			descr.taskId = GetTaskId();
+			if ( JobCompletionTable::Instance().Get( descr, stat ) )
+			{
+				JobCompletionTable::Instance().Erase( descr );
+				protocol.SendJobResult( response, stat.errCode );
+			}
+			else
+			{
+				protocol.SendJobResult( response, -1 );
+			}
         }
 	}
 
