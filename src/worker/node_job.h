@@ -73,6 +73,8 @@ public:
 		return taskType_ == "exec";
 	}
 
+    void SetMasterIP( const std::string &ip ) { masterIP_ = ip; }
+
 	unsigned int GetScriptLength() const { return scriptLength_; }
 	const std::string &GetScriptLanguage() const { return language_; }
 	const std::string &GetScript() const { return script_; }
@@ -108,6 +110,7 @@ private:
     int taskId_;
 	int errCode_;
 	std::string taskType_;
+    std::string masterIP_;
 };
 
 } // namespace python_server

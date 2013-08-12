@@ -355,8 +355,18 @@ class SendToPyExec : public Action
 		pyExecConnection->Send( job );
 		commDescrPool->FreeCommDescr();
 
-        job->SaveResponse();
+        SaveCompletionResults( job );
 	}
+
+    void SaveCompletionResults( const Job *job ) const
+    {
+        JobDescriptor descr;
+        JobCompletionStat stat;
+        descr.jobId = job->GetJobId();
+        descr.taskId = job->GetTaskId();
+        stat.errCode = job->GetErrorCode();
+        JobCompletionTable::Instance().Set( descr, stat );
+    }
 };
 
 class ActionCreator
@@ -393,6 +403,9 @@ public:
 
 	void Start()
 	{
+        boost::asio::ip::address remoteAddress = socket_.remote_endpoint().address();
+        job_.SetMasterIP( remoteAddress.to_string() );
+
 		socket_.async_read_some( boost::asio::buffer( buffer_ ),
 								 boost::bind( &Session::FirstRead, shared_from_this(),
 											boost::asio::placeholders::error,
