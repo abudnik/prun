@@ -121,9 +121,36 @@ bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptL
 bool ProtocolJson::GetJobResult( std::string &msg, int64_t jobId, int taskId )
 {
     msg = std::string( "{\"type\":\"get_result\"}\n" );
-	msg += std::string( "\"job_id\":" ) + boost::lexical_cast<std::string>( jobId ) + ","
+	msg += std::string( "{\"job_id\":" ) + boost::lexical_cast<std::string>( jobId ) + ","
         "\"task_id\":" + boost::lexical_cast<std::string>( taskId ) + "}";
 	AddHeader( msg );
+	return true;
+}
+
+bool ProtocolJson::SendJobResult( std::string &msg, int errCode )
+{
+    msg = std::string( "{\"type\":\"send_job_result\"}\n" );
+	msg += std::string( "{\"err_code\":" ) + boost::lexical_cast<std::string>( errCode ) + "}";
+	AddHeader( msg );
+	return true;
+}
+
+bool ProtocolJson::ParseJobResult( const std::string &msg, int &errCode )
+{
+	std::istringstream ss( msg );
+
+	boost::property_tree::ptree ptree;
+	try
+	{
+		boost::property_tree::read_json( ss, ptree );
+		errCode = ptree.get<int>( "err_code" );
+	}
+	catch( std::exception &e )
+	{
+		PS_LOG( "ProtocolJson::ParseMsgType: " << e.what() );
+		return false;
+	}
+
 	return true;
 }
 

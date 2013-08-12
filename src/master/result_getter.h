@@ -1,5 +1,5 @@
-#ifndef __JOB_RESULT_H
-#define __JOB_RESULT_H
+#ifndef __RESULT_GETTER_H
+#define __RESULT_GETTER_H
 
 #include <boost/asio.hpp>
 #include <boost/thread/mutex.hpp>
@@ -26,7 +26,7 @@ public:
 
     void Run();
 
-	virtual void OnGetJobResult( bool success, const Worker *worker );
+	virtual void OnGetJobResult( bool success, int errCode, const Worker *worker );
 
 private:
     virtual void NotifyObserver( int event );
@@ -95,7 +95,7 @@ public:
 private:
 	virtual void GetJobResult( const Worker *worker );
 
-    virtual void OnGetJobResult( bool success, const Worker *worker );
+    virtual void OnGetJobResult( bool success, int errCode, const Worker *worker );
 
 private:
     boost::asio::io_service &io_service_;

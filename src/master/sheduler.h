@@ -20,7 +20,7 @@ public:
 
     void OnNewJob( Job *job );
 
-    void OnTaskCompletion( const Worker *worker );
+    void OnTaskCompletion( int errCode, const Worker *worker );
 
 	bool GetTaskToSend( Worker **worker, Job **job );
 

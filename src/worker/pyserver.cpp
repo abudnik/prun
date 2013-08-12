@@ -46,6 +46,7 @@ the License.
 #include "common.h"
 #include "master_ping.h"
 #include "node_job.h"
+#include "job_completion_table.h"
 
 
 using namespace std;
@@ -883,6 +884,8 @@ int main( int argc, char* argv[], char **envp )
             pidfilePath = python_server::exeDir + '/' + pidfilePath;
         }
         python_server::Pidfile pidfile( pidfilePath.c_str() );
+
+        python_server::JobCompletionTable::Instance();
 
 		SetupSignalHandlers();
 		atexit( AtExit );

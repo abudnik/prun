@@ -1,4 +1,5 @@
 #include <boost/bind.hpp>
+#include <boost/scoped_ptr.hpp>
 #include "result_getter.h"
 #include "worker_manager.h"
 #include "sheduler.h"
@@ -50,9 +51,11 @@ void ResultGetter::NotifyObserver( int event )
     awakeCond_.notify_all();
 }
 
-void ResultGetter::OnGetJobResult( bool success, const Worker *worker )
+void ResultGetter::OnGetJobResult( bool success, int errCode, const Worker *worker )
 {
-    Sheduler::Instance().OnTaskCompletion( worker );
+    if ( !success ) // retrieving of job result from message failed
+        errCode = -1;
+    Sheduler::Instance().OnTaskCompletion( errCode, worker );
 }
 
 void ResultGetterBoost::Start()
@@ -70,10 +73,10 @@ void ResultGetterBoost::GetJobResult( const Worker *worker )
 	getter->GetJobResult();
 }
 
-void ResultGetterBoost::OnGetJobResult( bool success, const Worker *worker )
+void ResultGetterBoost::OnGetJobResult( bool success, int errCode, const Worker *worker )
 {
     getJobsSem_.Notify();
-    ResultGetter::OnGetJobResult( success, worker );
+    ResultGetter::OnGetJobResult( success, errCode, worker );
 }
 
 void GetterBoost::GetJobResult()
@@ -109,7 +112,7 @@ void GetterBoost::HandleConnect( const boost::system::error_code &error )
 	else
 	{
 		PS_LOG( "GetterBoost::HandleConnect error=" << error );
-		getter_->OnGetJobResult( false, worker_ );
+		getter_->OnGetJobResult( false, 0, worker_ );
 	}
 }
 
@@ -118,7 +121,7 @@ void GetterBoost::HandleWrite( const boost::system::error_code &error, size_t by
     if ( error )
     {
         PS_LOG( "GetterBoost::HandleWrite error=" << error.value() );
-        getter_->OnGetJobResult( false, worker_ );
+        getter_->OnGetJobResult( false, 0, worker_ );
     }
 }
 
@@ -165,12 +168,55 @@ void GetterBoost::HandleRead( const boost::system::error_code& error, size_t byt
 	else
 	{
 		PS_LOG( "GetterBoost::HandleRead error=" << error.value() );
-		getter_->OnGetJobResult( false, worker_ );
+		getter_->OnGetJobResult( false, 0, worker_ );
 	}
 }
 
 void GetterBoost::HandleResponse()
 {
+    const std::string &msg = response_.GetString();
+
+    std::string protocol, header, body;
+    int version;
+    if ( !python_server::Protocol::ParseMsg( msg, protocol, version, header, body ) )
+    {
+        PS_LOG( "GetterBoost::HandleResponse: couldn't parse msg: " << msg );
+        return;
+    }
+
+    python_server::ProtocolCreator protocolCreator;
+    boost::scoped_ptr< python_server::Protocol > parser(
+        protocolCreator.Create( protocol, version )
+    );
+    if ( !parser )
+    {
+        PS_LOG( "GetterBoost::HandleResponse: appropriate parser not found for protocol: "
+                << protocol << " " << version );
+        return;
+    }
+
+    std::string type;
+    parser->ParseMsgType( header, type );
+    if ( !parser->ParseMsgType( header, type ) )
+    {
+        PS_LOG( "GetterBoost::HandleResponse: couldn't parse msg type: " << header );
+        return;
+    }
+
+    if ( type == "send_job_result" )
+    {
+        int errCode;
+        if ( parser->ParseJobResult( body, errCode ) )
+        {
+            getter_->OnGetJobResult( true, errCode, worker_ );
+        }
+    }
+    else
+    {
+        PS_LOG( "GetterBoost::HandleResponse: unexpected msg type: " << type );
+    }
+
+    getter_->OnGetJobResult( false, 0, worker_ );
 }
 
 void GetterBoost::MakeRequest()

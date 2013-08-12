@@ -14,11 +14,15 @@ public:
 	virtual bool NodeResponsePing( std::string &msg ) = 0;
 	virtual bool NodeJobCompletionPing( std::string &msg, int64_t jobId, int taskId ) = 0;
 	virtual bool ParseJobCompletionPing( const std::string &msg, int64_t &jobId, int &taskId ) = 0;
+
     virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
                              const std::string &script, int64_t jobId, int taskId ) = 0;
     virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
                                   std::string &script, int64_t &jobId, int &taskId ) = 0;
     virtual bool GetJobResult( std::string &msg, int64_t jobId, int taskId ) = 0;
+    virtual bool SendJobResult( std::string &msg, int errCode ) = 0;
+    virtual bool ParseJobResult( const std::string &msg, int &errCode ) = 0;
+
     virtual bool ParseMsgType( const std::string &msg, std::string &type ) = 0;
 
     static bool ParseMsg( const std::string &msg, std::string &protocol, int &version,
@@ -50,6 +54,10 @@ public:
                                   std::string &script, int64_t &jobId, int &taskId );
 
     virtual bool GetJobResult( std::string &msg, int64_t jobId, int taskId );
+
+    virtual bool SendJobResult( std::string &msg, int errCode );
+
+    virtual bool ParseJobResult( const std::string &msg, int &errCode );
 
     virtual bool ParseMsgType( const std::string &msg, std::string &type );
 

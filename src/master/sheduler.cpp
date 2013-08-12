@@ -103,8 +103,9 @@ void Sheduler::OnNewJob( Job *job )
 		PlanJobExecution();
 }
 
-void Sheduler::OnTaskCompletion( const Worker *worker )
+void Sheduler::OnTaskCompletion( int errCode, const Worker *worker )
 {
+    PS_LOG( "Sheduler::OnTaskCompletion " << errCode );
 }
 
 bool Sheduler::GetTaskToSend( Worker **worker, Job **job )
