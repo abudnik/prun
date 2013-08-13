@@ -128,6 +128,17 @@ void GetterBoost::FirstRead( const boost::system::error_code& error, size_t byte
 {
 	if ( !error )
 	{
+        if ( firstRead_ )
+        {
+            // skip node's read completion status byte
+            firstRead_ = false;
+			socket_.async_read_some( boost::asio::buffer( buffer_ ),
+									 boost::bind( &GetterBoost::FirstRead, shared_from_this(),
+												  boost::asio::placeholders::error,
+												  boost::asio::placeholders::bytes_transferred ) );
+			return;
+        }
+
 		int ret = response_.OnFirstRead( buffer_, bytes_transferred );
 		if ( ret == 0 )
 		{
@@ -161,7 +172,10 @@ void GetterBoost::HandleRead( const boost::system::error_code& error, size_t byt
 		}
 		else
 		{
-			HandleResponse();
+			if ( !HandleResponse() )
+            {
+                getter_->OnGetJobResult( false, 0, worker_ );
+            }
 		}
 	}
 	else
@@ -171,7 +185,7 @@ void GetterBoost::HandleRead( const boost::system::error_code& error, size_t byt
 	}
 }
 
-void GetterBoost::HandleResponse()
+bool GetterBoost::HandleResponse()
 {
     const std::string &msg = response_.GetString();
 
@@ -180,7 +194,7 @@ void GetterBoost::HandleResponse()
     if ( !python_server::Protocol::ParseMsg( msg, protocol, version, header, body ) )
     {
         PS_LOG( "GetterBoost::HandleResponse: couldn't parse msg: " << msg );
-        return;
+        return false;
     }
 
     python_server::ProtocolCreator protocolCreator;
@@ -191,7 +205,7 @@ void GetterBoost::HandleResponse()
     {
         PS_LOG( "GetterBoost::HandleResponse: appropriate parser not found for protocol: "
                 << protocol << " " << version );
-        return;
+        return false;
     }
 
     std::string type;
@@ -199,7 +213,7 @@ void GetterBoost::HandleResponse()
     if ( !parser->ParseMsgType( header, type ) )
     {
         PS_LOG( "GetterBoost::HandleResponse: couldn't parse msg type: " << header );
-        return;
+        return false;
     }
 
     if ( type == "send_job_result" )
@@ -208,6 +222,7 @@ void GetterBoost::HandleResponse()
         if ( parser->ParseJobResult( body, errCode ) )
         {
             getter_->OnGetJobResult( true, errCode, worker_ );
+            return true;
         }
     }
     else
@@ -215,7 +230,7 @@ void GetterBoost::HandleResponse()
         PS_LOG( "GetterBoost::HandleResponse: unexpected msg type: " << type );
     }
 
-    getter_->OnGetJobResult( false, 0, worker_ );
+    return false;
 }
 
 void GetterBoost::MakeRequest()

@@ -52,7 +52,7 @@ public:
 	GetterBoost( boost::asio::io_service &io_service,
 				 ResultGetter *getter, const Worker *worker )
 	: io_service_( io_service ), socket_( io_service ),
-	 response_( false ),
+	 response_( false ), firstRead_( true ),
 	 getter_( getter ), worker_( worker )
 	{}
 
@@ -69,13 +69,14 @@ private:
 
     void HandleRead( const boost::system::error_code &error, size_t bytes_transferred );
 
-	void HandleResponse();
+	bool HandleResponse();
 
 private:
     boost::asio::io_service &io_service_;
 	tcp::socket socket_;
 	BufferType buffer_;
 	python_server::Request< BufferType > response_;
+    bool firstRead_;
     std::string request_;
 	ResultGetter *getter_;
 	const Worker *worker_;
