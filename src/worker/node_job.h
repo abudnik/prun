@@ -43,19 +43,6 @@ public:
         return ParseRequestBody( body, parser.get() );
 	}
 
-    void SaveResponse() const
-    {
-        std::ostringstream ss;
-        boost::property_tree::ptree ptree;
-
-        // TODO: full error code description
-        ptree.put( "response", errCode_ ? "FAILED" : "OK" );
-
-        boost::property_tree::write_json( ss, ptree, false );
-        //response = ss.str();
-        // todo: save result to (static?) response_table {(master_ip, job_id, task_id) -> response}
-    }
-
 	void GetResponse( std::string &response ) const
 	{
         if ( taskType_ == "get_result" )
@@ -97,6 +84,7 @@ public:
     int GetTaskId() const { return taskId_; }
     int GetErrorCode() const { return errCode_; }
 	const std::string &GetTaskType() const { return taskType_; }
+	const std::string &GetMasterIP() const { return masterIP_; }
 
 private:
     bool ParseRequestBody( const std::string &body, Protocol *parser )

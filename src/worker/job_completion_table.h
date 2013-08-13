@@ -2,6 +2,7 @@
 #define __JOB_COMPLETION_TABLE_H
 
 #include <map>
+#include <string>
 #include <boost/thread/mutex.hpp>
 
 namespace python_server {
@@ -15,6 +16,7 @@ struct JobDescriptor
 {
     int64_t jobId;
     int taskId;
+    std::string masterIP;
 };
 
 class JobCompletionTable
@@ -59,6 +61,19 @@ public:
             return true;
         }
         return false;
+    }
+
+    template< class Container >
+    void GetAll( Container &descriptors )
+    {
+        if ( table_.empty() )
+            return;
+        boost::shared_lock< boost::shared_mutex > lock( tableMut_ );
+        Table::const_iterator it = table_.begin();
+        for( ; it != table_.end(); ++it )
+        {
+            descriptors.push_back( it->first );
+        }
     }
 
     bool Erase( const JobDescriptor &descr )

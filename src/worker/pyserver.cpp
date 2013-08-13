@@ -46,7 +46,7 @@ the License.
 #include "common.h"
 #include "master_ping.h"
 #include "node_job.h"
-#include "job_completion_table.h"
+#include "job_completion_ping.h"
 
 
 using namespace std;
@@ -364,6 +364,7 @@ class SendToPyExec : public Action
         JobCompletionStat stat;
         descr.jobId = job->GetJobId();
         descr.taskId = job->GetTaskId();
+        descr.masterIP = job->GetMasterIP();
         stat.errCode = job->GetErrorCode();
         JobCompletionTable::Instance().Set( descr, stat );
     }
@@ -928,6 +929,11 @@ int main( int argc, char* argv[], char **envp )
 
 		python_server::ConnectionAcceptor acceptor( io_service, python_server::DEFAULT_PORT );
 
+        int pingTimeout = python_server::Config::Instance().Get<int>( "ping_timeout" );
+        boost::scoped_ptr< python_server::JobCompletionPinger > completionPing(
+            new python_server::JobCompletionPingerBoost( io_service, pingTimeout ) );
+        completionPing->StartPing();
+
         boost::scoped_ptr< python_server::MasterPing > masterPing(
             new python_server::MasterPingBoost( io_service ) );
         masterPing->Start();
@@ -946,6 +952,8 @@ int main( int argc, char* argv[], char **envp )
 			sigaddset( &waitset, SIGTERM );
 			sigwait( &waitset, &sig );
 		}
+
+        completionPing->Stop();
 
         work.reset();
 		io_service.stop();
