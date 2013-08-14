@@ -77,8 +77,8 @@ void PingerBoost::PingWorker( Worker *worker )
 
 	std::string msg;
 	protocol_->NodePing( msg, node_ip );
-	PS_LOG( msg );
-    PS_LOG( node_ip );
+	//PS_LOG( msg );
+    //PS_LOG( node_ip );
 
     try
     {

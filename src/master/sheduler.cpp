@@ -45,7 +45,7 @@ void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
                     if ( failedNodesCnt < (size_t)job->GetMaxFailedNodes() )
                     {
                         boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-                        needReschedule_.push( workerJob );
+                        needReschedule_.push_back( workerJob );
                     }
                     else
                     {
@@ -91,7 +91,7 @@ void Sheduler::PlanJobExecution()
         }
 
         jobExecutions_[ jobId ] = numNodes;
-        jobs_.push( job );
+        jobs_.push_back( job );
     }
 
 	NotifyAll();
@@ -101,11 +101,6 @@ void Sheduler::OnNewJob( Job *job )
 {
     if ( CanTakeNewJob() )
 		PlanJobExecution();
-}
-
-void Sheduler::OnTaskCompletion( int errCode, const Worker *worker )
-{
-    PS_LOG( "Sheduler::OnTaskCompletion " << errCode );
 }
 
 bool Sheduler::GetTaskToSend( Worker **worker, Job **job )
@@ -175,18 +170,68 @@ void Sheduler::OnTaskSendCompletion( bool success, const Worker *worker, const J
     }
     else
     {
-        const WorkerJob &workerJob = worker->GetJob();
+        {
+            const WorkerJob &workerJob = worker->GetJob();
+            Worker *w = const_cast<Worker *>( worker );
+            boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+            failedWorkers_[ workerJob.jobId_ ].insert( worker->GetIP() );
+            // worker is free for now, to get another job
+            sendingJobWorkers_.erase( worker->GetIP() );
+            freeWorkers_[ worker->GetIP() ] = w;
+            // reset worker job
+            w->SetJob( WorkerJob() );
+            // job need to be rescheduled to any other node
+            boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+            needReschedule_.push_back( workerJob );
+        }
+        NotifyAll();
+    }
+}
+
+void Sheduler::OnTaskCompletion( int errCode, const Worker *worker )
+{
+    const WorkerJob &workerJob = worker->GetJob();
+    PS_LOG( "Sheduler::OnTaskCompletion " << errCode );
+    if ( !errCode )
+    {
         Worker *w = const_cast<Worker *>( worker );
         boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
-        failedWorkers_[ workerJob.jobId_ ].insert( worker->GetIP() );
-        // worker is free for now, to get another job
-        sendingJobWorkers_.erase( worker->GetIP() );
+        busyWorkers_.erase( worker->GetIP() );
         freeWorkers_[ worker->GetIP() ] = w;
-        // reset worker job
-        w->SetJob( WorkerJob() );
-        // job need to be rescheduled to any other node
+
         boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
-        needReschedule_.push( workerJob );
+        int numExecution = jobExecutions_[ workerJob.jobId_ ];
+        if ( numExecution <= 1 )
+        {
+            RemoveJob( workerJob.jobId_ );
+        }
+        else
+        {
+            jobExecutions_[ workerJob.jobId_ ] = numExecution - 1;
+        }
+
+        w->SetJob( WorkerJob() );
+    }
+    else
+    {
+    }
+
+    NotifyAll();
+}
+
+void Sheduler::RemoveJob( int64_t jobId )
+{
+    jobExecutions_.erase( jobId );
+    std::list< Job * >::iterator it = jobs_.begin();
+    for( ; it != jobs_.end(); ++it )
+    {
+        Job *job = *it;
+        if ( job->GetJobId() == jobId )
+        {
+            jobs_.erase( it );
+            delete job;
+            break;
+        }
     }
 }
 
@@ -222,7 +267,7 @@ void Sheduler::Shutdown()
 	while( !jobs_.empty() )
 	{
 		delete jobs_.front();
-		jobs_.pop();
+		jobs_.pop_front();
 	}
 }
 

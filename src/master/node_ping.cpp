@@ -9,7 +9,7 @@ namespace master {
 
 void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg )
 {
-	PS_LOG( nodeIP << " : " << msg );
+	//PS_LOG( nodeIP << " : " << msg );
 
     std::string protocol, header, body;
     int version;

@@ -127,6 +127,26 @@ bool ProtocolJson::GetJobResult( std::string &msg, int64_t jobId, int taskId )
 	return true;
 }
 
+bool ProtocolJson::ParseGetJobResult( const std::string &msg, int64_t &jobId, int &taskId )
+{
+	std::istringstream ss( msg );
+
+	boost::property_tree::ptree ptree;
+	try
+	{
+		boost::property_tree::read_json( ss, ptree );
+        jobId = ptree.get<int64_t>( "job_id" );
+        taskId = ptree.get<int>( "task_id" );
+	}
+	catch( std::exception &e )
+	{
+		PS_LOG( "ProtocolJson::ParseGetJobResult: " << e.what() );
+		return false;
+	}
+
+	return true;
+}
+
 bool ProtocolJson::SendJobResult( std::string &msg, int errCode )
 {
     msg = std::string( "{\"type\":\"send_job_result\"}\n" );

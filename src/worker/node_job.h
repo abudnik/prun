@@ -60,6 +60,8 @@ public:
 			}
 			else
 			{
+                PS_LOG( "Job::GetResponse: job not found in completion table: "
+                        "jobId=" << GetJobId() << ", taskId=" << GetTaskId() );
 				protocol.SendJobResult( response, -1 );
 			}
         }
@@ -100,7 +102,7 @@ private:
         }
         if ( taskType_ == "get_result" )
         {
-            return true;
+            return parser->ParseGetJobResult( body, jobId_, taskId_ );
         }
         return false;
     }

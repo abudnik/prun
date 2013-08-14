@@ -2,7 +2,7 @@
 #define __SHEDULER_H
 
 #include <set>
-#include <queue>
+#include <list>
 #include <boost/thread/mutex.hpp>
 #include "common/observer.h"
 #include "worker.h"
@@ -20,11 +20,11 @@ public:
 
     void OnNewJob( Job *job );
 
-    void OnTaskCompletion( int errCode, const Worker *worker );
-
 	bool GetTaskToSend( Worker **worker, Job **job );
 
     void OnTaskSendCompletion( bool success, const Worker *worker, const Job *job );
+
+    void OnTaskCompletion( int errCode, const Worker *worker );
 
     static Sheduler &Instance()
     {
@@ -37,6 +37,8 @@ public:
 private:
 	void PlanJobExecution();
 
+    void RemoveJob( int64_t jobId );
+
     bool CheckIfWorkerFailedJob( Worker *worker, int64_t jobId ) const;
     bool CanTakeNewJob() const;
     bool NeedToSendTask() const;
@@ -46,10 +48,10 @@ private:
 	std::map< int64_t, std::set< std::string > > failedWorkers_; // job_id -> set(worker_ip)
     boost::mutex workersMut_;
 
-    std::queue< Job * > jobs_;
+    std::list< Job * > jobs_;
 	std::map< int64_t, int > jobExecutions_; // job_id -> num job remaining executions (== 0, if job execution completed)
 	std::map< int64_t, std::set< int > > tasksToSend_; // job_id -> set(task_id)
-	std::queue< WorkerJob > needReschedule_;
+	std::list< WorkerJob > needReschedule_;
     boost::mutex jobsMut_;
 };
 
