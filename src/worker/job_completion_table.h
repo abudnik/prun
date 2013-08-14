@@ -3,7 +3,8 @@
 
 #include <map>
 #include <string>
-#include <boost/thread/mutex.hpp>
+#include <boost/thread/locks.hpp>  
+#include <boost/thread/shared_mutex.hpp> 
 
 namespace python_server {
 
