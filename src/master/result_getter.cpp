@@ -97,10 +97,11 @@ void GetterBoost::HandleConnect( const boost::system::error_code &error )
 	{
         MakeRequest();
 
-		socket_.async_read_some( boost::asio::buffer( buffer_ ),
-								 boost::bind( &GetterBoost::FirstRead, shared_from_this(),
-											  boost::asio::placeholders::error,
-											  boost::asio::placeholders::bytes_transferred ) );
+        boost::asio::async_read( socket_,
+                                 boost::asio::buffer( &buffer_, sizeof( char ) ),
+                                 boost::bind( &GetterBoost::FirstRead, shared_from_this(),
+                                              boost::asio::placeholders::error,
+                                              boost::asio::placeholders::bytes_transferred ) );
 
         boost::asio::async_write( socket_,
                                   boost::asio::buffer( request_ ),
