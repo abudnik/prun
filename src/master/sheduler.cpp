@@ -161,8 +161,7 @@ bool Sheduler::GetTaskToSend( Worker **worker, Job **job )
 			freeWorkers_.erase( w->GetIP() );
 			sendingJobWorkers_[ w->GetIP() ] = w;
 
-            WorkerJob workerJob( jobId, taskId );
-            w->SetJob( workerJob );
+            w->SetJob( WorkerJob( jobId, taskId ) );
             *worker = w;
             *job = jobs_.front();
             return true;
