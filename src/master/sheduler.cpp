@@ -184,18 +184,23 @@ void Sheduler::OnTaskSendCompletion( bool success, const Worker *worker, const J
     else
     {
         {
-            const WorkerJob &workerJob = worker->GetJob();
             Worker *w = const_cast<Worker *>( worker );
             boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+			WorkerJob workerJob = worker->GetJob();
+			if ( workerJob.jobId_ < 0 )
+				return;
+
             failedWorkers_[ workerJob.jobId_ ].insert( worker->GetIP() );
+
             // worker is free for now, to get another job
             sendingJobWorkers_.erase( worker->GetIP() );
             freeWorkers_[ worker->GetIP() ] = w;
+            // reset worker job
+            w->SetJob( WorkerJob() );
+
             // job need to be rescheduled to any other node
             boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
             needReschedule_.push_back( workerJob );
-            // reset worker job
-            w->SetJob( WorkerJob() );
         }
         NotifyAll();
     }
@@ -203,14 +208,18 @@ void Sheduler::OnTaskSendCompletion( bool success, const Worker *worker, const J
 
 void Sheduler::OnTaskCompletion( int errCode, const Worker *worker )
 {
-    const WorkerJob &workerJob = worker->GetJob();
     PS_LOG( "Sheduler::OnTaskCompletion " << errCode );
     if ( !errCode )
     {
         Worker *w = const_cast<Worker *>( worker );
         boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+		WorkerJob workerJob = worker->GetJob();
+		if ( workerJob.jobId_ < 0 )
+			return;
+
         busyWorkers_.erase( worker->GetIP() );
         freeWorkers_[ worker->GetIP() ] = w;
+        w->SetJob( WorkerJob() );
 
         boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
         int numExecution = jobExecutions_[ workerJob.jobId_ ];
@@ -222,23 +231,26 @@ void Sheduler::OnTaskCompletion( int errCode, const Worker *worker )
         {
             jobExecutions_[ workerJob.jobId_ ] = numExecution - 1;
         }
-
-        w->SetJob( WorkerJob() );
     }
     else
     {
-        const WorkerJob &workerJob = worker->GetJob();
         Worker *w = const_cast<Worker *>( worker );
         boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+		WorkerJob workerJob = worker->GetJob();
+		if ( workerJob.jobId_ < 0 )
+			return;
+
         failedWorkers_[ workerJob.jobId_ ].insert( worker->GetIP() );
+
         // worker is free for now, to get another job
         busyWorkers_.erase( worker->GetIP() );
         freeWorkers_[ worker->GetIP() ] = w;
+        // reset worker job
+        w->SetJob( WorkerJob() );
+
         // job need to be rescheduled to any other node
         boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
         needReschedule_.push_back( workerJob );
-        // reset worker job
-        w->SetJob( WorkerJob() );
     }
 
     NotifyAll();

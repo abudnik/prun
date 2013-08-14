@@ -67,6 +67,9 @@ void WorkerManager::OnNodePingResponse( const std::string &hostIP )
 
 void WorkerManager::OnNodeJobCompletion( const std::string &hostIP, int64_t jobId, int taskId )
 {
+	if ( jobId < 0 || taskId < 0 )
+		return;
+
 	Worker *worker = GetWorkerByIP( hostIP );
 	if ( !worker )
 		return;
