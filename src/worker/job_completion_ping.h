@@ -14,7 +14,7 @@ class JobCompletionPinger
 {
 public:
     JobCompletionPinger( int pingTimeout )
-    : pingTimeout_( pingTimeout )
+    : stopped_( false ), pingTimeout_( pingTimeout )
     {
 		protocol_ = new ProtocolJson;
 	}
@@ -35,6 +35,7 @@ protected:
     virtual void PingMaster( const JobDescriptor &descr ) = 0;
 
 protected:
+    bool stopped_;
     SyncTimer timer_;
     int pingTimeout_;
 	Protocol *protocol_;

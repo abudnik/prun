@@ -8,6 +8,7 @@ namespace master {
 
 void Pinger::Stop()
 {
+    stopped_ = true;
     timer_.StopWaiting();
 }
 
@@ -24,12 +25,12 @@ void Pinger::PingWorkers()
 
 void Pinger::Run()
 {
-    do
+    while( !stopped_ )
     {
+        timer_.Wait( pingTimeout_ * 1000 );
         PingWorkers();
         CheckDropedPingResponses();
     }
-    while( timer_.Wait( pingTimeout_ * 1000 ) );
 }
 
 void Pinger::CheckDropedPingResponses()

@@ -14,7 +14,8 @@ class Pinger
 {
 public:
     Pinger( int pingTimeout, int maxDroped )
-    : pingTimeout_( pingTimeout ), maxDroped_( maxDroped ),
+    : stopped_( false ),
+     pingTimeout_( pingTimeout ), maxDroped_( maxDroped ),
      numPings_( 0 )
     {
 		protocol_ = new python_server::ProtocolJson;
@@ -40,6 +41,7 @@ protected:
     void OnWorkerIPResolve( Worker *worker, const std::string &ip );
 
 protected:
+    bool stopped_;
     python_server::SyncTimer timer_;
     int pingTimeout_;
     int maxDroped_;

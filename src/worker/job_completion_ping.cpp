@@ -7,6 +7,7 @@ namespace python_server {
 
 void JobCompletionPinger::Stop()
 {
+    stopped_ = true;
     timer_.StopWaiting();
 }
 
@@ -24,11 +25,11 @@ void JobCompletionPinger::PingMasters()
 
 void JobCompletionPinger::Run()
 {
-    do
+    while( !stopped_ )
     {
+        timer_.Wait( pingTimeout_ * 1000 );
         PingMasters();
     }
-    while( timer_.Wait( pingTimeout_ * 1000 ) );
 }
 
 
