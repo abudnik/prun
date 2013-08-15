@@ -1,5 +1,6 @@
 #include "sheduler.h"
 #include "common/log.h"
+#include "common/error_code.h"
 #include "job_manager.h"
 #include "worker_manager.h"
 
@@ -110,7 +111,7 @@ bool Sheduler::GetTaskToSend( Worker **worker, Job **job )
         return false;
 
     boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
-    if ( !freeWorkers_.size() )
+    if ( freeWorkers_.empty() )
         return false;
 
     boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
@@ -120,7 +121,7 @@ bool Sheduler::GetTaskToSend( Worker **worker, Job **job )
     bool needReschedule = false;
 
     // get task
-    if ( needReschedule_.size() )
+    if ( !needReschedule_.empty() )
     {
         WorkerJob workerJob = needReschedule_.front();
         jobId = workerJob.jobId_;
@@ -129,7 +130,7 @@ bool Sheduler::GetTaskToSend( Worker **worker, Job **job )
     }
     else
     {
-        if ( !tasksToSend_.size() )
+        if ( tasksToSend_.empty() )
             return false;
 
         Job *j = jobs_.front();
@@ -150,7 +151,7 @@ bool Sheduler::GetTaskToSend( Worker **worker, Job **job )
             {
                 std::set< int > &tasks = tasksToSend_[ jobId ];
                 tasks.erase( taskId );
-                if ( !tasks.size() )
+                if ( tasks.empty() )
                     tasksToSend_.erase( jobId );
             }
             else
@@ -233,6 +234,9 @@ void Sheduler::OnTaskCompletion( int errCode, const Worker *worker )
     }
     else
     {
+        if ( errCode == NODE_JOB_COMPLETION_NOT_FOUND )
+            return;
+
         Worker *w = const_cast<Worker *>( worker );
         boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
 		WorkerJob workerJob = worker->GetJob();

@@ -7,6 +7,7 @@
 #include "common/protocol.h"
 #include "common/helper.h"
 #include "common/request.h"
+#include "common/error_code.h"
 #include "job_completion_table.h"
 
 namespace python_server {
@@ -62,7 +63,7 @@ public:
 			{
                 PS_LOG( "Job::GetResponse: job not found in completion table: "
                         "jobId=" << GetJobId() << ", taskId=" << GetTaskId() );
-				protocol.SendJobResult( response, -1 );
+				protocol.SendJobResult( response, NODE_JOB_COMPLETION_NOT_FOUND );
 			}
         }
 	}

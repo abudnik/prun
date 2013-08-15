@@ -34,7 +34,7 @@ void WorkerManager::CheckDropedPingResponses()
         worker->SetNumPingResponse( 0 );
     }
 
-    if ( changedWorkers.size() )
+    if ( !changedWorkers.empty() )
     {
         Sheduler::Instance().OnChangedWorkerState( changedWorkers );
     }
