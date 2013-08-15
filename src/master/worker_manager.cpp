@@ -22,13 +22,13 @@ void WorkerManager::CheckDropedPingResponses()
             {
                 worker->SetState( WORKER_STATE_NOT_AVAIL );
                 changedWorkers.push_back( worker );
-                PS_LOG( "node not available, ip= " << worker->GetIP() );
+                PS_LOG( "WorkerManager::CheckDropedPingResponses: node not available, ip= " << worker->GetIP() );
             }
             if ( state == WORKER_STATE_EXEC )
             {
                 worker->SetState( WORKER_STATE_NOT_AVAIL );
                 changedWorkers.push_back( worker );
-                PS_LOG( "node job isn't available, ip= " << worker->GetIP() );
+                PS_LOG( "WorkerManager::CheckDropedPingResponses: node job isn't available, ip= " << worker->GetIP() );
             }
         }
         worker->SetNumPingResponse( 0 );

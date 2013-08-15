@@ -36,6 +36,9 @@ void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
                 const WorkerJob &workerJob = busyWorker->GetJob();
                 int64_t jobId = workerJob.jobId_;
 
+                PS_LOG( "Sheduler::OnChangedWorkerState: worker isn't available, while executing job"
+                        "; nodeIP=" << worker->GetIP() << ", jobId=" << jobId );
+
                 failedWorkers_[ jobId ].insert( worker->GetIP() );
 				busyWorkers_.erase( worker->GetIP() );
 
@@ -190,6 +193,9 @@ void Sheduler::OnTaskSendCompletion( bool success, const Worker *worker, const J
 			if ( workerJob.jobId_ < 0 )
 				return;
 
+            PS_LOG( "Sheduler::OnTaskSendCompletion: job sending failed."
+                    " jobId=" << workerJob.jobId_ << ", ip=" << worker->GetIP() );
+
             failedWorkers_[ workerJob.jobId_ ].insert( worker->GetIP() );
 
             // worker is free for now, to get another job
@@ -242,6 +248,9 @@ void Sheduler::OnTaskCompletion( int errCode, const Worker *worker )
 		WorkerJob workerJob = worker->GetJob();
 		if ( workerJob.jobId_ < 0 )
 			return;
+
+        PS_LOG( "Sheduler::OnTaskCompletion: errCode=" << errCode <<
+                ", jobId=" << workerJob.jobId_ << ", ip=" << worker->GetIP() );
 
         failedWorkers_[ workerJob.jobId_ ].insert( worker->GetIP() );
 
