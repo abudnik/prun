@@ -7,18 +7,13 @@
 
 namespace master {
 
-enum JobPriority
-{
-	JOB_PRIORITY_HIGH, JOB_PRIORITY_LOW
-};
-
 class Job
 {
 public:
     Job( const char *script, const char *scriptLanguage, int numNodes,
-		 int maxFailedNodes, int timeout, JobPriority priority )
+		 int maxFailedNodes, int timeout )
     : script_( script ), scriptLanguage_( scriptLanguage ), numNodes_( numNodes ),
-	 maxFailedNodes_( maxFailedNodes ), timeout_( timeout ), priority_( priority )
+	 maxFailedNodes_( maxFailedNodes ), timeout_( timeout )
     {
         static int64_t numJobs;
         scriptLength_ = script_.size();
@@ -32,7 +27,6 @@ public:
     int GetNumNodes() const { return numNodes_; }
     int GetMaxFailedNodes() const { return maxFailedNodes_; }
     int GetTimeout() const { return timeout_; }
-    JobPriority GetPriority() const { return priority_; }
     int64_t GetJobId() const { return id_; }
 
 private:
@@ -43,7 +37,6 @@ private:
     int numNodes_;
 	int maxFailedNodes_;
     int timeout_;
-    JobPriority priority_;
     int64_t id_;
 };
 

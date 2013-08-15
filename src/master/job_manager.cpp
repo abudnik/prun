@@ -102,18 +102,11 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
 
         std::string language = ptree.get<std::string>( "language" );
         int timeout = ptree.get<int>( "timeout" );
-        std::string priority = ptree.get<std::string>( "priority" );
         int numNodes = ptree.get<int>( "num_nodes" );
         int maxFailedNodes = ptree.get<int>( "max_failed_nodes" );
 
-        JobPriority jobPriority;
-        if ( priority == "high" )
-            jobPriority = JOB_PRIORITY_HIGH;
-        else
-            jobPriority = JOB_PRIORITY_LOW;
-
         Job *job = new Job( script.c_str(), language.c_str(), numNodes,
-							maxFailedNodes, timeout, jobPriority );
+							maxFailedNodes, timeout );
         return job;
     }
     catch( std::exception &e )
