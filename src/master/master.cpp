@@ -231,10 +231,10 @@ int main( int argc, char* argv[], char **envp )
 		}
 
 		// start node pinger
-        int pingTimeout = cfg.Get<int>( "ping_timeout" );
-        int maxDroped = cfg.Get<int>( "ping_max_droped" );
+        int heartbeatTimeout = cfg.Get<int>( "heartbeat_timeout" );
+        int maxDroped = cfg.Get<int>( "heartbeat_max_droped" );
         boost::scoped_ptr< master::Pinger > pinger(
-            new master::PingerBoost( io_service, pingTimeout, maxDroped ) );
+            new master::PingerBoost( io_service, heartbeatTimeout, maxDroped ) );
 		pinger->StartPing();
 
         RunTests();

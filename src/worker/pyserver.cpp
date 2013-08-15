@@ -929,9 +929,9 @@ int main( int argc, char* argv[], char **envp )
 
 		python_server::ConnectionAcceptor acceptor( io_service, python_server::DEFAULT_PORT );
 
-        int pingTimeout = python_server::Config::Instance().Get<int>( "ping_timeout" );
+        int heartbeatTimeout = python_server::Config::Instance().Get<int>( "completion_heartbeat_timeout" );
         boost::scoped_ptr< python_server::JobCompletionPinger > completionPing(
-            new python_server::JobCompletionPingerBoost( io_service, pingTimeout ) );
+            new python_server::JobCompletionPingerBoost( io_service, heartbeatTimeout ) );
         completionPing->StartPing();
 
         boost::scoped_ptr< python_server::MasterPing > masterPing(
