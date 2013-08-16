@@ -49,7 +49,6 @@ using namespace std;
 namespace master {
 
 bool isDaemon;
-unsigned int numThread;
 string exeDir;
 
 } // namespace master
@@ -171,11 +170,11 @@ int main( int argc, char* argv[], char **envp )
         }
         python_server::Pidfile pidfile( pidfilePath.c_str() );
 
-        unsigned int numPingThread = 1;
+        unsigned int numHeartbeatThread = 1;
 		unsigned int numPingReceiverThread = cfg.Get<unsigned int>( "num_ping_receiver_thread" );
 		unsigned int numJobSendThread = 1 + cfg.Get<unsigned int>( "num_job_send_thread" );
 		unsigned int numResultGetterThread = 1 + cfg.Get<unsigned int>( "num_result_getter_thread" );
-        master::numThread = numPingThread + numPingReceiverThread;
+        unsigned int numPingThread = numHeartbeatThread + numPingReceiverThread;
 
         InitWorkerManager();
         InitJobManager();
@@ -183,16 +182,16 @@ int main( int argc, char* argv[], char **envp )
 
 		atexit( AtExit );
 
-		boost::asio::io_service io_service;
-        boost::scoped_ptr<boost::asio::io_service::work> work(
-            new boost::asio::io_service::work( io_service ) );
+		boost::asio::io_service io_service_ping;
+        boost::scoped_ptr<boost::asio::io_service::work> work_ping(
+            new boost::asio::io_service::work( io_service_ping ) );
 
-		// create thread pool
+		// create thread pool for pingers
 		boost::thread_group worker_threads;
-		for( unsigned int i = 0; i < master::numThread; ++i )
+		for( unsigned int i = 0; i < numPingThread; ++i )
 		{
 		    worker_threads.create_thread(
-				boost::bind( &ThreadFun, &io_service )
+				boost::bind( &ThreadFun, &io_service_ping )
 			);
 		}
 
@@ -201,10 +200,9 @@ int main( int argc, char* argv[], char **envp )
             new boost::asio::io_service::work( io_service_senders ) );
 
 		// create thread pool for job senders
-		boost::thread_group worker_threads_senders;
 		for( unsigned int i = 0; i < numJobSendThread; ++i )
 		{
-		    worker_threads_senders.create_thread(
+		    worker_threads.create_thread(
 				boost::bind( &ThreadFun, &io_service_senders )
 			);
 		}
@@ -214,17 +212,16 @@ int main( int argc, char* argv[], char **envp )
             new boost::asio::io_service::work( io_service_getters ) );
 
 		// create thread pool for job result getters
-		boost::thread_group worker_threads_getters;
 		for( unsigned int i = 0; i < numResultGetterThread; ++i )
 		{
-		    worker_threads_getters.create_thread(
+		    worker_threads.create_thread(
 				boost::bind( &ThreadFun, &io_service_getters )
 			);
 		}
 
 		// start ping from nodes receiver threads
 		using boost::asio::ip::udp;
-		udp::socket recvSocket( io_service, udp::endpoint( udp::v4(), master::MASTER_UDP_PORT ) );
+		udp::socket recvSocket( io_service_ping, udp::endpoint( udp::v4(), master::MASTER_UDP_PORT ) );
 		boost::ptr_vector< master::PingReceiver > pingReceivers;
 		for( unsigned int i = 0; i < numPingReceiverThread; ++i )
 		{
@@ -252,7 +249,7 @@ int main( int argc, char* argv[], char **envp )
         int heartbeatTimeout = cfg.Get<int>( "heartbeat_timeout" );
         int maxDroped = cfg.Get<int>( "heartbeat_max_droped" );
         boost::scoped_ptr< master::Pinger > pinger(
-            new master::PingerBoost( io_service, heartbeatTimeout, maxDroped ) );
+            new master::PingerBoost( io_service_ping, heartbeatTimeout, maxDroped ) );
 		pinger->StartPing();
 
         RunTests();
@@ -283,12 +280,10 @@ int main( int argc, char* argv[], char **envp )
         work_senders.reset();
         io_service_senders.stop();
 
-        work.reset();
-		io_service.stop();
+        work_ping.reset();
+		io_service_ping.stop();
 
-        // stop thread pools
-        worker_threads_getters.join_all();
-        worker_threads_senders.join_all();
+        // stop thread pool
 		worker_threads.join_all();
 	}
 	catch( std::exception &e )
