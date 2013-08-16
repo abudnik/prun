@@ -32,7 +32,11 @@ public:
         return instance_;
     }
 
+    void PrintStats(); // dbg only?
+
 	void Shutdown();
+
+    bool IsWorkerBusy( const std::string &hostIP, int64_t jobId, int taskId ); // todo: remove it
 
 private:
 	void PlanJobExecution();

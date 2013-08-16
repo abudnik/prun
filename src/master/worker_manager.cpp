@@ -67,7 +67,8 @@ void WorkerManager::OnNodePingResponse( const std::string &hostIP )
 
 void WorkerManager::OnNodeJobCompletion( const std::string &hostIP, int64_t jobId, int taskId )
 {
-	if ( jobId < 0 || taskId < 0 )
+	if ( jobId < 0 || taskId < 0 ||
+         !Sheduler::Instance().IsWorkerBusy( hostIP, jobId, taskId ) )
 		return;
 
 	Worker *worker = GetWorkerByIP( hostIP );
@@ -89,6 +90,8 @@ bool WorkerManager::GetAchievedWorker( Worker **worker )
     boost::mutex::scoped_lock scoped_lock( workersMut_ );
 	if ( achievedWorkers_.empty() )
 		return false;
+
+    PS_LOG( "GetAchievedWorker: num achieved workers=" << achievedWorkers_.size() );
 
 	*worker = achievedWorkers_.front();
 	achievedWorkers_.pop();

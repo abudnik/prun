@@ -223,7 +223,13 @@ void Sheduler::OnTaskCompletion( int errCode, const Worker *worker )
 		if ( workerJob.jobId_ < 0 )
 			return;
 
-        busyWorkers_.erase( worker->GetIP() );
+        IPToWorker::iterator it = busyWorkers_.find( worker->GetIP() );
+        if ( it == busyWorkers_.end() ) // task already processed
+            return;                     // it can be when a few threads simultaneously gets success errCode from the same task
+
+        // todo: check if taskid == worker.taskid
+
+        busyWorkers_.erase( it );
         freeWorkers_[ worker->GetIP() ] = w;
         w->SetJob( WorkerJob() );
 
@@ -270,6 +276,16 @@ void Sheduler::OnTaskCompletion( int errCode, const Worker *worker )
 
 void Sheduler::RemoveJob( int64_t jobId )
 {
+    std::map< int64_t, std::set< std::string > >::iterator it_failed(
+        failedWorkers_.find( jobId )
+    );
+    if ( it_failed != failedWorkers_.end() )
+    {
+        int numFailed = it_failed->second.size();
+        failedWorkers_.erase( it_failed );
+        PS_LOG( "Sheduler::RemoveJob: jobId=" << jobId << ", num failed workers=" << numFailed );
+    }
+
     jobExecutions_.erase( jobId );
     std::list< Job * >::iterator it = jobs_.begin();
     for( ; it != jobs_.end(); ++it )
@@ -282,6 +298,8 @@ void Sheduler::RemoveJob( int64_t jobId )
             break;
         }
     }
+
+    PrintStats(); // dbg only?
 }
 
 bool Sheduler::CheckIfWorkerFailedJob( Worker *worker, int64_t jobId ) const
@@ -309,6 +327,29 @@ bool Sheduler::CanTakeNewJob() const
 bool Sheduler::NeedToSendTask() const
 {
     return ( !freeWorkers_.empty() ) && ( !tasksToSend_.empty() || !needReschedule_.empty() );
+}
+
+bool Sheduler::IsWorkerBusy( const std::string &hostIP, int64_t jobId, int taskId )
+{
+    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+    IPToWorker::const_iterator it = busyWorkers_.find( hostIP );
+    if ( it == busyWorkers_.end() )
+        return false;
+    const Worker *worker = it->second;
+    const WorkerJob &workerJob = worker->GetJob();
+    return ( workerJob.jobId_ == jobId ) && ( workerJob.taskId_ == taskId );
+}
+
+void Sheduler::PrintStats()
+{
+    PS_LOG( "================" );
+    PS_LOG( "free workers = " << freeWorkers_.size() );
+    PS_LOG( "failed workers = " << failedWorkers_.size() );
+    PS_LOG( "sending workers = " << sendingJobWorkers_.size() );
+
+    PS_LOG( "jobs = " << jobs_.size() );
+    PS_LOG( "need reschedule = " << needReschedule_.size() );
+    PS_LOG( "================" );
 }
 
 void Sheduler::Shutdown()
