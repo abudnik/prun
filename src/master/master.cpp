@@ -171,11 +171,11 @@ int main( int argc, char* argv[], char **envp )
         }
         python_server::Pidfile pidfile( pidfilePath.c_str() );
 
-        int numPingThread = 1;
-		int numPingReceiverThread = cfg.Get<int>( "num_ping_receiver_thread" );
-		int numJobSendThread = cfg.Get<int>( "num_job_send_thread" );
-		int numResultGetterThread = cfg.Get<int>( "num_result_getter_thread" );
-        master::numThread = numPingThread + numPingReceiverThread + numJobSendThread + numResultGetterThread;
+        unsigned int numPingThread = 1;
+		unsigned int numPingReceiverThread = cfg.Get<unsigned int>( "num_ping_receiver_thread" );
+		unsigned int numJobSendThread = 1 + cfg.Get<unsigned int>( "num_job_send_thread" );
+		unsigned int numResultGetterThread = 1 + cfg.Get<unsigned int>( "num_result_getter_thread" );
+        master::numThread = numPingThread + numPingReceiverThread;
 
         InitWorkerManager();
         InitJobManager();
@@ -196,11 +196,37 @@ int main( int argc, char* argv[], char **envp )
 			);
 		}
 
+		boost::asio::io_service io_service_senders;
+        boost::scoped_ptr<boost::asio::io_service::work> work_senders(
+            new boost::asio::io_service::work( io_service_senders ) );
+
+		// create thread pool for job senders
+		boost::thread_group worker_threads_senders;
+		for( unsigned int i = 0; i < numJobSendThread; ++i )
+		{
+		    worker_threads_senders.create_thread(
+				boost::bind( &ThreadFun, &io_service_senders )
+			);
+		}
+
+		boost::asio::io_service io_service_getters;
+        boost::scoped_ptr<boost::asio::io_service::work> work_getters(
+            new boost::asio::io_service::work( io_service_getters ) );
+
+		// create thread pool for job result getters
+		boost::thread_group worker_threads_getters;
+		for( unsigned int i = 0; i < numResultGetterThread; ++i )
+		{
+		    worker_threads_getters.create_thread(
+				boost::bind( &ThreadFun, &io_service_getters )
+			);
+		}
+
 		// start ping from nodes receiver threads
 		using boost::asio::ip::udp;
 		udp::socket recvSocket( io_service, udp::endpoint( udp::v4(), master::MASTER_UDP_PORT ) );
 		boost::ptr_vector< master::PingReceiver > pingReceivers;
-		for( int i = 0; i < numPingReceiverThread; ++i )
+		for( unsigned int i = 0; i < numPingReceiverThread; ++i )
 		{
 			master::PingReceiver *pingReceiver( new master::PingReceiverBoost( recvSocket ) );
 			pingReceivers.push_back( pingReceiver );
@@ -209,26 +235,18 @@ int main( int argc, char* argv[], char **envp )
 
 		// start result getter threads
 		int maxSimultResultGetters = cfg.Get<int>( "max_simult_result_getters" );
-		boost::ptr_vector< master::ResultGetter > resultGetters;
-		for( int i = 0; i < numResultGetterThread; ++i )
-		{
-			master::ResultGetter *resultGetter( new master::ResultGetterBoost( io_service,
-																			   maxSimultResultGetters ) );
-			resultGetters.push_back( resultGetter );
-			resultGetter->Start();
-		}
+		boost::scoped_ptr< master::ResultGetter > resultGetter(
+            new master::ResultGetterBoost( io_service_getters, maxSimultResultGetters )
+        );
+		resultGetter->Start();
 
-		// start job sender threads
+		// start job sender thread
 		int sendBufferSize = cfg.Get<int>( "send_buffer_size" );
 		int maxSimultSendingJobs = cfg.Get<int>( "max_simult_sending_jobs" );
-	    boost::ptr_vector< master::JobSender > jobSenders;
-		for( int i = 0; i < numJobSendThread; ++i )
-		{
-			master::JobSender *jobSender( new master::JobSenderBoost( io_service,
-																	  sendBufferSize, maxSimultSendingJobs ) );
-			jobSenders.push_back( jobSender );
-			jobSender->Start();
-		}
+	    boost::scoped_ptr< master::JobSender > jobSender(
+            new master::JobSenderBoost( io_service_senders, sendBufferSize, maxSimultSendingJobs )
+        );
+	    jobSender->Start();
 
 		// start node pinger
         int heartbeatTimeout = cfg.Get<int>( "heartbeat_timeout" );
@@ -255,20 +273,22 @@ int main( int argc, char* argv[], char **envp )
 		}
 
         pinger->Stop();
+        jobSender->Stop();
+        resultGetter->Stop();
 
-		for( int i = 0; i < numJobSendThread; ++i )
-		{
-            jobSenders[i].Stop();
-        }
+        // stop io services
+        work_getters.reset();
+        io_service_getters.stop();
 
-		for( int i = 0; i < numResultGetterThread; ++i )
-		{
-            resultGetters[i].Stop();
-		}
+        work_senders.reset();
+        io_service_senders.stop();
 
         work.reset();
 		io_service.stop();
 
+        // stop thread pools
+        worker_threads_getters.join_all();
+        worker_threads_senders.join_all();
 		worker_threads.join_all();
 	}
 	catch( std::exception &e )
