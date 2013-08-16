@@ -885,8 +885,7 @@ int main( int argc, char* argv[], char **envp )
 		}
 		// 1. accept thread
         // 2. additional worker thread for async reading results from pyexec
-        // 3. master ping thread
-		python_server::numThread = python_server::numJobThreads + 3;
+		python_server::numThread = python_server::numJobThreads + 2;
 
 		python_server::logger::InitLogger( python_server::isDaemon, "PythonServer" );
 
@@ -927,15 +926,30 @@ int main( int argc, char* argv[], char **envp )
 			);
 		}
 
+		boost::asio::io_service io_service_ping;
+        boost::scoped_ptr<boost::asio::io_service::work> work_ping(
+            new boost::asio::io_service::work( io_service_ping ) );
+
+		// create thread pool for pingers
+		// 1. job completion pinger
+		// 2. master heartbeat ping receiver
+		unsigned int numPingThread = 2;
+		for( unsigned int i = 0; i < numPingThread; ++i )
+		{
+		    worker_threads.create_thread(
+				boost::bind( &ThreadFun, &io_service_ping )
+			);
+		}
+
 		python_server::ConnectionAcceptor acceptor( io_service, python_server::DEFAULT_PORT );
 
-        int heartbeatTimeout = python_server::Config::Instance().Get<int>( "completion_heartbeat_timeout" );
+        int completionPingTimeout = python_server::Config::Instance().Get<int>( "completion_ping_timeout" );
         boost::scoped_ptr< python_server::JobCompletionPinger > completionPing(
-            new python_server::JobCompletionPingerBoost( io_service, heartbeatTimeout ) );
+            new python_server::JobCompletionPingerBoost( io_service_ping, completionPingTimeout ) );
         completionPing->StartPing();
 
         boost::scoped_ptr< python_server::MasterPing > masterPing(
-            new python_server::MasterPingBoost( io_service ) );
+            new python_server::MasterPingBoost( io_service_ping ) );
         masterPing->Start();
 
 		if ( !python_server::isDaemon )
@@ -954,6 +968,9 @@ int main( int argc, char* argv[], char **envp )
 		}
 
         completionPing->Stop();
+
+		work_ping.reset();
+		io_service_ping.stop();
 
         work.reset();
 		io_service.stop();
