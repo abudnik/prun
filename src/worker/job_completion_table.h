@@ -45,24 +45,9 @@ public:
         return instance_;
     }
 
-    void Set( const JobDescriptor &descr, const JobCompletionStat &stat )
-    {
-        boost::upgrade_lock< boost::shared_mutex > lock( tableMut_ );
-        boost::upgrade_to_unique_lock< boost::shared_mutex > uniqueLock( lock );
-        table_[ descr ] = stat;
-    }
+    void Set( const JobDescriptor &descr, const JobCompletionStat &stat );
 
-    bool Get( const JobDescriptor &descr, JobCompletionStat &stat )
-    {
-        boost::shared_lock< boost::shared_mutex > lock( tableMut_ );
-        Table::const_iterator it = table_.find( descr );
-        if ( it != table_.end() )
-        {
-            stat = it->second;
-            return true;
-        }
-        return false;
-    }
+    bool Get( const JobDescriptor &descr, JobCompletionStat &stat );
 
     template< class Container >
     void GetAll( Container &descriptors )
@@ -77,12 +62,7 @@ public:
         }
     }
 
-    bool Erase( const JobDescriptor &descr )
-    {
-        boost::upgrade_lock< boost::shared_mutex > lock( tableMut_ );
-        boost::upgrade_to_unique_lock< boost::shared_mutex > uniqueLock( lock );
-        return table_.erase( descr ) > 0;
-    }
+    bool Erase( const JobDescriptor &descr );
 
 private:
     Table table_;
