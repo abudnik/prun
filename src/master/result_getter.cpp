@@ -11,7 +11,8 @@ namespace master {
 
 void ResultGetter::Run()
 {
-    Worker *worker;
+    WorkerJob workerJob;
+	std::string hostIP;
 
     WorkerManager &workerMgr = WorkerManager::Instance();
 	workerMgr.Subscribe( this );
@@ -27,12 +28,11 @@ void ResultGetter::Run()
             newJobAvailable_ = false;
 		}
 
-        getTask = workerMgr.GetAchievedWorker( &worker );
+        getTask = workerMgr.GetAchievedWorker( workerJob, hostIP );
 		if ( getTask )
 		{
-			const WorkerJob &j = worker->GetJob();
-			PS_LOG( "Get achieved work " << j.jobId_ << " : " << j.taskId_ );
-			GetJobResult( worker );
+			PS_LOG( "Get achieved work " << workerJob.jobId_ << " : " << workerJob.taskId_ );
+			GetJobResult( workerJob, hostIP );
 		}
     }
 }
@@ -51,11 +51,11 @@ void ResultGetter::NotifyObserver( int event )
     awakeCond_.notify_all();
 }
 
-void ResultGetter::OnGetJobResult( bool success, int errCode, const Worker *worker )
+void ResultGetter::OnGetJobResult( bool success, int errCode, const WorkerJob &workerJob, const std::string &hostIP )
 {
     if ( !success ) // retrieving of job result from message failed
         errCode = -1;
-    Sheduler::Instance().OnTaskCompletion( errCode, worker );
+    Sheduler::Instance().OnTaskCompletion( errCode, workerJob, hostIP );
 }
 
 void ResultGetterBoost::Start()
@@ -63,26 +63,26 @@ void ResultGetterBoost::Start()
     io_service_.post( boost::bind( &ResultGetter::Run, this ) );
 }
 
-void ResultGetterBoost::GetJobResult( const Worker *worker )
+void ResultGetterBoost::GetJobResult( const WorkerJob &workerJob, const std::string &hostIP )
 {	
 	getJobsSem_.Wait();
 
 	GetterBoost::getter_ptr getter(
-		new GetterBoost( io_service_, this, worker )
+		new GetterBoost( io_service_, this, workerJob, hostIP )
 	);
 	getter->GetJobResult();
 }
 
-void ResultGetterBoost::OnGetJobResult( bool success, int errCode, const Worker *worker )
+void ResultGetterBoost::OnGetJobResult( bool success, int errCode, const WorkerJob &workerJob, const std::string &hostIP )
 {
     getJobsSem_.Notify();
-    ResultGetter::OnGetJobResult( success, errCode, worker );
+    ResultGetter::OnGetJobResult( success, errCode, workerJob, hostIP );
 }
 
 void GetterBoost::GetJobResult()
 {
 	tcp::endpoint nodeEndpoint(
-		boost::asio::ip::address::from_string( worker_->GetIP() ),
+		boost::asio::ip::address::from_string( hostIP_ ),
 	    NODE_PORT
     );
 
@@ -112,7 +112,7 @@ void GetterBoost::HandleConnect( const boost::system::error_code &error )
 	else
 	{
 		PS_LOG( "GetterBoost::HandleConnect error=" << error.message() );
-		getter_->OnGetJobResult( false, 0, worker_ );
+		getter_->OnGetJobResult( false, 0, workerJob_, hostIP_ );
 	}
 }
 
@@ -121,7 +121,7 @@ void GetterBoost::HandleWrite( const boost::system::error_code &error, size_t by
     if ( error )
     {
         PS_LOG( "GetterBoost::HandleWrite error=" << error.message() );
-        getter_->OnGetJobResult( false, 0, worker_ );
+        getter_->OnGetJobResult( false, 0, workerJob_, hostIP_ );
     }
 }
 
@@ -175,14 +175,14 @@ void GetterBoost::HandleRead( const boost::system::error_code& error, size_t byt
 		{
 			if ( !HandleResponse() )
             {
-                getter_->OnGetJobResult( false, 0, worker_ );
+                getter_->OnGetJobResult( false, 0, workerJob_, hostIP_ );
             }
 		}
 	}
 	else
 	{
 		PS_LOG( "GetterBoost::HandleRead error=" << error.message() );
-		getter_->OnGetJobResult( false, 0, worker_ );
+		getter_->OnGetJobResult( false, 0, workerJob_, hostIP_ );
 	}
 }
 
@@ -222,7 +222,7 @@ bool GetterBoost::HandleResponse()
         int errCode;
         if ( parser->ParseJobResult( body, errCode ) )
         {
-            getter_->OnGetJobResult( true, errCode, worker_ );
+            getter_->OnGetJobResult( true, errCode, workerJob_, hostIP_ );
             return true;
         }
     }
@@ -237,8 +237,7 @@ bool GetterBoost::HandleResponse()
 void GetterBoost::MakeRequest()
 {
     python_server::ProtocolJson protocol;
-    const WorkerJob &workerJob = worker_->GetJob();
-    protocol.GetJobResult( request_, workerJob.jobId_, workerJob.taskId_ );
+    protocol.GetJobResult( request_, workerJob_.jobId_, workerJob_.taskId_ );
 }
 
 } // namespace master

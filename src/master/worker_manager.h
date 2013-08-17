@@ -3,6 +3,7 @@
 
 #include <list>
 #include <queue>
+#include <utility> // pair
 #include <boost/thread/mutex.hpp>
 #include "common/observer.h"
 #include "worker.h"
@@ -28,7 +29,7 @@ public:
 
     void OnNodeJobCompletion( const std::string &hostIP, int64_t jobId, int taskId );
 
-	bool GetAchievedWorker( Worker **worker );
+	bool GetAchievedWorker( WorkerJob &worker, std::string &hostIP );
 
 	void SetWorkerIP( Worker *worker, const std::string &ip );
     Worker *GetWorkerByIP( const std::string &ip ) const;
@@ -46,7 +47,7 @@ public:
 
 private:
     WorkerList workers_;
-	std::queue< Worker * > achievedWorkers_;
+	std::queue< std::pair< WorkerJob, std::string > > achievedWorkers_;
     boost::mutex workersMut_;
 };
 

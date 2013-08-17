@@ -9,7 +9,8 @@ namespace master {
 
 void JobSender::Run()
 {
-    Worker *worker;
+	WorkerJob workerJob;
+	std::string hostIP;
     Job *job;
 
     Sheduler &sheduler = Sheduler::Instance();
@@ -26,12 +27,11 @@ void JobSender::Run()
             newJobAvailable_ = false;
 		}
 
-        getTask = sheduler.GetTaskToSend( &worker, &job );
+        getTask = sheduler.GetTaskToSend( workerJob, hostIP, &job );
 		if ( getTask )
 		{
-			const WorkerJob &j = worker->GetJob();
-			PS_LOG( "Get task " << j.jobId_ << " : " << j.taskId_ );
-			SendJob( worker, job );
+			PS_LOG( "Get task " << workerJob.jobId_ << " : " << workerJob.taskId_ );
+			SendJob( workerJob, hostIP, job );
 		}
     }
 }
@@ -50,10 +50,10 @@ void JobSender::NotifyObserver( int event )
     awakeCond_.notify_all();
 }
 
-void JobSender::OnJobSendCompletion( bool success, const Worker *worker, const Job *job )
+void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job )
 {
     PS_LOG("JobSender::OnJobSendCompletion "<<success);
-    Sheduler::Instance().OnTaskSendCompletion( success, worker, job );
+    Sheduler::Instance().OnTaskSendCompletion( success, workerJob, hostIP, job );
 }
 
 void JobSenderBoost::Start()
@@ -61,26 +61,26 @@ void JobSenderBoost::Start()
     io_service_.post( boost::bind( &JobSender::Run, this ) );
 }
 
-void JobSenderBoost::SendJob( const Worker *worker, const Job *job )
+void JobSenderBoost::SendJob( const WorkerJob &workerJob, const std::string &hostIP, const Job *job )
 {	
 	sendJobsSem_.Wait();
 
 	SenderBoost::sender_ptr sender(
-		new SenderBoost( io_service_, sendBufferSize_, this, worker, job )
+		new SenderBoost( io_service_, sendBufferSize_, this, workerJob, hostIP, job )
 	);
 	sender->Send();
 }
 
-void JobSenderBoost::OnJobSendCompletion( bool success, const Worker *worker, const Job *job )
+void JobSenderBoost::OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job )
 {
     sendJobsSem_.Notify();
-    JobSender::OnJobSendCompletion( success, worker, job );
+    JobSender::OnJobSendCompletion( success, workerJob, hostIP, job );
 }
 
 void SenderBoost::Send()
 {
 	tcp::endpoint nodeEndpoint(
-		boost::asio::ip::address::from_string( worker_->GetIP() ),
+		boost::asio::ip::address::from_string( hostIP_ ),
 	    NODE_PORT
     );
 
@@ -110,7 +110,7 @@ void SenderBoost::HandleConnect( const boost::system::error_code &error )
 	else
 	{
 		PS_LOG( "SenderBoost::HandleConnect error=" << error.message() );
-		sender_->OnJobSendCompletion( false, worker_, job_ );
+		sender_->OnJobSendCompletion( false, workerJob_, hostIP_, job_ );
 	}
 }
 
@@ -119,7 +119,7 @@ void SenderBoost::HandleWrite( const boost::system::error_code &error, size_t by
     if ( error )
     {
         PS_LOG( "SenderBoost::HandleWrite error=" << error.message() );
-        sender_->OnJobSendCompletion( false, worker_, job_ );
+        sender_->OnJobSendCompletion( false, workerJob_, hostIP_, job_ );
     }
 }
 
@@ -128,21 +128,20 @@ void SenderBoost::HandleRead( const boost::system::error_code &error, size_t byt
     if ( !error )
     {
         bool success = ( response_ == '1' );
-        sender_->OnJobSendCompletion( success, worker_, job_ );
+        sender_->OnJobSendCompletion( success, workerJob_, hostIP_, job_ );
     }
     else
     {
         PS_LOG( "SenderBoost::HandleRead error=" << error.message() );
-        sender_->OnJobSendCompletion( false, worker_, job_ );
+        sender_->OnJobSendCompletion( false, workerJob_, hostIP_, job_ );
     }
 }
 
 void SenderBoost::MakeRequest()
 {
     python_server::ProtocolJson protocol;
-    const WorkerJob &workerJob = worker_->GetJob();
     protocol.SendScript( request_, job_->GetScriptLanguage(), job_->GetScript(),
-                         workerJob.jobId_, workerJob.taskId_ );
+                         workerJob_.jobId_, workerJob_.taskId_ );
 }
 
 } // namespace master

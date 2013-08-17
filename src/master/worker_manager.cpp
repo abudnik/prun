@@ -67,13 +67,10 @@ void WorkerManager::OnNodePingResponse( const std::string &hostIP )
 
 void WorkerManager::OnNodeJobCompletion( const std::string &hostIP, int64_t jobId, int taskId )
 {
-	if ( jobId < 0 || taskId < 0 ||
-         !Sheduler::Instance().IsWorkerBusy( hostIP, jobId, taskId ) )
+	if ( jobId < 0 || taskId < 0 )
 		return;
 
-	Worker *worker = GetWorkerByIP( hostIP );
-	if ( !worker )
-		return;
+    std::pair< WorkerJob, std::string > worker( WorkerJob( jobId, taskId ), hostIP );
 
 	{
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
@@ -82,7 +79,7 @@ void WorkerManager::OnNodeJobCompletion( const std::string &hostIP, int64_t jobI
 	NotifyAll();
 }
 
-bool WorkerManager::GetAchievedWorker( Worker **worker )
+bool WorkerManager::GetAchievedWorker( WorkerJob &worker, std::string &hostIP )
 {
 	if ( achievedWorkers_.empty() )
 		return false;
@@ -93,7 +90,9 @@ bool WorkerManager::GetAchievedWorker( Worker **worker )
 
     PS_LOG( "GetAchievedWorker: num achieved workers=" << achievedWorkers_.size() );
 
-	*worker = achievedWorkers_.front();
+	const std::pair< WorkerJob, std::string > &w = achievedWorkers_.front();
+	worker = w.first;
+	hostIP = w.second;
 	achievedWorkers_.pop();
 	return true;
 }

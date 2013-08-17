@@ -20,11 +20,11 @@ public:
 
     void OnNewJob( Job *job );
 
-	bool GetTaskToSend( Worker **worker, Job **job );
+	bool GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **job );
 
-    void OnTaskSendCompletion( bool success, const Worker *worker, const Job *job );
+    void OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job );
 
-    void OnTaskCompletion( int errCode, const Worker *worker );
+    void OnTaskCompletion( int errCode, const WorkerJob &workerJob, const std::string &hostIP );
 
     static Sheduler &Instance()
     {
@@ -35,8 +35,6 @@ public:
     void PrintStats(); // dbg only?
 
 	void Shutdown();
-
-    bool IsWorkerBusy( const std::string &hostIP, int64_t jobId, int taskId ); // todo: remove it
 
 private:
 	void PlanJobExecution();

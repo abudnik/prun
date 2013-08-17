@@ -108,7 +108,7 @@ void Sheduler::OnNewJob( Job *job )
 		PlanJobExecution();
 }
 
-bool Sheduler::GetTaskToSend( Worker **worker, Job **job )
+bool Sheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **job )
 {
     if ( !NeedToSendTask() )
         return false;
@@ -165,8 +165,10 @@ bool Sheduler::GetTaskToSend( Worker **worker, Job **job )
 			freeWorkers_.erase( w->GetIP() );
 			sendingJobWorkers_[ w->GetIP() ] = w;
 
-            w->SetJob( WorkerJob( jobId, taskId ) );
-            *worker = w;
+			workerJob = WorkerJob( jobId, taskId );
+            w->SetJob( workerJob );
+
+			hostIP = w->GetIP();
             *job = jobs_.front();
             return true;
         }
@@ -175,32 +177,29 @@ bool Sheduler::GetTaskToSend( Worker **worker, Job **job )
     return false;
 }
 
-void Sheduler::OnTaskSendCompletion( bool success, const Worker *worker, const Job *job )
+void Sheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job )
 {
     if ( success )
     {
-        Worker *w = const_cast<Worker *>( worker );
+        Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
-        sendingJobWorkers_.erase( worker->GetIP() );
-        busyWorkers_[ worker->GetIP() ] = w;
+        sendingJobWorkers_.erase( hostIP );
+        busyWorkers_[ hostIP ] = w;
     }
     else
     {
         {
-            Worker *w = const_cast<Worker *>( worker );
+            Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
             boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
-			WorkerJob workerJob = worker->GetJob();
-			if ( workerJob.jobId_ < 0 )
-				return;
 
             PS_LOG( "Sheduler::OnTaskSendCompletion: job sending failed."
-                    " jobId=" << workerJob.jobId_ << ", ip=" << worker->GetIP() );
+                    " jobId=" << workerJob.jobId_ << ", ip=" << hostIP );
 
-            failedWorkers_[ workerJob.jobId_ ].insert( worker->GetIP() );
+            failedWorkers_[ workerJob.jobId_ ].insert( hostIP );
 
             // worker is free for now, to get another job
-            sendingJobWorkers_.erase( worker->GetIP() );
-            freeWorkers_[ worker->GetIP() ] = w;
+            sendingJobWorkers_.erase( hostIP );
+            freeWorkers_[ hostIP ] = w;
             // reset worker job
             w->SetJob( WorkerJob() );
 
@@ -212,25 +211,20 @@ void Sheduler::OnTaskSendCompletion( bool success, const Worker *worker, const J
     }
 }
 
-void Sheduler::OnTaskCompletion( int errCode, const Worker *worker )
+void Sheduler::OnTaskCompletion( int errCode, const WorkerJob &workerJob, const std::string &hostIP )
 {
     PS_LOG( "Sheduler::OnTaskCompletion " << errCode );
     if ( !errCode )
     {
-        Worker *w = const_cast<Worker *>( worker );
+        Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
         boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
-		WorkerJob workerJob = worker->GetJob();
-		if ( workerJob.jobId_ < 0 )
-			return;
 
-        IPToWorker::iterator it = busyWorkers_.find( worker->GetIP() );
+        IPToWorker::iterator it = busyWorkers_.find( hostIP );
         if ( it == busyWorkers_.end() ) // task already processed
             return;                     // it can be when a few threads simultaneously gets success errCode from the same task
 
-        // todo: check if taskid == worker.taskid
-
         busyWorkers_.erase( it );
-        freeWorkers_[ worker->GetIP() ] = w;
+        freeWorkers_[ hostIP ] = w;
         w->SetJob( WorkerJob() );
 
         boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
@@ -249,20 +243,17 @@ void Sheduler::OnTaskCompletion( int errCode, const Worker *worker )
         if ( errCode == NODE_JOB_COMPLETION_NOT_FOUND )
             return;
 
-        Worker *w = const_cast<Worker *>( worker );
+        Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
         boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
-		WorkerJob workerJob = worker->GetJob();
-		if ( workerJob.jobId_ < 0 )
-			return;
 
         PS_LOG( "Sheduler::OnTaskCompletion: errCode=" << errCode <<
-                ", jobId=" << workerJob.jobId_ << ", ip=" << worker->GetIP() );
+                ", jobId=" << workerJob.jobId_ << ", ip=" << hostIP );
 
-        failedWorkers_[ workerJob.jobId_ ].insert( worker->GetIP() );
+        failedWorkers_[ workerJob.jobId_ ].insert( hostIP );
 
         // worker is free for now, to get another job
-        busyWorkers_.erase( worker->GetIP() );
-        freeWorkers_[ worker->GetIP() ] = w;
+        busyWorkers_.erase( hostIP );
+        freeWorkers_[ hostIP ] = w;
         // reset worker job
         w->SetJob( WorkerJob() );
 
@@ -329,7 +320,7 @@ bool Sheduler::NeedToSendTask() const
     return ( !freeWorkers_.empty() ) && ( !tasksToSend_.empty() || !needReschedule_.empty() );
 }
 
-bool Sheduler::IsWorkerBusy( const std::string &hostIP, int64_t jobId, int taskId )
+/*bool Sheduler::IsWorkerBusy( const std::string &hostIP, int64_t jobId, int taskId )
 {
     boost::mutex::scoped_lock scoped_lock( workersMut_ );
     IPToWorker::const_iterator it = busyWorkers_.find( hostIP );
@@ -338,7 +329,7 @@ bool Sheduler::IsWorkerBusy( const std::string &hostIP, int64_t jobId, int taskI
     const Worker *worker = it->second;
     const WorkerJob &workerJob = worker->GetJob();
     return ( workerJob.jobId_ == jobId ) && ( workerJob.taskId_ == taskId );
-}
+}*/
 
 void Sheduler::PrintStats()
 {
