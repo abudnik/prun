@@ -77,7 +77,7 @@ bool JobManager::ReadScript( const std::string &fileName, std::string &script ) 
     std::string data, line;
     while( std::getline( file, line ) )
     {
-        boost::trim( line );
+        boost::trim_right( line );
         data += line + '\n';
     }
     python_server::EncodeBase64( data.c_str(), data.size(), script );
