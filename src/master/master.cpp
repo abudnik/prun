@@ -186,6 +186,7 @@ int main( int argc, char* argv[], char **envp )
 		boost::thread_group worker_threads;
 
 		boost::asio::io_service io_service_timeout;
+
         master::JobTimeout jobTimeout( io_service_timeout );
         jobTimeout.Start();
         worker_threads.create_thread(
@@ -193,40 +194,6 @@ int main( int argc, char* argv[], char **envp )
         );
 
 		boost::asio::io_service io_service_ping;
-        boost::scoped_ptr<boost::asio::io_service::work> work_ping(
-            new boost::asio::io_service::work( io_service_ping ) );
-
-		// create thread pool for pingers
-		for( unsigned int i = 0; i < numPingThread; ++i )
-		{
-		    worker_threads.create_thread(
-				boost::bind( &ThreadFun, &io_service_ping )
-			);
-		}
-
-		boost::asio::io_service io_service_senders;
-        boost::scoped_ptr<boost::asio::io_service::work> work_senders(
-            new boost::asio::io_service::work( io_service_senders ) );
-
-		// create thread pool for job senders
-		for( unsigned int i = 0; i < numJobSendThread; ++i )
-		{
-		    worker_threads.create_thread(
-				boost::bind( &ThreadFun, &io_service_senders )
-			);
-		}
-
-		boost::asio::io_service io_service_getters;
-        boost::scoped_ptr<boost::asio::io_service::work> work_getters(
-            new boost::asio::io_service::work( io_service_getters ) );
-
-		// create thread pool for job result getters
-		for( unsigned int i = 0; i < numResultGetterThread; ++i )
-		{
-		    worker_threads.create_thread(
-				boost::bind( &ThreadFun, &io_service_getters )
-			);
-		}
 
 		// start ping from nodes receiver threads
 		using boost::asio::ip::udp;
@@ -239,12 +206,22 @@ int main( int argc, char* argv[], char **envp )
 			pingReceiver->Start();
 		}
 
-		// start result getter threads
-		int maxSimultResultGetters = cfg.Get<int>( "max_simult_result_getters" );
-		boost::scoped_ptr< master::ResultGetter > resultGetter(
-            new master::ResultGetterBoost( io_service_getters, maxSimultResultGetters )
-        );
-		resultGetter->Start();
+		// start node pinger
+        int heartbeatTimeout = cfg.Get<int>( "heartbeat_timeout" );
+        int maxDroped = cfg.Get<int>( "heartbeat_max_droped" );
+        boost::scoped_ptr< master::Pinger > pinger(
+            new master::PingerBoost( io_service_ping, heartbeatTimeout, maxDroped ) );
+		pinger->StartPing();
+
+		// create thread pool for pingers
+		for( unsigned int i = 0; i < numPingThread; ++i )
+		{
+		    worker_threads.create_thread(
+				boost::bind( &ThreadFun, &io_service_ping )
+			);
+		}
+
+		boost::asio::io_service io_service_senders;
 
 		// start job sender thread
 		int sendBufferSize = cfg.Get<int>( "send_buffer_size" );
@@ -254,12 +231,30 @@ int main( int argc, char* argv[], char **envp )
         );
 	    jobSender->Start();
 
-		// start node pinger
-        int heartbeatTimeout = cfg.Get<int>( "heartbeat_timeout" );
-        int maxDroped = cfg.Get<int>( "heartbeat_max_droped" );
-        boost::scoped_ptr< master::Pinger > pinger(
-            new master::PingerBoost( io_service_ping, heartbeatTimeout, maxDroped ) );
-		pinger->StartPing();
+		// create thread pool for job senders
+		for( unsigned int i = 0; i < numJobSendThread; ++i )
+		{
+		    worker_threads.create_thread(
+				boost::bind( &ThreadFun, &io_service_senders )
+			);
+		}
+
+		boost::asio::io_service io_service_getters;
+
+		// start result getter
+		int maxSimultResultGetters = cfg.Get<int>( "max_simult_result_getters" );
+		boost::scoped_ptr< master::ResultGetter > resultGetter(
+            new master::ResultGetterBoost( io_service_getters, maxSimultResultGetters )
+        );
+		resultGetter->Start();
+
+		// create thread pool for job result getters
+		for( unsigned int i = 0; i < numResultGetterThread; ++i )
+		{
+		    worker_threads.create_thread(
+				boost::bind( &ThreadFun, &io_service_getters )
+			);
+		}
 
         RunTests();
 
@@ -285,13 +280,8 @@ int main( int argc, char* argv[], char **envp )
         resultGetter->Stop();
 
         // stop io services
-        work_getters.reset();
         io_service_getters.stop();
-
-        work_senders.reset();
         io_service_senders.stop();
-
-        work_ping.reset();
 		io_service_ping.stop();
 
         // stop thread pool

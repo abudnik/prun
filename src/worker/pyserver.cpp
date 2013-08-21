@@ -926,9 +926,18 @@ int main( int argc, char* argv[], char **envp )
 			);
 		}
 
+		python_server::ConnectionAcceptor acceptor( io_service, python_server::DEFAULT_PORT );
+
 		boost::asio::io_service io_service_ping;
-        boost::scoped_ptr<boost::asio::io_service::work> work_ping(
-            new boost::asio::io_service::work( io_service_ping ) );
+
+        int completionPingTimeout = python_server::Config::Instance().Get<int>( "completion_ping_timeout" );
+        boost::scoped_ptr< python_server::JobCompletionPinger > completionPing(
+            new python_server::JobCompletionPingerBoost( io_service_ping, completionPingTimeout ) );
+        completionPing->StartPing();
+
+        boost::scoped_ptr< python_server::MasterPing > masterPing(
+            new python_server::MasterPingBoost( io_service_ping ) );
+        masterPing->Start();
 
 		// create thread pool for pingers
 		// 1. job completion pinger
@@ -940,17 +949,6 @@ int main( int argc, char* argv[], char **envp )
 				boost::bind( &ThreadFun, &io_service_ping )
 			);
 		}
-
-		python_server::ConnectionAcceptor acceptor( io_service, python_server::DEFAULT_PORT );
-
-        int completionPingTimeout = python_server::Config::Instance().Get<int>( "completion_ping_timeout" );
-        boost::scoped_ptr< python_server::JobCompletionPinger > completionPing(
-            new python_server::JobCompletionPingerBoost( io_service_ping, completionPingTimeout ) );
-        completionPing->StartPing();
-
-        boost::scoped_ptr< python_server::MasterPing > masterPing(
-            new python_server::MasterPingBoost( io_service_ping ) );
-        masterPing->Start();
 
 		if ( !python_server::isDaemon )
 		{
@@ -969,7 +967,6 @@ int main( int argc, char* argv[], char **envp )
 
         completionPing->Stop();
 
-		work_ping.reset();
 		io_service_ping.stop();
 
         work.reset();
