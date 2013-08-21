@@ -41,6 +41,7 @@ the License.
 #include "sheduler.h"
 #include "job_sender.h"
 #include "result_getter.h"
+#include "job_timeout.h"
 #include "defines.h"
 
 using namespace std;
@@ -182,12 +183,20 @@ int main( int argc, char* argv[], char **envp )
 
 		atexit( AtExit );
 
+		boost::thread_group worker_threads;
+
+		boost::asio::io_service io_service_timeout;
+        master::JobTimeout jobTimeout( io_service_timeout );
+        jobTimeout.Start();
+        worker_threads.create_thread(
+            boost::bind( &ThreadFun, &io_service_timeout )
+        );
+
 		boost::asio::io_service io_service_ping;
         boost::scoped_ptr<boost::asio::io_service::work> work_ping(
             new boost::asio::io_service::work( io_service_ping ) );
 
 		// create thread pool for pingers
-		boost::thread_group worker_threads;
 		for( unsigned int i = 0; i < numPingThread; ++i )
 		{
 		    worker_threads.create_thread(
@@ -268,6 +277,8 @@ int main( int argc, char* argv[], char **envp )
 			sigaddset( &waitset, SIGTERM );
 			sigwait( &waitset, &sig );
 		}
+
+        jobTimeout.Stop();
 
         pinger->Stop();
         jobSender->Stop();
