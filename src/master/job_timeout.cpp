@@ -40,9 +40,9 @@ void JobTimeout::CheckTimeouts()
 void JobTimeout::PushJob( const WorkerJob &job, int timeout )
 {
     namespace pt = boost::posix_time;
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     const pt::ptime now = pt::second_clock::local_time();
     const pt::ptime deadline = now + pt::milliseconds( timeout );
+    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     jobs_[ deadline ] = job;
 }
 
