@@ -16,7 +16,7 @@ void JobCompletionPinger::PingMasters()
     typedef std::vector< JobDescriptor > Container;
     Container descriptors;
     JobCompletionTable::Instance().GetAll( descriptors );
-    typename Container::const_iterator it = descriptors.begin();
+    Container::const_iterator it = descriptors.begin();
     for( ; it != descriptors.end(); ++it )
     {
         PingMaster( *it );
