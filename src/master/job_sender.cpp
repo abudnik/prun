@@ -54,6 +54,10 @@ void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, c
 {
     PS_LOG("JobSender::OnJobSendCompletion "<<success);
     Sheduler::Instance().OnTaskSendCompletion( success, workerJob, hostIP, job );
+    if ( success )
+    {
+        timeoutManager_->PushJob( workerJob, hostIP, job->GetTimeout() );
+    }
 }
 
 void JobSenderBoost::Start()

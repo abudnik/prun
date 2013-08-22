@@ -11,12 +11,13 @@ namespace master {
 
 // hint: don't use boost::asio::deadline_timer due to os timer limitations (~16k or so)
 
-class JobTimeout
+class JobTimeoutManager
 {
-    typedef std::map< boost::posix_time::ptime, WorkerJob > TimeToJob;
+    typedef std::pair< WorkerJob, std::string > JobPair;
+    typedef std::multimap< boost::posix_time::ptime, JobPair > TimeToJob;
 
 public:
-    JobTimeout( boost::asio::io_service &io_service )
+    JobTimeoutManager( boost::asio::io_service &io_service )
     : io_service_( io_service ), stopped_( false )
     {}
 
@@ -26,7 +27,7 @@ public:
 
     void Run();
 
-    void PushJob( const WorkerJob &job, int timeout );
+    void PushJob( const WorkerJob &job, const std::string &hostIP, int timeout );
 
 private:
     void CheckTimeouts();
@@ -35,7 +36,7 @@ private:
     boost::asio::io_service &io_service_;
     bool stopped_;
     python_server::SyncTimer timer_;
-    TimeToJob jobs_;
+    TimeToJob jobs_; // job_send_time -> (WorkerJob, hostIP)
     boost::mutex jobsMut_;
 };
 

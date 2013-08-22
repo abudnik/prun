@@ -20,6 +20,12 @@ struct WorkerJob
 {
     WorkerJob( int64_t jobId, int taskId ) : jobId_( jobId ), taskId_( taskId ) {}
 	WorkerJob() : jobId_( -1 ), taskId_( -1 ) {}
+
+    bool operator == ( const WorkerJob &workerJob ) const
+    {
+        return jobId_ == workerJob.jobId_ && taskId_ == workerJob.taskId_;
+    }
+
 	int64_t jobId_;
 	int taskId_;
 };

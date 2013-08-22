@@ -8,6 +8,7 @@
 #include "common/helper.h"
 #include "job.h"
 #include "worker.h"
+#include "job_timeout.h"
 
 using boost::asio::ip::tcp;
 
@@ -16,8 +17,9 @@ namespace master {
 class JobSender : python_server::Observer
 {
 public:
-    JobSender()
-	: stopped_( false ), newJobAvailable_( false )
+    JobSender( JobTimeoutManager *timeoutManager )
+	: stopped_( false ), timeoutManager_( timeoutManager ),
+     newJobAvailable_( false )
 	{}
 
     virtual void Start() = 0;
@@ -35,7 +37,7 @@ private:
 
 private:
     bool stopped_;
-
+    JobTimeoutManager *timeoutManager_;
     boost::mutex awakeMut_;
     boost::condition_variable awakeCond_;
     bool newJobAvailable_;
@@ -81,8 +83,11 @@ class JobSenderBoost : public JobSender
 {
 public:
     JobSenderBoost( boost::asio::io_service &io_service,
+                    JobTimeoutManager *timeoutManager,
 					int sendBufferSize, int maxSimultSendingJobs )
-    : io_service_( io_service ), sendBufferSize_( sendBufferSize ),
+    : JobSender( timeoutManager ),
+     io_service_( io_service ),
+     sendBufferSize_( sendBufferSize ),
 	 sendJobsSem_( maxSimultSendingJobs )
     {}
 

@@ -187,8 +187,10 @@ int main( int argc, char* argv[], char **envp )
 
 		boost::asio::io_service io_service_timeout;
 
-        master::JobTimeout jobTimeout( io_service_timeout );
-        jobTimeout.Start();
+        boost::scoped_ptr< master::JobTimeoutManager > timeoutManager(
+            new master::JobTimeoutManager( io_service_timeout )
+        );
+        timeoutManager->Start();
         worker_threads.create_thread(
             boost::bind( &ThreadFun, &io_service_timeout )
         );
@@ -227,7 +229,8 @@ int main( int argc, char* argv[], char **envp )
 		int sendBufferSize = cfg.Get<int>( "send_buffer_size" );
 		int maxSimultSendingJobs = cfg.Get<int>( "max_simult_sending_jobs" );
 	    boost::scoped_ptr< master::JobSender > jobSender(
-            new master::JobSenderBoost( io_service_senders, sendBufferSize, maxSimultSendingJobs )
+            new master::JobSenderBoost( io_service_senders, timeoutManager.get(),
+                                        sendBufferSize, maxSimultSendingJobs )
         );
 	    jobSender->Start();
 
@@ -273,8 +276,7 @@ int main( int argc, char* argv[], char **envp )
 			sigwait( &waitset, &sig );
 		}
 
-        jobTimeout.Stop();
-
+        timeoutManager->Stop();
         pinger->Stop();
         jobSender->Stop();
         resultGetter->Stop();

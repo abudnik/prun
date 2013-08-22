@@ -15,6 +15,9 @@ void Sheduler::OnHostAppearance( Worker *worker )
 		freeWorkers_[ worker->GetIP() ] = worker;
 	}
 	PlanJobExecution();
+
+    if ( NeedToSendTask() )
+        NotifyAll();
 }
 
 void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
@@ -222,6 +225,7 @@ void Sheduler::OnTaskCompletion( int errCode, const WorkerJob &workerJob, const 
         IPToWorker::iterator it = busyWorkers_.find( hostIP );
         if ( it == busyWorkers_.end() ) // task already processed
             return;                     // it can be when a few threads simultaneously gets success errCode from the same task
+                                        // or after timeout
 
         busyWorkers_.erase( it );
         freeWorkers_[ hostIP ] = w;
@@ -263,6 +267,24 @@ void Sheduler::OnTaskCompletion( int errCode, const WorkerJob &workerJob, const 
     }
 
     NotifyAll();
+}
+
+void Sheduler::OnJobTimeout( const WorkerJob &workerJob, const std::string &hostIP )
+{
+    IPToWorker::iterator it;
+    {
+        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+        it = busyWorkers_.find( hostIP );
+    }
+    if ( it != busyWorkers_.end() )
+    {
+        const WorkerJob &job = it->second->GetJob();
+        if ( job == workerJob )
+        {
+            PS_LOG( "Sheduler::OnJobTimeout " << workerJob.jobId_ << ":" << workerJob.taskId_ << " " << hostIP );
+            OnTaskCompletion( NODE_JOB_TIMEOUT, workerJob, hostIP );
+        }
+    }
 }
 
 void Sheduler::RemoveJob( int64_t jobId )

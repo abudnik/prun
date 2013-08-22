@@ -1,20 +1,21 @@
 #include <boost/bind.hpp>
 #include "job_timeout.h"
+#include "sheduler.h"
 
 namespace master {
 
-void JobTimeout::Start()
+void JobTimeoutManager::Start()
 {
-    io_service_.post( boost::bind( &JobTimeout::Run, this ) );
+    io_service_.post( boost::bind( &JobTimeoutManager::Run, this ) );
 }
 
-void JobTimeout::Stop()
+void JobTimeoutManager::Stop()
 {
     stopped_ = true;
     timer_.StopWaiting();
 }
 
-void JobTimeout::Run()
+void JobTimeoutManager::Run()
 {
     while( !stopped_ )
     {
@@ -23,27 +24,35 @@ void JobTimeout::Run()
     }
 }
 
-void JobTimeout::CheckTimeouts()
+void JobTimeoutManager::CheckTimeouts()
 {
     namespace pt = boost::posix_time;
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-    TimeToJob::const_iterator it = jobs_.begin();
+    TimeToJob::iterator it = jobs_.begin();
     const pt::ptime now = pt::second_clock::local_time();
-    for( ; it != jobs_.end(); ++it )
+    for( ; it != jobs_.end(); )
     {
-        if ( now > it->first )
-        {
-        }
+        const pt::ptime &jobSendTime = it->first;
+        if ( now < jobSendTime ) // skip earlier sended jobs
+            break;
+
+        const JobPair &pair = it->second;
+        Sheduler::Instance().OnJobTimeout( pair.first, pair.second );
+        jobs_.erase( it++ );
     }
 }
 
-void JobTimeout::PushJob( const WorkerJob &job, int timeout )
+void JobTimeoutManager::PushJob( const WorkerJob &job, const std::string &hostIP, int timeout )
 {
     namespace pt = boost::posix_time;
     const pt::ptime now = pt::second_clock::local_time();
-    const pt::ptime deadline = now + pt::milliseconds( timeout );
+    const pt::ptime deadline = now + pt::seconds( timeout );
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-    jobs_[ deadline ] = job;
+    jobs_.insert( std::pair< pt::ptime, JobPair >(
+                      deadline,
+                      std::pair< WorkerJob, std::string >( job, hostIP )
+                      )
+    );
 }
 
 } // namespace master

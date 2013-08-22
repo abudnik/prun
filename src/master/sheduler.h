@@ -26,6 +26,8 @@ public:
 
     void OnTaskCompletion( int errCode, const WorkerJob &workerJob, const std::string &hostIP );
 
+    void OnJobTimeout( const WorkerJob &workerJob, const std::string &hostIP );
+
     static Sheduler &Instance()
     {
         static Sheduler instance_;
