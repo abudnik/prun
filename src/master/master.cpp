@@ -42,6 +42,7 @@ the License.
 #include "job_sender.h"
 #include "result_getter.h"
 #include "job_timeout.h"
+#include "admin.h"
 #include "defines.h"
 
 using namespace std;
@@ -259,6 +260,16 @@ int main( int argc, char* argv[], char **envp )
 			);
 		}
 
+		boost::asio::io_service io_service_admin;
+
+        // create thread pool for admin connections
+		boost::scoped_ptr< master::AdminConnection > adminConnection(
+            new master::AdminConnection( io_service_admin )
+        );
+        worker_threads.create_thread(
+            boost::bind( &ThreadFun, &io_service_admin )
+        );
+
         RunTests();
 
 		if ( !master::isDaemon )
@@ -282,6 +293,7 @@ int main( int argc, char* argv[], char **envp )
         resultGetter->Stop();
 
         // stop io services
+        io_service_admin.stop();
         io_service_getters.stop();
         io_service_senders.stop();
 		io_service_ping.stop();
