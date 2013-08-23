@@ -390,7 +390,7 @@ public:
 			acceptor_.open( endpoint.protocol() );
 			acceptor_.set_option( tcp::acceptor::reuse_address( true ) );
 			acceptor_.set_option( tcp::no_delay( true ) );
-			acceptor_.bind( tcp::endpoint( tcp::v4(), port ) );
+			acceptor_.bind( endpoint );
 			acceptor_.listen();
 		}
 		catch( std::exception &e )
