@@ -1,3 +1,7 @@
+#define BOOST_SPIRIT_THREADSAFE
+
+#include <sstream>
+#include <boost/property_tree/json_parser.hpp>
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include "admin.h"
@@ -6,7 +10,7 @@ namespace master {
 
 void AdminSession::Start()
 {
-    //boost::asio::ip::address remoteAddress = socket_.remote_endpoint().address();
+    remoteIP_ = socket_.remote_endpoint().address().to_string();
 
     socket_.async_read_some( boost::asio::buffer( buffer_ ),
                              boost::bind( &AdminSession::FirstRead, shared_from_this(),
@@ -16,30 +20,83 @@ void AdminSession::Start()
 
 void AdminSession::FirstRead( const boost::system::error_code& error, size_t bytes_transferred )
 {
-    /*if ( !error )
+    if ( !error )
     {
         int ret = request_.OnFirstRead( buffer_, bytes_transferred );
         if ( ret == 0 )
         {
             socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                                     boost::bind( &Session::FirstRead, shared_from_this(),
+                                     boost::bind( &AdminSession::FirstRead, shared_from_this(),
                                                   boost::asio::placeholders::error,
                                                   boost::asio::placeholders::bytes_transferred ) );
-            return;
-        }
-        if ( ret < 0 )
-        {
-            OnReadCompletion( false );
             return;
         }
     }
     else
     {
-        PS_LOG( "Session::FirstRead error=" << error.message() );
+        PS_LOG( "AdminSession::FirstRead error=" << error.message() );
     }
 
-    HandleRead( error, bytes_transferred );*/
+    HandleRead( error, bytes_transferred );
 }
+
+void AdminSession::HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
+{
+    if ( !error )
+    {
+        request_.OnRead( buffer_, bytes_transferred );
+
+        if ( !request_.IsReadCompleted() )
+        {
+            socket_.async_read_some( boost::asio::buffer( buffer_ ),
+                                     boost::bind( &AdminSession::HandleRead, shared_from_this(),
+                                                  boost::asio::placeholders::error,
+                                                  boost::asio::placeholders::bytes_transferred ) );
+        }
+        else
+        {
+            ParseRequest();
+
+            // read next command
+            request_.Reset();
+            socket_.async_read_some( boost::asio::buffer( buffer_ ),
+                                     boost::bind( &AdminSession::FirstRead, shared_from_this(),
+                                                  boost::asio::placeholders::error,
+                                                  boost::asio::placeholders::bytes_transferred ) );
+        }
+    }
+    else
+    {
+        PS_LOG( "AdminSession::HandleRead error=" << error.message() );
+    }
+}
+
+void AdminSession::ParseRequest()
+{
+    PS_LOG( request_.GetString() );
+
+    std::string command;
+	std::istringstream ss( request_.GetString() );
+
+	boost::property_tree::ptree ptree;
+	try
+	{
+		boost::property_tree::read_json( ss, ptree );
+        command = ptree.get<std::string>( "command" );
+	}
+	catch( std::exception &e )
+	{
+		PS_LOG( "AdminSession::HandleRequest: " << e.what() );
+        return;
+	}
+    HandleRequest( command, ptree );
+}
+
+void AdminSession::HandleRequest( const std::string &command, boost::property_tree::ptree &ptree )
+{
+    PS_LOG( "AdminSession::HandleRequest: unknown command: " << command );
+}
+
 
 void AdminConnection::StartAccept()
 {

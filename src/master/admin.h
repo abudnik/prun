@@ -2,6 +2,7 @@
 #define __ADMIN_H
 
 #include <boost/asio.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include "common/request.h"
 #include "common/log.h"
 #include "defines.h"
@@ -17,9 +18,15 @@ class AdminSession : public boost::enable_shared_from_this< AdminSession >
 public:
 	AdminSession( boost::asio::io_service &io_service )
 	: socket_( io_service ),
-     request_( false ),
+     request_( true ),
 	 io_service_( io_service )
 	{}
+
+	~AdminSession()
+	{
+        if ( !remoteIP_.empty() )
+            PS_LOG( "~AdminSession " << remoteIP_ );
+	}
 
     void Start();
 
@@ -27,11 +34,16 @@ public:
 
 private:
     void FirstRead( const boost::system::error_code& error, size_t bytes_transferred );
+    void HandleRead( const boost::system::error_code& error, size_t bytes_transferred );
+
+    void ParseRequest();
+    void HandleRequest( const std::string &command, boost::property_tree::ptree &ptree );
 
 private:
 	tcp::socket socket_;
 	BufferType buffer_;
     python_server::Request< BufferType > request_;
+    std::string remoteIP_;
 	boost::asio::io_service &io_service_;
 };
 
