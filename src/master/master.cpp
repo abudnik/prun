@@ -94,6 +94,7 @@ void RunTests()
 
 void AtExit()
 {
+    master::AdminCommandDispatcher::Instance().Shutdown();
     master::WorkerManager::Instance().Shutdown();
     master::JobManager::Instance().Shutdown();
 	master::Sheduler::Instance().Shutdown();
@@ -181,6 +182,7 @@ int main( int argc, char* argv[], char **envp )
         InitWorkerManager();
         InitJobManager();
 		master::Sheduler::Instance();
+        master::AdminCommandDispatcher::Instance().Initialize();
 
 		atexit( AtExit );
 

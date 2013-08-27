@@ -5,8 +5,57 @@
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include "admin.h"
+#include "job_manager.h"
 
 namespace master {
+
+void AdminCommand_Job::Execute( const std::string &command,
+                                const boost::property_tree::ptree &ptree )
+{
+	try
+	{
+        std::string filePath = ptree.get<std::string>( "file" );
+        // read job description from file
+        std::ifstream file( filePath.c_str() );
+        if ( !file.is_open() )
+        {
+            PS_LOG( "AdminCommand_Job::Execute: couldn't open " << filePath );
+            return;
+        }
+        std::string job, line;
+        while( std::getline( file, line ) )
+            job += line;
+        // add job to job queue
+        JobManager::Instance().PushJob( job );
+	}
+	catch( std::exception &e )
+	{
+		PS_LOG( "AdminCommand_Job::Execute: " << e.what() );
+	}
+}
+
+void AdminCommandDispatcher::Initialize()
+{
+    map_[ "job" ] = new AdminCommand_Job;
+}
+
+void AdminCommandDispatcher::Shutdown()
+{
+    std::map< std::string, AdminCommand * >::const_iterator it = map_.begin();
+    for( ; it != map_.end(); ++it )
+    {
+        delete it->second;
+    }
+}
+
+AdminCommand *AdminCommandDispatcher::Get( const std::string &command ) const
+{
+    std::map< std::string, AdminCommand * >::const_iterator it = map_.find( command );
+    if ( it != map_.end() )
+        return it->second;
+    return NULL;
+}
+
 
 void AdminSession::Start()
 {
@@ -18,7 +67,7 @@ void AdminSession::Start()
                                           boost::asio::placeholders::bytes_transferred ) );
 }
 
-void AdminSession::FirstRead( const boost::system::error_code& error, size_t bytes_transferred )
+void AdminSession::FirstRead( const boost::system::error_code &error, size_t bytes_transferred )
 {
     if ( !error )
     {
@@ -40,7 +89,7 @@ void AdminSession::FirstRead( const boost::system::error_code& error, size_t byt
     HandleRead( error, bytes_transferred );
 }
 
-void AdminSession::HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
+void AdminSession::HandleRead( const boost::system::error_code &error, size_t bytes_transferred )
 {
     if ( !error )
     {
@@ -55,7 +104,7 @@ void AdminSession::HandleRead( const boost::system::error_code& error, size_t by
         }
         else
         {
-            ParseRequest();
+            HandleRequest();
 
             // read next command
             request_.Reset();
@@ -71,7 +120,7 @@ void AdminSession::HandleRead( const boost::system::error_code& error, size_t by
     }
 }
 
-void AdminSession::ParseRequest()
+void AdminSession::HandleRequest()
 {
     PS_LOG( request_.GetString() );
 
@@ -89,12 +138,16 @@ void AdminSession::ParseRequest()
 		PS_LOG( "AdminSession::HandleRequest: " << e.what() );
         return;
 	}
-    HandleRequest( command, ptree );
-}
 
-void AdminSession::HandleRequest( const std::string &command, boost::property_tree::ptree &ptree )
-{
-    PS_LOG( "AdminSession::HandleRequest: unknown command: " << command );
+    AdminCommand *adminCommand = AdminCommandDispatcher::Instance().Get( command );
+    if ( adminCommand )
+    {
+        adminCommand->Execute( command, ptree );
+    }
+    else
+    {
+        PS_LOG( "AdminSession::HandleRequest: unknown command: " << command );
+    }
 }
 
 

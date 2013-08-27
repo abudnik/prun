@@ -11,6 +11,38 @@ namespace master {
 
 using boost::asio::ip::tcp;
 
+class AdminCommand
+{
+public:
+    virtual ~AdminCommand() {}
+    virtual void Execute( const std::string &command,
+                          const boost::property_tree::ptree &ptree ) = 0;
+};
+
+class AdminCommand_Job : public AdminCommand
+{
+public:
+    virtual void Execute( const std::string &command,
+                          const boost::property_tree::ptree &ptree );
+};
+
+class AdminCommandDispatcher
+{
+public:
+    void Initialize();
+    void Shutdown();
+    AdminCommand *Get( const std::string &command ) const;
+
+    static AdminCommandDispatcher &Instance()
+    {
+        static AdminCommandDispatcher instance_;
+        return instance_;
+    }
+
+private:
+    std::map< std::string, AdminCommand * > map_;
+};
+
 class AdminSession : public boost::enable_shared_from_this< AdminSession >
 {
 	typedef boost::array< char, 32 * 1024 > BufferType;
@@ -33,11 +65,10 @@ public:
 	tcp::socket &GetSocket() { return socket_; }
 
 private:
-    void FirstRead( const boost::system::error_code& error, size_t bytes_transferred );
-    void HandleRead( const boost::system::error_code& error, size_t bytes_transferred );
+    void FirstRead( const boost::system::error_code &error, size_t bytes_transferred );
+    void HandleRead( const boost::system::error_code &error, size_t bytes_transferred );
 
-    void ParseRequest();
-    void HandleRequest( const std::string &command, boost::property_tree::ptree &ptree );
+    void HandleRequest();
 
 private:
 	tcp::socket socket_;
