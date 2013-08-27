@@ -1,5 +1,6 @@
 import sys
 import socket
+import json
 
 MASTER_PORT = 5557
 
@@ -24,11 +25,32 @@ class Connection():
         except Exception as e:
             Exit( "couldn't send command to master" )
 
+class Command_Job():
+    def Execute(cmd):
+        print( '!' )
+
+class CommandDispatcher():
+    _instance = None
+    def __init__(self):
+        if self._instance is None:
+            print 'ok'
+            self.map_ = {'job' : Command_Job()}
+
+    @classmethod
+    def Instance(cls):
+        if cls._instance is None:
+            cls._instance = CommandDispatcher()
+        return cls._instance
+
+    def Get(self, command):
+        pass
+
 class Master():
     def __init__(self, connection):
         self.connection = connection
 
     def DoCommand(self, cmd):
+        dispatcher = CommandDispatcher.Instance()
         #
         msg = '{"command":"job","file":"/home/budnik/dev/PythonServer/test/test.job"}'
         header = str(len(msg))+'\n'
