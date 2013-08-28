@@ -19,22 +19,38 @@ class Connection():
         except Exception as e:
             Exit( "couldn't connect to master" )
 
+    def AddHeader(self, msg):
+        header = str(len(msg)) + '\n'
+        msg = header + msg
+        return msg
+
     def Send(self, msg):
-        try:        
+        msg = self.AddHeader( msg )
+        try:
             self.socket.send(msg)
         except Exception as e:
             Exit( "couldn't send command to master" )
 
 class Command_Job():
-    def Execute(cmd):
-        print( '!' )
+    def Prepare(self, cmd):
+        try:
+            path = cmd.split()[1]
+        except Exception as e:
+            print( "no file path given" )
+            raise e
+        return json.JSONEncoder().encode( {"command" : "job", "file" : path} )
+
+class Command_Test():
+    def Prepare(self, cmd):
+        msg = '{"command":"job","file":"/home/budnik/dev/PythonServer/test/test.job"}'
+        return msg
+
 
 class CommandDispatcher():
     _instance = None
     def __init__(self):
-        if self._instance is None:
-            print 'ok'
-            self.map_ = {'job' : Command_Job()}
+        self.map_ = {'job'   : Command_Job(),
+                     'test'  : Command_Test()}
 
     @classmethod
     def Instance(cls):
@@ -43,7 +59,10 @@ class CommandDispatcher():
         return cls._instance
 
     def Get(self, command):
-        pass
+        cmd = command.split( None, 1 )[0]
+        if cmd not in self.map_:
+            return None
+        return self.map_[ cmd ]
 
 class Master():
     def __init__(self, connection):
@@ -51,13 +70,15 @@ class Master():
 
     def DoCommand(self, cmd):
         dispatcher = CommandDispatcher.Instance()
-        #
-        msg = '{"command":"job","file":"/home/budnik/dev/PythonServer/test/test.job"}'
-        header = str(len(msg))+'\n'
-        msg = header + msg
-        self.connection.Send(msg)
-        #
-        print( "unknown command: " + cmd )
+        handler = dispatcher.Get( cmd )
+        if handler is not None:
+            try:
+                msg = handler.Prepare( cmd )
+                self.connection.Send( msg )
+            except Exception as e:
+                print( "error: couldn't execute command" )
+        else:
+            print( "unknown command: " + cmd )
 
 def PrintHelp():
     print( "Commands:" )
