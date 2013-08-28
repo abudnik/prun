@@ -1,6 +1,7 @@
 import sys
 import socket
 import json
+from threading import Thread
 
 MASTER_PORT = 5557
 
@@ -30,6 +31,29 @@ class Connection():
             self.socket.send(msg)
         except Exception as e:
             Exit( "couldn't send command to master" )
+
+    def Receive(self):
+        try:
+            data = self.socket.recv( 32 * 1024 )
+            return data
+        except Exception as e:
+            pass
+
+    def Close(self):
+        self.socket.shutdown(socket.SHUT_RDWR)
+        self.socket.close()
+
+class ResultGetter(Thread):
+    def __init__( self, connection ):
+        Thread.__init__(self)
+        self.connection = connection
+    
+    def run(self):
+        while True:
+            msg = self.connection.Receive()
+            if msg is None or len(msg) == 0:
+                break
+            print msg
 
 class Command_Job():
     def Prepare(self, cmd):
@@ -93,6 +117,9 @@ def Main():
     UserPrompt()
     con = Connection()
     master = Master( con )
+    resultGetter = ResultGetter( con )
+    resultGetter.start()
+
     while True:
         sys.stdout.write( '> ' )
         sys.stdout.flush()
@@ -105,5 +132,8 @@ def Main():
             PrintHelp()
             continue
         master.DoCommand( line )
+
+    con.Close()
+    resultGetter.join()
 
 Main()
