@@ -126,6 +126,7 @@ def PrintHelp():
     print( "  job /path/to/job/file -- run job, which described in .job file" )
     print( "  info <job_id>         -- show job execution statistics" )
     print( "  stat                  -- show master statistics" )
+    print( "  repeat, r             -- repeat last command" )
     print( "  exit, e               -- quit program" )
 
 def UserPrompt():
@@ -139,18 +140,28 @@ def Main():
     resultGetter = ResultGetter( con )
     resultGetter.start()
 
-    while True:
-        sys.stdout.write( '> ' )
-        sys.stdout.flush()
-        line = sys.stdin.readline().strip()
-        if len(line) == 0:
-            continue
-        if line in ("exit", "e", "quit", "q"):
-            break
-        if line == "help":
-            PrintHelp()
-            continue
-        master.DoCommand( line )
+    try:
+        lastCmd = None
+        while True:
+            sys.stdout.write( '> ' )
+            sys.stdout.flush()
+
+            line = sys.stdin.readline().strip()
+            if len(line) == 0:
+                continue
+
+            if line in ("exit", "e", "quit", "q"):
+                break
+            if line == "help":
+                PrintHelp()
+                continue
+            if line in ("repeat", "r") and lastCmd is not None:
+                line = lastCmd
+
+            master.DoCommand( line )
+            lastCmd = line
+    except Exception as e:
+        print e
 
     con.Close()
     resultGetter.join()
