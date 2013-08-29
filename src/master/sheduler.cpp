@@ -445,22 +445,31 @@ void Sheduler::GetJobInfo( std::string &info, int64_t jobId )
 
 void Sheduler::GetStatistics( std::string &stat )
 {
-    size_t numJobs, numReschedule;
-    {
-        boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
-        numJobs = jobs_.size();
-        numReschedule = needReschedule_.size();
-    }
-
     std::ostringstream ss;
     ss << "================" << std::endl <<
         "busy workers = " << busyWorkers_.size() << std::endl <<
         "free workers = " << freeWorkers_.size() << std::endl <<
         "failed workers = " << failedWorkers_.size() << std::endl <<
-        "sending workers = " << sendingJobWorkers_.size() << std::endl <<
-        "jobs = " << numJobs << std::endl <<
-        "need reschedule = " << numReschedule << std::endl <<
-        "================";
+        "sending workers = " << sendingJobWorkers_.size() << std::endl;
+
+	{
+        boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+        ss << "jobs = " << jobs_.size() << std::endl <<
+			"need reschedule = " << needReschedule_.size() << std::endl;
+
+		ss << "executing jobs: {";
+		std::list< Job * >::const_iterator it = jobs_.begin();
+		for( ; it != jobs_.end(); ++it )
+		{
+			if ( it != jobs_.begin() )
+				ss << ", ";
+			Job *job = *it;
+			ss << job->GetJobId();
+		}
+		ss << "}" << std::endl;
+	}
+
+    ss << "================";
 
     stat = ss.str();
 }
