@@ -53,7 +53,10 @@ class ResultGetter(Thread):
             msg = self.connection.Receive()
             if msg is None or len(msg) == 0:
                 break
-            print msg
+            print( "Command completed:" )
+            print( msg )
+            sys.stdout.write( '> ' )
+            sys.stdout.flush()
 
 class Command_Job():
     def Prepare(self, cmd):

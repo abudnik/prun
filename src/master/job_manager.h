@@ -23,7 +23,8 @@ public:
 class JobManager
 {
 public:
-    bool PushJob( const std::string &job_description );
+    Job *CreateJob( const std::string &job_description ) const;
+    void PushJob( Job *job );
 
     void SetExeDir( const std::string &dir ) { exeDir_ = dir; }
 

@@ -34,13 +34,12 @@ public:
         return instance_;
     }
 
-    void PrintStats(); // dbg only?
-
 	void Shutdown();
 
 private:
 	void PlanJobExecution();
 
+    void RunJobCallback( Job *job );
     void RemoveJob( int64_t jobId );
 
     bool CheckIfWorkerFailedJob( Worker *worker, int64_t jobId ) const;

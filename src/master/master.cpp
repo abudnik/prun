@@ -85,11 +85,16 @@ void RunTests()
         PS_LOG( "RunTests: couldn't open " << filePath );
         return;
     }
-    string job, line;
+    string jobDescr, line;
     while( getline( file, line ) )
-        job += line;
-    // add job to job queue
-    master::JobManager::Instance().PushJob( job );
+        jobDescr += line;
+
+    master::Job *job = master::JobManager::Instance().CreateJob( jobDescr );
+    if ( job )
+    {
+        // add job to job queue
+        master::JobManager::Instance().PushJob( job );
+    }
 }
 
 void AtExit()

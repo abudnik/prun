@@ -287,6 +287,20 @@ void Sheduler::OnJobTimeout( const WorkerJob &workerJob, const std::string &host
     }
 }
 
+void Sheduler::RunJobCallback( Job *job )
+{
+    std::ostringstream ss;
+    ss << "================" << std::endl <<
+        "free workers = " << freeWorkers_.size() << std::endl <<
+        "failed workers = " << failedWorkers_.size() << std::endl <<
+        "sending workers = " << sendingJobWorkers_.size() << std::endl <<
+        "jobs = " << jobs_.size() << std::endl <<
+        "need reschedule = " << needReschedule_.size() << std::endl <<
+        "================";
+
+    job->RunCallback( ss.str() );
+}
+
 void Sheduler::RemoveJob( int64_t jobId )
 {
     std::map< int64_t, std::set< std::string > >::iterator it_failed(
@@ -306,13 +320,14 @@ void Sheduler::RemoveJob( int64_t jobId )
         Job *job = *it;
         if ( job->GetJobId() == jobId )
         {
+            RunJobCallback( job );
             jobs_.erase( it );
             delete job;
-            break;
+            return;
         }
     }
 
-    PrintStats(); // dbg only?
+    PS_LOG( "Sheduler::RemoveJob: job not found for jobId=" << jobId );
 }
 
 bool Sheduler::CheckIfWorkerFailedJob( Worker *worker, int64_t jobId ) const
@@ -352,18 +367,6 @@ bool Sheduler::NeedToSendTask() const
     const WorkerJob &workerJob = worker->GetJob();
     return ( workerJob.jobId_ == jobId ) && ( workerJob.taskId_ == taskId );
 }*/
-
-void Sheduler::PrintStats()
-{
-    PS_LOG( "================" );
-    PS_LOG( "free workers = " << freeWorkers_.size() );
-    PS_LOG( "failed workers = " << failedWorkers_.size() );
-    PS_LOG( "sending workers = " << sendingJobWorkers_.size() );
-
-    PS_LOG( "jobs = " << jobs_.size() );
-    PS_LOG( "need reschedule = " << needReschedule_.size() );
-    PS_LOG( "================" );
-}
 
 void Sheduler::Shutdown()
 {

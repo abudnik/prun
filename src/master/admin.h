@@ -11,19 +11,23 @@ namespace master {
 
 using boost::asio::ip::tcp;
 
+class AdminSession;
+
 class AdminCommand
 {
 public:
     virtual ~AdminCommand() {}
     virtual void Execute( const std::string &command,
-                          const boost::property_tree::ptree &ptree ) = 0;
+                          const boost::property_tree::ptree &ptree,
+                          AdminSession *session ) = 0;
 };
 
 class AdminCommand_Job : public AdminCommand
 {
 public:
     virtual void Execute( const std::string &command,
-                          const boost::property_tree::ptree &ptree );
+                          const boost::property_tree::ptree &ptree,
+                          AdminSession *session );
 };
 
 class AdminCommandDispatcher
@@ -64,9 +68,12 @@ public:
 
 	tcp::socket &GetSocket() { return socket_; }
 
+    void OnCommandCompletion( const std::string &result );
+
 private:
     void FirstRead( const boost::system::error_code &error, size_t bytes_transferred );
     void HandleRead( const boost::system::error_code &error, size_t bytes_transferred );
+    void HandleWrite( const boost::system::error_code& error, size_t bytes_transferred );
 
     void HandleRequest();
 

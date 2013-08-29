@@ -10,7 +10,8 @@
 namespace master {
 
 void AdminCommand_Job::Execute( const std::string &command,
-                                const boost::property_tree::ptree &ptree )
+                                const boost::property_tree::ptree &ptree,
+                                AdminSession *session )
 {
 	try
 	{
@@ -22,11 +23,17 @@ void AdminCommand_Job::Execute( const std::string &command,
             PS_LOG( "AdminCommand_Job::Execute: couldn't open " << filePath );
             return;
         }
-        std::string job, line;
+        std::string jobDescr, line;
         while( std::getline( file, line ) )
-            job += line;
-        // add job to job queue
-        JobManager::Instance().PushJob( job );
+            jobDescr += line;
+
+        Job *job = JobManager::Instance().CreateJob( jobDescr );
+        if ( job )
+        {
+            job->SetCallback( session, &AdminSession::OnCommandCompletion );
+            // add job to job queue
+            JobManager::Instance().PushJob( job );
+        }
 	}
 	catch( std::exception &e )
 	{
@@ -120,6 +127,14 @@ void AdminSession::HandleRead( const boost::system::error_code &error, size_t by
     }
 }
 
+void AdminSession::HandleWrite( const boost::system::error_code& error, size_t bytes_transferred )
+{
+    if ( error )
+    {
+        PS_LOG( "AdminSession::HandleWrite error=" << error.message() );
+    }
+}
+
 void AdminSession::HandleRequest()
 {
     PS_LOG( request_.GetString() );
@@ -142,12 +157,21 @@ void AdminSession::HandleRequest()
     AdminCommand *adminCommand = AdminCommandDispatcher::Instance().Get( command );
     if ( adminCommand )
     {
-        adminCommand->Execute( command, ptree );
+        adminCommand->Execute( command, ptree, this );
     }
     else
     {
         PS_LOG( "AdminSession::HandleRequest: unknown command: " << command );
     }
+}
+
+void AdminSession::OnCommandCompletion( const std::string &result )
+{
+    boost::asio::async_write( socket_,
+                              boost::asio::buffer( result ),
+                              boost::bind( &AdminSession::HandleWrite, shared_from_this(),
+                                           boost::asio::placeholders::error,
+                                           boost::asio::placeholders::bytes_transferred ) );
 }
 
 

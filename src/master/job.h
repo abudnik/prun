@@ -3,6 +3,8 @@
 
 #include <list>
 #include <boost/thread/mutex.hpp>
+#include <boost/function.hpp>
+#include <boost/bind.hpp>
 #include <stdint.h> // int64_t
 
 namespace master {
@@ -29,6 +31,18 @@ public:
     int GetTimeout() const { return timeout_; }
     int64_t GetJobId() const { return id_; }
 
+    template< typename T >
+    void SetCallback( T *obj, void (T::*f)( const std::string &result ) )
+    {
+        callback_ = boost::bind( f, obj->shared_from_this(), _1 );
+    }
+
+    void RunCallback( const std::string &result ) const
+    {
+        if ( callback_ )
+            callback_( result );
+    }
+
 private:
     std::string script_;
     std::string scriptLanguage_;
@@ -38,6 +52,8 @@ private:
 	int maxFailedNodes_;
     int timeout_;
     int64_t id_;
+
+    boost::function< void (const std::string &) > callback_;
 };
 
 class JobQueue

@@ -25,23 +25,22 @@ bool JDLJason::ParseJob( const std::string &job_description, boost::property_tre
     return true;
 }
 
-bool JobManager::PushJob( const std::string &job_description )
+Job *JobManager::CreateJob( const std::string &job_description ) const
 {
     boost::property_tree::ptree ptree;
     JDLJason parser;
     if ( !parser.ParseJob( job_description, ptree ) )
-        return false;
+        return NULL;
 
-    Job *job = CreateJob( ptree );
-    if ( !job )
-        return false;
+    return CreateJob( ptree );
+}
 
+void JobManager::PushJob( Job *job )
+{
     PS_LOG( "push job" );
     jobs_.PushJob( job );
 
     Sheduler::Instance().OnNewJob( job );
-
-    return true;
 }
 
 Job *JobManager::GetJobById( int64_t jobId )
