@@ -27,9 +27,12 @@ public:
 	unsigned int GetScriptLength() const { return scriptLength_; }
 
     int GetNumNodes() const { return numNodes_; }
+    int GetNumPlannedExec() const { return numPlannedExec_; }
     int GetMaxFailedNodes() const { return maxFailedNodes_; }
     int GetTimeout() const { return timeout_; }
     int64_t GetJobId() const { return id_; }
+
+    void SetNumPlannedExec( int val ) { numPlannedExec_ = val; }
 
     template< typename T >
     void SetCallback( T *obj, void (T::*f)( const std::string &result ) )
@@ -49,6 +52,7 @@ private:
     unsigned int scriptLength_;
 
     int numNodes_;
+    int numPlannedExec_;
 	int maxFailedNodes_;
     int timeout_;
     int64_t id_;

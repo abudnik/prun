@@ -22,7 +22,27 @@ public:
                           AdminSession *session ) = 0;
 };
 
+class Job;
 class AdminCommand_Job : public AdminCommand
+{
+public:
+    virtual void Execute( const std::string &command,
+                          const boost::property_tree::ptree &ptree,
+                          AdminSession *session );
+
+private:
+    void PrintJobInfo( Job *job, AdminSession *session ) const;
+};
+
+class AdminCommand_Info : public AdminCommand
+{
+public:
+    virtual void Execute( const std::string &command,
+                          const boost::property_tree::ptree &ptree,
+                          AdminSession *session );
+};
+
+class AdminCommand_Stat : public AdminCommand
 {
 public:
     virtual void Execute( const std::string &command,

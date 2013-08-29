@@ -85,7 +85,10 @@ void Sheduler::PlanJobExecution()
 
     int numNodes = job->GetNumNodes();
     if ( numNodes <= 0 )
+    {
         numNodes = WorkerManager::Instance().GetTotalWorkers();
+        job->SetNumPlannedExec( numNodes );
+    }
 
     int64_t jobId = job->GetJobId();
 
@@ -291,11 +294,7 @@ void Sheduler::RunJobCallback( Job *job )
 {
     std::ostringstream ss;
     ss << "================" << std::endl <<
-        "free workers = " << freeWorkers_.size() << std::endl <<
-        "failed workers = " << failedWorkers_.size() << std::endl <<
-        "sending workers = " << sendingJobWorkers_.size() << std::endl <<
-        "jobs = " << jobs_.size() << std::endl <<
-        "need reschedule = " << needReschedule_.size() << std::endl <<
+        "Job completed, jobId = " << job->GetJobId() << std::endl <<
         "================";
 
     job->RunCallback( ss.str() );
@@ -357,6 +356,18 @@ bool Sheduler::NeedToSendTask() const
     return ( !freeWorkers_.empty() ) && ( !tasksToSend_.empty() || !needReschedule_.empty() );
 }
 
+Job *Sheduler::FindJobByJobId( int64_t jobId ) const
+{
+    std::list< Job * >::const_iterator it = jobs_.begin();
+    for( ; it != jobs_.end(); ++it )
+    {
+        Job *job = *it;
+        if ( job->GetJobId() == jobId )
+            return job;
+    }
+    return NULL;
+}
+
 /*bool Sheduler::IsWorkerBusy( const std::string &hostIP, int64_t jobId, int taskId )
 {
     boost::mutex::scoped_lock scoped_lock( workersMut_ );
@@ -375,6 +386,83 @@ void Sheduler::Shutdown()
 		delete jobs_.front();
 		jobs_.pop_front();
 	}
+}
+
+void Sheduler::GetJobInfo( std::string &info, int64_t jobId )
+{
+    std::ostringstream ss;
+    boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+    boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+
+    Job *job = FindJobByJobId( jobId );
+    if ( !job )
+    {
+        ss << "job isn't executing now, jobId = " << jobId;
+        info = ss.str();
+        return;
+    }
+
+    ss << "================" << std::endl <<
+        "Job info, jobId = " << job->GetJobId() << std::endl;
+
+    {
+        std::map< int64_t, int >::const_iterator it = jobExecutions_.find( jobId );
+        if ( it != jobExecutions_.end() )
+        {
+            int numNodes = job->GetNumPlannedExec();
+            ss << "job executions = " << numNodes - it->second << std::endl <<
+                "total planned executions = " << numNodes << std::endl;
+        }
+    }
+
+    {
+        int num = 0;
+        IPToWorker::const_iterator it = busyWorkers_.begin();
+        for( ; it != busyWorkers_.end(); ++it )
+        {
+            const WorkerJob &job = it->second->GetJob();
+            if ( job.jobId_ == jobId )
+                ++num;
+        }
+        ss << "busy workers = " << num << std::endl;
+    }
+
+    {
+        int num = 0;
+        IPToWorker::const_iterator it = sendingJobWorkers_.begin();
+        for( ; it != sendingJobWorkers_.end(); ++it )
+        {
+            const WorkerJob &job = it->second->GetJob();
+            if ( job.jobId_ == jobId )
+                ++num;
+        }
+        ss << "sending workers = " << num << std::endl;
+    }
+
+    ss << "================";
+    info = ss.str();
+}
+
+void Sheduler::GetStatistics( std::string &stat )
+{
+    size_t numJobs, numReschedule;
+    {
+        boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+        numJobs = jobs_.size();
+        numReschedule = needReschedule_.size();
+    }
+
+    std::ostringstream ss;
+    ss << "================" << std::endl <<
+        "busy workers = " << busyWorkers_.size() << std::endl <<
+        "free workers = " << freeWorkers_.size() << std::endl <<
+        "failed workers = " << failedWorkers_.size() << std::endl <<
+        "sending workers = " << sendingJobWorkers_.size() << std::endl <<
+        "jobs = " << numJobs << std::endl <<
+        "need reschedule = " << numReschedule << std::endl <<
+        "================";
+
+    stat = ss.str();
 }
 
 } // namespace master

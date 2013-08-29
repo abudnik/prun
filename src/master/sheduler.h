@@ -28,6 +28,9 @@ public:
 
     void OnJobTimeout( const WorkerJob &workerJob, const std::string &hostIP );
 
+    void GetJobInfo( std::string &info, int64_t jobId );
+    void GetStatistics( std::string &stat );
+
     static Sheduler &Instance()
     {
         static Sheduler instance_;
@@ -45,6 +48,8 @@ private:
     bool CheckIfWorkerFailedJob( Worker *worker, int64_t jobId ) const;
     bool CanTakeNewJob() const;
     bool NeedToSendTask() const;
+
+    Job *FindJobByJobId( int64_t jobId ) const;
 
 private:
 	IPToWorker busyWorkers_, freeWorkers_, sendingJobWorkers_;

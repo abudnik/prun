@@ -53,7 +53,6 @@ class ResultGetter(Thread):
             msg = self.connection.Receive()
             if msg is None or len(msg) == 0:
                 break
-            print( "Command completed:" )
             print( msg )
             sys.stdout.write( '> ' )
             sys.stdout.flush()
@@ -67,6 +66,19 @@ class Command_Job():
             raise e
         return json.JSONEncoder().encode( {"command" : "job", "file" : path} )
 
+class Command_Info():
+    def Prepare(self, cmd):
+        try:
+            jobId = int( cmd.split()[1] )
+        except Exception as e:
+            print( "invalid jobId argument" )
+            raise e
+        return json.JSONEncoder().encode( {"command" : "info", "job_id" : jobId} )
+
+class Command_Stat():
+    def Prepare(self, cmd):
+        return json.JSONEncoder().encode( {"command" : "stat"} )
+
 class Command_Test():
     def Prepare(self, cmd):
         msg = '{"command":"job","file":"/home/budnik/dev/PythonServer/test/test.job"}'
@@ -77,6 +89,8 @@ class CommandDispatcher():
     _instance = None
     def __init__(self):
         self.map_ = {'job'   : Command_Job(),
+                     'info'  : Command_Info(),
+                     'stat'  : Command_Stat(),
                      'test'  : Command_Test()}
 
     @classmethod
@@ -110,6 +124,8 @@ class Master():
 def PrintHelp():
     print( "Commands:" )
     print( "  job /path/to/job/file -- run job, which described in .job file" )
+    print( "  info <job_id>         -- show job execution statistics" )
+    print( "  stat                  -- show master statistics" )
     print( "  exit, e               -- quit program" )
 
 def UserPrompt():
