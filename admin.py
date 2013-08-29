@@ -28,7 +28,7 @@ class Connection():
     def Send(self, msg):
         msg = self.AddHeader( msg )
         try:
-            self.socket.send(msg)
+            self.socket.send( msg.encode( "utf-8" ) )
         except Exception as e:
             Exit( "couldn't send command to master" )
 
@@ -53,7 +53,7 @@ class ResultGetter(Thread):
             msg = self.connection.Receive()
             if msg is None or len(msg) == 0:
                 break
-            print( msg )
+            print( msg.decode( "utf-8" ) )
             sys.stdout.write( '> ' )
             sys.stdout.flush()
 
@@ -161,7 +161,7 @@ def Main():
             master.DoCommand( line )
             lastCmd = line
     except Exception as e:
-        print e
+        print( e )
 
     con.Close()
     resultGetter.join()
