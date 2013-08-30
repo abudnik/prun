@@ -96,7 +96,8 @@ private:
         {
             std::string script64;
             parser->ParseSendScript( body, language_, script64, jobId_, taskId_ );
-            DecodeBase64( script64, script_ );
+            if ( !DecodeBase64( script64, script_ ) )
+                return false;
 
             scriptLength_ = script_.size();
             return true;

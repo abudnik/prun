@@ -79,9 +79,8 @@ bool JobManager::ReadScript( const std::string &fileName, std::string &script ) 
         boost::trim_right( line );
         data += line + '\n';
     }
-    python_server::EncodeBase64( data.c_str(), data.size(), script );
 
-    return true;
+    return python_server::EncodeBase64( data.c_str(), data.size(), script );
 }
 
 Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const

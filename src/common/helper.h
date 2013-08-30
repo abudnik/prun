@@ -27,6 +27,7 @@ the License.
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/binary_from_base64.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
+#include "common/log.h"
 
 namespace python_server {
 
@@ -80,23 +81,56 @@ private:
 };
 
 template< typename T >
-void EncodeBase64( const T *data, std::size_t size, std::string &out )
+bool EncodeBase64( const T *data, std::size_t size, std::string &out )
 {
-  using namespace boost::archive::iterators;
-  typedef base64_from_binary< transform_width< char*, 6, 8 > > translate_out;
-  out.append( translate_out( data ), translate_out( data + size ) );
+    using namespace boost::archive::iterators;
+    typedef base64_from_binary< transform_width< char*, 6, 8, boost::uint8_t > > translate_out;
+    try
+    {
+        out.append( translate_out( data ), translate_out( data + size ) );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "EncodeBase64: " << e.what() );
+        return false;
+    }
+    return true;
 }
 
 template< typename Container >
-void DecodeBase64( std::string &data, Container &out )
+bool DecodeBase64( std::string &data, Container &out )
 {
-  using namespace boost::archive::iterators;
-  typedef transform_width< binary_from_base64< std::string::const_iterator >, 8, 6 > translate_in;
+    using namespace boost::archive::iterators;
+    typedef transform_width< binary_from_base64< std::string::const_iterator >, 8, 6, boost::uint8_t > translate_in;
 
-  std::size_t padding = data.size() % 4;
-  data.append( padding, std::string::value_type( '=' ) );
+    std::size_t padding = data.size() % 4;
+    data.append( padding, std::string::value_type( '=' ) );
 
-  std::copy( translate_in( data.begin() ), translate_in( data.end() - padding ), std::back_inserter( out ) );
+    try
+    {
+        std::copy( translate_in( data.begin() ), translate_in( data.end() - padding ), std::back_inserter( out ) );
+    }
+    catch( std::exception &e )
+    {
+        // crutch for different base64 decode behaviour varying on boost version 
+        try
+        {
+            out.clear();
+            std::size_t pos = data.size();
+            if ( padding )
+            {
+                pos = data.find_last_not_of( std::string::value_type( '=' ) );
+                pos = ( pos == data.size() - 1 ) ? data.size() : pos;
+            }
+            std::copy( translate_in( data.begin() ), translate_in( data.begin() + pos ), std::back_inserter( out ) );
+        }
+        catch( std::exception &e )
+        {
+            PS_LOG( "DecodeBase64: " << e.what() );
+            return false;
+        }
+    }
+    return true;
 }
 
 } // namespace python_server
