@@ -41,13 +41,14 @@ public:
 
 private:
 	void PlanJobExecution();
+    bool SheduleTask( WorkerJob &workerJob, std::string &hostIP, Job **job,
+                      int64_t jobId, int taskId, bool reschedule );
 
     void RunJobCallback( Job *job );
     void RemoveJob( int64_t jobId );
 
     bool CheckIfWorkerFailedJob( Worker *worker, int64_t jobId ) const;
     bool CanTakeNewJob() const;
-    bool NeedToSendTask() const;
 
     Job *FindJobByJobId( int64_t jobId ) const;
 
