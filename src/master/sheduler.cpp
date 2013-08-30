@@ -164,23 +164,17 @@ bool Sheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **j
     // firstly, check if there is a task which needs to reschedule
     if ( !needReschedule_.empty() )
     {
-        WorkerJob workerJob = needReschedule_.front();
-        jobId = workerJob.jobId_;
-        taskId = workerJob.taskId_;
+        std::list< WorkerJob >::const_iterator it = needReschedule_.begin();
+        for( ; it != needReschedule_.end(); ++it )
+        {
+            workerJob = *it;
+            jobId = workerJob.jobId_;
+            taskId = workerJob.taskId_;
 
-        if ( SheduleTask( workerJob, hostIP, job,
-                          jobId, taskId, true ) )
-            return true;
-    }
-
-    if ( tasksToSend_.empty() )
-    {
-        // if there is any worker available, but all queued jobs are
-        // sended to workers, then take next job from job mgr queue
-        scoped_lock_j.unlock();
-        scoped_lock_w.unlock();
-        PlanJobExecution();
-        return false;
+            if ( SheduleTask( workerJob, hostIP, job,
+                              jobId, taskId, true ) )
+                return true;
+        }
     }
 
     std::list< Job * >::const_iterator it = jobs_.begin();
@@ -193,10 +187,17 @@ bool Sheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **j
         if ( !tasks.empty() )
         {
             taskId = *tasks.begin();
-            return SheduleTask( workerJob, hostIP, job,
-                                jobId, taskId, false );
+            if ( SheduleTask( workerJob, hostIP, job,
+                              jobId, taskId, false ) )
+                return true;
         }
     }
+
+    // if there is any worker available, but all queued jobs are
+    // sended to workers, then take next job from job mgr queue
+    scoped_lock_j.unlock();
+    scoped_lock_w.unlock();
+    PlanJobExecution();
 
     return false;
 }
