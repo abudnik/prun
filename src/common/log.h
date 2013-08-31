@@ -26,9 +26,9 @@ the License.
 
 #define PS_LOG( MSG )\
 {\
-	std::ostringstream os;\
-	os << MSG;\
-	python_server::logger::Log( os.str().c_str() );	\
+    std::ostringstream os;\
+    os << MSG;\
+    python_server::logger::Log( os.str().c_str() ); \
 }
 
 namespace python_server {

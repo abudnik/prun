@@ -13,18 +13,18 @@ class Job
 {
 public:
     Job( const char *script, const char *scriptLanguage, int numNodes,
-		 int maxFailedNodes, int timeout )
+         int maxFailedNodes, int timeout )
     : script_( script ), scriptLanguage_( scriptLanguage ), numNodes_( numNodes ),
-	 maxFailedNodes_( maxFailedNodes ), timeout_( timeout )
+     maxFailedNodes_( maxFailedNodes ), timeout_( timeout )
     {
         static int64_t numJobs;
         scriptLength_ = script_.size();
         id_ = numJobs++;
     }
 
-	const std::string &GetScript() const { return script_; }
-	const std::string &GetScriptLanguage() const { return scriptLanguage_; }
-	unsigned int GetScriptLength() const { return scriptLength_; }
+    const std::string &GetScript() const { return script_; }
+    const std::string &GetScriptLanguage() const { return scriptLanguage_; }
+    unsigned int GetScriptLength() const { return scriptLength_; }
 
     int GetNumNodes() const { return numNodes_; }
     int GetNumPlannedExec() const { return numPlannedExec_; }
@@ -53,7 +53,7 @@ private:
 
     int numNodes_;
     int numPlannedExec_;
-	int maxFailedNodes_;
+    int maxFailedNodes_;
     int timeout_;
     int64_t id_;
 
@@ -74,7 +74,7 @@ public:
 
     Job *GetJobById( int64_t jobId );
 
-	void Clear( bool doDelete = true );
+    void Clear( bool doDelete = true );
 
 private:
     std::list< Job * > jobs_;

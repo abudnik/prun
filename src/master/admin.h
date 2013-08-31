@@ -69,24 +69,24 @@ private:
 
 class AdminSession : public boost::enable_shared_from_this< AdminSession >
 {
-	typedef boost::array< char, 32 * 1024 > BufferType;
+    typedef boost::array< char, 32 * 1024 > BufferType;
 
 public:
-	AdminSession( boost::asio::io_service &io_service )
-	: socket_( io_service ),
+    AdminSession( boost::asio::io_service &io_service )
+    : socket_( io_service ),
      request_( true ),
-	 io_service_( io_service )
-	{}
+     io_service_( io_service )
+    {}
 
-	~AdminSession()
-	{
+    ~AdminSession()
+    {
         if ( !remoteIP_.empty() )
             PS_LOG( "~AdminSession " << remoteIP_ );
-	}
+    }
 
     void Start();
 
-	tcp::socket &GetSocket() { return socket_; }
+    tcp::socket &GetSocket() { return socket_; }
 
     void OnCommandCompletion( const std::string &result );
 
@@ -98,37 +98,37 @@ private:
     void HandleRequest();
 
 private:
-	tcp::socket socket_;
-	BufferType buffer_;
+    tcp::socket socket_;
+    BufferType buffer_;
     python_server::Request< BufferType > request_;
     std::string remoteIP_;
-	boost::asio::io_service &io_service_;
+    boost::asio::io_service &io_service_;
 };
 
 class AdminConnection
 {
-	typedef boost::shared_ptr< AdminSession > session_ptr;
+    typedef boost::shared_ptr< AdminSession > session_ptr;
 
 public:
     AdminConnection( boost::asio::io_service &io_service )
     : io_service_( io_service ),
      acceptor_( io_service )
     {
-		try
-		{
-		    tcp::endpoint endpoint( tcp::v4(), MASTER_ADMIN_PORT );
-			acceptor_.open( endpoint.protocol() );
-			acceptor_.set_option( tcp::acceptor::reuse_address( true ) );
-			acceptor_.set_option( tcp::no_delay( true ) );
-			acceptor_.bind( endpoint );
-			acceptor_.listen();
-		}
-		catch( std::exception &e )
-		{
-			PS_LOG( "AdminConnection: " << e.what() );
-		}
+        try
+        {
+            tcp::endpoint endpoint( tcp::v4(), MASTER_ADMIN_PORT );
+            acceptor_.open( endpoint.protocol() );
+            acceptor_.set_option( tcp::acceptor::reuse_address( true ) );
+            acceptor_.set_option( tcp::no_delay( true ) );
+            acceptor_.bind( endpoint );
+            acceptor_.listen();
+        }
+        catch( std::exception &e )
+        {
+            PS_LOG( "AdminConnection: " << e.what() );
+        }
 
-		StartAccept();
+        StartAccept();
     }
 
 private:
@@ -136,8 +136,8 @@ private:
     void HandleAccept( session_ptr session, const boost::system::error_code &error );
 
 private:
-	boost::asio::io_service &io_service_;
-	tcp::acceptor acceptor_;
+    boost::asio::io_service &io_service_;
+    tcp::acceptor acceptor_;
 };
 
 } // namespace master

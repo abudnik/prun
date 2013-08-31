@@ -23,7 +23,7 @@ public:
     virtual void Start() = 0;
 
 protected:
-	python_server::Protocol *protocol_;
+    python_server::Protocol *protocol_;
 };
 
 using boost::asio::ip::udp;

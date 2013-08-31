@@ -19,15 +19,15 @@ enum WorkerState
 struct WorkerJob
 {
     WorkerJob( int64_t jobId, int taskId ) : jobId_( jobId ), taskId_( taskId ) {}
-	WorkerJob() : jobId_( -1 ), taskId_( -1 ) {}
+    WorkerJob() : jobId_( -1 ), taskId_( -1 ) {}
 
     bool operator == ( const WorkerJob &workerJob ) const
     {
         return jobId_ == workerJob.jobId_ && taskId_ == workerJob.taskId_;
     }
 
-	int64_t jobId_;
-	int taskId_;
+    int64_t jobId_;
+    int taskId_;
 };
 
 class Worker
@@ -35,7 +35,7 @@ class Worker
 public:
     Worker( const std::string &host )
     : host_( host ),
-	 state_( WORKER_STATE_NOT_AVAIL ),
+     state_( WORKER_STATE_NOT_AVAIL ),
      numCores_( 1 ), numPingResponse_( 0 )
     {}
 
@@ -52,19 +52,19 @@ public:
     void SetNumPingResponse( int num ) { numPingResponse_ = num; }
     void IncNumPingResponse() { ++numPingResponse_; }
 
-	const std::string &GetHost() const { return host_; }
-	const std::string &GetIP() const { return ip_; }
-	int GetNumCores() const { return numCores_; }
-	WorkerState GetState() const { return state_; }
-	const WorkerJob &GetJob() const { return job_; }
+    const std::string &GetHost() const { return host_; }
+    const std::string &GetIP() const { return ip_; }
+    int GetNumCores() const { return numCores_; }
+    WorkerState GetState() const { return state_; }
+    const WorkerJob &GetJob() const { return job_; }
     int GetNumPingResponse() const { return numPingResponse_; }
 
 private:
     std::string host_;
     std::string ip_;
     WorkerState state_;
-	WorkerJob job_;
-	int numCores_;
+    WorkerJob job_;
+    int numCores_;
     int numPingResponse_;
 };
 

@@ -27,7 +27,7 @@ public:
 
 private:
     std::string configPath_;
-	boost::property_tree::ptree ptree_;
+    boost::property_tree::ptree ptree_;
 };
 
 } // namespace python_server

@@ -40,9 +40,9 @@ void JobCompletionPingerBoost::StartPing()
 
 void JobCompletionPingerBoost::PingMaster( const JobDescriptor &descr )
 {
-	std::string msg;
+    std::string msg;
     protocol_->NodeJobCompletionPing( msg, descr.jobId, descr.taskId );
-	PS_LOG( msg );
+    PS_LOG( msg );
 
     udp::endpoint master_endpoint( boost::asio::ip::address::from_string( descr.masterIP ),
                                    DEFAULT_MASTER_UDP_PORT );

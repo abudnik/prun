@@ -12,28 +12,28 @@ namespace master {
 void ResultGetter::Run()
 {
     WorkerJob workerJob;
-	std::string hostIP;
+    std::string hostIP;
 
     WorkerManager &workerMgr = WorkerManager::Instance();
-	workerMgr.Subscribe( this );
+    workerMgr.Subscribe( this );
 
     bool getTask = false;
     while( !stopped_ )
     {
         if ( !getTask )
-		{
-			boost::unique_lock< boost::mutex > lock( awakeMut_ );
-			if ( !newJobAvailable_ )
-				awakeCond_.wait( lock );
+        {
+            boost::unique_lock< boost::mutex > lock( awakeMut_ );
+            if ( !newJobAvailable_ )
+                awakeCond_.wait( lock );
             newJobAvailable_ = false;
-		}
+        }
 
         getTask = workerMgr.GetAchievedWorker( workerJob, hostIP );
-		if ( getTask )
-		{
-			PS_LOG( "Get achieved work " << workerJob.jobId_ << " : " << workerJob.taskId_ );
-			GetJobResult( workerJob, hostIP );
-		}
+        if ( getTask )
+        {
+            PS_LOG( "Get achieved work " << workerJob.jobId_ << " : " << workerJob.taskId_ );
+            GetJobResult( workerJob, hostIP );
+        }
     }
 }
 
@@ -47,7 +47,7 @@ void ResultGetter::Stop()
 void ResultGetter::NotifyObserver( int event )
 {
     boost::unique_lock< boost::mutex > lock( awakeMut_ );
-	newJobAvailable_ = true;
+    newJobAvailable_ = true;
     awakeCond_.notify_all();
 }
 
@@ -64,13 +64,13 @@ void ResultGetterBoost::Start()
 }
 
 void ResultGetterBoost::GetJobResult( const WorkerJob &workerJob, const std::string &hostIP )
-{	
-	getJobsSem_.Wait();
+{   
+    getJobsSem_.Wait();
 
-	GetterBoost::getter_ptr getter(
-		new GetterBoost( io_service_, this, workerJob, hostIP )
-	);
-	getter->GetJobResult();
+    GetterBoost::getter_ptr getter(
+        new GetterBoost( io_service_, this, workerJob, hostIP )
+    );
+    getter->GetJobResult();
 }
 
 void ResultGetterBoost::OnGetJobResult( bool success, int errCode, const WorkerJob &workerJob, const std::string &hostIP )
@@ -81,20 +81,20 @@ void ResultGetterBoost::OnGetJobResult( bool success, int errCode, const WorkerJ
 
 void GetterBoost::GetJobResult()
 {
-	tcp::endpoint nodeEndpoint(
-		boost::asio::ip::address::from_string( hostIP_ ),
-	    NODE_PORT
+    tcp::endpoint nodeEndpoint(
+        boost::asio::ip::address::from_string( hostIP_ ),
+        NODE_PORT
     );
 
     socket_.async_connect( nodeEndpoint,
-						   boost::bind( &GetterBoost::HandleConnect, shared_from_this(),
-										boost::asio::placeholders::error ) );
+                           boost::bind( &GetterBoost::HandleConnect, shared_from_this(),
+                                        boost::asio::placeholders::error ) );
 }
 
 void GetterBoost::HandleConnect( const boost::system::error_code &error )
 {
-	if ( !error )
-	{
+    if ( !error )
+    {
         MakeRequest();
 
         boost::asio::async_read( socket_,
@@ -108,12 +108,12 @@ void GetterBoost::HandleConnect( const boost::system::error_code &error )
                                   boost::bind( &GetterBoost::HandleWrite, shared_from_this(),
                                                boost::asio::placeholders::error,
                                                boost::asio::placeholders::bytes_transferred ) );
-	}
-	else
-	{
-		PS_LOG( "GetterBoost::HandleConnect error=" << error.message() );
-		getter_->OnGetJobResult( false, 0, workerJob_, hostIP_ );
-	}
+    }
+    else
+    {
+        PS_LOG( "GetterBoost::HandleConnect error=" << error.message() );
+        getter_->OnGetJobResult( false, 0, workerJob_, hostIP_ );
+    }
 }
 
 void GetterBoost::HandleWrite( const boost::system::error_code &error, size_t bytes_transferred )
@@ -127,63 +127,63 @@ void GetterBoost::HandleWrite( const boost::system::error_code &error, size_t by
 
 void GetterBoost::FirstRead( const boost::system::error_code& error, size_t bytes_transferred )
 {
-	if ( !error )
-	{
+    if ( !error )
+    {
         if ( firstRead_ )
         {
             // skip node's read completion status byte
             firstRead_ = false;
-			socket_.async_read_some( boost::asio::buffer( buffer_ ),
-									 boost::bind( &GetterBoost::FirstRead, shared_from_this(),
-												  boost::asio::placeholders::error,
-												  boost::asio::placeholders::bytes_transferred ) );
-			return;
+            socket_.async_read_some( boost::asio::buffer( buffer_ ),
+                                     boost::bind( &GetterBoost::FirstRead, shared_from_this(),
+                                                  boost::asio::placeholders::error,
+                                                  boost::asio::placeholders::bytes_transferred ) );
+            return;
         }
 
-		int ret = response_.OnFirstRead( buffer_, bytes_transferred );
-		if ( ret == 0 )
-		{
-			socket_.async_read_some( boost::asio::buffer( buffer_ ),
-									 boost::bind( &GetterBoost::FirstRead, shared_from_this(),
-												  boost::asio::placeholders::error,
-												  boost::asio::placeholders::bytes_transferred ) );
-			return;
-		}
-	}
-	else
-	{
-		PS_LOG( "GetterBoost::FirstRead error=" << error.message() );
-	}
+        int ret = response_.OnFirstRead( buffer_, bytes_transferred );
+        if ( ret == 0 )
+        {
+            socket_.async_read_some( boost::asio::buffer( buffer_ ),
+                                     boost::bind( &GetterBoost::FirstRead, shared_from_this(),
+                                                  boost::asio::placeholders::error,
+                                                  boost::asio::placeholders::bytes_transferred ) );
+            return;
+        }
+    }
+    else
+    {
+        PS_LOG( "GetterBoost::FirstRead error=" << error.message() );
+    }
 
-	HandleRead( error, bytes_transferred );
+    HandleRead( error, bytes_transferred );
 }
 
 void GetterBoost::HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
 {
-	if ( !error )
-	{
-		response_.OnRead( buffer_, bytes_transferred );
+    if ( !error )
+    {
+        response_.OnRead( buffer_, bytes_transferred );
 
-		if ( !response_.IsReadCompleted() )
-		{
-			socket_.async_read_some( boost::asio::buffer( buffer_ ),
-									 boost::bind( &GetterBoost::HandleRead, shared_from_this(),
-												  boost::asio::placeholders::error,
-												  boost::asio::placeholders::bytes_transferred ) );
-		}
-		else
-		{
-			if ( !HandleResponse() )
+        if ( !response_.IsReadCompleted() )
+        {
+            socket_.async_read_some( boost::asio::buffer( buffer_ ),
+                                     boost::bind( &GetterBoost::HandleRead, shared_from_this(),
+                                                  boost::asio::placeholders::error,
+                                                  boost::asio::placeholders::bytes_transferred ) );
+        }
+        else
+        {
+            if ( !HandleResponse() )
             {
                 getter_->OnGetJobResult( false, 0, workerJob_, hostIP_ );
             }
-		}
-	}
-	else
-	{
-		PS_LOG( "GetterBoost::HandleRead error=" << error.message() );
-		getter_->OnGetJobResult( false, 0, workerJob_, hostIP_ );
-	}
+        }
+    }
+    else
+    {
+        PS_LOG( "GetterBoost::HandleRead error=" << error.message() );
+        getter_->OnGetJobResult( false, 0, workerJob_, hostIP_ );
+    }
 }
 
 bool GetterBoost::HandleResponse()

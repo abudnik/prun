@@ -36,33 +36,33 @@ const char *serviceName = "";
 
 void InitLogger( bool isDaemon, const char *serviceName )
 {
-	logger::isDaemon = isDaemon;
-	logger::serviceName = serviceName;
+    logger::isDaemon = isDaemon;
+    logger::serviceName = serviceName;
 
-	if ( isDaemon )
-	{
-		openlog( serviceName, LOG_CONS, LOG_DAEMON );
-	}
+    if ( isDaemon )
+    {
+        openlog( serviceName, LOG_CONS, LOG_DAEMON );
+    }
 }
 
 void ShutdownLogger()
 {
-	if ( isDaemon )
-	{
-		closelog();
-	}
+    if ( isDaemon )
+    {
+        closelog();
+    }
 }
 
 void Log( const char *msg )
 {
-	if ( isDaemon )
-	{
-		syslog( LOG_INFO, "%s", msg );
-	}
-	else
-	{
-		std::cout << serviceName << ": " <<  msg << std::endl;
-	}
+    if ( isDaemon )
+    {
+        syslog( LOG_INFO, "%s", msg );
+    }
+    else
+    {
+        std::cout << serviceName << ": " <<  msg << std::endl;
+    }
 }
 
 } // namespace logger

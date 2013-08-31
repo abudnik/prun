@@ -14,8 +14,8 @@ void AdminCommand_Job::Execute( const std::string &command,
                                 const boost::property_tree::ptree &ptree,
                                 AdminSession *session )
 {
-	try
-	{
+    try
+    {
         std::string filePath = ptree.get<std::string>( "file" );
         // read job description from file
         std::ifstream file( filePath.c_str() );
@@ -36,11 +36,11 @@ void AdminCommand_Job::Execute( const std::string &command,
             JobManager::Instance().PushJob( job );
             PrintJobInfo( job, session );
         }
-	}
-	catch( std::exception &e )
-	{
-		PS_LOG( "AdminCommand_Job::Execute: " << e.what() );
-	}
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_Job::Execute: " << e.what() );
+    }
 }
 
 void AdminCommand_Job::PrintJobInfo( Job *job, AdminSession *session ) const
@@ -54,17 +54,17 @@ void AdminCommand_Info::Execute( const std::string &command,
                                  const boost::property_tree::ptree &ptree,
                                  AdminSession *session )
 {
-	try
-	{
+    try
+    {
         int64_t jobId = ptree.get<int64_t>( "job_id" );
         std::string info;
         Sheduler::Instance().GetJobInfo( info, jobId );
         session->OnCommandCompletion( info );
-	}
-	catch( std::exception &e )
-	{
-		PS_LOG( "AdminCommand_Stat::Execute: " << e.what() );
-	}
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_Stat::Execute: " << e.what() );
+    }
 }
 
 
@@ -72,16 +72,16 @@ void AdminCommand_Stat::Execute( const std::string &command,
                                  const boost::property_tree::ptree &ptree,
                                  AdminSession *session )
 {
-	try
-	{
+    try
+    {
         std::string stat;
         Sheduler::Instance().GetStatistics( stat );
         session->OnCommandCompletion( stat );
-	}
-	catch( std::exception &e )
-	{
-		PS_LOG( "AdminCommand_Stat::Execute: " << e.what() );
-	}
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_Stat::Execute: " << e.what() );
+    }
 }
 
 void AdminCommandDispatcher::Initialize()
@@ -185,19 +185,19 @@ void AdminSession::HandleRequest()
     PS_LOG( request_.GetString() );
 
     std::string command;
-	std::istringstream ss( request_.GetString() );
+    std::istringstream ss( request_.GetString() );
 
-	boost::property_tree::ptree ptree;
-	try
-	{
-		boost::property_tree::read_json( ss, ptree );
+    boost::property_tree::ptree ptree;
+    try
+    {
+        boost::property_tree::read_json( ss, ptree );
         command = ptree.get<std::string>( "command" );
-	}
-	catch( std::exception &e )
-	{
-		PS_LOG( "AdminSession::HandleRequest: " << e.what() );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminSession::HandleRequest: " << e.what() );
         return;
-	}
+    }
 
     AdminCommand *adminCommand = AdminCommandDispatcher::Instance().Get( command );
     if ( adminCommand )

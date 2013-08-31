@@ -60,7 +60,7 @@ Job *JobManager::GetTopJob()
 
 void JobManager::Shutdown()
 {
-	jobs_.Clear();
+    jobs_.Clear();
 }
 
 bool JobManager::ReadScript( const std::string &fileName, std::string &script ) const
@@ -104,7 +104,7 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
         int maxFailedNodes = ptree.get<int>( "max_failed_nodes" );
 
         Job *job = new Job( script.c_str(), language.c_str(), numNodes,
-							maxFailedNodes, timeout );
+                            maxFailedNodes, timeout );
         return job;
     }
     catch( std::exception &e )

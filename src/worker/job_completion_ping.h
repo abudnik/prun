@@ -16,13 +16,13 @@ public:
     JobCompletionPinger( int pingTimeout )
     : stopped_( false ), pingTimeout_( pingTimeout )
     {
-		protocol_ = new ProtocolJson;
-	}
+        protocol_ = new ProtocolJson;
+    }
 
-	virtual ~JobCompletionPinger()
-	{
-		delete protocol_;
-	}
+    virtual ~JobCompletionPinger()
+    {
+        delete protocol_;
+    }
 
     virtual void StartPing() = 0;
 
@@ -38,7 +38,7 @@ protected:
     bool stopped_;
     SyncTimer timer_;
     int pingTimeout_;
-	Protocol *protocol_;
+    Protocol *protocol_;
 };
 
 

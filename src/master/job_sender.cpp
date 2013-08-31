@@ -9,30 +9,30 @@ namespace master {
 
 void JobSender::Run()
 {
-	WorkerJob workerJob;
-	std::string hostIP;
+    WorkerJob workerJob;
+    std::string hostIP;
     Job *job;
 
     Sheduler &sheduler = Sheduler::Instance();
-	sheduler.Subscribe( this );
+    sheduler.Subscribe( this );
 
     bool getTask = false;
     while( !stopped_ )
     {
         if ( !getTask )
-		{
-			boost::unique_lock< boost::mutex > lock( awakeMut_ );
-			if ( !newJobAvailable_ )
-				awakeCond_.wait( lock );
+        {
+            boost::unique_lock< boost::mutex > lock( awakeMut_ );
+            if ( !newJobAvailable_ )
+                awakeCond_.wait( lock );
             newJobAvailable_ = false;
-		}
+        }
 
         getTask = sheduler.GetTaskToSend( workerJob, hostIP, &job );
-		if ( getTask )
-		{
-			PS_LOG( "Get task " << workerJob.jobId_ << " : " << workerJob.taskId_ );
-			SendJob( workerJob, hostIP, job );
-		}
+        if ( getTask )
+        {
+            PS_LOG( "Get task " << workerJob.jobId_ << " : " << workerJob.taskId_ );
+            SendJob( workerJob, hostIP, job );
+        }
     }
 }
 
@@ -46,7 +46,7 @@ void JobSender::Stop()
 void JobSender::NotifyObserver( int event )
 {
     boost::unique_lock< boost::mutex > lock( awakeMut_ );
-	newJobAvailable_ = true;
+    newJobAvailable_ = true;
     awakeCond_.notify_all();
 }
 
@@ -66,13 +66,13 @@ void JobSenderBoost::Start()
 }
 
 void JobSenderBoost::SendJob( const WorkerJob &workerJob, const std::string &hostIP, const Job *job )
-{	
-	sendJobsSem_.Wait();
+{   
+    sendJobsSem_.Wait();
 
-	SenderBoost::sender_ptr sender(
-		new SenderBoost( io_service_, sendBufferSize_, this, workerJob, hostIP, job )
-	);
-	sender->Send();
+    SenderBoost::sender_ptr sender(
+        new SenderBoost( io_service_, sendBufferSize_, this, workerJob, hostIP, job )
+    );
+    sender->Send();
 }
 
 void JobSenderBoost::OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job )
@@ -83,20 +83,20 @@ void JobSenderBoost::OnJobSendCompletion( bool success, const WorkerJob &workerJ
 
 void SenderBoost::Send()
 {
-	tcp::endpoint nodeEndpoint(
-		boost::asio::ip::address::from_string( hostIP_ ),
-	    NODE_PORT
+    tcp::endpoint nodeEndpoint(
+        boost::asio::ip::address::from_string( hostIP_ ),
+        NODE_PORT
     );
 
     socket_.async_connect( nodeEndpoint,
-						   boost::bind( &SenderBoost::HandleConnect, shared_from_this(),
-										boost::asio::placeholders::error ) );
+                           boost::bind( &SenderBoost::HandleConnect, shared_from_this(),
+                                        boost::asio::placeholders::error ) );
 }
 
 void SenderBoost::HandleConnect( const boost::system::error_code &error )
 {
-	if ( !error )
-	{
+    if ( !error )
+    {
         MakeRequest();
 
         boost::asio::async_read( socket_,
@@ -110,12 +110,12 @@ void SenderBoost::HandleConnect( const boost::system::error_code &error )
                                   boost::bind( &SenderBoost::HandleWrite, shared_from_this(),
                                                boost::asio::placeholders::error,
                                                boost::asio::placeholders::bytes_transferred ) );
-	}
-	else
-	{
-		PS_LOG( "SenderBoost::HandleConnect error=" << error.message() );
-		sender_->OnJobSendCompletion( false, workerJob_, hostIP_, job_ );
-	}
+    }
+    else
+    {
+        PS_LOG( "SenderBoost::HandleConnect error=" << error.message() );
+        sender_->OnJobSendCompletion( false, workerJob_, hostIP_, job_ );
+    }
 }
 
 void SenderBoost::HandleWrite( const boost::system::error_code &error, size_t bytes_transferred )

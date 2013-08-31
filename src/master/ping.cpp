@@ -1,4 +1,5 @@
 #include <boost/bind.hpp>
+#include <stdint.h> // boost/atomic/atomic.hpp:202:16: error: ‘uintptr_t’ was not declared in this scope
 #include <boost/thread.hpp>
 #include "ping.h"
 #include "common/log.h"
@@ -61,11 +62,11 @@ void PingerBoost::PingWorker( Worker *worker )
 
         boost::system::error_code error;
         udp::resolver::iterator iterator = resolver_.resolve( query, error );
-		if ( error )
-		{
-			PS_LOG( "PingerBoost::PingWorker address not resolved: " << worker->GetHost() );
+        if ( error )
+        {
+            PS_LOG( "PingerBoost::PingWorker address not resolved: " << worker->GetHost() );
             return;
-		}
+        }
 
         std::pair< EndpointMap::iterator, bool > p = endpoints_.insert(
             std::make_pair( worker->GetHost(), *iterator ) );
@@ -76,9 +77,9 @@ void PingerBoost::PingWorker( Worker *worker )
 
     const std::string &node_ip = it->second.address().to_string();
 
-	std::string msg;
-	protocol_->NodePing( msg, node_ip );
-	//PS_LOG( msg );
+    std::string msg;
+    protocol_->NodePing( msg, node_ip );
+    //PS_LOG( msg );
     //PS_LOG( node_ip );
 
     try

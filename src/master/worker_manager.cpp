@@ -67,34 +67,34 @@ void WorkerManager::OnNodePingResponse( const std::string &hostIP )
 
 void WorkerManager::OnNodeJobCompletion( const std::string &hostIP, int64_t jobId, int taskId )
 {
-	if ( jobId < 0 || taskId < 0 )
-		return;
+    if ( jobId < 0 || taskId < 0 )
+        return;
 
     std::pair< WorkerJob, std::string > worker( WorkerJob( jobId, taskId ), hostIP );
 
-	{
+    {
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
-		achievedWorkers_.push( worker );
-	}
-	NotifyAll();
+        achievedWorkers_.push( worker );
+    }
+    NotifyAll();
 }
 
 bool WorkerManager::GetAchievedWorker( WorkerJob &worker, std::string &hostIP )
 {
-	if ( achievedWorkers_.empty() )
-		return false;
+    if ( achievedWorkers_.empty() )
+        return false;
 
     boost::mutex::scoped_lock scoped_lock( workersMut_ );
-	if ( achievedWorkers_.empty() )
-		return false;
+    if ( achievedWorkers_.empty() )
+        return false;
 
     PS_LOG( "GetAchievedWorker: num achieved workers=" << achievedWorkers_.size() );
 
-	const std::pair< WorkerJob, std::string > &w = achievedWorkers_.front();
-	worker = w.first;
-	hostIP = w.second;
-	achievedWorkers_.pop();
-	return true;
+    const std::pair< WorkerJob, std::string > &w = achievedWorkers_.front();
+    worker = w.first;
+    hostIP = w.second;
+    achievedWorkers_.pop();
+    return true;
 }
 
 void WorkerManager::SetWorkerIP( Worker *worker, const std::string &ip )
@@ -109,7 +109,7 @@ Worker *WorkerManager::GetWorkerByIP( const std::string &ip ) const
 
 void WorkerManager::Shutdown()
 {
-	workers_.Clear();
+    workers_.Clear();
 }
 
 bool ReadHosts( const char *filePath, std::list< std::string > &hosts )

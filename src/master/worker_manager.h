@@ -29,9 +29,9 @@ public:
 
     void OnNodeJobCompletion( const std::string &hostIP, int64_t jobId, int taskId );
 
-	bool GetAchievedWorker( WorkerJob &worker, std::string &hostIP );
+    bool GetAchievedWorker( WorkerJob &worker, std::string &hostIP );
 
-	void SetWorkerIP( Worker *worker, const std::string &ip );
+    void SetWorkerIP( Worker *worker, const std::string &ip );
     Worker *GetWorkerByIP( const std::string &ip ) const;
 
     WorkerList::WorkerContainer &GetWorkers() { return workers_.GetWorkers(); }
@@ -47,7 +47,7 @@ public:
 
 private:
     WorkerList workers_;
-	std::queue< std::pair< WorkerJob, std::string > > achievedWorkers_;
+    std::queue< std::pair< WorkerJob, std::string > > achievedWorkers_;
     boost::mutex workersMut_;
 };
 

@@ -1,5 +1,6 @@
 #define BOOST_SPIRIT_THREADSAFE
 
+#include <stdint.h> // boost/atomic/atomic.hpp:202:16: error: ‘uintptr_t’ was not declared in this scope
 #include <boost/property_tree/json_parser.hpp>
 #include <fstream>
 #include "config.h"

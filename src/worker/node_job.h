@@ -15,9 +15,9 @@ namespace python_server {
 class Job
 {
 public:
-	template< typename T >
-	bool ParseRequest( Request<T> &request )
-	{
+    template< typename T >
+    bool ParseRequest( Request<T> &request )
+    {
         const std::string &req = request.GetString();
 
         std::string protocol, header, body;
@@ -29,9 +29,9 @@ public:
         }
 
         ProtocolCreator protocolCreator;
-	    boost::scoped_ptr< Protocol > parser(
-		    protocolCreator.Create( protocol, version )
-		);
+        boost::scoped_ptr< Protocol > parser(
+            protocolCreator.Create( protocol, version )
+        );
         if ( !parser )
         {
             PS_LOG( "Job::ParseRequest: appropriate parser not found for protocol: "
@@ -42,52 +42,52 @@ public:
         parser->ParseMsgType( header, taskType_ );
 
         return ParseRequestBody( body, parser.get() );
-	}
+    }
 
-	void GetResponse( std::string &response ) const
-	{
+    void GetResponse( std::string &response ) const
+    {
         if ( taskType_ == "get_result" )
         {
-			JobDescriptor descr;
-			JobCompletionStat stat;
-			ProtocolJson protocol;
+            JobDescriptor descr;
+            JobCompletionStat stat;
+            ProtocolJson protocol;
 
-			descr.jobId = GetJobId();
-			descr.taskId = GetTaskId();
-			if ( JobCompletionTable::Instance().Get( descr, stat ) )
-			{
-				JobCompletionTable::Instance().Erase( descr );
-				protocol.SendJobResult( response, stat.errCode );
-			}
-			else
-			{
+            descr.jobId = GetJobId();
+            descr.taskId = GetTaskId();
+            if ( JobCompletionTable::Instance().Get( descr, stat ) )
+            {
+                JobCompletionTable::Instance().Erase( descr );
+                protocol.SendJobResult( response, stat.errCode );
+            }
+            else
+            {
                 PS_LOG( "Job::GetResponse: job not found in completion table: "
                         "jobId=" << GetJobId() << ", taskId=" << GetTaskId() );
-				protocol.SendJobResult( response, NODE_JOB_COMPLETION_NOT_FOUND );
-			}
+                protocol.SendJobResult( response, NODE_JOB_COMPLETION_NOT_FOUND );
+            }
         }
-	}
+    }
 
-	void OnError( int err )
-	{
-		errCode_ = err;
-	}
+    void OnError( int err )
+    {
+        errCode_ = err;
+    }
 
-	bool NeedPingMaster() const
-	{
-		return taskType_ == "exec";
-	}
+    bool NeedPingMaster() const
+    {
+        return taskType_ == "exec";
+    }
 
     void SetMasterIP( const std::string &ip ) { masterIP_ = ip; }
 
-	unsigned int GetScriptLength() const { return scriptLength_; }
-	const std::string &GetScriptLanguage() const { return language_; }
-	const std::string &GetScript() const { return script_; }
+    unsigned int GetScriptLength() const { return scriptLength_; }
+    const std::string &GetScriptLanguage() const { return language_; }
+    const std::string &GetScript() const { return script_; }
     int64_t GetJobId() const { return jobId_; }
     int GetTaskId() const { return taskId_; }
     int GetErrorCode() const { return errCode_; }
-	const std::string &GetTaskType() const { return taskType_; }
-	const std::string &GetMasterIP() const { return masterIP_; }
+    const std::string &GetTaskType() const { return taskType_; }
+    const std::string &GetMasterIP() const { return masterIP_; }
 
 private:
     bool ParseRequestBody( const std::string &body, Protocol *parser )
@@ -110,13 +110,13 @@ private:
     }
 
 private:
-	unsigned int scriptLength_;
-	std::string language_;
-	std::string script_;
+    unsigned int scriptLength_;
+    std::string language_;
+    std::string script_;
     int64_t jobId_;
     int taskId_;
-	int errCode_;
-	std::string taskType_;
+    int errCode_;
+    std::string taskType_;
     std::string masterIP_;
 };
 

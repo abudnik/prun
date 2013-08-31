@@ -10,10 +10,10 @@ namespace master {
 
 void Sheduler::OnHostAppearance( Worker *worker )
 {
-	{
-		boost::mutex::scoped_lock scoped_lock( workersMut_ );
-		freeWorkers_[ worker->GetIP() ] = worker;
-	}
+    {
+        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+        freeWorkers_[ worker->GetIP() ] = worker;
+    }
     NotifyAll();
 }
 
@@ -40,7 +40,7 @@ void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
                         "; nodeIP=" << worker->GetIP() << ", jobId=" << jobId );
 
                 failedWorkers_[ jobId ].insert( worker->GetIP() );
-				busyWorkers_.erase( worker->GetIP() );
+                busyWorkers_.erase( worker->GetIP() );
 
                 const Job *job = JobManager::Instance().GetJobById( jobId );
                 if ( job )
@@ -61,10 +61,10 @@ void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
                     PS_LOG( "Sheduler::OnChangedWorkerState: Job for jobId=" << jobId << " not found" );
                 }
             }
-			else
-			{
-				freeWorkers_.erase( worker->GetIP() );
-			}
+            else
+            {
+                freeWorkers_.erase( worker->GetIP() );
+            }
         }
 
         if ( state == WORKER_STATE_FAILED )
@@ -77,14 +77,14 @@ void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
 void Sheduler::OnNewJob( Job *job )
 {
     if ( CanTakeNewJob() )
-		PlanJobExecution();
+        PlanJobExecution();
 }
 
 void Sheduler::PlanJobExecution()
 {
-	Job *job = JobManager::Instance().PopJob();
-	if ( !job )
-		return;
+    Job *job = JobManager::Instance().PopJob();
+    if ( !job )
+        return;
 
     int numNodes = job->GetNumNodes();
     if ( numNodes <= 0 )
@@ -109,7 +109,7 @@ void Sheduler::PlanJobExecution()
         jobs_.push_back( job );
     }
 
-	NotifyAll();
+    NotifyAll();
 }
 
 bool Sheduler::SheduleTask( WorkerJob &workerJob, std::string &hostIP, Job **job,
@@ -133,13 +133,13 @@ bool Sheduler::SheduleTask( WorkerJob &workerJob, std::string &hostIP, Job **job
                 needReschedule_.pop_front();
             }
 
-			freeWorkers_.erase( w->GetIP() );
-			sendingJobWorkers_[ w->GetIP() ] = w;
+            freeWorkers_.erase( w->GetIP() );
+            sendingJobWorkers_[ w->GetIP() ] = w;
 
-			workerJob = WorkerJob( jobId, taskId );
+            workerJob = WorkerJob( jobId, taskId );
             w->SetJob( workerJob );
 
-			hostIP = w->GetIP();
+            hostIP = w->GetIP();
             *job = jobs_.front();
             return true;
         }
@@ -395,11 +395,11 @@ Job *Sheduler::FindJobByJobId( int64_t jobId ) const
 
 void Sheduler::Shutdown()
 {
-	while( !jobs_.empty() )
-	{
-		delete jobs_.front();
-		jobs_.pop_front();
-	}
+    while( !jobs_.empty() )
+    {
+        delete jobs_.front();
+        jobs_.pop_front();
+    }
 }
 
 void Sheduler::GetJobInfo( std::string &info, int64_t jobId )
@@ -466,22 +466,22 @@ void Sheduler::GetStatistics( std::string &stat )
         "failed workers = " << failedWorkers_.size() << std::endl <<
         "sending workers = " << sendingJobWorkers_.size() << std::endl;
 
-	{
+    {
         boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
         ss << "jobs = " << jobs_.size() << std::endl <<
-			"need reschedule = " << needReschedule_.size() << std::endl;
+            "need reschedule = " << needReschedule_.size() << std::endl;
 
-		ss << "executing jobs: {";
-		std::list< Job * >::const_iterator it = jobs_.begin();
-		for( ; it != jobs_.end(); ++it )
-		{
-			if ( it != jobs_.begin() )
-				ss << ", ";
-			const Job *job = *it;
-			ss << job->GetJobId();
-		}
-		ss << "}" << std::endl;
-	}
+        ss << "executing jobs: {";
+        std::list< Job * >::const_iterator it = jobs_.begin();
+        for( ; it != jobs_.end(); ++it )
+        {
+            if ( it != jobs_.begin() )
+                ss << ", ";
+            const Job *job = *it;
+            ss << job->GetJobId();
+        }
+        ss << "}" << std::endl;
+    }
 
     ss << "================";
 

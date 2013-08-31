@@ -9,7 +9,7 @@ namespace master {
 
 void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg )
 {
-	//PS_LOG( nodeIP << " : " << msg );
+    //PS_LOG( nodeIP << " : " << msg );
 
     std::string protocol, header, body;
     int version;
@@ -75,7 +75,7 @@ void PingReceiverBoost::HandleRead( const boost::system::error_code& error, size
 {
     if ( !error )
     {
-		std::string response( buffer_.begin(), buffer_.begin() + bytes_transferred );
+        std::string response( buffer_.begin(), buffer_.begin() + bytes_transferred );
         OnNodePing( remote_endpoint_.address().to_string(), response );
     }
     else

@@ -34,50 +34,50 @@ namespace python_server {
 class Semaphore
 {
 public:
-	Semaphore( unsigned int v )
-	: count_( v )
-	{}
+    Semaphore( unsigned int v )
+    : count_( v )
+    {}
 
-	void Notify()
-	{
-		boost::mutex::scoped_lock lock( mutex_ );
-		++count_;
-		condition_.notify_one();
-	}
+    void Notify()
+    {
+        boost::mutex::scoped_lock lock( mutex_ );
+        ++count_;
+        condition_.notify_one();
+    }
 
-	void Wait()
-	{
-		boost::mutex::scoped_lock lock( mutex_ );
-		while( !count_ )
-			condition_.wait( lock );
-		--count_;
-	}
+    void Wait()
+    {
+        boost::mutex::scoped_lock lock( mutex_ );
+        while( !count_ )
+            condition_.wait( lock );
+        --count_;
+    }
 
 private:
-	boost::mutex mutex_;
-	boost::condition_variable condition_;
-	unsigned int count_;
+    boost::mutex mutex_;
+    boost::condition_variable condition_;
+    unsigned int count_;
 };
 
 class SyncTimer
 {
 public:
-	void StopWaiting()
-	{
-		boost::mutex::scoped_lock lock( mutex_ );
-		condition_.notify_one();
-	}
+    void StopWaiting()
+    {
+        boost::mutex::scoped_lock lock( mutex_ );
+        condition_.notify_one();
+    }
 
-	bool Wait( int millisec )
-	{
-		boost::mutex::scoped_lock lock( mutex_ );
+    bool Wait( int millisec )
+    {
+        boost::mutex::scoped_lock lock( mutex_ );
         const boost::system_time timeout = boost::get_system_time() + boost::posix_time::milliseconds( millisec );
         return !condition_.timed_wait( lock, timeout );
-	}
+    }
 
 private:
-	boost::mutex mutex_;
-	boost::condition_variable condition_;
+    boost::mutex mutex_;
+    boost::condition_variable condition_;
 };
 
 template< typename T >

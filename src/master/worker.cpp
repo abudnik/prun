@@ -51,7 +51,7 @@ int WorkerList::GetTotalWorkers() const
     WorkerContainer::const_iterator it = workers_.begin();
     for( ; it != workers_.end(); ++it )
     {
-		num += (*it)->GetNumCores();
+        num += (*it)->GetNumCores();
     }
     return num;
 }
