@@ -23,7 +23,7 @@ public:
 };
 
 class Job;
-class AdminCommand_Job : public AdminCommand
+class AdminCommand_Run : public AdminCommand
 {
 public:
     virtual void Execute( const std::string &command,

@@ -57,14 +57,14 @@ class ResultGetter(Thread):
             sys.stdout.write( '> ' )
             sys.stdout.flush()
 
-class Command_Job():
+class Command_Run():
     def Prepare(self, cmd):
         try:
             path = cmd.split()[1]
         except Exception as e:
             print( "no file path given" )
             raise e
-        return json.JSONEncoder().encode( {"command" : "job", "file" : path} )
+        return json.JSONEncoder().encode( {"command" : "run", "file" : path} )
 
 class Command_Info():
     def Prepare(self, cmd):
@@ -81,14 +81,14 @@ class Command_Stat():
 
 class Command_Test():
     def Prepare(self, cmd):
-        msg = '{"command":"job","file":"/home/budnik/dev/PythonServer/test/test.job"}'
+        msg = '{"command":"run","file":"/home/budnik/dev/PythonServer/test/test.job"}'
         return msg
 
 
 class CommandDispatcher():
     _instance = None
     def __init__(self):
-        self.map_ = {'job'   : Command_Job(),
+        self.map_ = {'run'   : Command_Run(),
                      'info'  : Command_Info(),
                      'stat'  : Command_Stat(),
                      'test'  : Command_Test()}
@@ -123,7 +123,7 @@ class Master():
 
 def PrintHelp():
     print( "Commands:" )
-    print( "  job /path/to/job/file -- run job, which described in .job file" )
+    print( "  run /path/to/job/file -- run job, which described in .job file" )
     print( "  info <job_id>         -- show job execution statistics" )
     print( "  stat                  -- show master statistics" )
     print( "  repeat, r             -- repeat last command" )

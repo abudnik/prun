@@ -10,7 +10,7 @@
 
 namespace master {
 
-void AdminCommand_Job::Execute( const std::string &command,
+void AdminCommand_Run::Execute( const std::string &command,
                                 const boost::property_tree::ptree &ptree,
                                 AdminSession *session )
 {
@@ -21,7 +21,7 @@ void AdminCommand_Job::Execute( const std::string &command,
         std::ifstream file( filePath.c_str() );
         if ( !file.is_open() )
         {
-            PS_LOG( "AdminCommand_Job::Execute: couldn't open " << filePath );
+            PS_LOG( "AdminCommand_Run::Execute: couldn't open " << filePath );
             return;
         }
         std::string jobDescr, line;
@@ -39,11 +39,11 @@ void AdminCommand_Job::Execute( const std::string &command,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_Job::Execute: " << e.what() );
+        PS_LOG( "AdminCommand_Run::Execute: " << e.what() );
     }
 }
 
-void AdminCommand_Job::PrintJobInfo( Job *job, AdminSession *session ) const
+void AdminCommand_Run::PrintJobInfo( Job *job, AdminSession *session ) const
 {
     std::ostringstream ss;
     ss << "Job pushed to queue, jobId = " << job->GetJobId();
@@ -86,7 +86,7 @@ void AdminCommand_Stat::Execute( const std::string &command,
 
 void AdminCommandDispatcher::Initialize()
 {
-    map_[ "job" ] = new AdminCommand_Job;
+    map_[ "run" ] = new AdminCommand_Run;
     map_[ "info" ] = new AdminCommand_Info;
     map_[ "stat" ] = new AdminCommand_Stat;
 }
