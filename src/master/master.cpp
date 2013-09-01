@@ -41,7 +41,7 @@ the License.
 #include "sheduler.h"
 #include "job_sender.h"
 #include "result_getter.h"
-#include "job_timeout.h"
+#include "timeout_manager.h"
 #include "admin.h"
 #include "defines.h"
 
@@ -195,8 +195,8 @@ int main( int argc, char* argv[], char **envp )
 
         boost::asio::io_service io_service_timeout;
 
-        boost::scoped_ptr< master::JobTimeoutManager > timeoutManager(
-            new master::JobTimeoutManager( io_service_timeout )
+        boost::scoped_ptr< master::TimeoutManager > timeoutManager(
+            new master::TimeoutManager( io_service_timeout )
         );
         timeoutManager->Start();
         worker_threads.create_thread(

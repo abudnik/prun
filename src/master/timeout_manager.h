@@ -3,6 +3,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/function.hpp>
 #include <boost/thread/mutex.hpp>
 #include "common/helper.h"
 #include "worker.h"
@@ -11,13 +12,22 @@ namespace master {
 
 // hint: don't use boost::asio::deadline_timer due to os timer limitations (~16k or so)
 
-class JobTimeoutManager
+class TimeoutManager
 {
-    typedef std::pair< WorkerJob, std::string > JobPair;
-    typedef std::multimap< boost::posix_time::ptime, JobPair > TimeToJob;
+    typedef boost::function< void () > Callback;
+    typedef std::multimap< boost::posix_time::ptime,
+                           Callback > TimeToCallback;
+
+    struct TaskTimeoutHandler
+    {
+        void HandleTimeout();
+
+        WorkerJob workerJob_;
+        std::string hostIP_;
+    };
 
 public:
-    JobTimeoutManager( boost::asio::io_service &io_service )
+    TimeoutManager( boost::asio::io_service &io_service )
     : io_service_( io_service ), stopped_( false )
     {}
 
@@ -27,7 +37,7 @@ public:
 
     void Run();
 
-    void PushJob( const WorkerJob &job, const std::string &hostIP, int timeout );
+    void PushTask( const WorkerJob &job, const std::string &hostIP, int timeout );
 
 private:
     void CheckTimeouts();
@@ -36,7 +46,7 @@ private:
     boost::asio::io_service &io_service_;
     bool stopped_;
     python_server::SyncTimer timer_;
-    TimeToJob jobs_; // job_send_time -> (WorkerJob, hostIP)
+    TimeToCallback jobs_;
     boost::mutex jobsMut_;
 };
 
