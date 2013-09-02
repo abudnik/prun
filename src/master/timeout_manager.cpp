@@ -1,22 +1,22 @@
 #include <boost/bind.hpp>
 #include "timeout_manager.h"
-#include "sheduler.h"
+#include "scheduler.h"
 
 namespace master {
 
 void TimeoutManager::TaskTimeoutHandler::HandleTimeout()
 {
-    Sheduler::Instance().OnTaskTimeout( workerJob_, hostIP_ );
+    Scheduler::Instance().OnTaskTimeout( workerJob_, hostIP_ );
 }
 
 void TimeoutManager::JobTimeoutHandler::HandleTimeout()
 {
-    Sheduler::Instance().OnJobTimeout( jobId_ );
+    Scheduler::Instance().OnJobTimeout( jobId_ );
 }
 
 void TimeoutManager::JobQueueTimeoutHandler::HandleTimeout()
 {
-    Sheduler::Instance().OnJobQueueTimeout( jobId_ );
+    Scheduler::Instance().OnJobQueueTimeout( jobId_ );
 }
 
 

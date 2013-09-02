@@ -2,7 +2,7 @@
 #include <boost/asio/ip/address.hpp>
 #include "worker_manager.h"
 #include "common/log.h"
-#include "sheduler.h"
+#include "scheduler.h"
 
 namespace master {
 
@@ -36,7 +36,7 @@ void WorkerManager::CheckDropedPingResponses()
 
     if ( !changedWorkers.empty() )
     {
-        Sheduler::Instance().OnChangedWorkerState( changedWorkers );
+        Scheduler::Instance().OnChangedWorkerState( changedWorkers );
     }
 }
 
@@ -56,7 +56,7 @@ void WorkerManager::OnNodePingResponse( const std::string &hostIP )
 
         if ( stateChanged )
         {
-            Sheduler::Instance().OnHostAppearance( worker );
+            Scheduler::Instance().OnHostAppearance( worker );
         }
     }
     else

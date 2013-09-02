@@ -1,6 +1,6 @@
 #include <boost/bind.hpp>
 #include "job_sender.h"
-#include "sheduler.h"
+#include "scheduler.h"
 #include "common/log.h"
 #include "common/protocol.h"
 #include "defines.h"
@@ -13,8 +13,8 @@ void JobSender::Run()
     std::string hostIP;
     Job *job;
 
-    Sheduler &sheduler = Sheduler::Instance();
-    sheduler.Subscribe( this );
+    Scheduler &scheduler = Scheduler::Instance();
+    scheduler.Subscribe( this );
 
     bool getTask = false;
     while( !stopped_ )
@@ -27,7 +27,7 @@ void JobSender::Run()
             newJobAvailable_ = false;
         }
 
-        getTask = sheduler.GetTaskToSend( workerJob, hostIP, &job );
+        getTask = scheduler.GetTaskToSend( workerJob, hostIP, &job );
         if ( getTask )
         {
             PS_LOG( "Get task " << workerJob.jobId_ << " : " << workerJob.taskId_ );
@@ -53,7 +53,7 @@ void JobSender::NotifyObserver( int event )
 void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job )
 {
     PS_LOG("JobSender::OnJobSendCompletion "<<success);
-    Sheduler::Instance().OnTaskSendCompletion( success, workerJob, hostIP, job );
+    Scheduler::Instance().OnTaskSendCompletion( success, workerJob, hostIP, job );
     if ( success )
     {
         timeoutManager_->PushTask( workerJob, hostIP, job->GetTaskTimeout() );

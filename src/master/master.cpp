@@ -38,7 +38,7 @@ the License.
 #include "node_ping.h"
 #include "job_manager.h"
 #include "worker_manager.h"
-#include "sheduler.h"
+#include "scheduler.h"
 #include "job_sender.h"
 #include "result_getter.h"
 #include "timeout_manager.h"
@@ -96,7 +96,7 @@ void AtExit()
     master::AdminCommandDispatcher::Instance().Shutdown();
     master::WorkerManager::Instance().Shutdown();
     master::JobManager::Instance().Shutdown();
-    master::Sheduler::Instance().Shutdown();
+    master::Scheduler::Instance().Shutdown();
 
     python_server::logger::ShutdownLogger();
 }
@@ -186,7 +186,7 @@ int main( int argc, char* argv[], char **envp )
         );
         master::JobManager::Instance().Initialize( master::exeDir, timeoutManager.get() );
 
-        master::Sheduler::Instance();
+        master::Scheduler::Instance();
         master::AdminCommandDispatcher::Instance().Initialize();
 
         atexit( AtExit );

@@ -1,4 +1,4 @@
-#include "sheduler.h"
+#include "scheduler.h"
 #include "common/log.h"
 #include "common/error_code.h"
 #include "job_manager.h"
@@ -8,7 +8,7 @@
 
 namespace master {
 
-void Sheduler::OnHostAppearance( Worker *worker )
+void Scheduler::OnHostAppearance( Worker *worker )
 {
     {
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
@@ -17,7 +17,7 @@ void Sheduler::OnHostAppearance( Worker *worker )
     NotifyAll();
 }
 
-void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
+void Scheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
 {
     boost::mutex::scoped_lock scoped_lock( workersMut_ );
 
@@ -36,7 +36,7 @@ void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
                 const WorkerJob &workerJob = busyWorker->GetJob();
                 int64_t jobId = workerJob.jobId_;
 
-                PS_LOG( "Sheduler::OnChangedWorkerState: worker isn't available, while executing job"
+                PS_LOG( "Scheduler::OnChangedWorkerState: worker isn't available, while executing job"
                         "; nodeIP=" << worker->GetIP() << ", jobId=" << jobId );
 
                 failedWorkers_[ jobId ].insert( worker->GetIP() );
@@ -53,12 +53,12 @@ void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
                     }
                     else
                     {
-                        PS_LOG( "Sheduler::OnChangedWorkerState: max failed nodes limit exceeded for job, jobId=" << jobId );
+                        PS_LOG( "Scheduler::OnChangedWorkerState: max failed nodes limit exceeded for job, jobId=" << jobId );
                     }
                 }
                 else
                 {
-                    PS_LOG( "Sheduler::OnChangedWorkerState: Job for jobId=" << jobId << " not found" );
+                    PS_LOG( "Scheduler::OnChangedWorkerState: Job for jobId=" << jobId << " not found" );
                 }
             }
             else
@@ -69,18 +69,18 @@ void Sheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
 
         if ( state == WORKER_STATE_FAILED )
         {
-            PS_LOG( "TODO: Sheduler::OnChangedWorkerState" );
+            PS_LOG( "TODO: Scheduler::OnChangedWorkerState" );
         }
     }
 }
 
-void Sheduler::OnNewJob( Job *job )
+void Scheduler::OnNewJob( Job *job )
 {
     if ( CanTakeNewJob() )
         PlanJobExecution();
 }
 
-void Sheduler::PlanJobExecution()
+void Scheduler::PlanJobExecution()
 {
     Job *job = JobManager::Instance().PopJob();
     if ( !job )
@@ -112,7 +112,7 @@ void Sheduler::PlanJobExecution()
     NotifyAll();
 }
 
-bool Sheduler::SheduleTask( WorkerJob &workerJob, std::string &hostIP, Job **job,
+bool Scheduler::ScheduleTask( WorkerJob &workerJob, std::string &hostIP, Job **job,
                             int64_t jobId, int taskId, bool reschedule )
 {
     IPToWorker::const_iterator it = freeWorkers_.begin();
@@ -147,7 +147,7 @@ bool Sheduler::SheduleTask( WorkerJob &workerJob, std::string &hostIP, Job **job
     return false;
 }
 
-bool Sheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **job )
+bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **job )
 {
     if ( freeWorkers_.empty() )
         return false;
@@ -171,7 +171,7 @@ bool Sheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **j
             jobId = workerJob.jobId_;
             taskId = workerJob.taskId_;
 
-            if ( SheduleTask( workerJob, hostIP, job,
+            if ( ScheduleTask( workerJob, hostIP, job,
                               jobId, taskId, true ) )
                 return true;
         }
@@ -187,7 +187,7 @@ bool Sheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **j
         if ( !tasks.empty() )
         {
             taskId = *tasks.begin();
-            if ( SheduleTask( workerJob, hostIP, job,
+            if ( ScheduleTask( workerJob, hostIP, job,
                               jobId, taskId, false ) )
                 return true;
         }
@@ -202,7 +202,7 @@ bool Sheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **j
     return false;
 }
 
-void Sheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job )
+void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job )
 {
     if ( success )
     {
@@ -217,7 +217,7 @@ void Sheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, c
             Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
             boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
 
-            PS_LOG( "Sheduler::OnTaskSendCompletion: job sending failed."
+            PS_LOG( "Scheduler::OnTaskSendCompletion: job sending failed."
                     " jobId=" << workerJob.jobId_ << ", ip=" << hostIP );
 
             failedWorkers_[ workerJob.jobId_ ].insert( hostIP );
@@ -236,9 +236,9 @@ void Sheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, c
     }
 }
 
-void Sheduler::OnTaskCompletion( int errCode, const WorkerJob &workerJob, const std::string &hostIP )
+void Scheduler::OnTaskCompletion( int errCode, const WorkerJob &workerJob, const std::string &hostIP )
 {
-    PS_LOG( "Sheduler::OnTaskCompletion " << errCode );
+    PS_LOG( "Scheduler::OnTaskCompletion " << errCode );
     if ( !errCode )
     {
         Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
@@ -272,7 +272,7 @@ void Sheduler::OnTaskCompletion( int errCode, const WorkerJob &workerJob, const 
         Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
         boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
 
-        PS_LOG( "Sheduler::OnTaskCompletion: errCode=" << errCode <<
+        PS_LOG( "Scheduler::OnTaskCompletion: errCode=" << errCode <<
                 ", jobId=" << workerJob.jobId_ << ", ip=" << hostIP );
 
         failedWorkers_[ workerJob.jobId_ ].insert( hostIP );
@@ -291,7 +291,7 @@ void Sheduler::OnTaskCompletion( int errCode, const WorkerJob &workerJob, const 
     NotifyAll();
 }
 
-void Sheduler::OnTaskTimeout( const WorkerJob &workerJob, const std::string &hostIP )
+void Scheduler::OnTaskTimeout( const WorkerJob &workerJob, const std::string &hostIP )
 {
     IPToWorker::iterator it;
     {
@@ -303,13 +303,13 @@ void Sheduler::OnTaskTimeout( const WorkerJob &workerJob, const std::string &hos
         const WorkerJob &job = it->second->GetJob();
         if ( job == workerJob )
         {
-            PS_LOG( "Sheduler::OnJobTimeout " << workerJob.jobId_ << ":" << workerJob.taskId_ << " " << hostIP );
+            PS_LOG( "Scheduler::OnJobTimeout " << workerJob.jobId_ << ":" << workerJob.taskId_ << " " << hostIP );
             OnTaskCompletion( NODE_JOB_TIMEOUT, workerJob, hostIP );
         }
     }
 }
 
-void Sheduler::OnJobTimeout( int64_t jobId )
+void Scheduler::OnJobTimeout( int64_t jobId )
 {
     {
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
@@ -319,7 +319,7 @@ void Sheduler::OnJobTimeout( int64_t jobId )
     NotifyAll();
 }
 
-void Sheduler::OnJobQueueTimeout( int64_t jobId )
+void Scheduler::OnJobQueueTimeout( int64_t jobId )
 {
     // todo: what if job sended to all workers, but this timeout happens?
     {
@@ -330,7 +330,7 @@ void Sheduler::OnJobQueueTimeout( int64_t jobId )
     NotifyAll();
 }
 
-void Sheduler::RunJobCallback( Job *job, const char *completionStatus )
+void Scheduler::RunJobCallback( Job *job, const char *completionStatus )
 {
     std::ostringstream ss;
     ss << "================" << std::endl <<
@@ -343,7 +343,7 @@ void Sheduler::RunJobCallback( Job *job, const char *completionStatus )
     job->RunCallback( ss.str() );
 }
 
-void Sheduler::RemoveJob( int64_t jobId, const char *completionStatus )
+void Scheduler::RemoveJob( int64_t jobId, const char *completionStatus )
 {
     std::map< int64_t, std::set< std::string > >::iterator it_failed(
         failedWorkers_.find( jobId )
@@ -352,7 +352,7 @@ void Sheduler::RemoveJob( int64_t jobId, const char *completionStatus )
     {
         int numFailed = it_failed->second.size();
         failedWorkers_.erase( it_failed );
-        PS_LOG( "Sheduler::RemoveJob: jobId=" << jobId << ", num failed workers=" << numFailed );
+        PS_LOG( "Scheduler::RemoveJob: jobId=" << jobId << ", num failed workers=" << numFailed );
     }
 
     jobExecutions_.erase( jobId );
@@ -369,10 +369,10 @@ void Sheduler::RemoveJob( int64_t jobId, const char *completionStatus )
         }
     }
 
-    PS_LOG( "Sheduler::RemoveJob: job not found for jobId=" << jobId );
+    PS_LOG( "Scheduler::RemoveJob: job not found for jobId=" << jobId );
 }
 
-void Sheduler::StopWorkers( int64_t jobId )
+void Scheduler::StopWorkers( int64_t jobId )
 {
     {
         IPToWorker::iterator it = busyWorkers_.begin();
@@ -406,7 +406,7 @@ void Sheduler::StopWorkers( int64_t jobId )
     }
 }
 
-bool Sheduler::CheckIfWorkerFailedJob( Worker *worker, int64_t jobId ) const
+bool Scheduler::CheckIfWorkerFailedJob( Worker *worker, int64_t jobId ) const
 {
     const std::string &ip = worker->GetIP();
     std::map< int64_t, std::set< std::string > >::const_iterator it = failedWorkers_.find( jobId );
@@ -423,12 +423,12 @@ bool Sheduler::CheckIfWorkerFailedJob( Worker *worker, int64_t jobId ) const
     return false;
 }
 
-bool Sheduler::CanTakeNewJob() const
+bool Scheduler::CanTakeNewJob() const
 {
     return !freeWorkers_.empty();
 }
 
-Job *Sheduler::FindJobByJobId( int64_t jobId ) const
+Job *Scheduler::FindJobByJobId( int64_t jobId ) const
 {
     std::list< Job * >::const_iterator it = jobs_.begin();
     for( ; it != jobs_.end(); ++it )
@@ -440,7 +440,7 @@ Job *Sheduler::FindJobByJobId( int64_t jobId ) const
     return NULL;
 }
 
-/*bool Sheduler::IsWorkerBusy( const std::string &hostIP, int64_t jobId, int taskId )
+/*bool Scheduler::IsWorkerBusy( const std::string &hostIP, int64_t jobId, int taskId )
 {
     boost::mutex::scoped_lock scoped_lock( workersMut_ );
     IPToWorker::const_iterator it = busyWorkers_.find( hostIP );
@@ -451,7 +451,7 @@ Job *Sheduler::FindJobByJobId( int64_t jobId ) const
     return ( workerJob.jobId_ == jobId ) && ( workerJob.taskId_ == taskId );
 }*/
 
-void Sheduler::Shutdown()
+void Scheduler::Shutdown()
 {
     while( !jobs_.empty() )
     {
@@ -460,7 +460,7 @@ void Sheduler::Shutdown()
     }
 }
 
-void Sheduler::GetJobInfo( std::string &info, int64_t jobId )
+void Scheduler::GetJobInfo( std::string &info, int64_t jobId )
 {
     std::ostringstream ss;
     boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
@@ -515,7 +515,7 @@ void Sheduler::GetJobInfo( std::string &info, int64_t jobId )
     info = ss.str();
 }
 
-void Sheduler::GetStatistics( std::string &stat )
+void Scheduler::GetStatistics( std::string &stat )
 {
     std::ostringstream ss;
     ss << "================" << std::endl <<

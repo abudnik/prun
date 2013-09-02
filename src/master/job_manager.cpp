@@ -5,7 +5,7 @@
 #include "job_manager.h"
 #include "common/log.h"
 #include "common/helper.h"
-#include "sheduler.h"
+#include "scheduler.h"
 #include "timeout_manager.h"
 
 namespace master {
@@ -41,7 +41,7 @@ void JobManager::PushJob( Job *job )
     PS_LOG( "push job" );
     jobs_.PushJob( job );
 
-    Sheduler::Instance().OnNewJob( job );
+    Scheduler::Instance().OnNewJob( job );
     timeoutManager_->PushJob( job->GetJobId(), job->GetTimeout(), job->GetQueueTimeout() );
 }
 

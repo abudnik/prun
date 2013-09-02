@@ -11,7 +11,7 @@
 
 namespace master {
 
-class Sheduler : public python_server::Observable< true >
+class Scheduler : public python_server::Observable< true >
 {
 public:
     void OnHostAppearance( Worker *worker );
@@ -33,9 +33,9 @@ public:
     void GetJobInfo( std::string &info, int64_t jobId );
     void GetStatistics( std::string &stat );
 
-    static Sheduler &Instance()
+    static Scheduler &Instance()
     {
-        static Sheduler instance_;
+        static Scheduler instance_;
         return instance_;
     }
 
@@ -43,8 +43,8 @@ public:
 
 private:
     void PlanJobExecution();
-    bool SheduleTask( WorkerJob &workerJob, std::string &hostIP, Job **job,
-                      int64_t jobId, int taskId, bool reschedule );
+    bool ScheduleTask( WorkerJob &workerJob, std::string &hostIP, Job **job,
+                       int64_t jobId, int taskId, bool reschedule );
 
     void RunJobCallback( Job *job, const char *completionStatus );
     void RemoveJob( int64_t jobId, const char *completionStatus );

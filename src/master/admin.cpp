@@ -6,7 +6,7 @@
 #include <boost/enable_shared_from_this.hpp>
 #include "admin.h"
 #include "job_manager.h"
-#include "sheduler.h"
+#include "scheduler.h"
 
 namespace master {
 
@@ -58,7 +58,7 @@ void AdminCommand_Info::Execute( const std::string &command,
     {
         int64_t jobId = ptree.get<int64_t>( "job_id" );
         std::string info;
-        Sheduler::Instance().GetJobInfo( info, jobId );
+        Scheduler::Instance().GetJobInfo( info, jobId );
         session->OnCommandCompletion( info );
     }
     catch( std::exception &e )
@@ -75,7 +75,7 @@ void AdminCommand_Stat::Execute( const std::string &command,
     try
     {
         std::string stat;
-        Sheduler::Instance().GetStatistics( stat );
+        Scheduler::Instance().GetStatistics( stat );
         session->OnCommandCompletion( stat );
     }
     catch( std::exception &e )

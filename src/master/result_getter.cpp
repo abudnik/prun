@@ -2,7 +2,7 @@
 #include <boost/scoped_ptr.hpp>
 #include "result_getter.h"
 #include "worker_manager.h"
-#include "sheduler.h"
+#include "scheduler.h"
 #include "common/log.h"
 #include "common/protocol.h"
 #include "defines.h"
@@ -55,7 +55,7 @@ void ResultGetter::OnGetJobResult( bool success, int errCode, const WorkerJob &w
 {
     if ( !success ) // retrieving of job result from message failed
         errCode = -1;
-    Sheduler::Instance().OnTaskCompletion( errCode, workerJob, hostIP );
+    Scheduler::Instance().OnTaskCompletion( errCode, workerJob, hostIP );
 }
 
 void ResultGetterBoost::Start()
