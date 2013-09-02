@@ -257,7 +257,7 @@ void Sheduler::OnTaskCompletion( int errCode, const WorkerJob &workerJob, const 
         int numExecution = jobExecutions_[ workerJob.jobId_ ];
         if ( numExecution <= 1 )
         {
-            RemoveJob( workerJob.jobId_ );
+            RemoveJob( workerJob.jobId_, "success" );
         }
         else
         {
@@ -291,7 +291,7 @@ void Sheduler::OnTaskCompletion( int errCode, const WorkerJob &workerJob, const 
     NotifyAll();
 }
 
-void Sheduler::OnJobTimeout( const WorkerJob &workerJob, const std::string &hostIP )
+void Sheduler::OnTaskTimeout( const WorkerJob &workerJob, const std::string &hostIP )
 {
     IPToWorker::iterator it;
     {
@@ -309,17 +309,32 @@ void Sheduler::OnJobTimeout( const WorkerJob &workerJob, const std::string &host
     }
 }
 
-void Sheduler::RunJobCallback( Job *job )
+void Sheduler::OnJobTimeout( int64_t jobId )
+{
+    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+    StopWorkers( jobId );
+    RemoveJob( jobId, "timeout" );
+}
+
+void Sheduler::OnJobQueueTimeout( int64_t jobId )
+{
+    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+    StopWorkers( jobId );
+    RemoveJob( jobId, "queue timeout" );
+}
+
+void Sheduler::RunJobCallback( Job *job, const char *completionStatus )
 {
     std::ostringstream ss;
     ss << "================" << std::endl <<
         "Job completed, jobId = " << job->GetJobId() << std::endl <<
+        "completion status: " << completionStatus << std::endl <<
         "================";
 
     job->RunCallback( ss.str() );
 }
 
-void Sheduler::RemoveJob( int64_t jobId )
+void Sheduler::RemoveJob( int64_t jobId, const char *completionStatus )
 {
     std::map< int64_t, std::set< std::string > >::iterator it_failed(
         failedWorkers_.find( jobId )
@@ -338,7 +353,7 @@ void Sheduler::RemoveJob( int64_t jobId )
         Job *job = *it;
         if ( job->GetJobId() == jobId )
         {
-            RunJobCallback( job );
+            RunJobCallback( job, completionStatus );
             jobs_.erase( it );
             delete job;
             return;
@@ -346,6 +361,12 @@ void Sheduler::RemoveJob( int64_t jobId )
     }
 
     PS_LOG( "Sheduler::RemoveJob: job not found for jobId=" << jobId );
+}
+
+void Sheduler::StopWorkers( int64_t jobId )
+{
+    // todo: ...
+    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
 }
 
 bool Sheduler::CheckIfWorkerFailedJob( Worker *worker, int64_t jobId ) const

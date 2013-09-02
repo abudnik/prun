@@ -56,7 +56,7 @@ void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, c
     Sheduler::Instance().OnTaskSendCompletion( success, workerJob, hostIP, job );
     if ( success )
     {
-        timeoutManager_->PushTask( workerJob, hostIP, job->GetTimeout() );
+        timeoutManager_->PushTask( workerJob, hostIP, job->GetTaskTimeout() );
     }
 }
 

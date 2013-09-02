@@ -20,13 +20,12 @@ public:
     bool ParseJob( const std::string &job_description, boost::property_tree::ptree &ptree );
 };
 
+class TimeoutManager;
 class JobManager
 {
 public:
     Job *CreateJob( const std::string &job_description ) const;
     void PushJob( Job *job );
-
-    void SetExeDir( const std::string &dir ) { exeDir_ = dir; }
 
     Job *GetJobById( int64_t jobId );
 
@@ -39,6 +38,7 @@ public:
         return instance_;
     }
 
+    void Initialize( const std::string &exeDir, TimeoutManager *timeoutManager );
     void Shutdown();
 
 private:
@@ -47,6 +47,7 @@ private:
 
 private:
     JobQueue jobs_;
+    TimeoutManager *timeoutManager_;
     std::string exeDir_;
 };
 

@@ -26,7 +26,9 @@ public:
 
     void OnTaskCompletion( int errCode, const WorkerJob &workerJob, const std::string &hostIP );
 
-    void OnJobTimeout( const WorkerJob &workerJob, const std::string &hostIP );
+    void OnTaskTimeout( const WorkerJob &workerJob, const std::string &hostIP );
+    void OnJobTimeout( int64_t jobId );
+    void OnJobQueueTimeout( int64_t jobId );
 
     void GetJobInfo( std::string &info, int64_t jobId );
     void GetStatistics( std::string &stat );
@@ -44,8 +46,9 @@ private:
     bool SheduleTask( WorkerJob &workerJob, std::string &hostIP, Job **job,
                       int64_t jobId, int taskId, bool reschedule );
 
-    void RunJobCallback( Job *job );
-    void RemoveJob( int64_t jobId );
+    void RunJobCallback( Job *job, const char *completionStatus );
+    void RemoveJob( int64_t jobId, const char *completionStatus );
+    void StopWorkers( int64_t jobId );
 
     bool CheckIfWorkerFailedJob( Worker *worker, int64_t jobId ) const;
     bool CanTakeNewJob() const;

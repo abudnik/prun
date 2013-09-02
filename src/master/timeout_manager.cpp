@@ -6,8 +6,19 @@ namespace master {
 
 void TimeoutManager::TaskTimeoutHandler::HandleTimeout()
 {
-    Sheduler::Instance().OnJobTimeout( workerJob_, hostIP_ );
+    Sheduler::Instance().OnTaskTimeout( workerJob_, hostIP_ );
 }
+
+void TimeoutManager::JobTimeoutHandler::HandleTimeout()
+{
+    Sheduler::Instance().OnJobTimeout( jobId_ );
+}
+
+void TimeoutManager::JobQueueTimeoutHandler::HandleTimeout()
+{
+    Sheduler::Instance().OnJobQueueTimeout( jobId_ );
+}
+
 
 void TimeoutManager::Start()
 {
@@ -64,6 +75,38 @@ void TimeoutManager::PushTask( const WorkerJob &job, const std::string &hostIP, 
     jobs_.insert( std::pair< pt::ptime, Callback >(
                       deadline,
                       callback
+                )
+    );
+}
+
+void TimeoutManager::PushJob( int64_t jobId, int jobTimeout, int queueTimeout )
+{
+    namespace pt = boost::posix_time;
+    const pt::ptime now = pt::second_clock::local_time();
+    const pt::ptime deadline = now + pt::seconds( jobTimeout );
+    const pt::ptime deadlineQueue = now + pt::seconds( queueTimeout );
+
+    boost::shared_ptr< JobTimeoutHandler > handler( new JobTimeoutHandler );
+    handler->jobId_ = jobId;
+    Callback callback(
+        boost::bind( &JobTimeoutHandler::HandleTimeout, handler )
+    );
+
+    boost::shared_ptr< JobQueueTimeoutHandler > handlerQueue( new JobQueueTimeoutHandler );
+    handlerQueue->jobId_ = jobId;
+    Callback callbackQueue(
+        boost::bind( &JobQueueTimeoutHandler::HandleTimeout, handlerQueue )
+    );
+
+    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    jobs_.insert( std::pair< pt::ptime, Callback >(
+                      deadline,
+                      callback
+                )
+    );
+    jobs_.insert( std::pair< pt::ptime, Callback >(
+                      deadlineQueue,
+                      callbackQueue
                 )
     );
 }

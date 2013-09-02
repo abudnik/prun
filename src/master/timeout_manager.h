@@ -21,9 +21,19 @@ class TimeoutManager
     struct TaskTimeoutHandler
     {
         void HandleTimeout();
-
         WorkerJob workerJob_;
         std::string hostIP_;
+    };
+
+    struct JobTimeoutHandler
+    {
+        void HandleTimeout();
+        int64_t jobId_;
+    };
+    struct JobQueueTimeoutHandler
+    {
+        void HandleTimeout();
+        int64_t jobId_;
     };
 
 public:
@@ -37,6 +47,7 @@ public:
 
     void Run();
 
+    void PushJob( int64_t jobId, int jobTimeout, int queueTimeout );
     void PushTask( const WorkerJob &job, const std::string &hostIP, int timeout );
 
 private:

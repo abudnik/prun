@@ -1,7 +1,9 @@
 {
-    "script" : "test/sendscript/example.py",
+    "script" : "test/sendscript/simple.py",
     "language" : "python",
-    "timeout" : 60,
+    "job_timeout" : 120,
+    "queue_timeout" : 600,
+    "task_timeout" : 10,
     "num_nodes" : -1,
-	"max_failed_nodes" : 10
+    "max_failed_nodes" : 10
 }

@@ -81,7 +81,7 @@ class Command_Stat():
 
 class Command_Test():
     def Prepare(self, cmd):
-        msg = '{"command":"run","file":"/home/budnik/dev/PythonServer/test/test.job"}'
+        msg = '{"command":"run","file":"/home/budnik/dev/prun/test/test.job"}'
         return msg
 
 

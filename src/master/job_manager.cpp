@@ -6,6 +6,7 @@
 #include "common/log.h"
 #include "common/helper.h"
 #include "sheduler.h"
+#include "timeout_manager.h"
 
 namespace master {
 
@@ -41,6 +42,7 @@ void JobManager::PushJob( Job *job )
     jobs_.PushJob( job );
 
     Sheduler::Instance().OnNewJob( job );
+    timeoutManager_->PushJob( job->GetJobId(), job->GetTimeout(), job->GetQueueTimeout() );
 }
 
 Job *JobManager::GetJobById( int64_t jobId )
@@ -56,6 +58,12 @@ Job *JobManager::PopJob()
 Job *JobManager::GetTopJob()
 {
     return jobs_.GetTopJob();
+}
+
+void JobManager::Initialize( const std::string &exeDir, TimeoutManager *timeoutManager )
+{
+    exeDir_ = exeDir;
+    timeoutManager_ = timeoutManager;
 }
 
 void JobManager::Shutdown()
@@ -99,12 +107,14 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
             return NULL;
 
         std::string language = ptree.get<std::string>( "language" );
-        int timeout = ptree.get<int>( "timeout" );
+        int timeout = ptree.get<int>( "job_timeout" );
+        int queueTimeout = ptree.get<int>( "queue_timeout" );
+        int taskTimeout = ptree.get<int>( "task_timeout" );
         int numNodes = ptree.get<int>( "num_nodes" );
         int maxFailedNodes = ptree.get<int>( "max_failed_nodes" );
 
-        Job *job = new Job( script.c_str(), language.c_str(), numNodes,
-                            maxFailedNodes, timeout );
+        Job *job = new Job( script, language, numNodes,
+                            maxFailedNodes, timeout, queueTimeout, taskTimeout );
         return job;
     }
     catch( std::exception &e )

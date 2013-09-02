@@ -69,12 +69,6 @@ void InitWorkerManager()
     }
 }
 
-void InitJobManager()
-{
-    master::JobManager &mgr = master::JobManager::Instance();
-    mgr.SetExeDir( master::exeDir );
-}
-
 void RunTests()
 {
     // read job description from file
@@ -185,7 +179,13 @@ int main( int argc, char* argv[], char **envp )
         unsigned int numPingThread = numHeartbeatThread + numPingReceiverThread;
 
         InitWorkerManager();
-        InitJobManager();
+
+        boost::asio::io_service io_service_timeout;
+        boost::scoped_ptr< master::TimeoutManager > timeoutManager(
+            new master::TimeoutManager( io_service_timeout )
+        );
+        master::JobManager::Instance().Initialize( master::exeDir, timeoutManager.get() );
+
         master::Sheduler::Instance();
         master::AdminCommandDispatcher::Instance().Initialize();
 
@@ -193,11 +193,6 @@ int main( int argc, char* argv[], char **envp )
 
         boost::thread_group worker_threads;
 
-        boost::asio::io_service io_service_timeout;
-
-        boost::scoped_ptr< master::TimeoutManager > timeoutManager(
-            new master::TimeoutManager( io_service_timeout )
-        );
         timeoutManager->Start();
         worker_threads.create_thread(
             boost::bind( &ThreadFun, &io_service_timeout )
