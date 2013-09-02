@@ -42,12 +42,17 @@ void JobManager::PushJob( Job *job )
     jobs_.PushJob( job );
 
     Scheduler::Instance().OnNewJob( job );
-    timeoutManager_->PushJob( job->GetJobId(), job->GetTimeout(), job->GetQueueTimeout() );
+    timeoutManager_->PushJobQueue( job->GetJobId(), job->GetQueueTimeout() );
 }
 
 Job *JobManager::GetJobById( int64_t jobId )
 {
     return jobs_.GetJobById( jobId );
+}
+
+void JobManager::DeleteJob( int64_t jobId )
+{
+    jobs_.DeleteJob( jobId );
 }
 
 Job *JobManager::PopJob()

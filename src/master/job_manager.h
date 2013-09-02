@@ -21,6 +21,7 @@ public:
 };
 
 class TimeoutManager;
+
 class JobManager
 {
 public:
@@ -28,6 +29,7 @@ public:
     void PushJob( Job *job );
 
     Job *GetJobById( int64_t jobId );
+    void DeleteJob( int64_t jobId );
 
     Job *PopJob();
     Job *GetTopJob();

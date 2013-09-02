@@ -313,19 +313,11 @@ void Scheduler::OnJobTimeout( int64_t jobId )
 {
     {
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
+
+        if ( !FindJobByJobId( jobId ) )
+            return;
         StopWorkers( jobId );
         RemoveJob( jobId, "timeout" );
-    }
-    NotifyAll();
-}
-
-void Scheduler::OnJobQueueTimeout( int64_t jobId )
-{
-    // todo: what if job sended to all workers, but this timeout happens?
-    {
-        boost::mutex::scoped_lock scoped_lock( workersMut_ );
-        StopWorkers( jobId );
-        RemoveJob( jobId, "queue timeout" );
     }
     NotifyAll();
 }

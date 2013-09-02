@@ -1,4 +1,5 @@
 #include "job.h"
+#include "common/log.h"
 
 namespace master {
 
@@ -19,15 +20,48 @@ Job *JobQueue::GetJobById( int64_t jobId )
     return NULL;
 }
 
+void JobQueue::DeleteJob( int64_t jobId )
+{
+    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+
+    {
+        IdToJob::iterator it = idToJob_.find( jobId );
+        if ( it == idToJob_.end() )
+            return;
+        idToJob_.erase( it );
+    }
+
+    std::list< Job * >::iterator it = jobs_.begin();
+    for( ; it != jobs_.end(); ++it )
+    {
+        Job *job = *it;
+        std::ostringstream ss;
+        ss << "================" << std::endl <<
+            "Job deleted from job queue, jobId = " << job->GetJobId() << std::endl <<
+            "completion status: failed" << std::endl <<
+            "================";
+
+        PS_LOG( ss.str() );
+
+        job->RunCallback( ss.str() );
+        delete job;
+
+        jobs_.erase( it );
+        --numJobs_;
+        break;
+    }
+}
+
 Job *JobQueue::PopJob()
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     if ( numJobs_ )
     {
-        Job *j = jobs_.front();
+        Job *job = jobs_.front();
         jobs_.pop_front();
+        idToJob_.erase( job->GetJobId() );
         --numJobs_;
-        return j;
+        return job;
     }
     return NULL;
 }
@@ -52,6 +86,7 @@ void JobQueue::Clear( bool doDelete )
         }
     }
     jobs_.clear();
+    idToJob_.clear();
     numJobs_ = 0;
 }
 

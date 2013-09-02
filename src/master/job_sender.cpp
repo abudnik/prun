@@ -56,6 +56,11 @@ void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, c
     Scheduler::Instance().OnTaskSendCompletion( success, workerJob, hostIP, job );
     if ( success )
     {
+        if ( !workerJob.taskId_ )
+        {
+            // first task send completion means that job execution started
+            timeoutManager_->PushJob( workerJob.jobId_, job->GetTimeout() );
+        }
         timeoutManager_->PushTask( workerJob, hostIP, job->GetTaskTimeout() );
     }
 }

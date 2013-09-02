@@ -47,7 +47,8 @@ public:
 
     void Run();
 
-    void PushJob( int64_t jobId, int jobTimeout, int queueTimeout );
+    void PushJobQueue( int64_t jobId, int queueTimeout );
+    void PushJob( int64_t jobId, int jobTimeout );
     void PushTask( const WorkerJob &job, const std::string &hostIP, int timeout );
 
 private:

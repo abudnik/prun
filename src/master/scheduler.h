@@ -28,7 +28,6 @@ public:
 
     void OnTaskTimeout( const WorkerJob &workerJob, const std::string &hostIP );
     void OnJobTimeout( int64_t jobId );
-    void OnJobQueueTimeout( int64_t jobId );
 
     void GetJobInfo( std::string &info, int64_t jobId );
     void GetStatistics( std::string &stat );

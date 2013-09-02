@@ -1,6 +1,7 @@
 #include <boost/bind.hpp>
 #include "timeout_manager.h"
 #include "scheduler.h"
+#include "job_manager.h"
 
 namespace master {
 
@@ -16,7 +17,7 @@ void TimeoutManager::JobTimeoutHandler::HandleTimeout()
 
 void TimeoutManager::JobQueueTimeoutHandler::HandleTimeout()
 {
-    Scheduler::Instance().OnJobQueueTimeout( jobId_ );
+    JobManager::Instance().DeleteJob( jobId_ );
 }
 
 
@@ -58,6 +59,46 @@ void TimeoutManager::CheckTimeouts()
     }
 }
 
+void TimeoutManager::PushJobQueue( int64_t jobId, int queueTimeout )
+{
+    namespace pt = boost::posix_time;
+    const pt::ptime now = pt::second_clock::local_time();
+    const pt::ptime deadlineQueue = now + pt::seconds( queueTimeout );
+
+    boost::shared_ptr< JobQueueTimeoutHandler > handlerQueue( new JobQueueTimeoutHandler );
+    handlerQueue->jobId_ = jobId;
+    Callback callbackQueue(
+        boost::bind( &JobQueueTimeoutHandler::HandleTimeout, handlerQueue )
+    );
+
+    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    jobs_.insert( std::pair< pt::ptime, Callback >(
+                      deadlineQueue,
+                      callbackQueue
+                )
+    );
+}
+
+void TimeoutManager::PushJob( int64_t jobId, int jobTimeout )
+{
+    namespace pt = boost::posix_time;
+    const pt::ptime now = pt::second_clock::local_time();
+    const pt::ptime deadline = now + pt::seconds( jobTimeout );
+
+    boost::shared_ptr< JobTimeoutHandler > handler( new JobTimeoutHandler );
+    handler->jobId_ = jobId;
+    Callback callback(
+        boost::bind( &JobTimeoutHandler::HandleTimeout, handler )
+    );
+
+    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    jobs_.insert( std::pair< pt::ptime, Callback >(
+                      deadline,
+                      callback
+                )
+    );
+}
+
 void TimeoutManager::PushTask( const WorkerJob &job, const std::string &hostIP, int timeout )
 {
     namespace pt = boost::posix_time;
@@ -75,38 +116,6 @@ void TimeoutManager::PushTask( const WorkerJob &job, const std::string &hostIP, 
     jobs_.insert( std::pair< pt::ptime, Callback >(
                       deadline,
                       callback
-                )
-    );
-}
-
-void TimeoutManager::PushJob( int64_t jobId, int jobTimeout, int queueTimeout )
-{
-    namespace pt = boost::posix_time;
-    const pt::ptime now = pt::second_clock::local_time();
-    const pt::ptime deadline = now + pt::seconds( jobTimeout );
-    const pt::ptime deadlineQueue = now + pt::seconds( queueTimeout );
-
-    boost::shared_ptr< JobTimeoutHandler > handler( new JobTimeoutHandler );
-    handler->jobId_ = jobId;
-    Callback callback(
-        boost::bind( &JobTimeoutHandler::HandleTimeout, handler )
-    );
-
-    boost::shared_ptr< JobQueueTimeoutHandler > handlerQueue( new JobQueueTimeoutHandler );
-    handlerQueue->jobId_ = jobId;
-    Callback callbackQueue(
-        boost::bind( &JobQueueTimeoutHandler::HandleTimeout, handlerQueue )
-    );
-
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-    jobs_.insert( std::pair< pt::ptime, Callback >(
-                      deadline,
-                      callback
-                )
-    );
-    jobs_.insert( std::pair< pt::ptime, Callback >(
-                      deadlineQueue,
-                      callbackQueue
                 )
     );
 }
