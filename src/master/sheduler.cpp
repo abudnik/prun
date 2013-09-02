@@ -311,16 +311,23 @@ void Sheduler::OnTaskTimeout( const WorkerJob &workerJob, const std::string &hos
 
 void Sheduler::OnJobTimeout( int64_t jobId )
 {
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
-    StopWorkers( jobId );
-    RemoveJob( jobId, "timeout" );
+    {
+        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+        StopWorkers( jobId );
+        RemoveJob( jobId, "timeout" );
+    }
+    NotifyAll();
 }
 
 void Sheduler::OnJobQueueTimeout( int64_t jobId )
 {
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
-    StopWorkers( jobId );
-    RemoveJob( jobId, "queue timeout" );
+    // todo: what if job sended to all workers, but this timeout happens?
+    {
+        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+        StopWorkers( jobId );
+        RemoveJob( jobId, "queue timeout" );
+    }
+    NotifyAll();
 }
 
 void Sheduler::RunJobCallback( Job *job, const char *completionStatus )
@@ -330,6 +337,8 @@ void Sheduler::RunJobCallback( Job *job, const char *completionStatus )
         "Job completed, jobId = " << job->GetJobId() << std::endl <<
         "completion status: " << completionStatus << std::endl <<
         "================";
+
+    PS_LOG( ss.str() );
 
     job->RunCallback( ss.str() );
 }
@@ -365,8 +374,36 @@ void Sheduler::RemoveJob( int64_t jobId, const char *completionStatus )
 
 void Sheduler::StopWorkers( int64_t jobId )
 {
-    // todo: ...
+    {
+        IPToWorker::iterator it = busyWorkers_.begin();
+        for( ; it != busyWorkers_.end(); )
+        {
+            Worker *w = it->second;
+            if ( w->GetJob().jobId_ == jobId )
+            {
+                busyWorkers_.erase( it++ );
+                freeWorkers_[ w->GetIP() ] = w;
+                w->SetJob( WorkerJob() );
+                continue;
+            }
+            ++it;
+        }
+    }
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    jobExecutions_.erase( jobId );
+    tasksToSend_.erase( jobId );
+    {
+        std::list< WorkerJob >::iterator it = needReschedule_.begin();
+        for( ; it != needReschedule_.end(); )
+        {
+            if ( it->jobId_ == jobId )
+            {
+                needReschedule_.erase( it++ );
+                continue;
+            }
+            ++it;
+        }
+    }
 }
 
 bool Sheduler::CheckIfWorkerFailedJob( Worker *worker, int64_t jobId ) const
