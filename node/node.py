@@ -10,13 +10,15 @@ try:
     shmemPath = sys.argv[2]
     scriptLen = int(sys.argv[3])
     shmemOffset = int(sys.argv[4])
+    taskId = int(sys.argv[5])
+    numTasks = int(sys.argv[6])
 
     shmem = os.open( shmemPath, os.O_RDONLY )
     buf = mmap.mmap( shmem, scriptLen, mmap.MAP_SHARED, mmap.PROT_READ, offset=shmemOffset )
     s, = struct.unpack( str(scriptLen)+'s', buf[:scriptLen] )
     os.close( shmem )
 
-    exec s in dict()
+    exec( s, {"taskId":taskId, "numTasks":numTasks} )
 except Exception as e:
     errCode = -1
     print e

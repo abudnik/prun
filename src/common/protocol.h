@@ -16,9 +16,9 @@ public:
     virtual bool ParseJobCompletionPing( const std::string &msg, int64_t &jobId, int &taskId ) = 0;
 
     virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
-                             const std::string &script, int64_t jobId, int taskId ) = 0;
+                             const std::string &script, int64_t jobId, int taskId, int numTasks ) = 0;
     virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
-                                  std::string &script, int64_t &jobId, int &taskId ) = 0;
+                                  std::string &script, int64_t &jobId, int &taskId, int &numTasks ) = 0;
     virtual bool GetJobResult( std::string &msg, int64_t jobId, int taskId ) = 0;
     virtual bool ParseGetJobResult( const std::string &msg, int64_t &jobId, int &taskId ) = 0;
     virtual bool SendJobResult( std::string &msg, int errCode ) = 0;
@@ -49,10 +49,10 @@ public:
     virtual bool ParseJobCompletionPing( const std::string &msg, int64_t &jobId, int &taskId );
 
     virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
-                             const std::string &script, int64_t jobId, int taskId );
+                             const std::string &script, int64_t jobId, int taskId, int numTasks );
 
     virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
-                                  std::string &script, int64_t &jobId, int &taskId );
+                                  std::string &script, int64_t &jobId, int &taskId, int &numTasks );
 
     virtual bool GetJobResult( std::string &msg, int64_t jobId, int taskId );
 

@@ -85,6 +85,8 @@ public:
         jobId_ = ptree.get<int>( "id" );
         scriptLength_ = ptree.get<unsigned int>( "len" );
         language_ = ptree.get<std::string>( "lang" );
+        taskId_ = ptree.get<int>( "task_id" );
+        numTasks_ = ptree.get<int>( "num_tasks" );
     }
 
     void GetResponse( std::string &response )
@@ -109,12 +111,16 @@ public:
     int GetJobId() const { return jobId_; }
     unsigned int GetScriptLength() const { return scriptLength_; }
     const std::string &GetScriptLanguage() const { return language_; }
+    int GetTaskId() const { return taskId_; }
+    int GetNumTasks() const { return numTasks_; }
 
 private:
     int jobId_;
     unsigned int scriptLength_;
     int errCode_;
     std::string language_;
+    int taskId_;
+    int numTasks_;
 };
 
 class ScriptExec
@@ -140,21 +146,21 @@ public:
         if ( pid > 0 )
             return;
 
-        std::ostringstream ss, ss2;
-
-        ss << job->GetScriptLength();
-        string scriptLength = ss.str();
+        string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
 
         size_t offset = job->GetJobId() * SHMEM_BLOCK_SIZE;
-        ss2 << offset;
-        string shmemOffset = ss2.str();
+        string shmemOffset = boost::lexical_cast<std::string>( offset );
+
+        string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
+        string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
 
         ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 
         int ret = execl( pythonExePath_.c_str(), "python",
                          nodeScriptPath.c_str(),
                          threadParams.fifoName.c_str(), shmemPath.c_str(),
-                         scriptLength.c_str(), shmemOffset.c_str(), NULL );
+                         scriptLength.c_str(), shmemOffset.c_str(),
+                         taskId.c_str(), numTasks.c_str(), NULL );
         if ( ret < 0 )
         {
             PS_LOG( "HandleRequest: execl failed: " << strerror(errno) );

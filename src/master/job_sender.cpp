@@ -150,7 +150,7 @@ void SenderBoost::MakeRequest()
 {
     python_server::ProtocolJson protocol;
     protocol.SendScript( request_, job_->GetScriptLanguage(), job_->GetScript(),
-                         workerJob_.jobId_, workerJob_.taskId_ );
+                         workerJob_.jobId_, workerJob_.taskId_, job_->GetNumPlannedExec() );
 }
 
 } // namespace master

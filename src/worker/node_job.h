@@ -85,6 +85,7 @@ public:
     const std::string &GetScript() const { return script_; }
     int64_t GetJobId() const { return jobId_; }
     int GetTaskId() const { return taskId_; }
+    int GetNumTasks() const { return numTasks_; }
     int GetErrorCode() const { return errCode_; }
     const std::string &GetTaskType() const { return taskType_; }
     const std::string &GetMasterIP() const { return masterIP_; }
@@ -95,7 +96,7 @@ private:
         if ( taskType_ == "exec" )
         {
             std::string script64;
-            parser->ParseSendScript( body, language_, script64, jobId_, taskId_ );
+            parser->ParseSendScript( body, language_, script64, jobId_, taskId_, numTasks_ );
             if ( !DecodeBase64( script64, script_ ) )
                 return false;
 
@@ -115,6 +116,7 @@ private:
     std::string script_;
     int64_t jobId_;
     int taskId_;
+    int numTasks_;
     int errCode_;
     std::string taskType_;
     std::string masterIP_;

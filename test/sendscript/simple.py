@@ -14,15 +14,17 @@ def IsSimple( value ):
 
 def main():
 	#file = open( "out.txt", "w" )
-
+	simples = []
 	for i in xrange( 1, 100000 ):
 		if IsSimple( i ):
-			pass
+			simples.append( i )
 			#file.write( "%d\n" % i )
 
 	#file.close()
 
-	print 'done'
+        global taskId, numTasks
+	print( "%i : %i" % (taskId, numTasks) )
+	print( 'done' )
 
 #import psyco
 #psyco.full()
