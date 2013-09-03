@@ -139,18 +139,25 @@ bool Scheduler::ScheduleTask( WorkerJob &workerJob, std::string &hostIP, Job **j
 bool Scheduler::RescheduleTask( const WorkerJob &workerJob )
 {
     int64_t jobId = workerJob.jobId_;
+    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     const Job *job = FindJobByJobId( jobId );
     if ( job )
     {
         size_t failedNodesCnt = failedWorkers_[ jobId ].size();
         if ( failedNodesCnt < (size_t)job->GetMaxFailedNodes() )
         {
-            boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+            if ( job->GetNoReschedule() )
+            {
+                DecrementJobExecution( jobId );
+                return false;
+            }
+
             needReschedule_.push_back( workerJob );
             return true;
         }
         else
         {
+            scoped_lock.unlock();
             StopWorkers( jobId );
             RemoveJob( jobId, "max failed nodes limit exceeded" );
         }
@@ -268,15 +275,7 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerJob &workerJob, const
         w->SetJob( WorkerJob() );
 
         boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
-        int numExecution = jobExecutions_[ workerJob.jobId_ ];
-        if ( numExecution <= 1 )
-        {
-            RemoveJob( workerJob.jobId_, "success" );
-        }
-        else
-        {
-            jobExecutions_[ workerJob.jobId_ ] = numExecution - 1;
-        }
+        DecrementJobExecution( workerJob.jobId_ );
     }
     else
     {
@@ -346,6 +345,19 @@ void Scheduler::RunJobCallback( Job *job, const char *completionStatus )
     PS_LOG( ss.str() );
 
     job->RunCallback( ss.str() );
+}
+
+void Scheduler::DecrementJobExecution( int64_t jobId )
+{
+    int numExecution = jobExecutions_[ jobId ];
+    if ( numExecution <= 1 )
+    {
+        RemoveJob( jobId, "success" );
+    }
+    else
+    {
+        jobExecutions_[ jobId ] = numExecution - 1;
+    }
 }
 
 void Scheduler::RemoveJob( int64_t jobId, const char *completionStatus )

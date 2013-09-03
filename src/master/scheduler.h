@@ -47,6 +47,7 @@ private:
     bool RescheduleTask( const WorkerJob &workerJob );
 
     void RunJobCallback( Job *job, const char *completionStatus );
+    void DecrementJobExecution( int64_t jobId );
     void RemoveJob( int64_t jobId, const char *completionStatus );
     void StopWorkers( int64_t jobId );
 
