@@ -287,9 +287,7 @@ private:
             if ( ret < 0 )
             {
                 job_->OnError( ret );
-                execCompleted_ = true;
-                boost::unique_lock< boost::mutex > lock( responseMut_ );
-                responseCond_.notify_all();
+                NotifyResponseCondVar();
                 return;
             }
         }
@@ -313,15 +311,14 @@ private:
             else
             {
                 HandleResponse();
-                execCompleted_ = true;
-                boost::unique_lock< boost::mutex > lock( responseMut_ );
-                responseCond_.notify_all();
+                NotifyResponseCondVar();
             }
         }
         else
         {
             PS_LOG( "PyExecConnection::HandleRead error=" << error.message() );
-            //HandleError( error );
+            job_->OnError( -1 );
+            NotifyResponseCondVar();
         }
     }
 
@@ -334,6 +331,13 @@ private:
 
         int errCode = ptree_.get<int>( "err" );
         job_->OnError( errCode );
+    }
+
+    void NotifyResponseCondVar()
+    {
+        execCompleted_ = true;
+        boost::unique_lock< boost::mutex > lock( responseMut_ );
+        responseCond_.notify_one();
     }
 
 private:
