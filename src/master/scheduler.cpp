@@ -32,8 +32,8 @@ void Scheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
             IPToWorker::iterator it = busyWorkers_.find( worker->GetIP() );
             if ( it != busyWorkers_.end() )
             {
-                const Worker *busyWorker = it->second;
-                const WorkerJob &workerJob = busyWorker->GetJob();
+                Worker *busyWorker = it->second;
+                const WorkerJob workerJob = busyWorker->GetJob();
                 int64_t jobId = workerJob.jobId_;
 
                 PS_LOG( "Scheduler::OnChangedWorkerState: worker isn't available, while executing job"
@@ -41,24 +41,13 @@ void Scheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
 
                 failedWorkers_[ jobId ].insert( worker->GetIP() );
                 busyWorkers_.erase( worker->GetIP() );
+                busyWorker->SetJob( WorkerJob() );
 
-                const Job *job = JobManager::Instance().GetJobById( jobId );
-                if ( job )
+                if ( RescheduleTask( workerJob ) )
                 {
-                    size_t failedNodesCnt = failedWorkers_[ jobId ].size();
-                    if ( failedNodesCnt < (size_t)job->GetMaxFailedNodes() )
-                    {
-                        boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-                        needReschedule_.push_back( workerJob );
-                    }
-                    else
-                    {
-                        PS_LOG( "Scheduler::OnChangedWorkerState: max failed nodes limit exceeded for job, jobId=" << jobId );
-                    }
-                }
-                else
-                {
-                    PS_LOG( "Scheduler::OnChangedWorkerState: Job for jobId=" << jobId << " not found" );
+                    scoped_lock.unlock();
+                    NotifyAll();
+                    scoped_lock.lock();
                 }
             }
             else
@@ -147,6 +136,32 @@ bool Scheduler::ScheduleTask( WorkerJob &workerJob, std::string &hostIP, Job **j
     return false;
 }
 
+bool Scheduler::RescheduleTask( const WorkerJob &workerJob )
+{
+    int64_t jobId = workerJob.jobId_;
+    const Job *job = FindJobByJobId( jobId );
+    if ( job )
+    {
+        size_t failedNodesCnt = failedWorkers_[ jobId ].size();
+        if ( failedNodesCnt < (size_t)job->GetMaxFailedNodes() )
+        {
+            boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+            needReschedule_.push_back( workerJob );
+            return true;
+        }
+        else
+        {
+            StopWorkers( jobId );
+            RemoveJob( jobId, "max failed nodes limit exceeded" );
+        }
+    }
+    else
+    {
+        PS_LOG( "Scheduler::RescheduleTask: Job for jobId=" << jobId << " not found" );
+    }
+    return false;
+}
+
 bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **job )
 {
     if ( freeWorkers_.empty() )
@@ -215,7 +230,7 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
     {
         {
             Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
-            boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+            boost::mutex::scoped_lock scoped_lock( workersMut_ );
 
             PS_LOG( "Scheduler::OnTaskSendCompletion: job sending failed."
                     " jobId=" << workerJob.jobId_ << ", ip=" << hostIP );
@@ -229,8 +244,7 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
             w->SetJob( WorkerJob() );
 
             // job need to be rescheduled to any other node
-            boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
-            needReschedule_.push_back( workerJob );
+            RescheduleTask( workerJob );
         }
         NotifyAll();
     }
@@ -270,7 +284,7 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerJob &workerJob, const
             return;
 
         Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
-        boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+        boost::mutex::scoped_lock scoped_lock( workersMut_ );
 
         PS_LOG( "Scheduler::OnTaskCompletion: errCode=" << errCode <<
                 ", jobId=" << workerJob.jobId_ << ", ip=" << hostIP );
@@ -284,8 +298,7 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerJob &workerJob, const
         w->SetJob( WorkerJob() );
 
         // job need to be rescheduled to any other node
-        boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
-        needReschedule_.push_back( workerJob );
+        RescheduleTask( workerJob );
     }
 
     NotifyAll();
@@ -431,17 +444,6 @@ Job *Scheduler::FindJobByJobId( int64_t jobId ) const
     }
     return NULL;
 }
-
-/*bool Scheduler::IsWorkerBusy( const std::string &hostIP, int64_t jobId, int taskId )
-{
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
-    IPToWorker::const_iterator it = busyWorkers_.find( hostIP );
-    if ( it == busyWorkers_.end() )
-        return false;
-    const Worker *worker = it->second;
-    const WorkerJob &workerJob = worker->GetJob();
-    return ( workerJob.jobId_ == jobId ) && ( workerJob.taskId_ == taskId );
-}*/
 
 void Scheduler::Shutdown()
 {

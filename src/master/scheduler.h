@@ -44,6 +44,7 @@ private:
     void PlanJobExecution();
     bool ScheduleTask( WorkerJob &workerJob, std::string &hostIP, Job **job,
                        int64_t jobId, int taskId, bool reschedule );
+    bool RescheduleTask( const WorkerJob &workerJob );
 
     void RunJobCallback( Job *job, const char *completionStatus );
     void RemoveJob( int64_t jobId, const char *completionStatus );
