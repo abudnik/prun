@@ -110,7 +110,6 @@ public:
     ~CommDescrPool()
     {
         delete sem_;
-        sem_ = NULL;
     }
 
     void AddCommDescr( const CommDescr &descr )
@@ -164,6 +163,58 @@ private:
 
 CommDescrPool *commDescrPool;
 
+struct ExecInfo
+{
+    int64_t jobId_;
+    int taskId_;
+    boost::function< void () > callback_;
+};
+
+class ExecTable
+{
+    typedef std::list< ExecInfo > Container;
+
+public:
+    void Add( const ExecInfo &execInfo )
+    {
+        boost::unique_lock< boost::mutex > lock( mut_ );
+        table_.push_back( execInfo );
+    }
+
+    void Delete( int64_t jobId, int taskId )
+    {
+        boost::unique_lock< boost::mutex > lock( mut_ );
+        Container::iterator it = table_.begin();
+        for( ; it != table_.end(); ++it )
+        {
+            const ExecInfo &execInfo = *it;
+            if ( execInfo.jobId_ == jobId && execInfo.taskId_ == taskId )
+            {
+                table_.erase( it );
+                break;
+            }
+        }
+    }
+
+    void Clear()
+    {
+        boost::unique_lock< boost::mutex > lock( mut_ );
+        Container::iterator it = table_.begin();
+        for( ; it != table_.end(); ++it )
+        {
+            const ExecInfo &execInfo = *it;
+            if ( execInfo.callback_ )
+                execInfo.callback_();
+        }
+        table_.clear();
+    }
+
+private:
+    Container table_;
+    boost::mutex mut_;
+};
+ExecTable execTable;
+
 
 class Action
 {
@@ -207,6 +258,12 @@ public:
 
         execCompleted_ = false;
 
+        ExecInfo execInfo;
+        execInfo.jobId_ = job->GetJobId();
+        execInfo.taskId_ = job->GetTaskId();
+        execInfo.callback_ = boost::bind( &PyExecConnection::Cancel, this );
+        execTable.Add( execInfo );
+
         try
         {
             std::ostringstream ss, ss2;
@@ -243,9 +300,8 @@ public:
                 }
                 else
                 {
-                    PS_LOG( "PyExecConnection::Send(): timed out" );
-                    ret = -1;
-                    //break;
+                    PS_LOG( "PyExecConnection::Send(): waiting task completion: jobId=" << job->GetJobId() <<
+                            ", taskId=" << job->GetTaskId() );
                 }
             }
         }
@@ -255,7 +311,14 @@ public:
             ret = -1;
         }
 
+        execTable.Delete( job->GetJobId(), job->GetTaskId() );
         return ret;
+    }
+
+    void Cancel()
+    {
+        job_->OnError( -1 );
+        NotifyResponseCondVar();
     }
 
 private:
@@ -979,6 +1042,8 @@ int main( int argc, char* argv[], char **envp )
         io_service.stop();
 
         python_server::taskSem->Notify();
+
+        python_server::execTable.Clear();
 
         worker_threads.join_all();
 
