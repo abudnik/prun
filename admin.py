@@ -40,8 +40,11 @@ class Connection():
             pass
 
     def Close(self):
-        self.socket.shutdown(socket.SHUT_RDWR)
-        self.socket.close()
+        try:
+            self.socket.shutdown(socket.SHUT_RDWR)
+            self.socket.close()
+        except Exception as e:
+            pass
 
 class ResultGetter(Thread):
     def __init__( self, connection ):
