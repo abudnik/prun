@@ -35,6 +35,7 @@ unsigned short DEFAULT_MASTER_UDP_PORT = DEFAULT_PORT - 2;
 char const SHMEM_NAME[] = "pyexec_shmem";
 char const FIFO_NAME[] = "/tmp/pyexec";
 
-char const NODE_SCRIPT_NAME[] = "node/node.py";
+char const NODE_SCRIPT_NAME_PY[] = "node/node.py";
+char const NODE_SCRIPT_NAME_JAVA[] = "node/node.java";
 
 } // namespace python_server

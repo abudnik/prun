@@ -35,7 +35,8 @@ extern unsigned short DEFAULT_MASTER_UDP_PORT;
 extern const char SHMEM_NAME[];
 extern const char FIFO_NAME[];
 
-extern const char NODE_SCRIPT_NAME[];
+extern const char NODE_SCRIPT_NAME_PY[];
+extern const char NODE_SCRIPT_NAME_JAVA[];
 
 } // namespace python_server
 

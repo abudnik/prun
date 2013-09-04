@@ -53,7 +53,6 @@ bool isFork;
 uid_t uid;
 unsigned int numThread;
 string exeDir;
-string nodeScriptPath;
 string shmemPath;
 
 boost::interprocess::shared_memory_object *sharedMemPool;
@@ -172,13 +171,13 @@ public:
         ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 
         int ret = execl( pythonExePath_.c_str(), "python",
-                         nodeScriptPath.c_str(),
+                         (exeDir + '/' + NODE_SCRIPT_NAME_PY).c_str(),
                          threadParams.fifoName.c_str(), shmemPath.c_str(),
                          scriptLength.c_str(), shmemOffset.c_str(),
                          taskId.c_str(), numTasks.c_str(), NULL );
         if ( ret < 0 )
         {
-            PS_LOG( "HandleRequest: execl failed: " << strerror(errno) );
+            PS_LOG( "PythonExec::Execute: execl failed: " << strerror(errno) );
         }
         ::exit( 1 );
     }
@@ -212,7 +211,7 @@ public:
                     ret = read( fifo, &errCode, sizeof( errCode ) );
                     if ( ret <= 0 )
                     {
-                        PS_LOG( "read fifo failed: " << strerror(errno) );
+                        PS_LOG( "PythonExec::DoFork: read fifo failed: " << strerror(errno) );
                     }
                 }
                 else
@@ -223,7 +222,7 @@ public:
                 }
                 else
                 {
-                    PS_LOG( "poll failed: " << strerror(errno) );
+                    PS_LOG( "PythonExec::DoFork: poll failed: " << strerror(errno) );
                     
                 }
                 job_->OnError( errCode );
@@ -232,7 +231,7 @@ public:
             }
             else
             {
-                PS_LOG( "DoFork: pipe not opened" );
+                PS_LOG( "PythonExec::DoFork: pipe not opened" );
                 job_->OnError( -1 );
             }
             //PS_LOG( "wait child done " << pid );
@@ -245,7 +244,7 @@ public:
         }
         else
         {
-            PS_LOG( "DoFork: fork() failed " << strerror(errno) );
+            PS_LOG( "PythonExec::DoFork: fork() failed " << strerror(errno) );
         }
 
         return pid;
@@ -256,6 +255,118 @@ private:
     std::string pythonExePath_;
 };
 
+class JavaExec : public ScriptExec
+{
+public:
+    JavaExec()
+    {
+        javaExePath_ = Config::Instance().Get<string>( "java" );
+    }
+
+    virtual void Execute( Job *job )
+    {
+        job_ = job;
+
+        pid_t pid = DoFork();
+        if ( pid > 0 )
+            return;
+
+        string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
+
+        size_t offset = job->GetJobId() * SHMEM_BLOCK_SIZE;
+        string shmemOffset = boost::lexical_cast<std::string>( offset );
+
+        string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
+        string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
+
+        ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+
+        int ret = execl( javaExePath_.c_str(), "java",
+                         "-cp", (exeDir + "/node").c_str(),
+                         "node",
+                         threadParams.fifoName.c_str(), shmemPath.c_str(),
+                         scriptLength.c_str(), shmemOffset.c_str(),
+                         taskId.c_str(), numTasks.c_str(), NULL );
+        if ( ret < 0 )
+        {
+            PS_LOG( "JavaExec::Execute: execl failed: " << strerror(errno) );
+        }
+        ::exit( 1 );
+    }
+
+    pid_t DoFork()
+    {
+        pid_t pid = fork();
+
+        if ( pid > 0 )
+        {
+            //PS_LOG( "wait child " << pid );
+            ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+            threadParams.pid = pid;
+
+            int fifo = threadParams.fifofd;
+            if ( fifo != -1 )
+            {
+                sigset_t sigset, oldset;
+                sigemptyset( &sigset );
+                sigaddset( &sigset, SIGCHLD );
+                sigprocmask( SIG_BLOCK, &sigset, &oldset );
+
+                pollfd pfd[1];
+                pfd[0].fd = fifo;
+                pfd[0].events = POLLIN;
+
+                int errCode = -1;
+                int ret = poll( pfd, 1, job_->GetTimeout() * 1000 );
+                if ( ret > 0 )
+                {
+                    ret = read( fifo, &errCode, sizeof( errCode ) );
+                    if ( ret <= 0 )
+                    {
+                        PS_LOG( "JavaExec::DoFork: read fifo failed: " << strerror(errno) );
+                    }
+                }
+                else
+                if ( ret == 0 )
+                {
+                    errCode = NODE_JOB_TIMEOUT;
+                    KillExec( pid );
+                }
+                else
+                {
+                    PS_LOG( "JavaExec::DoFork: poll failed: " << strerror(errno) );
+                    
+                }
+                job_->OnError( errCode );
+
+                sigprocmask( SIG_BLOCK, &oldset, NULL );
+            }
+            else
+            {
+                PS_LOG( "JavaExec::DoFork: pipe not opened" );
+                job_->OnError( -1 );
+            }
+            //PS_LOG( "wait child done " << pid );
+        }
+        else
+        if ( pid == 0 )
+        {
+            isFork = true;
+            prctl( PR_SET_PDEATHSIG, SIGHUP );
+        }
+        else
+        {
+            PS_LOG( "JavaExec::DoFork: fork() failed " << strerror(errno) );
+        }
+
+        return pid;
+    }
+
+private:
+    Job *job_;
+    std::string javaExePath_;
+};
+
 class ExecCreator
 {
 public:
@@ -263,6 +374,8 @@ public:
     {
         if ( language == "python" )
             return new PythonExec();
+        if ( language == "java" )
+            return new JavaExec();
         return NULL;
     }
 };
@@ -530,6 +643,27 @@ void SetupPyExecIPC()
     }
 }
 
+void SetupLanguageRuntime()
+{
+    pid_t pid = fork();
+    if ( pid == 0 )
+    {
+        std::string javacPath = python_server::Config::Instance().Get<std::string>( "javac" );
+        std::string nodePath = python_server::exeDir + '/' + python_server::NODE_SCRIPT_NAME_JAVA;
+        int ret = execl( javacPath.c_str(), "javac", nodePath.c_str(), NULL );
+        if ( ret < 0 )
+        {
+            PS_LOG( "SetupLanguageRuntime: execl(javac) failed: " << strerror(errno) );
+        }
+        ::exit( 0 );
+    }
+    else
+    if ( pid < 0 )
+    {
+        PS_LOG( "SetupLanguageRuntime: fork() failed " << strerror(errno) );
+    }
+}
+
 void Impersonate()
 {
     if ( python_server::uid )
@@ -678,11 +812,11 @@ int main( int argc, char* argv[], char **envp )
         if ( vm.count( "exe_dir" ) )
         {
             python_server::exeDir = vm[ "exe_dir" ].as<std::string>();
-            python_server::nodeScriptPath = python_server::exeDir + '/';
         }
-        python_server::nodeScriptPath += python_server::NODE_SCRIPT_NAME;
 
         python_server::Config::Instance().ParseConfig( python_server::exeDir.c_str() );
+
+        SetupLanguageRuntime();
 
         SetupPyExecIPC();
         
