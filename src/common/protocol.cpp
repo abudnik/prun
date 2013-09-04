@@ -86,19 +86,22 @@ bool ProtocolJson::ParseJobCompletionPing( const std::string &msg, int64_t &jobI
 }
 
 bool ProtocolJson::SendScript( std::string &msg, const std::string &scriptLanguage,
-                               const std::string &script, int64_t jobId, int taskId, int numTasks )
+                               const std::string &script, int64_t jobId, int taskId, int numTasks,
+                               int timeout )
 {
     msg = std::string( "{\"type\":\"exec\"}\n" );
     msg += std::string( "{\"lang\":\"" ) + scriptLanguage + "\",\"script\":\"" + script + "\","
         "\"job_id\":" + boost::lexical_cast<std::string>( jobId ) + ","
         "\"task_id\":" + boost::lexical_cast<std::string>( taskId ) + ","
-        "\"num_tasks\":" + boost::lexical_cast<std::string>( numTasks ) + "}";
+        "\"num_tasks\":" + boost::lexical_cast<std::string>( numTasks ) + ","
+        "\"timeout\":" + boost::lexical_cast<std::string>( timeout ) + "}";
     AddHeader( msg );
     return true;
 }
 
 bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptLanguage,
-                                    std::string &script, int64_t &jobId, int &taskId, int &numTasks )
+                                    std::string &script, int64_t &jobId, int &taskId, int &numTasks,
+                                    int &timeout )
 {
     std::istringstream ss( msg );
 
@@ -111,6 +114,7 @@ bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptL
         jobId = ptree.get<int64_t>( "job_id" );
         taskId = ptree.get<int>( "task_id" );
         numTasks = ptree.get<int>( "num_tasks" );
+        timeout = ptree.get<int>( "timeout" );
     }
     catch( std::exception &e )
     {

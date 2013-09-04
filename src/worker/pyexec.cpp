@@ -40,6 +40,7 @@ the License.
 #include "common/request.h"
 #include "common/log.h"
 #include "common/config.h"
+#include "common/error_code.h"
 
 
 using namespace std;
@@ -87,6 +88,7 @@ public:
         language_ = ptree.get<std::string>( "lang" );
         taskId_ = ptree.get<int>( "task_id" );
         numTasks_ = ptree.get<int>( "num_tasks" );
+        timeout_ = ptree.get<int>( "timeout" );
     }
 
     void GetResponse( std::string &response )
@@ -113,6 +115,7 @@ public:
     const std::string &GetScriptLanguage() const { return language_; }
     int GetTaskId() const { return taskId_; }
     int GetNumTasks() const { return numTasks_; }
+    int GetTimeout() const { return timeout_; }
 
 private:
     int jobId_;
@@ -121,12 +124,24 @@ private:
     std::string language_;
     int taskId_;
     int numTasks_;
+    int timeout_;
 };
 
 class ScriptExec
 {
 public:
     virtual void Execute( Job *job ) = 0;
+
+    virtual void KillExec( pid_t pid )
+    {
+        PS_LOG( "poll timed out, trying to kill process: " << pid );
+        int ret = kill( pid, SIGTERM );
+        if ( ret == -1 )
+        {
+            PS_LOG( "process killing failed: pid=" << pid << ", err=" << strerror(errno) );
+        }
+    }
+
     virtual ~ScriptExec() {}
 };
 
@@ -191,7 +206,7 @@ public:
                 pfd[0].events = POLLIN;
 
                 int errCode = -1;
-                int ret = poll( pfd, 1, -1 );
+                int ret = poll( pfd, 1, job_->GetTimeout() * 1000 );
                 if ( ret > 0 )
                 {
                     ret = read( fifo, &errCode, sizeof( errCode ) );
@@ -201,8 +216,15 @@ public:
                     }
                 }
                 else
+                if ( ret == 0 )
                 {
-                    PS_LOG( "ppoll failed: " << strerror(errno) );
+                    errCode = NODE_JOB_TIMEOUT;
+                    KillExec( pid );
+                }
+                else
+                {
+                    PS_LOG( "poll failed: " << strerror(errno) );
+                    
                 }
                 job_->OnError( errCode );
 

@@ -273,6 +273,7 @@ public:
             ptree_.put( "lang", job->GetScriptLanguage() );
             ptree_.put( "task_id", job->GetTaskId() );
             ptree_.put( "num_tasks", job->GetNumTasks() );
+            ptree_.put( "timeout", job->GetTimeout() );
 
             boost::property_tree::write_json( ss, ptree_, false );
 
