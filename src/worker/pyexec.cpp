@@ -334,6 +334,45 @@ public:
     }
 };
 
+class RubyExec : public ScriptExec
+{
+public:
+    RubyExec()
+    {
+        exePath_ = Config::Instance().Get<string>( "ruby" );
+    }
+
+    virtual void Execute( Job *job )
+    {
+        job_ = job;
+
+        pid_t pid = DoFork();
+        if ( pid > 0 )
+            return;
+
+        string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
+
+        size_t offset = job->GetJobId() * SHMEM_BLOCK_SIZE;
+        string shmemOffset = boost::lexical_cast<std::string>( offset );
+
+        string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
+        string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
+
+        ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+
+        int ret = execl( exePath_.c_str(), "ruby",
+                         (exeDir + '/' + NODE_SCRIPT_NAME_RUBY).c_str(),
+                         threadParams.fifoName.c_str(), shmemPath.c_str(),
+                         scriptLength.c_str(), shmemOffset.c_str(),
+                         taskId.c_str(), numTasks.c_str(), NULL );
+        if ( ret < 0 )
+        {
+            PS_LOG( "RubyExec::Execute: execl failed: " << strerror(errno) );
+        }
+        ::exit( 1 );
+    }
+};
+
 class ExecCreator
 {
 public:
@@ -345,6 +384,8 @@ public:
             return new JavaExec();
         if ( language == "shell" )
             return new ShellExec();
+        if ( language == "ruby" )
+            return new RubyExec();
         return NULL;
     }
 };
@@ -548,6 +589,7 @@ void SigHandler( int s )
 {
     if ( s == SIGTERM )
     {
+        PS_LOG( "Caught SIGTERM. Exiting..." );
         exit( 0 );
     }
 
@@ -785,7 +827,7 @@ int main( int argc, char* argv[], char **envp )
 
         python_server::Config::Instance().ParseConfig( python_server::exeDir.c_str() );
 
-        SetupLanguageRuntime();
+        //SetupLanguageRuntime();
 
         SetupPyExecIPC();
         
