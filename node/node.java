@@ -30,8 +30,8 @@ public class node {
         int errCode = 0;
         try {
             String shmemPath = args[1];
-            long scriptLen = Long.valueOf( args[2] ).longValue();
-            long shmemOffset = Long.valueOf( args[3] ).longValue();
+            long scriptLen = Long.parseLong( args[2] );
+            long shmemOffset = Long.parseLong( args[3] );
 
             RandomAccessFile shmem = new RandomAccessFile( shmemPath, "r" );
             MappedByteBuffer buf = shmem.getChannel().map( FileChannel.MapMode.READ_ONLY, shmemOffset, scriptLen );
