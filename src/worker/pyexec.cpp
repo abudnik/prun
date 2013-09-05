@@ -367,6 +367,117 @@ private:
     std::string javaExePath_;
 };
 
+class ShellExec : public ScriptExec
+{
+public:
+    ShellExec()
+    {
+        exePath_ = Config::Instance().Get<string>( "shell" );
+    }
+
+    virtual void Execute( Job *job )
+    {
+        job_ = job;
+
+        pid_t pid = DoFork();
+        if ( pid > 0 )
+            return;
+
+        string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
+
+        size_t offset = job->GetJobId() * SHMEM_BLOCK_SIZE;
+        string shmemOffset = boost::lexical_cast<std::string>( offset );
+
+        string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
+        string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
+
+        ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+
+        int ret = execl( exePath_.c_str(), "bash",
+                         (exeDir + '/' + NODE_SCRIPT_NAME_SHELL).c_str(),
+                         threadParams.fifoName.c_str(), shmemPath.c_str(),
+                         scriptLength.c_str(), shmemOffset.c_str(),
+                         taskId.c_str(), numTasks.c_str(), NULL );
+        if ( ret < 0 )
+        {
+            PS_LOG( "ShellExec::Execute: execl failed: " << strerror(errno) );
+        }
+        ::exit( 1 );
+    }
+
+    pid_t DoFork()
+    {
+        pid_t pid = fork();
+
+        if ( pid > 0 )
+        {
+            //PS_LOG( "wait child " << pid );
+            ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+            threadParams.pid = pid;
+
+            int fifo = threadParams.fifofd;
+            if ( fifo != -1 )
+            {
+                sigset_t sigset, oldset;
+                sigemptyset( &sigset );
+                sigaddset( &sigset, SIGCHLD );
+                sigprocmask( SIG_BLOCK, &sigset, &oldset );
+
+                pollfd pfd[1];
+                pfd[0].fd = fifo;
+                pfd[0].events = POLLIN;
+
+                int errCode = -1;
+                int ret = poll( pfd, 1, job_->GetTimeout() * 1000 );
+                if ( ret > 0 )
+                {
+                    ret = read( fifo, &errCode, sizeof( errCode ) );
+                    if ( ret <= 0 )
+                    {
+                        PS_LOG( "ShellExec::DoFork: read fifo failed: " << strerror(errno) );
+                    }
+                }
+                else
+                if ( ret == 0 )
+                {
+                    errCode = NODE_JOB_TIMEOUT;
+                    KillExec( pid );
+                }
+                else
+                {
+                    PS_LOG( "ShellExec::DoFork: poll failed: " << strerror(errno) );
+                    
+                }
+                job_->OnError( errCode );
+
+                sigprocmask( SIG_BLOCK, &oldset, NULL );
+            }
+            else
+            {
+                PS_LOG( "ShellExec::DoFork: pipe not opened" );
+                job_->OnError( -1 );
+            }
+            //PS_LOG( "wait child done " << pid );
+        }
+        else
+        if ( pid == 0 )
+        {
+            isFork = true;
+            prctl( PR_SET_PDEATHSIG, SIGHUP );
+        }
+        else
+        {
+            PS_LOG( "ShellExec::DoFork: fork() failed " << strerror(errno) );
+        }
+
+        return pid;
+    }
+
+private:
+    Job *job_;
+    std::string exePath_;
+};
+
 class ExecCreator
 {
 public:
@@ -376,6 +487,8 @@ public:
             return new PythonExec();
         if ( language == "java" )
             return new JavaExec();
+        if ( language == "shell" )
+            return new ShellExec();
         return NULL;
     }
 };

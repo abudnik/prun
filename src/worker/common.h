@@ -37,6 +37,7 @@ extern const char FIFO_NAME[];
 
 extern const char NODE_SCRIPT_NAME_PY[];
 extern const char NODE_SCRIPT_NAME_JAVA[];
+extern const char NODE_SCRIPT_NAME_SHELL[];
 
 } // namespace python_server
 

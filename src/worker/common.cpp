@@ -37,5 +37,6 @@ char const FIFO_NAME[] = "/tmp/pyexec";
 
 char const NODE_SCRIPT_NAME_PY[] = "node/node.py";
 char const NODE_SCRIPT_NAME_JAVA[] = "node/node.java";
+char const NODE_SCRIPT_NAME_SHELL[] = "node/node.sh";
 
 } // namespace python_server
