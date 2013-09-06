@@ -374,6 +374,45 @@ public:
     }
 };
 
+class JavaScriptExec : public ScriptExec
+{
+public:
+    JavaScriptExec()
+    {
+        exePath_ = Config::Instance().Get<string>( "js" );
+    }
+
+    virtual void Execute( Job *job )
+    {
+        job_ = job;
+
+        pid_t pid = DoFork();
+        if ( pid > 0 )
+            return;
+
+        string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
+
+        size_t offset = job->GetJobId() * SHMEM_BLOCK_SIZE;
+        string shmemOffset = boost::lexical_cast<std::string>( offset );
+
+        string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
+        string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
+
+        ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+
+        int ret = execl( exePath_.c_str(), "node",
+                         (exeDir + '/' + NODE_SCRIPT_NAME_JS).c_str(),
+                         threadParams.fifoName.c_str(), shmemPath.c_str(),
+                         scriptLength.c_str(), shmemOffset.c_str(),
+                         taskId.c_str(), numTasks.c_str(), NULL );
+        if ( ret < 0 )
+        {
+            PS_LOG( "JavaScriptExec::Execute: execl failed: " << strerror(errno) );
+        }
+        ::exit( 1 );
+    }
+};
+
 class ExecCreator
 {
 public:
@@ -387,6 +426,8 @@ public:
             return new ShellExec();
         if ( language == "ruby" )
             return new RubyExec();
+        if ( language == "js" )
+            return new JavaScriptExec();
         return NULL;
     }
 };
