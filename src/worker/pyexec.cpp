@@ -199,6 +199,7 @@ public:
         if ( pid == 0 )
         {
             isFork = true;
+            // linux-only. kill child process, if parent exits
             prctl( PR_SET_PDEATHSIG, SIGHUP );
         }
         else
@@ -661,10 +662,17 @@ void SetupLanguageRuntime()
     {
         std::string javacPath = python_server::Config::Instance().Get<std::string>( "javac" );
         std::string nodePath = python_server::exeDir + '/' + python_server::NODE_SCRIPT_NAME_JAVA;
-        int ret = execl( javacPath.c_str(), "javac", nodePath.c_str(), NULL );
-        if ( ret < 0 )
+        if ( access( javacPath.c_str(), F_OK ) != -1 )
         {
-            PS_LOG( "SetupLanguageRuntime: execl(javac) failed: " << strerror(errno) );
+            int ret = execl( javacPath.c_str(), "javac", nodePath.c_str(), NULL );
+            if ( ret < 0 )
+            {
+                PS_LOG( "SetupLanguageRuntime: execl(javac) failed: " << strerror(errno) );
+            }
+        }
+        else
+        {
+            PS_LOG( "SetupLanguageRuntime: file not found: " << javacPath );
         }
         ::exit( 0 );
     }
@@ -827,7 +835,7 @@ int main( int argc, char* argv[], char **envp )
 
         python_server::Config::Instance().ParseConfig( python_server::exeDir.c_str() );
 
-        //SetupLanguageRuntime();
+        SetupLanguageRuntime();
 
         SetupPyExecIPC();
         
