@@ -26,6 +26,8 @@ import java.lang.reflect.Method;
 
 
 public class node {
+    private final static int NODE_SCRIPT_EXEC_FAILED = -5;
+
     public static void main(String args[]) {
         int errCode = 0;
         try {
@@ -60,11 +62,11 @@ public class node {
                 method.invoke( obj, (Object)arglist );
             }
             else {
-                errCode = -1;
+                errCode = NODE_SCRIPT_EXEC_FAILED;
             }
         }
         catch( Exception e ) {
-            errCode = -1;
+            errCode = NODE_SCRIPT_EXEC_FAILED;
             System.err.println( e );
         }
 

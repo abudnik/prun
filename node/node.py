@@ -3,7 +3,7 @@ import os
 import mmap
 import struct
 
-
+NODE_SCRIPT_EXEC_FAILED = -5
 errCode = 0
 
 try:
@@ -20,7 +20,7 @@ try:
 
     exec( s, {"taskId":taskId, "numTasks":numTasks} )
 except Exception as e:
-    errCode = -1
+    errCode = NODE_SCRIPT_EXEC_FAILED
     print e
 
 try:

@@ -318,7 +318,7 @@ public:
 
     void Cancel()
     {
-        job_->OnError( -1 );
+        job_->OnError( NODE_FATAL );
         NotifyResponseCondVar();
     }
 
@@ -350,7 +350,7 @@ private:
             }
             if ( ret < 0 )
             {
-                job_->OnError( ret );
+                job_->OnError( NODE_FATAL );
                 NotifyResponseCondVar();
                 return;
             }
@@ -381,7 +381,7 @@ private:
         else
         {
             PS_LOG( "PyExecConnection::HandleRead error=" << error.message() );
-            job_->OnError( -1 );
+            job_->OnError( NODE_FATAL );
             NotifyResponseCondVar();
         }
     }
@@ -558,12 +558,12 @@ private:
             {
                 PS_LOG( "Session::HandleRequest: appropriate action not found for task type: "
                         << job_.GetTaskType() );
-                job_.OnError( -1 );
+                job_.OnError( NODE_FATAL );
             }
         }
         else
         {
-            job_.OnError( -1 );
+            job_.OnError( NODE_FATAL );
         }
 
         WriteResponse();

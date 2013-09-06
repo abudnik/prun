@@ -163,7 +163,7 @@ public:
                 pfd[0].fd = fifo;
                 pfd[0].events = POLLIN;
 
-                int errCode = -1;
+                int errCode = NODE_FATAL;
                 int ret = poll( pfd, 1, job_->GetTimeout() * 1000 );
                 if ( ret > 0 )
                 {
@@ -191,7 +191,7 @@ public:
             else
             {
                 PS_LOG( "ScriptExec::DoFork: pipe not opened" );
-                job_->OnError( -1 );
+                job_->OnError( NODE_FATAL );
             }
             //PS_LOG( "wait child done " << pid );
         }
@@ -435,7 +435,7 @@ protected:
             }
             if ( ret < 0 )
             {
-                job_.OnError( ret );
+                job_.OnError( NODE_FATAL );
                 WriteResponse();
                 return;
             }
@@ -488,7 +488,7 @@ protected:
         {
             PS_LOG( "Session::HandleRequest: appropriate executor not found for language: "
                     << job_.GetScriptLanguage() );
-            job_.OnError( -1 );
+            job_.OnError( NODE_LANG_NOT_SUPPORTED );
         }
 
         request_.Reset();

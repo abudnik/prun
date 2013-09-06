@@ -1,3 +1,4 @@
+NODE_SCRIPT_EXEC_FAILED = -5
 errCode = 0
 
 begin
@@ -16,7 +17,7 @@ begin
 
   eval(inject+buffer)
 rescue Exception => e
-  errCode = -1
+  errCode = NODE_SCRIPT_EXEC_FAILED
   puts e.message
   puts e.backtrace.inspect
 end

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+NODE_SCRIPT_EXEC_FAILED=-5
 errCode=0
 
 shmemPath=$2
@@ -13,7 +14,7 @@ if [ $? -eq 0 ]; then
 eval "$s"
 errCode=$?
 else
-errCode=-1
+errCode=$NODE_SCRIPT_EXEC_FAILED
 fi
 
 fifoName=$1
