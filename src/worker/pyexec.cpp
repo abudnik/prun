@@ -701,7 +701,16 @@ void SetupLanguageRuntime()
     pid_t pid = fork();
     if ( pid == 0 )
     {
-        std::string javacPath = python_server::Config::Instance().Get<std::string>( "javac" );
+        python_server::isFork = true;
+        std::string javacPath;
+        try
+        {
+            javacPath = python_server::Config::Instance().Get<std::string>( "javac" );
+        }
+        catch( std::exception &e )
+        {
+            PS_LOG( "SetupLanguageRuntime: get javac path failed: " << e.what() );
+        }
         std::string nodePath = python_server::exeDir + '/' + python_server::NODE_SCRIPT_NAME_JAVA;
         if ( access( javacPath.c_str(), F_OK ) != -1 )
         {
@@ -715,7 +724,13 @@ void SetupLanguageRuntime()
         {
             PS_LOG( "SetupLanguageRuntime: file not found: " << javacPath );
         }
-        ::exit( 0 );
+        ::exit( 1 );
+    }
+    else
+    if ( pid > 0 )
+    {
+        int status;
+        waitpid( pid, &status, 0 );
     }
     else
     if ( pid < 0 )
