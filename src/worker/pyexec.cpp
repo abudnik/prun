@@ -129,7 +129,35 @@ private:
 class ScriptExec
 {
 public:
-    virtual void Execute( Job *job ) = 0;
+    virtual void Execute( Job *job )
+    {
+        job_ = job;
+
+        pid_t pid = DoFork();
+        if ( pid > 0 )
+            return;
+
+        string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
+
+        size_t offset = job->GetJobId() * SHMEM_BLOCK_SIZE;
+        string shmemOffset = boost::lexical_cast<std::string>( offset );
+
+        string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
+        string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
+
+        ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+
+        int ret = execl( exePath_.c_str(), job->GetScriptLanguage().c_str(),
+                         nodePath_.c_str(),
+                         threadParams.fifoName.c_str(), shmemPath.c_str(),
+                         scriptLength.c_str(), shmemOffset.c_str(),
+                         taskId.c_str(), numTasks.c_str(), NULL );
+        if ( ret < 0 )
+        {
+            PS_LOG( "ScriptExec::Execute: execl failed: " << strerror(errno) );
+        }
+        ::exit( 1 );
+    }
 
     virtual void KillExec( pid_t pid )
     {
@@ -215,6 +243,7 @@ public:
 protected:
     Job *job_;
     std::string exePath_;
+    std::string nodePath_;
 };
 
 class PythonExec : public ScriptExec
@@ -223,36 +252,7 @@ public:
     PythonExec()
     {
         exePath_ = Config::Instance().Get<string>( "python" );
-    }
-
-    virtual void Execute( Job *job )
-    {
-        job_ = job;
-
-        pid_t pid = DoFork();
-        if ( pid > 0 )
-            return;
-
-        string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
-
-        size_t offset = job->GetJobId() * SHMEM_BLOCK_SIZE;
-        string shmemOffset = boost::lexical_cast<std::string>( offset );
-
-        string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
-        string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
-
-        ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
-
-        int ret = execl( exePath_.c_str(), "python",
-                         (exeDir + '/' + NODE_SCRIPT_NAME_PY).c_str(),
-                         threadParams.fifoName.c_str(), shmemPath.c_str(),
-                         scriptLength.c_str(), shmemOffset.c_str(),
-                         taskId.c_str(), numTasks.c_str(), NULL );
-        if ( ret < 0 )
-        {
-            PS_LOG( "PythonExec::Execute: execl failed: " << strerror(errno) );
-        }
-        ::exit( 1 );
+        nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_PY;
     }
 };
 
@@ -262,6 +262,7 @@ public:
     JavaExec()
     {
         exePath_ = Config::Instance().Get<string>( "java" );
+        nodePath_ = exeDir + "/node";
     }
 
     virtual void Execute( Job *job )
@@ -282,8 +283,8 @@ public:
 
         ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 
-        int ret = execl( exePath_.c_str(), "java",
-                         "-cp", (exeDir + "/node").c_str(),
+        int ret = execl( exePath_.c_str(), job->GetScriptLanguage().c_str(),
+                         "-cp", nodePath_.c_str(),
                          "node",
                          threadParams.fifoName.c_str(), shmemPath.c_str(),
                          scriptLength.c_str(), shmemOffset.c_str(),
@@ -302,36 +303,7 @@ public:
     ShellExec()
     {
         exePath_ = Config::Instance().Get<string>( "shell" );
-    }
-
-    virtual void Execute( Job *job )
-    {
-        job_ = job;
-
-        pid_t pid = DoFork();
-        if ( pid > 0 )
-            return;
-
-        string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
-
-        size_t offset = job->GetJobId() * SHMEM_BLOCK_SIZE;
-        string shmemOffset = boost::lexical_cast<std::string>( offset );
-
-        string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
-        string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
-
-        ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
-
-        int ret = execl( exePath_.c_str(), "bash",
-                         (exeDir + '/' + NODE_SCRIPT_NAME_SHELL).c_str(),
-                         threadParams.fifoName.c_str(), shmemPath.c_str(),
-                         scriptLength.c_str(), shmemOffset.c_str(),
-                         taskId.c_str(), numTasks.c_str(), NULL );
-        if ( ret < 0 )
-        {
-            PS_LOG( "ShellExec::Execute: execl failed: " << strerror(errno) );
-        }
-        ::exit( 1 );
+        nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_SHELL;
     }
 };
 
@@ -341,36 +313,7 @@ public:
     RubyExec()
     {
         exePath_ = Config::Instance().Get<string>( "ruby" );
-    }
-
-    virtual void Execute( Job *job )
-    {
-        job_ = job;
-
-        pid_t pid = DoFork();
-        if ( pid > 0 )
-            return;
-
-        string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
-
-        size_t offset = job->GetJobId() * SHMEM_BLOCK_SIZE;
-        string shmemOffset = boost::lexical_cast<std::string>( offset );
-
-        string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
-        string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
-
-        ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
-
-        int ret = execl( exePath_.c_str(), "ruby",
-                         (exeDir + '/' + NODE_SCRIPT_NAME_RUBY).c_str(),
-                         threadParams.fifoName.c_str(), shmemPath.c_str(),
-                         scriptLength.c_str(), shmemOffset.c_str(),
-                         taskId.c_str(), numTasks.c_str(), NULL );
-        if ( ret < 0 )
-        {
-            PS_LOG( "RubyExec::Execute: execl failed: " << strerror(errno) );
-        }
-        ::exit( 1 );
+        nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_RUBY;
     }
 };
 
@@ -380,36 +323,7 @@ public:
     JavaScriptExec()
     {
         exePath_ = Config::Instance().Get<string>( "js" );
-    }
-
-    virtual void Execute( Job *job )
-    {
-        job_ = job;
-
-        pid_t pid = DoFork();
-        if ( pid > 0 )
-            return;
-
-        string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
-
-        size_t offset = job->GetJobId() * SHMEM_BLOCK_SIZE;
-        string shmemOffset = boost::lexical_cast<std::string>( offset );
-
-        string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
-        string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
-
-        ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
-
-        int ret = execl( exePath_.c_str(), "node",
-                         (exeDir + '/' + NODE_SCRIPT_NAME_JS).c_str(),
-                         threadParams.fifoName.c_str(), shmemPath.c_str(),
-                         scriptLength.c_str(), shmemOffset.c_str(),
-                         taskId.c_str(), numTasks.c_str(), NULL );
-        if ( ret < 0 )
-        {
-            PS_LOG( "JavaScriptExec::Execute: execl failed: " << strerror(errno) );
-        }
-        ::exit( 1 );
+        nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_JS;
     }
 };
 
