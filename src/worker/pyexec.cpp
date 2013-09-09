@@ -257,7 +257,7 @@ protected:
 
 class PythonExec : public ScriptExec
 {
-public:
+protected:
     virtual bool InitLanguageEnv()
     {
         try
@@ -277,21 +277,6 @@ public:
 class JavaExec : public ScriptExec
 {
 public:
-    virtual bool InitLanguageEnv()
-    {
-        try
-        {
-            exePath_ = Config::Instance().Get<string>( "java" );
-            nodePath_ = exeDir + "/node";
-        }
-        catch( std::exception &e )
-        {
-            PS_LOG( "JavaExec::Init: " << e.what() );
-            return false;
-        }
-        return true;
-    }
-
     virtual void Execute( Job *job )
     {
         if ( !InitLanguageEnv() )
@@ -328,11 +313,27 @@ public:
         }
         ::exit( 1 );
     }
+
+protected:
+    virtual bool InitLanguageEnv()
+    {
+        try
+        {
+            exePath_ = Config::Instance().Get<string>( "java" );
+            nodePath_ = exeDir + "/node";
+        }
+        catch( std::exception &e )
+        {
+            PS_LOG( "JavaExec::Init: " << e.what() );
+            return false;
+        }
+        return true;
+    }
 };
 
 class ShellExec : public ScriptExec
 {
-public:
+protected:
     virtual bool InitLanguageEnv()
     {
         try
@@ -351,7 +352,7 @@ public:
 
 class RubyExec : public ScriptExec
 {
-public:
+protected:
     virtual bool InitLanguageEnv()
     {
         try
@@ -370,7 +371,7 @@ public:
 
 class JavaScriptExec : public ScriptExec
 {
-public:
+protected:
     virtual bool InitLanguageEnv()
     {
         try
