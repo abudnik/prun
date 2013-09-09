@@ -129,8 +129,16 @@ private:
 class ScriptExec
 {
 public:
+    virtual ~ScriptExec() {}
+
     virtual void Execute( Job *job )
     {
+        if ( !InitLanguageEnv() )
+        {
+            job->OnError( NODE_FATAL );
+            return;
+        }
+
         job_ = job;
 
         pid_t pid = DoFork();
@@ -168,6 +176,9 @@ public:
             PS_LOG( "process killing failed: pid=" << pid << ", err=" << strerror(errno) );
         }
     }
+
+protected:
+    virtual bool InitLanguageEnv() = 0;
 
     virtual pid_t DoFork()
     {
@@ -238,8 +249,6 @@ public:
         return pid;
     }
 
-    virtual ~ScriptExec() {}
-
 protected:
     Job *job_;
     std::string exePath_;
@@ -249,24 +258,48 @@ protected:
 class PythonExec : public ScriptExec
 {
 public:
-    PythonExec()
+    virtual bool InitLanguageEnv()
     {
-        exePath_ = Config::Instance().Get<string>( "python" );
-        nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_PY;
+        try
+        {
+            exePath_ = Config::Instance().Get<string>( "python" );
+            nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_PY;
+        }
+        catch( std::exception &e )
+        {
+            PS_LOG( "PythonExec::Init: " << e.what() );
+            return false;
+        }
+        return true;
     }
 };
 
 class JavaExec : public ScriptExec
 {
 public:
-    JavaExec()
+    virtual bool InitLanguageEnv()
     {
-        exePath_ = Config::Instance().Get<string>( "java" );
-        nodePath_ = exeDir + "/node";
+        try
+        {
+            exePath_ = Config::Instance().Get<string>( "java" );
+            nodePath_ = exeDir + "/node";
+        }
+        catch( std::exception &e )
+        {
+            PS_LOG( "JavaExec::Init: " << e.what() );
+            return false;
+        }
+        return true;
     }
 
     virtual void Execute( Job *job )
     {
+        if ( !InitLanguageEnv() )
+        {
+            job->OnError( NODE_FATAL );
+            return;
+        }
+
         job_ = job;
 
         pid_t pid = DoFork();
@@ -300,30 +333,57 @@ public:
 class ShellExec : public ScriptExec
 {
 public:
-    ShellExec()
+    virtual bool InitLanguageEnv()
     {
-        exePath_ = Config::Instance().Get<string>( "shell" );
-        nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_SHELL;
+        try
+        {
+            exePath_ = Config::Instance().Get<string>( "shell" );
+            nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_SHELL;
+        }
+        catch( std::exception &e )
+        {
+            PS_LOG( "ShellExec::Init: " << e.what() );
+            return false;
+        }
+        return true;
     }
 };
 
 class RubyExec : public ScriptExec
 {
 public:
-    RubyExec()
+    virtual bool InitLanguageEnv()
     {
-        exePath_ = Config::Instance().Get<string>( "ruby" );
-        nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_RUBY;
+        try
+        {
+            exePath_ = Config::Instance().Get<string>( "ruby" );
+            nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_RUBY;
+        }
+        catch( std::exception &e )
+        {
+            PS_LOG( "RubyExec::Init: " << e.what() );
+            return false;
+        }
+        return true;
     }
 };
 
 class JavaScriptExec : public ScriptExec
 {
 public:
-    JavaScriptExec()
+    virtual bool InitLanguageEnv()
     {
-        exePath_ = Config::Instance().Get<string>( "js" );
-        nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_JS;
+        try
+        {
+            exePath_ = Config::Instance().Get<string>( "js" );
+            nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_JS;
+        }
+        catch( std::exception &e )
+        {
+            PS_LOG( "JavaScriptExec::Init: " << e.what() );
+            return false;
+        }
+        return true;
     }
 };
 
