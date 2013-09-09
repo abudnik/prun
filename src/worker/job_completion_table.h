@@ -30,7 +30,14 @@ class JobCompletionTable
                 return true;
 
             if ( a.jobId == b.jobId )
+            {
+                if ( a.taskId == b.taskId )
+                {
+                    int cmp = a.masterIP.compare( b.masterIP );
+                    return cmp < 0;
+                }
                 return a.taskId < b.taskId;
+            }
 
             return false;
         }

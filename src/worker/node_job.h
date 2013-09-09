@@ -54,6 +54,7 @@ public:
 
             descr.jobId = GetJobId();
             descr.taskId = GetTaskId();
+            descr.masterIP = GetMasterIP();
             if ( JobCompletionTable::Instance().Get( descr, stat ) )
             {
                 JobCompletionTable::Instance().Erase( descr );
@@ -62,7 +63,8 @@ public:
             else
             {
                 PS_LOG( "Job::GetResponse: job not found in completion table: "
-                        "jobId=" << GetJobId() << ", taskId=" << GetTaskId() );
+                        "jobId=" << GetJobId() << ", taskId=" << GetTaskId() <<
+                        ", masterIP=" << GetMasterIP() );
                 protocol.SendJobResult( response, NODE_JOB_COMPLETION_NOT_FOUND );
             }
         }
