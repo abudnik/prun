@@ -22,7 +22,7 @@ set(SRC_COMMON_CPP log.cpp daemon.cpp config.cpp protocol.cpp)
 foreach(cpp ${SRC_COMMON_CPP})
   list(APPEND SRC_COMMON ${COMMON_DIR}/${cpp} )
 endforeach(cpp)
-add_library(commonObjects OBJECT ${SRC_COMMON})
+add_library(commonObjects STATIC ${SRC_COMMON})
 
 
 set(APP_NAME pyserver)
@@ -34,8 +34,8 @@ foreach(cpp ${SRC_PYSERVER_CPP})
   list(APPEND SRC_PYSERVER ${WORKER_DIR}/${cpp} )
 endforeach(cpp)
 
-add_executable( ${APP_NAME} ${SRC_PYSERVER} $<TARGET_OBJECTS:commonObjects> )
-target_link_libraries( ${APP_NAME} ${Boost_LIBRARIES} -lrt )
+add_executable( ${APP_NAME} ${SRC_PYSERVER} )
+target_link_libraries( ${APP_NAME} commonObjects ${Boost_LIBRARIES} -lrt )
 
 set(APP_NAME pyexec)
 
@@ -44,8 +44,8 @@ foreach(cpp ${SRC_PYEXEC_CPP})
   list(APPEND SRC_PYEXEC ${WORKER_DIR}/${cpp} )
 endforeach(cpp)
 
-add_executable( ${APP_NAME} ${SRC_PYEXEC} $<TARGET_OBJECTS:commonObjects> )
-target_link_libraries( ${APP_NAME} ${Boost_LIBRARIES} -lrt )
+add_executable( ${APP_NAME} ${SRC_PYEXEC} )
+target_link_libraries( ${APP_NAME} commonObjects ${Boost_LIBRARIES} -lrt )
 
 
 set(APP_NAME master)
@@ -57,5 +57,5 @@ foreach(cpp ${SRC_MASTER_CPP})
   list(APPEND SRC_MASTER ${MASTER_DIR}/${cpp} )
 endforeach(cpp)
 
-add_executable( ${APP_NAME} ${SRC_MASTER} $<TARGET_OBJECTS:commonObjects> )
-target_link_libraries( ${APP_NAME} ${Boost_LIBRARIES} -lrt )
+add_executable( ${APP_NAME} ${SRC_MASTER} )
+target_link_libraries( ${APP_NAME} commonObjects ${Boost_LIBRARIES} -lrt )
