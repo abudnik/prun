@@ -19,7 +19,7 @@ public:
         typename Container::const_iterator it = hosts.begin();
         for( ; it != hosts.end(); ++it )
         {
-            workers_.AddWorker( new Worker( *it ) );
+            workers_.AddWorker( new Worker( (const std::string &)( *it ) ) );
         }
     }
 
