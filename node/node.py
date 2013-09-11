@@ -21,7 +21,7 @@ try:
     exec( s, {"taskId":taskId, "numTasks":numTasks} )
 except Exception as e:
     errCode = NODE_SCRIPT_EXEC_FAILED
-    print e
+    print( e )
 
 try:
     fifoName = sys.argv[1]
@@ -29,4 +29,4 @@ try:
     os.write( fifo, struct.pack('i', errCode) )
     os.close( fifo )
 except Exception as e:
-    print e
+    print( e )
