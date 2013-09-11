@@ -2,7 +2,6 @@
 #define __PIDFILE_H
 
 #include <boost/interprocess/sync/file_lock.hpp>
-#include <boost/move/move.hpp>
 #include <boost/filesystem.hpp>
 #include <fstream>
 #include "log.h"
@@ -28,7 +27,7 @@ public:
             exit( 1 );
         }
 
-        f_lock_ = boost::move( f_lock );
+		f_lock_.swap( f_lock );
 
         file_ << getpid();
         file_.flush();
