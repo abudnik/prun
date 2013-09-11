@@ -65,7 +65,7 @@ void InitWorkerManager()
     if ( master::ReadHosts( hostsPath.c_str(), hosts ) )
     {
         master::WorkerManager &mgr = master::WorkerManager::Instance();
-        mgr.Initialize( hosts );
+        mgr.Initialize( hosts.begin(), hosts.end() );
     }
 }
 

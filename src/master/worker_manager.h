@@ -13,11 +13,11 @@ namespace master {
 class WorkerManager : public python_server::Observable< true >
 {
 public:
-    template< class Container >
-    void Initialize( const Container &hosts )
+    template< class InputIterator >
+    void Initialize( InputIterator first, InputIterator last )
     {
-        typename Container::const_iterator it = hosts.begin();
-        for( ; it != hosts.end(); ++it )
+        InputIterator it = first;
+        for( ; it != last; ++it )
         {
             workers_.AddWorker( new Worker( (const std::string &)( *it ) ) );
         }
