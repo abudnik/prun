@@ -5,6 +5,7 @@ project( prun )
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 find_package(Boost COMPONENTS system thread program_options filesystem REQUIRED)
+include_directories( ${Boost_INCLUDE_DIR} )
 
 if (Release)
   set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused-parameter -pedantic -pthread -g -O3")
