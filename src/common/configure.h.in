@@ -1,0 +1,5 @@
+#ifndef __CONFIGURE_H
+
+#cmakedefine HAVE_SYS_PRCTL_H
+
+#endif

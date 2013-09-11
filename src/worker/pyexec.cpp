@@ -35,13 +35,15 @@ the License.
 #include <unistd.h>
 #include <csignal>
 #include <sys/wait.h>
-#include <sys/prctl.h>
 #include "common.h"
 #include "common/request.h"
 #include "common/log.h"
 #include "common/config.h"
 #include "common/error_code.h"
-
+#include <common/configure.h>
+#ifdef HAVE_SYS_PRCTL_H
+#include <sys/prctl.h>
+#endif
 
 using namespace std;
 using boost::asio::ip::tcp;
@@ -239,7 +241,9 @@ protected:
         {
             isFork = true;
             // linux-only. kill child process, if parent exits
+#ifdef HAVE_SYS_PRCTL_H
             prctl( PR_SET_PDEATHSIG, SIGHUP );
+#endif
         }
         else
         {

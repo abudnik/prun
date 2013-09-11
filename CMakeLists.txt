@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
+INCLUDE (CheckIncludeFiles)
 
 project( prun )
 
@@ -18,6 +19,9 @@ include_directories ( ${SRC_DIR} )
 
 
 set(COMMON_DIR ${SRC_DIR}/common)
+
+CHECK_INCLUDE_FILES ("sys/prctl.h" HAVE_SYS_PRCTL_H)
+CONFIGURE_FILE(${COMMON_DIR}/configure.h.in ${COMMON_DIR}/configure.h)
 
 set(SRC_COMMON_CPP log.cpp daemon.cpp config.cpp protocol.cpp)
 foreach(cpp ${SRC_COMMON_CPP})
@@ -60,3 +64,4 @@ endforeach(cpp)
 
 add_executable( ${APP_NAME} ${SRC_MASTER} )
 target_link_libraries( ${APP_NAME} commonObjects ${Boost_LIBRARIES} -lrt )
+
