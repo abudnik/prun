@@ -40,7 +40,7 @@ the License.
 #include "common/log.h"
 #include "common/config.h"
 #include "common/error_code.h"
-#include <common/configure.h>
+#include "common/configure.h"
 #ifdef HAVE_SYS_PRCTL_H
 #include <sys/prctl.h>
 #endif
