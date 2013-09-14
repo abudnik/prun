@@ -1,7 +1,7 @@
 #!/bin/bash
 
 command_exists () {
-    type "$1" &> /dev/null ;
+    command -v "$1" >/dev/null 2>&1
 }
 
 NODE_SCRIPT_EXEC_FAILED=-5
