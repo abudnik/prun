@@ -897,8 +897,7 @@ void ThreadFun( boost::asio::io_service *io_service )
 
 } // anonymous namespace
 
-// TODO: error code description
-// TODO: read directly to shmem, avoiding memory copying
+
 int main( int argc, char* argv[], char **envp )
 {
     try
