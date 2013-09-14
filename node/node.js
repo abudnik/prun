@@ -14,16 +14,15 @@ var NODE_SCRIPT_EXEC_FAILED = -5;
 var errCode = 0;
 
 try {
-    var shmemPath = process.argv[3];
+    var readFifo = process.argv[3];
     var scriptLen = parseInt( process.argv[4] );
-    var shmemOffset = parseInt( process.argv[5] );
-    var taskId = process.argv[6];
-    var numTasks = process.argv[7];
+    var taskId = process.argv[5];
+    var numTasks = process.argv[6];
 
-    var shmem = fs.openSync(shmemPath, "r");
+    var fifo = fs.openSync(readFifo, "r");
 
     var buffer = new Buffer(scriptLen);
-    fs.readSync(shmem, buffer, shmemOffset, scriptLen, null);
+    fs.readSync(fifo, buffer, 0, scriptLen, null);
 
     var data = buffer.toString("utf8", 0, buffer.length);
 
@@ -37,10 +36,10 @@ try {
 }
 
 try {
-    var fifoName = process.argv[2];
-    var fifo = fs.openSync(fifoName, "w");
-    fs.writeSync( fifo, getBytes( errCode ), 0, 4, null );
-    fs.close( fifo );
+    var writeFifo = process.argv[2];
+    var fifo = fs.openSync(writeFifo, "w");
+    fs.writeSync(fifo, getBytes( errCode ), 0, 4, null);
+    fs.close(fifo);
 } catch( e ) {
     console.log(e);
 }
