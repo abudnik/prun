@@ -1,12 +1,9 @@
 import java.io.IOException;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-
-import java.io.RandomAccessFile;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
@@ -31,15 +28,12 @@ public class node {
     public static void main(String args[]) {
         int errCode = 0;
         try {
-            String shmemPath = args[1];
+            String readFifo = args[1];
             long scriptLen = Long.parseLong( args[2] );
-            long shmemOffset = Long.parseLong( args[3] );
 
-            RandomAccessFile shmem = new RandomAccessFile( shmemPath, "r" );
-            MappedByteBuffer buf = shmem.getChannel().map( FileChannel.MapMode.READ_ONLY, shmemOffset, scriptLen );
-
-            byte[] bytes = new byte[ (int)scriptLen ];
-            buf.get( bytes );
+            FileInputStream fifo = new FileInputStream( readFifo );
+			byte[] bytes = new byte[ (int)scriptLen ];
+            fifo.read( bytes );
             String s = new String( bytes, "UTF-8" );
 
             String className = "Main";
@@ -57,8 +51,8 @@ public class node {
                 Object obj = aClass.newInstance();
                 Method method = aClass.getDeclaredMethod( "main", new Class[] { String[].class } );
                 String arglist[] = new String[2];
-                arglist[0] = args[4];
-                arglist[1] = args[5];
+                arglist[0] = args[3];
+                arglist[1] = args[4];
                 method.invoke( obj, (Object)arglist );
             }
             else {
