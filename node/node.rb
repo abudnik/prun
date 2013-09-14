@@ -2,15 +2,13 @@ NODE_SCRIPT_EXEC_FAILED = -5
 errCode = 0
 
 begin
-  shmemPath = ARGV[1]
+  readFifo = ARGV[1]
   scriptLen = Integer(ARGV[2])
-  shmemOffset = Integer(ARGV[3])
-  taskId = ARGV[4]
-  numTasks = ARGV[5]
+  taskId = ARGV[3]
+  numTasks = ARGV[4]
 
-  file = File.open(shmemPath, 'r')
-  file.seek(shmemOffset, IO::SEEK_SET)
-  buffer = file.read(scriptLen)
+  fifo = File.open(readFifo, 'r')
+  buffer = fifo.read( scriptLen )
 
   inject = "taskId=" + taskId + "\n"
   inject += "numTasks=" + numTasks + "\n"

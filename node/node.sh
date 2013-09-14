@@ -7,13 +7,12 @@ command_exists () {
 NODE_SCRIPT_EXEC_FAILED=-5
 errCode=0
 
-shmemPath=$2
+readFifo=$2
 scriptLen=$3
-shmemOffset=$4
-taskId=$5
-numTasks=$6
+taskId=$4
+numTasks=$5
 
-s=`dd if=$shmemPath bs=1 skip=$shmemOffset count=$scriptLen 2>/dev/null`
+s=`dd if=$readFifo bs=$scriptLen count=1 2>/dev/null`
 if [ $? -eq 0 ]; then
     eval "$s"
     errCode=$?

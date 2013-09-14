@@ -55,15 +55,14 @@ bool isFork;
 uid_t uid;
 unsigned int numThread;
 string exeDir;
-string shmemPath;
 
 boost::interprocess::shared_memory_object *sharedMemPool;
 boost::interprocess::mapped_region *mappedRegion; 
 
 struct ThreadParams
 {
-    int fifofd;
-    string fifoName;
+    int writeFifoFD, readFifoFD;
+    string writeFifo, readFifo;
     pid_t pid;
 };
 
@@ -159,8 +158,8 @@ public:
 
         int ret = execl( exePath_.c_str(), job->GetScriptLanguage().c_str(),
                          nodePath_.c_str(),
-                         threadParams.fifoName.c_str(), shmemPath.c_str(),
-                         scriptLength.c_str(), shmemOffset.c_str(),
+                         threadParams.readFifo.c_str(), threadParams.writeFifo.c_str(),
+                         scriptLength.c_str(),
                          taskId.c_str(), numTasks.c_str(), NULL );
         if ( ret < 0 )
         {
@@ -192,48 +191,17 @@ protected:
             ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
             threadParams.pid = pid;
 
-            int fifo = threadParams.fifofd;
-            if ( fifo != -1 )
+            sigset_t sigset, oldset;
+            sigemptyset( &sigset );
+            sigaddset( &sigset, SIGCHLD );
+            sigprocmask( SIG_BLOCK, &sigset, &oldset );
+
+            if ( DoFifoIO( threadParams.writeFifoFD, false, pid ) )
             {
-                sigset_t sigset, oldset;
-                sigemptyset( &sigset );
-                sigaddset( &sigset, SIGCHLD );
-                sigprocmask( SIG_BLOCK, &sigset, &oldset );
-
-                pollfd pfd[1];
-                pfd[0].fd = fifo;
-                pfd[0].events = POLLIN;
-
-                int errCode = NODE_FATAL;
-                int ret = poll( pfd, 1, job_->GetTimeout() * 1000 );
-                if ( ret > 0 )
-                {
-                    ret = read( fifo, &errCode, sizeof( errCode ) );
-                    if ( ret <= 0 )
-                    {
-                        PS_LOG( "ScriptExec::DoFork: read fifo failed: " << strerror(errno) );
-                    }
-                }
-                else
-                if ( ret == 0 )
-                {
-                    errCode = NODE_JOB_TIMEOUT;
-                    KillExec( pid );
-                }
-                else
-                {
-                    PS_LOG( "ScriptExec::DoFork: poll failed: " << strerror(errno) );
-                    
-                }
-                job_->OnError( errCode );
-
-                sigprocmask( SIG_BLOCK, &oldset, NULL );
+                DoFifoIO( threadParams.readFifoFD, true, pid );
             }
-            else
-            {
-                PS_LOG( "ScriptExec::DoFork: pipe not opened" );
-                job_->OnError( NODE_FATAL );
-            }
+
+            sigprocmask( SIG_BLOCK, &oldset, NULL );
             //PS_LOG( "wait child done " << pid );
         }
         else
@@ -251,6 +219,67 @@ protected:
         }
 
         return pid;
+    }
+
+    bool DoFifoIO( int fifo, bool doRead, pid_t pid )
+    {
+        if ( fifo != -1 )
+        {
+            pollfd pfd[1];
+            pfd[0].fd = fifo;
+            pfd[0].events = doRead ? POLLIN : POLLOUT;
+
+            int errCode = NODE_FATAL;
+            int ret = poll( pfd, 1, job_->GetTimeout() * 1000 );
+            if ( ret > 0 )
+            {
+                if ( doRead )
+                {
+                    ret = read( fifo, &errCode, sizeof( errCode ) );
+                    if ( ret > 0 )
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        PS_LOG( "ScriptExec::DoFifoIO: read fifo failed: " << strerror(errno) );
+                    }
+                }
+                else
+                {
+                    size_t offset = job_->GetJobId() * SHMEM_BLOCK_SIZE;
+                    char *shmemAddr = (char*)python_server::mappedRegion->get_address() + offset;
+                    
+                    ret = write( fifo, shmemAddr, job_->GetScriptLength() );
+                    if ( ret > 0 )
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        PS_LOG( "ScriptExec::DoFifoIO: write fifo failed: " << strerror(errno) );
+                    }
+                }
+            }
+            else
+            if ( ret == 0 )
+            {
+                errCode = NODE_JOB_TIMEOUT;
+                KillExec( pid );
+            }
+            else
+            {
+                PS_LOG( "ScriptExec::DoFifoIO: poll failed: " << strerror(errno) );
+
+            }
+            job_->OnError( errCode );
+        }
+        else
+        {
+            PS_LOG( "ScriptExec::DoFifoIO: pipe not opened" );
+            job_->OnError( NODE_FATAL );
+        }
+        return false;
     }
 
 protected:
@@ -308,8 +337,8 @@ public:
         int ret = execl( exePath_.c_str(), job->GetScriptLanguage().c_str(),
                          "-cp", nodePath_.c_str(),
                          "node",
-                         threadParams.fifoName.c_str(), shmemPath.c_str(),
-                         scriptLength.c_str(), shmemOffset.c_str(),
+                         threadParams.readFifo.c_str(), threadParams.writeFifo.c_str(),
+                         scriptLength.c_str(),
                          taskId.c_str(), numTasks.c_str(), NULL );
         if ( ret < 0 )
         {
@@ -648,25 +677,6 @@ void SetupPyExecIPC()
     {
         python_server::sharedMemPool = new ipc::shared_memory_object( ipc::open_only, python_server::SHMEM_NAME, ipc::read_only );
         python_server::mappedRegion = new ipc::mapped_region( *python_server::sharedMemPool, ipc::read_only );
-
-        // crutch: get shared memory file path 
-        char line[256] = { '\0' };
-        std::ostringstream command;
-        command << "lsof -Fn -p" << getpid() << "|grep " << python_server::SHMEM_NAME;
-        FILE *cmd = popen( command.str().c_str(), "r" );
-        fgets( line, sizeof(line), cmd );
-        pclose( cmd );
-
-        if ( !strlen( line ) )
-        {
-            PS_LOG( "SetupPyExecIPC: error shared memory file not found");
-            exit( 1 );
-        }
-
-        string path( line );
-        size_t pos = path.find_first_of( '/' );
-        size_t end = path.find_first_of( '\n' ) - 1;
-        python_server::shmemPath = path.substr( pos, end );
     }
     catch( std::exception &e )
     {
@@ -746,11 +756,17 @@ void AtExit()
     {
         python_server::ThreadParams &threadParams = it->second;
 
-        if ( threadParams.fifofd != -1 )
-            close( threadParams.fifofd );
+        if ( threadParams.readFifoFD != -1 )
+            close( threadParams.readFifoFD );
 
-        if ( !threadParams.fifoName.empty() )
-            unlink( threadParams.fifoName.c_str() );
+        if ( !threadParams.readFifo.empty() )
+            unlink( threadParams.readFifo.c_str() );
+
+        if ( threadParams.writeFifoFD != -1 )
+            close( threadParams.writeFifoFD );
+
+        if ( !threadParams.writeFifo.empty() )
+            unlink( threadParams.writeFifo.c_str() );
     }
 
     delete python_server::mappedRegion;
@@ -764,43 +780,64 @@ void AtExit()
     kill( getppid(), SIGTERM );
 }
 
+int CreateFifo( const std::string &fifoName )
+{
+    unlink( fifoName.c_str() );
+
+    int ret = mkfifo( fifoName.c_str(), S_IRUSR | S_IWUSR );
+    if ( !ret )
+    {
+        if ( python_server::uid )
+        {
+            ret = chown( fifoName.c_str(), python_server::uid, -1 );
+            if ( ret == -1 )
+                PS_LOG( "CreateFifo: chown failed " << strerror(errno) );
+        }
+
+        int fifofd = open( fifoName.c_str(), O_RDWR | O_NONBLOCK );
+        if ( fifofd == -1 )
+        {
+            PS_LOG( "open fifo " << fifoName << " failed: " << strerror(errno) );
+        }
+        return fifofd;
+    }
+    else
+    {
+        PS_LOG( "CreateFifo: mkfifo failed " << strerror(errno) );
+    }
+    return -1;
+}
+
 void OnThreadCreate( const boost::thread *thread )
 {
     static int threadCnt = 0;
 
     python_server::ThreadParams threadParams;
-    threadParams.fifofd = -1;
+    threadParams.writeFifoFD = -1;
+    threadParams.readFifoFD = -1;
 
     std::ostringstream ss;
-    ss << python_server::FIFO_NAME << threadCnt;
-    threadParams.fifoName = ss.str();
+    ss << python_server::FIFO_NAME << 'w' << threadCnt;
+    threadParams.writeFifo = ss.str();
 
-    unlink( threadParams.fifoName.c_str() );
-
-    int ret = mkfifo( threadParams.fifoName.c_str(), S_IRUSR | S_IWUSR );
-    if ( !ret )
+    threadParams.writeFifoFD = CreateFifo( threadParams.writeFifo );
+    if ( threadParams.writeFifoFD == -1 )
     {
-        if ( python_server::uid )
-        {
-            ret = chown( threadParams.fifoName.c_str(), python_server::uid, -1 );
-            if ( ret == -1 )
-                PS_LOG( "OnThreadCreate: chown failed " << strerror(errno) );
-        }
+        threadParams.writeFifo.clear();
+    }
 
-        threadParams.fifofd = open( threadParams.fifoName.c_str(), O_RDWR | O_NONBLOCK );
-        if ( threadParams.fifofd == -1 )
-        {
-            PS_LOG( "open fifo " << threadParams.fifoName << " failed: " << strerror(errno) );
-        }
-    }
-    else
+    std::ostringstream ss2;
+    ss2 << python_server::FIFO_NAME << 'r' << threadCnt;
+    threadParams.readFifo = ss2.str();
+
+    threadParams.readFifoFD = CreateFifo( threadParams.readFifo );
+    if ( threadParams.readFifoFD == -1 )
     {
-        PS_LOG( "OnThreadCreate: mkfifo failed " << strerror(errno) );
-        threadParams.fifoName.clear();
+        threadParams.readFifo.clear();
     }
-    ++threadCnt;
 
     python_server::threadInfo[ thread->get_id() ] = threadParams;
+    ++threadCnt;
 }
 
 void ThreadFun( boost::asio::io_service *io_service )
