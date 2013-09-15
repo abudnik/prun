@@ -22,7 +22,7 @@ void MasterPingBoost::HandleRead( const boost::system::error_code& error, size_t
 {
     if ( !error )
     {
-        std::string request( buffer_.begin(), buffer_.begin() + bytes_transferred );
+        //std::string request( buffer_.begin(), buffer_.begin() + bytes_transferred );
         //PS_LOG( request );
 
         std::string msg;
