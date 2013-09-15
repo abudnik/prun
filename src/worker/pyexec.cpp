@@ -229,8 +229,12 @@ protected:
             pfd[0].fd = fifo;
             pfd[0].events = doRead ? POLLIN : POLLOUT;
 
+            int timeout = job_->GetTimeout();
+            if ( timeout > 0 )
+                timeout *= 1000;
+
             int errCode = NODE_FATAL;
-            int ret = poll( pfd, 1, job_->GetTimeout() * 1000 );
+            int ret = poll( pfd, 1, timeout );
             if ( ret > 0 )
             {
                 if ( doRead )

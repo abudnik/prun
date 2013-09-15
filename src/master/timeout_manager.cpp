@@ -61,6 +61,9 @@ void TimeoutManager::CheckTimeouts()
 
 void TimeoutManager::PushJobQueue( int64_t jobId, int queueTimeout )
 {
+    if ( queueTimeout < 0 )
+        return;
+
     namespace pt = boost::posix_time;
     const pt::ptime now = pt::second_clock::local_time();
     const pt::ptime deadlineQueue = now + pt::seconds( queueTimeout );
@@ -81,6 +84,9 @@ void TimeoutManager::PushJobQueue( int64_t jobId, int queueTimeout )
 
 void TimeoutManager::PushJob( int64_t jobId, int jobTimeout )
 {
+    if ( jobTimeout < 0 )
+        return;
+
     namespace pt = boost::posix_time;
     const pt::ptime now = pt::second_clock::local_time();
     const pt::ptime deadline = now + pt::seconds( jobTimeout );
@@ -101,6 +107,9 @@ void TimeoutManager::PushJob( int64_t jobId, int jobTimeout )
 
 void TimeoutManager::PushTask( const WorkerJob &job, const std::string &hostIP, int timeout )
 {
+    if ( timeout < 0 )
+        return;
+
     namespace pt = boost::posix_time;
     const pt::ptime now = pt::second_clock::local_time();
     const pt::ptime deadline = now + pt::seconds( timeout );
