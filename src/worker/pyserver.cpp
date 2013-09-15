@@ -766,6 +766,11 @@ void UserInteraction()
 
 void RunPyExecProcess()
 {
+    sigset_t waitset, oldset;
+    sigemptyset( &waitset );
+    sigaddset( &waitset, SIGUSR1 );
+    sigprocmask( SIG_BLOCK, &waitset, &oldset );
+
     pid_t pid = fork();
 
     if ( pid < 0 )
@@ -776,6 +781,8 @@ void RunPyExecProcess()
     else
     if ( pid == 0 )
     {
+        sigprocmask( SIG_BLOCK, &oldset, NULL );
+
         std::string exePath( python_server::exeDir );
         exePath += "/pyexec";
 
@@ -796,16 +803,13 @@ void RunPyExecProcess()
     else
     if ( pid > 0 )
     {
+        // wait while pyexec completes initialization
         python_server::pyexecPid = pid;
-
-        // wait while PyExec completes initialization
-        sigset_t waitset;
         siginfo_t info;
-        sigemptyset( &waitset );
-        sigaddset( &waitset, SIGUSR1 );
 
         // TODO: sigtaimedwait && kill( pid, 0 )
         while( ( sigwaitinfo( &waitset, &info ) <= 0 ) && ( info.si_pid != pid ) );
+        sigprocmask( SIG_BLOCK, &oldset, NULL );
     }
 }
 
