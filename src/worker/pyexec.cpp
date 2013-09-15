@@ -253,16 +253,26 @@ protected:
                 {
                     size_t offset = job_->GetJobId() * SHMEM_BLOCK_SIZE;
                     char *shmemAddr = (char*)python_server::mappedRegion->get_address() + offset;
-                    
-                    ret = write( fifo, shmemAddr, job_->GetScriptLength() );
-                    if ( ret > 0 )
+
+                    offset = 0;
+                    unsigned int bytesToWrite = job_->GetScriptLength();
+                    while( bytesToWrite )
                     {
-                        return true;
+                        ret = write( fifo, shmemAddr + offset, bytesToWrite );
+                        if ( ret > 0 )
+                        {
+                            offset += ret;
+                            bytesToWrite -= ret;
+                        }
+                        else
+                        {
+                            if ( errno == EAGAIN )
+                                continue;
+                            PS_LOG( "ScriptExec::DoFifoIO: write fifo failed: " << strerror(errno) );
+                            break;
+                        }
                     }
-                    else
-                    {
-                        PS_LOG( "ScriptExec::DoFifoIO: write fifo failed: " << strerror(errno) );
-                    }
+                    return !bytesToWrite;
                 }
             }
             else
