@@ -924,26 +924,17 @@ int main( int argc, char* argv[], char **envp )
 
         Impersonate();
 
-        if ( !python_server::isDaemon )
+        if ( python_server::isDaemon )
         {
-            sigset_t waitset;
-            int sig;
-            sigemptyset( &waitset );
-            sigaddset( &waitset, SIGTERM );
-			sigprocmask( SIG_BLOCK, &waitset, NULL );
-            sigwait( &waitset, &sig );
+			PS_LOG( "started" );
         }
-        else
-        {
-            PS_LOG( "started" );
 
-            sigset_t waitset;
-            int sig;
-            sigemptyset( &waitset );
-            sigaddset( &waitset, SIGTERM );
-			sigprocmask( SIG_BLOCK, &waitset, NULL );
-            sigwait( &waitset, &sig );
-        }
+		sigset_t waitset;
+		int sig;
+		sigemptyset( &waitset );
+		sigaddset( &waitset, SIGTERM );
+		sigprocmask( SIG_BLOCK, &waitset, NULL );
+		sigwait( &waitset, &sig );
 
         io_service.stop();
         worker_threads.join_all();
