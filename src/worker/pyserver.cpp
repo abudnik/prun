@@ -726,6 +726,7 @@ void SigHandler( int s )
 {
     if ( s == SIGTERM )
     {
+		PS_LOG( "Caught SIGTERM. Exiting..." );
         exit( 0 );
     }
 
@@ -1031,6 +1032,7 @@ int main( int argc, char* argv[], char **envp )
             int sig;
             sigemptyset( &waitset );
             sigaddset( &waitset, SIGTERM );
+			sigprocmask( SIG_BLOCK, &waitset, NULL );
             sigwait( &waitset, &sig );
         }
 

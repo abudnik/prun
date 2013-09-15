@@ -286,6 +286,7 @@ int main( int argc, char* argv[], char **envp )
             int sig;
             sigemptyset( &waitset );
             sigaddset( &waitset, SIGTERM );
+			sigprocmask( SIG_BLOCK, &waitset, NULL );
             sigwait( &waitset, &sig );
         }
 

@@ -194,14 +194,14 @@ protected:
             sigset_t sigset, oldset;
             sigemptyset( &sigset );
             sigaddset( &sigset, SIGCHLD );
-            sigprocmask( SIG_BLOCK, &sigset, &oldset );
+            pthread_sigmask( SIG_BLOCK, &sigset, &oldset );
 
             if ( DoFifoIO( threadParams.writeFifoFD, false, pid ) )
             {
                 DoFifoIO( threadParams.readFifoFD, true, pid );
             }
 
-            sigprocmask( SIG_BLOCK, &oldset, NULL );
+            pthread_sigmask( SIG_BLOCK, &oldset, NULL );
             //PS_LOG( "wait child done " << pid );
         }
         else
@@ -637,12 +637,6 @@ namespace {
 
 void SigHandler( int s )
 {
-    if ( s == SIGTERM )
-    {
-        PS_LOG( "Caught SIGTERM. Exiting..." );
-        exit( 0 );
-    }
-
     if ( s == SIGCHLD )
     {
         // On Linux, multiple children terminating will be compressed into a single SIGCHLD
@@ -664,7 +658,6 @@ void SetupSignalHandlers()
     sigemptyset(&sigHandler.sa_mask);
     sigHandler.sa_flags = 0;
 
-    sigaction( SIGTERM, &sigHandler, 0 );
     sigaction( SIGCHLD, &sigHandler, 0 );
     sigaction( SIGHUP, &sigHandler, 0 );
 }
@@ -937,6 +930,7 @@ int main( int argc, char* argv[], char **envp )
             int sig;
             sigemptyset( &waitset );
             sigaddset( &waitset, SIGTERM );
+			sigprocmask( SIG_BLOCK, &waitset, NULL );
             sigwait( &waitset, &sig );
         }
         else
@@ -947,6 +941,7 @@ int main( int argc, char* argv[], char **envp )
             int sig;
             sigemptyset( &waitset );
             sigaddset( &waitset, SIGTERM );
+			sigprocmask( SIG_BLOCK, &waitset, NULL );
             sigwait( &waitset, &sig );
         }
 
