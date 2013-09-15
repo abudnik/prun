@@ -781,7 +781,7 @@ void RunPyExecProcess()
     else
     if ( pid == 0 )
     {
-        sigprocmask( SIG_BLOCK, &oldset, NULL );
+        sigprocmask( SIG_SETMASK, &oldset, NULL );
 
         std::string exePath( python_server::exeDir );
         exePath += "/pyexec";
@@ -809,7 +809,7 @@ void RunPyExecProcess()
 
         // TODO: sigtaimedwait && kill( pid, 0 )
         while( ( sigwaitinfo( &waitset, &info ) <= 0 ) && ( info.si_pid != pid ) );
-        sigprocmask( SIG_BLOCK, &oldset, NULL );
+        sigprocmask( SIG_SETMASK, &oldset, NULL );
     }
 }
 

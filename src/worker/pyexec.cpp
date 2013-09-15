@@ -201,7 +201,7 @@ protected:
                 DoFifoIO( threadParams.readFifoFD, true, pid );
             }
 
-            pthread_sigmask( SIG_BLOCK, &oldset, NULL );
+            pthread_sigmask( SIG_SETMASK, &oldset, NULL );
             //PS_LOG( "wait child done " << pid );
         }
         else
