@@ -22,8 +22,8 @@ using boost::asio::ip::udp;
 class PingReceiverBoost : public PingReceiver
 {
 public:
-    PingReceiverBoost( udp::socket &socket )
-    : socket_( socket )
+    PingReceiverBoost( boost::asio::io_service &io_service )
+    : socket_( io_service, udp::endpoint( udp::v4(), master::MASTER_UDP_PORT ) )
     {
         memset( buffer_.c_array(), 0, buffer_.size() );
     }
@@ -36,7 +36,7 @@ private:
 
 private:
     boost::array< char, 32 * 1024 > buffer_;
-    udp::socket &socket_;
+    udp::socket socket_;
     udp::endpoint remote_endpoint_;
 };
 

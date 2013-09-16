@@ -201,10 +201,8 @@ int main( int argc, char* argv[], char **envp )
         boost::asio::io_service io_service_ping;
 
         // start ping from nodes receiver threads
-        using boost::asio::ip::udp;
-        udp::socket recvSocket( io_service_ping, udp::endpoint( udp::v4(), master::MASTER_UDP_PORT ) );
         boost::scoped_ptr< master::PingReceiver > pingReceiver(
-             new master::PingReceiverBoost( recvSocket ) );
+             new master::PingReceiverBoost( io_service_ping ) );
         pingReceiver->Start();
 
         // start node pinger
