@@ -203,13 +203,9 @@ int main( int argc, char* argv[], char **envp )
         // start ping from nodes receiver threads
         using boost::asio::ip::udp;
         udp::socket recvSocket( io_service_ping, udp::endpoint( udp::v4(), master::MASTER_UDP_PORT ) );
-        boost::ptr_vector< master::PingReceiver > pingReceivers;
-        for( unsigned int i = 0; i < numPingReceiverThread; ++i )
-        {
-            master::PingReceiver *pingReceiver( new master::PingReceiverBoost( recvSocket ) );
-            pingReceivers.push_back( pingReceiver );
-            pingReceiver->Start();
-        }
+        boost::scoped_ptr< master::PingReceiver > pingReceiver(
+             new master::PingReceiverBoost( recvSocket ) );
+        pingReceiver->Start();
 
         // start node pinger
         int heartbeatTimeout = cfg.Get<int>( "heartbeat_timeout" );

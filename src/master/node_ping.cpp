@@ -76,14 +76,15 @@ void PingReceiverBoost::HandleRead( const boost::system::error_code& error, size
     if ( !error )
     {
         std::string response( buffer_.begin(), buffer_.begin() + bytes_transferred );
-        OnNodePing( remote_endpoint_.address().to_string(), response );
+        std::string nodeIP( remote_endpoint_.address().to_string() );
+        StartReceive();
+        OnNodePing( nodeIP, response );
     }
     else
     {
+        StartReceive();
         PS_LOG( "PingReceiverBoost::HandleRead error=" << error );
     }
-
-    StartReceive();
 }
 
 } // namespace master
