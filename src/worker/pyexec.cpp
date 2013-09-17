@@ -796,7 +796,7 @@ int CreateFifo( const std::string &fifoName )
     {
         if ( python_server::uid )
         {
-            ret = chown( fifoName.c_str(), python_server::uid, -1 );
+            ret = chown( fifoName.c_str(), python_server::uid, (gid_t)-1 );
             if ( ret == -1 )
                 PS_LOG( "CreateFifo: chown failed " << strerror(errno) );
         }
