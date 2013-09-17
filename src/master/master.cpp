@@ -281,7 +281,13 @@ int main( int argc, char* argv[], char **envp )
             sigemptyset( &waitset );
             sigaddset( &waitset, SIGTERM );
 			sigprocmask( SIG_BLOCK, &waitset, NULL );
-            sigwait( &waitset, &sig );
+            while( 1 )
+            {
+                int ret = sigwait( &waitset, &sig );
+                if ( !ret )
+                    break;
+                PS_LOG( "main(): sigwait failed: " << strerror(errno) );
+            }
         }
 
         timeoutManager->Stop();

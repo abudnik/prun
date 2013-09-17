@@ -283,8 +283,8 @@ protected:
             }
             else
             {
+                errCode = NODE_FATAL;
                 PS_LOG( "ScriptExec::DoFifoIO: poll failed: " << strerror(errno) );
-
             }
             job_->OnError( errCode );
         }
@@ -948,7 +948,13 @@ int main( int argc, char* argv[], char **envp )
 		sigemptyset( &waitset );
 		sigaddset( &waitset, SIGTERM );
 		sigprocmask( SIG_BLOCK, &waitset, NULL );
-		sigwait( &waitset, &sig );
+        while( 1 )
+        {
+            int ret = sigwait( &waitset, &sig );
+            if ( !ret )
+                break;
+            PS_LOG( "main(): sigwait failed: " << strerror(errno) );
+        }
 
         io_service.stop();
         worker_threads.join_all();
