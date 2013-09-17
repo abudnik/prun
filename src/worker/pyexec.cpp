@@ -672,8 +672,8 @@ void SetupSignalHandlers()
     sigemptyset(&sigHandler.sa_mask);
     sigHandler.sa_flags = 0;
 
-    sigaction( SIGCHLD, &sigHandler, 0 );
-    sigaction( SIGHUP, &sigHandler, 0 );
+    sigaction( SIGCHLD, &sigHandler, NULL );
+    sigaction( SIGHUP, &sigHandler, NULL );
 }
 
 void SetupPyExecIPC()

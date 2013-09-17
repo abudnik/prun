@@ -724,12 +724,6 @@ void VerifyCommandlineParams()
 
 void SigHandler( int s )
 {
-    if ( s == SIGTERM )
-    {
-		PS_LOG( "Caught SIGTERM. Exiting..." );
-        exit( 0 );
-    }
-
     if ( s == SIGCHLD )
     {
         int status;
@@ -745,6 +739,15 @@ void SigHandler( int s )
     }
 }
 
+void SigInfoHandler( int s, siginfo_t *siginfo, void *context )
+{
+    if ( s == SIGTERM )
+    {
+		PS_LOG( "Caught SIGTERM from pid=" << siginfo->si_pid << ", uid=" << siginfo->si_uid << ". Exiting..." );
+        exit( 0 );
+    }
+}
+
 void SetupSignalHandlers()
 {
     struct sigaction sigHandler;
@@ -753,10 +756,17 @@ void SetupSignalHandlers()
     sigemptyset(&sigHandler.sa_mask);
     sigHandler.sa_flags = 0;
 
-    sigaction( SIGTERM, &sigHandler, 0 );
-    sigaction( SIGUSR1, &sigHandler, 0 );
-    sigaction( SIGCHLD, &sigHandler, 0 );
-    sigaction( SIGHUP, &sigHandler, 0 );
+    sigaction( SIGUSR1, &sigHandler, NULL );
+    sigaction( SIGCHLD, &sigHandler, NULL );
+    sigaction( SIGHUP, &sigHandler, NULL );
+
+    struct sigaction sigInfoHandler;
+    memset( &sigInfoHandler, 0, sizeof( sigInfoHandler ) );
+    sigInfoHandler.sa_sigaction = SigInfoHandler;
+    sigemptyset(&sigInfoHandler.sa_mask);
+    sigInfoHandler.sa_flags = SA_SIGINFO;
+
+    sigaction( SIGTERM, &sigInfoHandler, NULL );
 }
 
 void UserInteraction()
