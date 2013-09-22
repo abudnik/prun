@@ -271,7 +271,7 @@ public:
         memset( buffer_.c_array(), 0, buffer_.size() );
     }
 
-    int Send( Job *job )
+    int Send( Job *job, int taskId )
     {
         job_ = job;
 
@@ -287,7 +287,7 @@ public:
 
         ExecInfo execInfo;
         execInfo.jobId_ = job->GetJobId();
-        execInfo.taskId_ = job->GetTaskId();
+        execInfo.taskId_ = taskId;
         execInfo.callback_ = boost::bind( &PyExecConnection::Cancel, this );
         execTable.Add( execInfo );
 
@@ -298,7 +298,7 @@ public:
             ptree_.put( "id", commDescr.shmemBlockId );
             ptree_.put( "len", script.size() );
             ptree_.put( "lang", job->GetScriptLanguage() );
-            ptree_.put( "task_id", job->GetTaskId() );
+            ptree_.put( "task_id", taskId );
             ptree_.put( "num_tasks", job->GetNumTasks() );
             ptree_.put( "timeout", job->GetTimeout() );
 
@@ -329,7 +329,7 @@ public:
                 else
                 {
                     PS_LOG( "PyExecConnection::Send(): waiting task completion: jobId=" << job->GetJobId() <<
-                            ", taskId=" << job->GetTaskId() );
+                            ", taskId=" << taskId );
                 }
             }
         }
@@ -339,7 +339,7 @@ public:
             ret = -1;
         }
 
-        execTable.Delete( job->GetJobId(), job->GetTaskId() );
+        execTable.Delete( job->GetJobId(), taskId );
         return ret;
     }
 
@@ -447,29 +447,63 @@ class SendToPyExec : public Action
 {
     virtual void Execute( boost::shared_ptr< Job > &job )
     {
-        DoSend( job );
+        int taskId = job->GetTaskId();
+
+        for( int i = 1; i < job->GetNumCPU(); ++i )
+        {
+            boost::asio::io_service *io_service = commDescrPool->GetIoService();
+
+            io_service->post( boost::bind( &SendToPyExec::DoSend,
+                                           boost::shared_ptr< SendToPyExec >( new SendToPyExec ),
+                                           boost::shared_ptr< Job >( job ), taskId + i ) );
+        }
+
+        DoSend( job, taskId );
     }
 
-    void SaveCompletionResults( boost::shared_ptr< Job > &job ) const
+    void SaveCompletionResults( boost::shared_ptr< Job > &job, int taskId ) const
     {
         JobDescriptor descr;
         JobCompletionStat stat;
         descr.jobId = job->GetJobId();
-        descr.taskId = job->GetTaskId();
+        descr.taskId = taskId;
         descr.masterIP = job->GetMasterIP();
         stat.errCode = job->GetErrorCode();
         JobCompletionTable::Instance().Set( descr, stat );
     }
 
+    void NodeJobCompletionPing( boost::shared_ptr< Job > &job, int taskId )
+    {
+        boost::asio::io_service *io_service = commDescrPool->GetIoService();
+
+        using boost::asio::ip::udp;
+        udp::socket socket( *io_service, udp::endpoint( udp::v4(), 0 ) );
+        udp::endpoint master_endpoint( boost::asio::ip::address::from_string( job->GetMasterIP() ), DEFAULT_MASTER_UDP_PORT );
+
+        ProtocolJson protocol;
+        std::string msg;
+        protocol.NodeJobCompletionPing( msg, job->GetJobId(), taskId );
+
+        try
+        {
+            socket.send_to( boost::asio::buffer( msg ), master_endpoint );
+        }
+        catch( boost::system::system_error &e )
+        {
+            PS_LOG( "SendToPyExec::NodeJobCompletionPing: send_to failed: " << e.what() << ", host : " << master_endpoint );
+        }
+    }
+
 public:
-    void DoSend( boost::shared_ptr< Job > job )
+    void DoSend( boost::shared_ptr< Job > job, int taskId )
     {
         commDescrPool->AllocCommDescr();
         PyExecConnection::connection_ptr pyExecConnection( new PyExecConnection() );
-        pyExecConnection->Send( job.get() );
+        pyExecConnection->Send( job.get(), taskId );
         commDescrPool->FreeCommDescr();
 
-        SaveCompletionResults( job );
+        SaveCompletionResults( job, taskId );
+        NodeJobCompletionPing( job, taskId );
     }
 };
 
@@ -614,9 +648,6 @@ private:
 
     void WriteResponse()
     {
-        if ( job_->NeedPingMaster() )
-            NodeJobCompletionPing();
-
         job_->GetResponse( response_ );
         if ( !response_.empty() )
         {
@@ -624,26 +655,6 @@ private:
                                       boost::asio::buffer( response_ ),
                                       boost::bind( &Session::HandleWrite, shared_from_this(),
                                                    boost::asio::placeholders::error ) );
-        }
-    }
-
-    void NodeJobCompletionPing()
-    {
-        using boost::asio::ip::udp;
-        udp::socket socket( io_service_, udp::endpoint( udp::v4(), 0 ) );
-        udp::endpoint master_endpoint( socket_.remote_endpoint().address(), DEFAULT_MASTER_UDP_PORT );
-
-        ProtocolJson protocol;
-        std::string msg;
-        protocol.NodeJobCompletionPing( msg, job_->GetJobId(), job_->GetTaskId() );
-
-        try
-        {
-            socket.send_to( boost::asio::buffer( msg ), master_endpoint );
-        }
-        catch( boost::system::system_error &e )
-        {
-            PS_LOG( "Session::NodeJobCompletionPing: send_to failed: " << e.what() << ", host : " << master_endpoint );
         }
     }
 

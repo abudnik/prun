@@ -75,11 +75,6 @@ public:
         errCode_ = err;
     }
 
-    bool NeedPingMaster() const
-    {
-        return taskType_ == "exec";
-    }
-
     void SetMasterIP( const std::string &ip ) { masterIP_ = ip; }
 
     unsigned int GetScriptLength() const { return scriptLength_; }
@@ -88,6 +83,7 @@ public:
     int64_t GetJobId() const { return jobId_; }
     int GetTaskId() const { return taskId_; }
     int GetNumTasks() const { return numTasks_; }
+    int GetNumCPU() const { return numCPU_; }
     int GetTimeout() const { return timeout_; }
     int GetErrorCode() const { return errCode_; }
     const std::string &GetTaskType() const { return taskType_; }
@@ -99,7 +95,7 @@ private:
         if ( taskType_ == "exec" )
         {
             std::string script64;
-            parser->ParseSendScript( body, language_, script64, jobId_, taskId_, numTasks_, timeout_ );
+            parser->ParseSendScript( body, language_, script64, jobId_, taskId_, numTasks_, numCPU_, timeout_ );
             if ( !DecodeBase64( script64, script_ ) )
                 return false;
 
@@ -120,6 +116,7 @@ private:
     int64_t jobId_;
     int taskId_;
     int numTasks_;
+    int numCPU_;
     int timeout_;
     int errCode_;
     std::string taskType_;
