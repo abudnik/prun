@@ -103,13 +103,37 @@ class CommDescrPool
     typedef std::map< boost::thread::id, ThreadComm > CommParams;
 
 public:
-    CommDescrPool( int numJobThreads )
-    : sem_( new Semaphore( numJobThreads ) )
-    {}
-
-    ~CommDescrPool()
+    CommDescrPool( int numJobThreads, boost::asio::io_service *io_service )
+    : sem_( new Semaphore( numJobThreads ) ),
+     io_service_( io_service )
     {
-        delete sem_;
+        for( int i = 0; i < numJobThreads; ++i )
+        {
+            // init shmem block associated with created thread
+            CommDescr commDescr;
+            commDescr.shmemBlockId = i;
+            commDescr.shmemAddr = (char*)mappedRegion->get_address() + i * SHMEM_BLOCK_SIZE;
+            commDescr.used = false;
+
+            memset( commDescr.shmemAddr, 0, SHMEM_BLOCK_SIZE );
+
+            boost::system::error_code ec;
+
+            // open socket to pyexec
+            tcp::resolver resolver( *io_service );
+            tcp::resolver::query query( tcp::v4(), "localhost", boost::lexical_cast<std::string>( DEFAULT_PYEXEC_PORT ) );
+            tcp::resolver::iterator iterator = resolver.resolve( query );
+
+            commDescr.socket = boost::shared_ptr< tcp::socket >( new tcp::socket( *io_service ) );
+            commDescr.socket->connect( *iterator, ec );
+            if ( ec )
+            {
+                PS_LOG( "CommDescrPool(): socket_.connect() failed " << ec.message() );
+                exit( 1 );
+            }
+
+            AddCommDescr( commDescr );
+        }
     }
 
     void AddCommDescr( const CommDescr &descr )
@@ -153,12 +177,15 @@ public:
         sem_->Notify();
     }
 
+    boost::asio::io_service *GetIoService() const { return io_service_; }
+
 private:
     std::vector< CommDescr > commDescr_;
     boost::mutex commDescrMut_;
 
     CommParams commParams_;
-    Semaphore *sem_;
+    boost::scoped_ptr< Semaphore > sem_;
+    boost::asio::io_service *io_service_;
 };
 
 CommDescrPool *commDescrPool;
@@ -420,12 +447,7 @@ class SendToPyExec : public Action
 {
     virtual void Execute( boost::shared_ptr< Job > &job )
     {
-        commDescrPool->AllocCommDescr();
-        PyExecConnection::connection_ptr pyExecConnection( new PyExecConnection() );
-        pyExecConnection->Send( job.get() );
-        commDescrPool->FreeCommDescr();
-
-        SaveCompletionResults( job );
+        DoSend( job );
     }
 
     void SaveCompletionResults( boost::shared_ptr< Job > &job ) const
@@ -437,6 +459,17 @@ class SendToPyExec : public Action
         descr.masterIP = job->GetMasterIP();
         stat.errCode = job->GetErrorCode();
         JobCompletionTable::Instance().Set( descr, stat );
+    }
+
+public:
+    void DoSend( boost::shared_ptr< Job > job )
+    {
+        commDescrPool->AllocCommDescr();
+        PyExecConnection::connection_ptr pyExecConnection( new PyExecConnection() );
+        pyExecConnection->Send( job.get() );
+        commDescrPool->FreeCommDescr();
+
+        SaveCompletionResults( job );
     }
 };
 
@@ -868,37 +901,6 @@ void AtExit()
     python_server::logger::ShutdownLogger();
 }
 
-void InitPyExecComm( boost::asio::io_service *io_service )
-{
-    for( unsigned int i = 0; i < python_server::numJobThreads; ++i )
-    {
-        // init shmem block associated with created thread
-        python_server::CommDescr commDescr;
-        commDescr.shmemBlockId = i;
-        commDescr.shmemAddr = (char*)python_server::mappedRegion->get_address() + i * python_server::SHMEM_BLOCK_SIZE;
-        commDescr.used = false;
-
-        memset( commDescr.shmemAddr, 0, python_server::SHMEM_BLOCK_SIZE );
-
-        boost::system::error_code ec;
-
-        // open socket to pyexec
-        tcp::resolver resolver( *io_service );
-        tcp::resolver::query query( tcp::v4(), "localhost", boost::lexical_cast<std::string>( python_server::DEFAULT_PYEXEC_PORT ) );
-        tcp::resolver::iterator iterator = resolver.resolve( query );
-
-        commDescr.socket = boost::shared_ptr< tcp::socket >( new tcp::socket( *io_service ) );
-        commDescr.socket->connect( *iterator, ec );
-        if ( ec )
-        {
-            PS_LOG( "InitPyExecComm: socket_.connect() failed " << ec.message() );
-            exit( 1 );
-        }
-
-        python_server::commDescrPool->AddCommDescr( commDescr );
-    }
-}
-
 void ThreadFun( boost::asio::io_service *io_service )
 {
     try
@@ -996,9 +998,7 @@ int main( int argc, char* argv[], char **envp )
         boost::scoped_ptr<boost::asio::io_service::work> work(
             new boost::asio::io_service::work( io_service ) );
 
-        python_server::commDescrPool = new python_server::CommDescrPool( python_server::numJobThreads );
-
-        InitPyExecComm( &io_service );
+        python_server::commDescrPool = new python_server::CommDescrPool( python_server::numJobThreads, &io_service );
 
         python_server::taskSem = new python_server::Semaphore( python_server::numJobThreads );
 
