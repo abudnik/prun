@@ -219,13 +219,13 @@ ExecTable execTable;
 class Action
 {
 public:
-    virtual void Execute( Job *job ) = 0;
+    virtual void Execute( boost::shared_ptr< Job > &job ) = 0;
     virtual ~Action() {}
 };
 
 class NoAction : public Action
 {
-    virtual void Execute( Job *job ) {}
+    virtual void Execute( boost::shared_ptr< Job > &job ) {}
 };
 
 class PyExecConnection : public boost::enable_shared_from_this< PyExecConnection >
@@ -418,17 +418,17 @@ private:
 
 class SendToPyExec : public Action
 {
-    virtual void Execute( Job *job )
+    virtual void Execute( boost::shared_ptr< Job > &job )
     {
         commDescrPool->AllocCommDescr();
         PyExecConnection::connection_ptr pyExecConnection( new PyExecConnection() );
-        pyExecConnection->Send( job );
+        pyExecConnection->Send( job.get() );
         commDescrPool->FreeCommDescr();
 
         SaveCompletionResults( job );
     }
 
-    void SaveCompletionResults( const Job *job ) const
+    void SaveCompletionResults( boost::shared_ptr< Job > &job ) const
     {
         JobDescriptor descr;
         JobCompletionStat stat;
@@ -462,6 +462,7 @@ public:
     Session( boost::asio::io_service &io_service )
     : socket_( io_service ),
      request_( false ),
+     job_( new Job ),
      io_service_( io_service )
     {
     }
@@ -475,7 +476,7 @@ public:
     void Start()
     {
         boost::asio::ip::address remoteAddress = socket_.remote_endpoint().address();
-        job_.SetMasterIP( remoteAddress.to_string() );
+        job_->SetMasterIP( remoteAddress.to_string() );
 
         socket_.async_read_some( boost::asio::buffer( buffer_ ),
                                  boost::bind( &Session::FirstRead, shared_from_this(),
@@ -545,25 +546,25 @@ private:
 
     void HandleRequest()
     {
-        if ( job_.ParseRequest( request_ ) )
+        if ( job_->ParseRequest( request_ ) )
         {
             boost::scoped_ptr< Action > action(
-                actionCreator_.Create( job_.GetTaskType() )
+                actionCreator_.Create( job_->GetTaskType() )
             );
             if ( action )
             {
-                action->Execute( &job_ );
+                action->Execute( job_ );
             }
             else
             {
                 PS_LOG( "Session::HandleRequest: appropriate action not found for task type: "
-                        << job_.GetTaskType() );
-                job_.OnError( NODE_FATAL );
+                        << job_->GetTaskType() );
+                job_->OnError( NODE_FATAL );
             }
         }
         else
         {
-            job_.OnError( NODE_FATAL );
+            job_->OnError( NODE_FATAL );
         }
 
         WriteResponse();
@@ -580,10 +581,10 @@ private:
 
     void WriteResponse()
     {
-        if ( job_.NeedPingMaster() )
+        if ( job_->NeedPingMaster() )
             NodeJobCompletionPing();
 
-        job_.GetResponse( response_ );
+        job_->GetResponse( response_ );
         if ( !response_.empty() )
         {
             boost::asio::async_write( socket_,
@@ -601,7 +602,7 @@ private:
 
         ProtocolJson protocol;
         std::string msg;
-        protocol.NodeJobCompletionPing( msg, job_.GetJobId(), job_.GetTaskId() );
+        protocol.NodeJobCompletionPing( msg, job_->GetJobId(), job_->GetTaskId() );
 
         try
         {
@@ -625,7 +626,7 @@ protected:
     tcp::socket socket_;
     BufferType buffer_;
     Request< BufferType > request_;
-    Job job_;
+    boost::shared_ptr< Job > job_;
     ActionCreator actionCreator_;
     char readStatus_;
     std::string response_;
