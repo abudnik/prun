@@ -40,7 +40,15 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
 
     if ( type == "ping_response" )
     {
-        WorkerManager::Instance().OnNodePingResponse( nodeIP );
+        int numCPU;
+        if ( parser->ParseResponsePing( body, numCPU ) )
+        {
+            WorkerManager::Instance().OnNodePingResponse( nodeIP, numCPU );
+        }
+        else
+        {
+            PS_LOG( "PingReceiver::OnNodePing: couldn't parse msg body: " << body );
+        }
     }
     if ( type == "job_completion" )
     {

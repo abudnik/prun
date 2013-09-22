@@ -40,7 +40,7 @@ void WorkerManager::CheckDropedPingResponses()
     }
 }
 
-void WorkerManager::OnNodePingResponse( const std::string &hostIP )
+void WorkerManager::OnNodePingResponse( const std::string &hostIP, int numCPU )
 {
     Worker *worker = GetWorkerByIP( hostIP );
     if ( worker )
@@ -56,6 +56,7 @@ void WorkerManager::OnNodePingResponse( const std::string &hostIP )
 
         if ( stateChanged )
         {
+            worker->SetNumCPU( numCPU );
             Scheduler::Instance().OnHostAppearance( worker );
         }
     }

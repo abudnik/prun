@@ -25,7 +25,7 @@ public:
 
     void CheckDropedPingResponses();
 
-    void OnNodePingResponse( const std::string &hostIP );
+    void OnNodePingResponse( const std::string &hostIP, int numCPU );
 
     void OnNodeJobCompletion( const std::string &hostIP, int64_t jobId, int taskId );
 

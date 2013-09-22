@@ -1,4 +1,5 @@
 #include <boost/bind.hpp>
+#include <boost/thread.hpp>
 #include "master_ping.h"
 #include "common/log.h"
 
@@ -25,8 +26,10 @@ void MasterPingBoost::HandleRead( const boost::system::error_code& error, size_t
         //std::string request( buffer_.begin(), buffer_.begin() + bytes_transferred );
         //PS_LOG( request );
 
+        const static int numThread = boost::thread::hardware_concurrency();
+
         std::string msg;
-        protocol_->NodeResponsePing( msg );
+        protocol_->NodeResponsePing( msg, numThread );
 
         udp::endpoint master_endpoint( remote_endpoint_.address(), DEFAULT_MASTER_UDP_PORT );
 

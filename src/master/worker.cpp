@@ -51,7 +51,7 @@ int WorkerList::GetTotalWorkers() const
     WorkerContainer::const_iterator it = workers_.begin();
     for( ; it != workers_.end(); ++it )
     {
-        num += (*it)->GetNumCores();
+        num += (*it)->GetNumCPU();
     }
     return num;
 }
@@ -64,7 +64,9 @@ int WorkerList::GetNumWorkers( int stateMask ) const
     {
         int state = (int)(*it)->GetState();
         if ( state & stateMask )
-            ++num;
+        {
+            num += (*it)->GetNumCPU();
+        }
     }
     return num;
 }

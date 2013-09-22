@@ -11,7 +11,8 @@ class Protocol
 public:
     virtual ~Protocol() {}
     virtual bool NodePing( std::string &msg, const std::string &hostName ) = 0;
-    virtual bool NodeResponsePing( std::string &msg ) = 0;
+    virtual bool NodeResponsePing( std::string &msg, int numCPU ) = 0;
+    virtual bool ParseResponsePing( const std::string &msg, int &numCPU ) = 0;
     virtual bool NodeJobCompletionPing( std::string &msg, int64_t jobId, int taskId ) = 0;
     virtual bool ParseJobCompletionPing( const std::string &msg, int64_t &jobId, int &taskId ) = 0;
 
@@ -44,7 +45,9 @@ class ProtocolJson : public Protocol
 public:
     virtual bool NodePing( std::string &msg, const std::string &host );
 
-    virtual bool NodeResponsePing( std::string &msg );
+    virtual bool NodeResponsePing( std::string &msg, int numCPU );
+
+    virtual bool ParseResponsePing( const std::string &msg, int &numCPU );
 
     virtual bool NodeJobCompletionPing( std::string &msg, int64_t jobId, int taskId );
 

@@ -49,10 +49,30 @@ bool ProtocolJson::NodePing( std::string &msg, const std::string &host )
     return true;
 }
 
-bool ProtocolJson::NodeResponsePing( std::string &msg )
+bool ProtocolJson::NodeResponsePing( std::string &msg, int numCPU )
 {
     msg = std::string( "{\"type\":\"ping_response\"}\n" );
+    msg += std::string( "{\"num_cpu\":" ) + boost::lexical_cast<std::string>( numCPU ) + "}";
     AddHeader( msg );
+    return true;
+}
+
+bool ProtocolJson::ParseResponsePing( const std::string &msg, int &numCPU )
+{
+    std::istringstream ss( msg );
+
+    boost::property_tree::ptree ptree;
+    try
+    {
+        boost::property_tree::read_json( ss, ptree );
+        numCPU = ptree.get<int>( "num_cpu" );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "ProtocolJson::ParseResponsePing: " << e.what() );
+        return false;
+    }
+
     return true;
 }
 
