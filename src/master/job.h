@@ -11,15 +11,16 @@ namespace master {
 
 enum JobFlag
 {
-    JOB_FLAG_NO_RESCHEDULE = 1
+    JOB_FLAG_NO_RESCHEDULE = 1,
+    JOB_FLAG_EXCLUSIVE_EXEC = 2
 };
 
 class Job
 {
 public:
     Job( const std::string &script, const std::string &scriptLanguage, int numNodes,
-         int maxFailedNodes, int timeout, int queueTimeout, int taskTimeout,
-         bool noReschedule )
+         int maxFailedNodes, int maxCPU, int timeout, int queueTimeout, int taskTimeout,
+         bool noReschedule, bool exclusiveExec )
     : script_( script ), scriptLanguage_( scriptLanguage ), numNodes_( numNodes ),
      maxFailedNodes_( maxFailedNodes ), timeout_( timeout ),
      queueTimeout_( queueTimeout ), taskTimeout_( taskTimeout ),
@@ -27,6 +28,8 @@ public:
     {
         if ( noReschedule )
             flags_ |= JOB_FLAG_NO_RESCHEDULE;
+        if ( exclusiveExec )
+            flags_ |= JOB_FLAG_EXCLUSIVE_EXEC;
 
         static int64_t numJobs;
         scriptLength_ = script_.size();
@@ -40,10 +43,12 @@ public:
     int GetNumNodes() const { return numNodes_; }
     int GetNumPlannedExec() const { return numPlannedExec_; }
     int GetMaxFailedNodes() const { return maxFailedNodes_; }
+    int GetMaxCPU() const { return maxCPU_; }
     int GetTimeout() const { return timeout_; }
     int GetQueueTimeout() const { return queueTimeout_; }
     int GetTaskTimeout() const { return taskTimeout_; }
-    bool GetNoReschedule() const { return flags_ & JOB_FLAG_NO_RESCHEDULE; }
+    bool IsNoReschedule() const { return flags_ & JOB_FLAG_NO_RESCHEDULE; }
+    bool IsExclusiveAccess() const { return flags_ & JOB_FLAG_EXCLUSIVE_EXEC; }
     int64_t GetJobId() const { return id_; }
 
     void SetNumPlannedExec( int val ) { numPlannedExec_ = val; }
@@ -68,6 +73,7 @@ private:
     int numNodes_;
     int numPlannedExec_;
     int maxFailedNodes_;
+    int maxCPU_;
     int timeout_, queueTimeout_, taskTimeout_;
     int flags_;
     int64_t id_;

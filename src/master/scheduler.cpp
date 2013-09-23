@@ -89,9 +89,9 @@ void Scheduler::PlanJobExecution()
         boost::mutex::scoped_lock scoped_lock( jobsMut_ );
 
         std::set< int > &tasks = tasksToSend_[ jobId ];
-        for( int i = 0; i < numNodes; ++i )
+        for( int taskId = 0; taskId < numNodes; ++taskId )
         {
-            tasks.insert( i );
+            tasks.insert( taskId );
         }
 
         jobExecutions_[ jobId ] = numNodes;
@@ -146,7 +146,7 @@ bool Scheduler::RescheduleTask( const WorkerJob &workerJob )
         size_t failedNodesCnt = failedWorkers_[ jobId ].size();
         if ( failedNodesCnt < (size_t)job->GetMaxFailedNodes() )
         {
-            if ( job->GetNoReschedule() )
+            if ( job->IsNoReschedule() )
             {
                 DecrementJobExecution( jobId );
                 return false;

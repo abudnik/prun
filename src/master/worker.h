@@ -102,8 +102,10 @@ public:
     WorkerContainer &GetWorkers() { return workers_; }
 
     int GetTotalWorkers() const;
+    int GetTotalCPU() const;
 
     int GetNumWorkers( int stateMask ) const;
+    int GetNumCPU( int stateMask ) const;
 
 private:
     WorkerContainer workers_;
