@@ -1009,7 +1009,9 @@ int main( int argc, char* argv[], char **envp )
         boost::scoped_ptr<boost::asio::io_service::work> work(
             new boost::asio::io_service::work( io_service ) );
 
-        python_server::commDescrPool = new python_server::CommDescrPool( python_server::numJobThreads, &io_service );
+        boost::scoped_ptr< python_server::CommDescrPool > commDescrPool(
+            new python_server::CommDescrPool( python_server::numJobThreads, &io_service ) );
+        python_server::commDescrPool = commDescrPool.get();
 
         python_server::taskSem = new python_server::Semaphore( python_server::numJobThreads );
 
@@ -1080,8 +1082,6 @@ int main( int argc, char* argv[], char **envp )
         python_server::execTable.Clear();
 
         worker_threads.join_all();
-
-        delete python_server::commDescrPool;
     }
     catch( std::exception &e )
     {
