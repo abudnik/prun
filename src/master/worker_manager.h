@@ -35,7 +35,8 @@ public:
     Worker *GetWorkerByIP( const std::string &ip ) const;
 
     WorkerList::WorkerContainer &GetWorkers() { return workers_.GetWorkers(); }
-    int GetTotalWorkers() { return workers_.GetTotalWorkers(); }
+    int GetTotalWorkers() const { return workers_.GetTotalWorkers(); }
+    int GetTotalCPU() const { return workers_.GetTotalCPU(); }
 
     static WorkerManager &Instance()
     {

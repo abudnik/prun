@@ -51,12 +51,38 @@ int WorkerList::GetTotalWorkers() const
     WorkerContainer::const_iterator it = workers_.begin();
     for( ; it != workers_.end(); ++it )
     {
+        ++num;
+    }
+    return num;
+}
+
+int WorkerList::GetTotalCPU() const
+{
+    int num = 0;
+    WorkerContainer::const_iterator it = workers_.begin();
+    for( ; it != workers_.end(); ++it )
+    {
         num += (*it)->GetNumCPU();
     }
     return num;
 }
 
 int WorkerList::GetNumWorkers( int stateMask ) const
+{
+    int num = 0;
+    WorkerContainer::const_iterator it = workers_.begin();
+    for( ; it != workers_.end(); ++it )
+    {
+        int state = (int)(*it)->GetState();
+        if ( state & stateMask )
+        {
+            ++num;
+        }
+    }
+    return num;
+}
+
+int WorkerList::GetNumCPU( int stateMask ) const
 {
     int num = 0;
     WorkerContainer::const_iterator it = workers_.begin();
