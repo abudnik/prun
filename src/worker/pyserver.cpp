@@ -784,15 +784,6 @@ void SigHandler( int s )
     }
 }
 
-void SigInfoHandler( int s, siginfo_t *siginfo, void *context )
-{
-    if ( s == SIGTERM )
-    {
-		PS_LOG( "Caught SIGTERM from pid=" << siginfo->si_pid << ", uid=" << siginfo->si_uid << ". Exiting..." );
-        exit( 0 );
-    }
-}
-
 void SetupSignalHandlers()
 {
     struct sigaction sigHandler;
@@ -801,17 +792,27 @@ void SetupSignalHandlers()
     sigemptyset(&sigHandler.sa_mask);
     sigHandler.sa_flags = 0;
 
-    sigaction( SIGUSR1, &sigHandler, NULL );
     sigaction( SIGCHLD, &sigHandler, NULL );
-    sigaction( SIGHUP, &sigHandler, NULL );
+}
 
-    struct sigaction sigInfoHandler;
-    memset( &sigInfoHandler, 0, sizeof( sigInfoHandler ) );
-    sigInfoHandler.sa_sigaction = SigInfoHandler;
-    sigemptyset(&sigInfoHandler.sa_mask);
-    sigInfoHandler.sa_flags = SA_SIGINFO;
+void SetupSignalMask()
+{
+    sigset_t sigset;
+    sigemptyset( &sigset );
+    sigaddset( &sigset, SIGTERM );
+    sigaddset( &sigset, SIGHUP );
+    sigaddset( &sigset, SIGCHLD );
+    sigaddset( &sigset, SIGUSR1 );
+    sigprocmask( SIG_BLOCK, &sigset, NULL );
+}
 
-    sigaction( SIGTERM, &sigInfoHandler, NULL );
+void UnblockSighandlerMask()
+{
+    sigset_t sigset;
+    // appropriate unblocking signals see in SetupSignalHandlers
+    sigemptyset( &sigset );
+    sigaddset( &sigset, SIGCHLD );
+    pthread_sigmask( SIG_UNBLOCK, &sigset, NULL );
 }
 
 void UserInteraction()
@@ -821,11 +822,6 @@ void UserInteraction()
 
 void RunPyExecProcess()
 {
-    sigset_t waitset, oldset;
-    sigemptyset( &waitset );
-    sigaddset( &waitset, SIGUSR1 );
-    sigprocmask( SIG_BLOCK, &waitset, &oldset );
-
     pid_t pid = fork();
 
     if ( pid < 0 )
@@ -836,8 +832,6 @@ void RunPyExecProcess()
     else
     if ( pid == 0 )
     {
-        sigprocmask( SIG_SETMASK, &oldset, NULL );
-
         std::string exePath( python_server::exeDir );
         exePath += "/pyexec";
 
@@ -861,10 +855,12 @@ void RunPyExecProcess()
         // wait while pyexec completes initialization
         python_server::pyexecPid = pid;
         siginfo_t info;
+        sigset_t waitset;
+        sigemptyset( &waitset );
+        sigaddset( &waitset, SIGUSR1 );
 
         // TODO: sigtaimedwait && kill( pid, 0 )
         while( ( sigwaitinfo( &waitset, &info ) <= 0 ) && ( info.si_pid != pid ) );
-        sigprocmask( SIG_SETMASK, &oldset, NULL );
     }
 }
 
@@ -999,6 +995,7 @@ int main( int argc, char* argv[], char **envp )
         python_server::JobCompletionTable::Instance();
 
         SetupSignalHandlers();
+        SetupSignalMask();
         atexit( AtExit );
 
         SetupPyExecIPC();
@@ -1048,6 +1045,8 @@ int main( int argc, char* argv[], char **envp )
             );
         }
 
+        UnblockSighandlerMask();
+
         if ( !python_server::isDaemon )
         {
             UserInteraction();
@@ -1060,7 +1059,6 @@ int main( int argc, char* argv[], char **envp )
             int sig;
             sigemptyset( &waitset );
             sigaddset( &waitset, SIGTERM );
-			sigprocmask( SIG_BLOCK, &waitset, NULL );
             while( 1 )
             {
                 int ret = sigwait( &waitset, &sig );

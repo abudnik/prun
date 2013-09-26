@@ -191,17 +191,10 @@ protected:
             ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
             threadParams.pid = pid;
 
-            sigset_t sigset, oldset;
-            sigemptyset( &sigset );
-            sigaddset( &sigset, SIGCHLD );
-            pthread_sigmask( SIG_BLOCK, &sigset, &oldset );
-
             if ( DoFifoIO( threadParams.writeFifoFD, false, pid ) )
             {
                 DoFifoIO( threadParams.readFifoFD, true, pid );
             }
-
-            pthread_sigmask( SIG_SETMASK, &oldset, NULL );
             //PS_LOG( "wait child done " << pid );
         }
         else
@@ -673,7 +666,25 @@ void SetupSignalHandlers()
     sigHandler.sa_flags = 0;
 
     sigaction( SIGCHLD, &sigHandler, NULL );
-    sigaction( SIGHUP, &sigHandler, NULL );
+}
+
+void SetupSignalMask()
+{
+    sigset_t sigset;
+    sigemptyset( &sigset );
+    sigaddset( &sigset, SIGTERM );
+    sigaddset( &sigset, SIGHUP );
+    sigaddset( &sigset, SIGCHLD );
+    sigprocmask( SIG_BLOCK, &sigset, NULL );
+}
+
+void UnblockSighandlerMask()
+{
+    sigset_t sigset;
+    // appropriate unblocking signals see in SetupSignalHandlers
+    sigemptyset( &sigset );
+    sigaddset( &sigset, SIGCHLD );
+    pthread_sigmask( SIG_UNBLOCK, &sigset, NULL );
 }
 
 void SetupPyExecIPC()
@@ -865,6 +876,7 @@ void ThreadFun( boost::asio::io_service *io_service )
 int main( int argc, char* argv[], char **envp )
 {
     SetupSignalHandlers();
+    SetupSignalMask();
     atexit( AtExit );
 
     try
@@ -938,6 +950,8 @@ int main( int argc, char* argv[], char **envp )
 
         Impersonate();
 
+        UnblockSighandlerMask();
+
         if ( python_server::isDaemon )
         {
 			PS_LOG( "started" );
@@ -947,7 +961,6 @@ int main( int argc, char* argv[], char **envp )
 		int sig;
 		sigemptyset( &waitset );
 		sigaddset( &waitset, SIGTERM );
-		sigprocmask( SIG_BLOCK, &waitset, NULL );
         while( 1 )
         {
             int ret = sigwait( &waitset, &sig );
