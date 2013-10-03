@@ -7,9 +7,31 @@
 #include "common/observer.h"
 #include "worker.h"
 #include "job.h"
+#include "failed_workers.h"
 
 
 namespace master {
+
+struct NodeState
+{
+    NodeState()
+    : numBusyCPU_( 0 ),
+     worker_( NULL )
+    {}
+
+    void Reset()
+    {
+        numBusyCPU_ = 0;
+    }
+
+    void SetWorker( Worker *w ) { worker_ = w; }
+    Worker *GetWorker() { return worker_; }
+
+    int numBusyCPU_;
+    Worker *worker_;
+};
+typedef std::map< std::string, NodeState > IPToNodeState;
+
 
 class Scheduler : public python_server::Observable< true >
 {
@@ -51,14 +73,14 @@ private:
     void RemoveJob( int64_t jobId, const char *completionStatus );
     void StopWorkers( int64_t jobId );
 
-    bool CheckIfWorkerFailedJob( Worker *worker, int64_t jobId ) const;
     bool CanTakeNewJob() const;
 
     Job *FindJobByJobId( int64_t jobId ) const;
 
 private:
+    IPToNodeState nodeState_;
     IPToWorker busyWorkers_, freeWorkers_, sendingJobWorkers_;
-    std::map< int64_t, std::set< std::string > > failedWorkers_; // job_id -> set(worker_ip)
+    FailedWorkers failedWorkers_;
     boost::mutex workersMut_;
 
     std::list< Job * > jobs_;
