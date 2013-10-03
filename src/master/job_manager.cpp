@@ -115,7 +115,6 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
         int timeout = ptree.get<int>( "job_timeout" );
         int queueTimeout = ptree.get<int>( "queue_timeout" );
         int taskTimeout = ptree.get<int>( "task_timeout" );
-        int numNodes = ptree.get<int>( "num_nodes" );
         int maxFailedNodes = ptree.get<int>( "max_failed_nodes" );
         int maxCPU = ptree.get<int>( "max_cpu" );
         bool noReschedule = ptree.get<bool>( "no_reschedule" );
@@ -124,7 +123,14 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
         if ( taskTimeout < 0 )
             taskTimeout = -1;
 
-        Job *job = new Job( script, language, numNodes,
+        if ( maxCPU > 100 || maxCPU < 1 )
+        {
+            PS_LOG( "JobManager::CreateJob invalid maxCPU value=" << maxCPU <<
+                    ", set maxCPU value to 100" );
+            maxCPU = 100;
+        }
+
+        Job *job = new Job( script, language,
                             maxFailedNodes, maxCPU, timeout, queueTimeout, taskTimeout,
                             noReschedule, exclusiveExec );
         return job;

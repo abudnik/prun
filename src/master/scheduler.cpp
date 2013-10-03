@@ -56,7 +56,7 @@ void Scheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
                 freeWorkers_.erase( worker->GetIP() );
             }
 
-            {
+            /*{
             IPToNodeState::iterator it = nodeState_.find( worker->GetIP() );
             if ( it != nodeState_.end() )
             {
@@ -84,7 +84,7 @@ void Scheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
                 PS_LOG( "Scheduler::OnChangedWorkerState: sheduler doesn't know about worker"
                         " with ip = " << worker->GetIP() );
             }
-            }
+            }*/
         }
 
         if ( state == WORKER_STATE_FAILED )
@@ -106,26 +106,26 @@ void Scheduler::PlanJobExecution()
     if ( !job )
         return;
 
-    int numNodes = job->GetNumNodes();
-    if ( numNodes <= 0 )
-    {
-        // if there is no limit for max number of nodes,
-        // set it to number of current active workers
-        numNodes = WorkerManager::Instance().GetTotalWorkers();
-        job->SetNumPlannedExec( numNodes );
-    }
+    int totalCPU = WorkerManager::Instance().GetTotalCPU();
+    int numExec = static_cast<int>( totalCPU * ( job->GetMaxCPU() / 100. ) );
+    if ( numExec < 1 )
+        numExec = 1;
+    if ( numExec > totalCPU )
+        numExec = totalCPU;
+
+    job->SetNumPlannedExec( numExec );
 
     int64_t jobId = job->GetJobId();
     {
         boost::mutex::scoped_lock scoped_lock( jobsMut_ );
 
         std::set< int > &tasks = tasksToSend_[ jobId ];
-        for( int taskId = 0; taskId < numNodes; ++taskId )
+        for( int taskId = 0; taskId < numExec; ++taskId )
         {
             tasks.insert( taskId );
         }
 
-        jobExecutions_[ jobId ] = numNodes;
+        jobExecutions_[ jobId ] = numExec;
         jobs_.push_back( job );
     }
 

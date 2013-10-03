@@ -18,11 +18,11 @@ enum JobFlag
 class Job
 {
 public:
-    Job( const std::string &script, const std::string &scriptLanguage, int numNodes,
+    Job( const std::string &script, const std::string &scriptLanguage,
          int maxFailedNodes, int maxCPU, int timeout, int queueTimeout, int taskTimeout,
          bool noReschedule, bool exclusiveExec )
-    : script_( script ), scriptLanguage_( scriptLanguage ), numNodes_( numNodes ),
-     maxFailedNodes_( maxFailedNodes ), timeout_( timeout ),
+    : script_( script ), scriptLanguage_( scriptLanguage ),
+     maxFailedNodes_( maxFailedNodes ), maxCPU_( maxCPU ), timeout_( timeout ),
      queueTimeout_( queueTimeout ), taskTimeout_( taskTimeout ),
      flags_( 0 )
     {
@@ -40,7 +40,6 @@ public:
     const std::string &GetScriptLanguage() const { return scriptLanguage_; }
     unsigned int GetScriptLength() const { return scriptLength_; }
 
-    int GetNumNodes() const { return numNodes_; }
     int GetNumPlannedExec() const { return numPlannedExec_; }
     int GetMaxFailedNodes() const { return maxFailedNodes_; }
     int GetMaxCPU() const { return maxCPU_; }
@@ -70,7 +69,6 @@ private:
     std::string scriptLanguage_;
     unsigned int scriptLength_;
 
-    int numNodes_;
     int numPlannedExec_;
     int maxFailedNodes_;
     int maxCPU_;
