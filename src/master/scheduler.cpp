@@ -164,6 +164,42 @@ bool Scheduler::ScheduleTask( WorkerJob &workerJob, std::string &hostIP, Job **j
             return true;
         }
     }
+
+    /*{
+    IPToNodeState::const_iterator it = nodeState_.begin();
+    for( ; it != nodeState_.end(); ++it )
+    {
+        NodeState &nodeState = it->second;
+        if ( !nodeState.GetNumBusyCPU() )
+            continue;
+
+        Worker *w = nodeState.GetWorker();
+        if ( !failedWorkers_.IsWorkerFailedJob( w->GetIP(), jobId ) )
+        {
+            if ( !reschedule )
+            {
+                std::set< int > &tasks = tasksToSend_[ jobId ];
+                tasks.erase( taskId );
+                if ( tasks.empty() )
+                    tasksToSend_.erase( jobId );
+            }
+            else
+            {
+                needReschedule_.pop_front();
+            }
+
+            nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - 1 );
+
+            workerJob = WorkerJob( jobId, taskId );
+            w->SetJob( workerJob );
+
+            hostIP = w->GetIP();
+            *job = jobs_.front();
+            return true;
+        }
+    }
+    }*/
+
     return false;
 }
 
@@ -259,27 +295,40 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
 {
     if ( success )
     {
+        /*
+         */
         Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
         sendingJobWorkers_.erase( hostIP );
         busyWorkers_[ hostIP ] = w;
+        /*
+         */
     }
     else
     {
         {
             Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
-            boost::mutex::scoped_lock scoped_lock( workersMut_ );
 
             PS_LOG( "Scheduler::OnTaskSendCompletion: job sending failed."
                     " jobId=" << workerJob.jobId_ << ", ip=" << hostIP );
 
+            boost::mutex::scoped_lock scoped_lock( workersMut_ );
+
+            /*
+             */
             failedWorkers_.Add( workerJob.jobId_, hostIP );
+            /*
+             */
 
             // worker is free for now, to get another job
             sendingJobWorkers_.erase( hostIP );
             freeWorkers_[ hostIP ] = w;
             // reset worker job
             w->SetJob( WorkerJob() );
+
+            /*NodeState &nodeState = nodeState_[ hostIP ];
+            nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - 1 );
+            w->SetJob( WorkerJob() );*/
 
             // job need to be rescheduled to any other node
             RescheduleTask( workerJob );

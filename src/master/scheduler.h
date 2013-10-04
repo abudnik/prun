@@ -12,8 +12,9 @@
 
 namespace master {
 
-struct NodeState
+class NodeState
 {
+public:
     NodeState()
     : numBusyCPU_( 0 ),
      worker_( NULL )
@@ -24,11 +25,16 @@ struct NodeState
         numBusyCPU_ = 0;
     }
 
+    int GetNumBusyCPU() const { return numBusyCPU_; }
+    void SetNumBusyCPU( int num ) { numBusyCPU_ = num; }
+    int GetNumFreeCPU() const { return worker_->GetNumCPU() - numBusyCPU_; }
     void SetWorker( Worker *w ) { worker_ = w; }
-    Worker *GetWorker() { return worker_; }
+    Worker *GetWorker() const { return worker_; }
 
+private:
     int numBusyCPU_;
     Worker *worker_;
+
 };
 typedef std::map< std::string, NodeState > IPToNodeState;
 
