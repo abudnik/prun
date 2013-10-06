@@ -27,9 +27,9 @@ public:
 
     void OnNodePingResponse( const std::string &hostIP, int numCPU );
 
-    void OnNodeJobCompletion( const std::string &hostIP, int64_t jobId, int taskId );
+    void OnNodeTaskCompletion( const std::string &hostIP, int64_t jobId, int taskId );
 
-    bool GetAchievedWorker( WorkerJob &worker, std::string &hostIP );
+    bool GetAchievedTask( WorkerTask &worker, std::string &hostIP );
 
     void SetWorkerIP( Worker *worker, const std::string &ip );
     Worker *GetWorkerByIP( const std::string &ip ) const;
@@ -48,7 +48,7 @@ public:
 
 private:
     WorkerList workers_;
-    std::queue< std::pair< WorkerJob, std::string > > achievedWorkers_;
+    std::queue< std::pair< WorkerTask, std::string > > achievedWorkers_;
     boost::mutex workersMut_;
 };
 

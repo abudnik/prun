@@ -56,7 +56,7 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
         int taskId;
         if ( parser->ParseJobCompletionPing( body, jobId, taskId ) )
         {
-            WorkerManager::Instance().OnNodeJobCompletion( nodeIP, jobId, taskId );
+            WorkerManager::Instance().OnNodeTaskCompletion( nodeIP, jobId, taskId );
         }
         else
         {

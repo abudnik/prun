@@ -12,7 +12,6 @@ void Scheduler::OnHostAppearance( Worker *worker )
 {
     {
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
-        freeWorkers_[ worker->GetIP() ] = worker;
         nodeState_[ worker->GetIP() ].SetWorker( worker );
     }
     NotifyAll();
@@ -25,52 +24,24 @@ void Scheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
     std::vector< Worker * >::const_iterator it = workers.begin();
     for( ; it != workers.end(); ++it )
     {
-        const Worker *worker = *it;
+        Worker *worker = *it;
         WorkerState state = worker->GetState();
 
         if ( state == WORKER_STATE_NOT_AVAIL )
         {
-            IPToWorker::iterator it = busyWorkers_.find( worker->GetIP() );
-            if ( it != busyWorkers_.end() )
-            {
-                Worker *busyWorker = it->second;
-                const WorkerJob workerJob = busyWorker->GetJob();
-                int64_t jobId = workerJob.jobId_;
-
-                PS_LOG( "Scheduler::OnChangedWorkerState: worker isn't available, while executing job"
-                        "; nodeIP=" << worker->GetIP() << ", jobId=" << jobId );
-
-                failedWorkers_.Add( jobId, worker->GetIP() );
-                busyWorkers_.erase( worker->GetIP() );
-                busyWorker->SetJob( WorkerJob() );
-
-                if ( RescheduleTask( workerJob ) )
-                {
-                    scoped_lock.unlock();
-                    NotifyAll();
-                    scoped_lock.lock();
-                }
-            }
-            else
-            {
-                freeWorkers_.erase( worker->GetIP() );
-            }
-
-            /*{
             IPToNodeState::iterator it = nodeState_.find( worker->GetIP() );
             if ( it != nodeState_.end() )
             {
                 NodeState &nodeState = it->second;
-                Worker *busyWorker = nodeState.GetWorker();
                 const WorkerJob workerJob = worker->GetJob();
-                int64_t jobId = workerJob.jobId_;
+                int64_t jobId = workerJob.GetJobId();
 
                 PS_LOG( "Scheduler::OnChangedWorkerState: worker isn't available, while executing job"
                         "; nodeIP=" << worker->GetIP() << ", jobId=" << jobId );
 
                 failedWorkers_.Add( jobId, worker->GetIP() );
                 nodeState.Reset();
-                busyWorker->SetJob( WorkerJob() );
+                worker->SetJob( WorkerJob() );
 
                 if ( RescheduleTask( workerJob ) )
                 {
@@ -84,7 +55,6 @@ void Scheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
                 PS_LOG( "Scheduler::OnChangedWorkerState: sheduler doesn't know about worker"
                         " with ip = " << worker->GetIP() );
             }
-            }*/
         }
 
         if ( state == WORKER_STATE_FAILED )
@@ -132,108 +102,118 @@ void Scheduler::PlanJobExecution()
     NotifyAll();
 }
 
-bool Scheduler::ScheduleTask( WorkerJob &workerJob, std::string &hostIP, Job **job,
-                            int64_t jobId, int taskId, bool reschedule )
-{
-    IPToWorker::const_iterator it = freeWorkers_.begin();
-    for( ; it != freeWorkers_.end(); ++it )
-    {
-        Worker *w = it->second;
-        if ( !failedWorkers_.IsWorkerFailedJob( w->GetIP(), jobId ) )
-        {
-            if ( !reschedule )
-            {
-                std::set< int > &tasks = tasksToSend_[ jobId ];
-                tasks.erase( taskId );
-                if ( tasks.empty() )
-                    tasksToSend_.erase( jobId );
-            }
-            else
-            {
-                needReschedule_.pop_front();
-            }
-
-            freeWorkers_.erase( w->GetIP() );
-            sendingJobWorkers_[ w->GetIP() ] = w;
-
-            workerJob = WorkerJob( jobId, taskId );
-            w->SetJob( workerJob );
-
-            hostIP = w->GetIP();
-            *job = jobs_.front();
-            return true;
-        }
-    }
-
-    /*{
-    IPToNodeState::const_iterator it = nodeState_.begin();
-    for( ; it != nodeState_.end(); ++it )
-    {
-        NodeState &nodeState = it->second;
-        if ( !nodeState.GetNumBusyCPU() )
-            continue;
-
-        Worker *w = nodeState.GetWorker();
-        if ( !failedWorkers_.IsWorkerFailedJob( w->GetIP(), jobId ) )
-        {
-            if ( !reschedule )
-            {
-                std::set< int > &tasks = tasksToSend_[ jobId ];
-                tasks.erase( taskId );
-                if ( tasks.empty() )
-                    tasksToSend_.erase( jobId );
-            }
-            else
-            {
-                needReschedule_.pop_front();
-            }
-
-            nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - 1 );
-
-            workerJob = WorkerJob( jobId, taskId );
-            w->SetJob( workerJob );
-
-            hostIP = w->GetIP();
-            *job = jobs_.front();
-            return true;
-        }
-    }
-    }*/
-
-    return false;
-}
-
 bool Scheduler::RescheduleTask( const WorkerJob &workerJob )
 {
-    int64_t jobId = workerJob.jobId_;
+    int64_t jobId = workerJob.GetJobId();
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     const Job *job = FindJobByJobId( jobId );
     if ( job )
     {
         size_t failedNodesCnt = failedWorkers_.GetFailedNodesCnt( jobId );
-        if ( failedNodesCnt < (size_t)job->GetMaxFailedNodes() )
-        {
-            if ( job->IsNoReschedule() )
-            {
-                DecrementJobExecution( jobId );
-                return false;
-            }
-
-            needReschedule_.push_back( workerJob );
-            return true;
-        }
-        else
+        if ( failedNodesCnt >= (size_t)job->GetMaxFailedNodes() )
         {
             scoped_lock.unlock();
             StopWorkers( jobId );
             RemoveJob( jobId, "max failed nodes limit exceeded" );
+            return false;
         }
+
+        if ( job->IsNoReschedule() )
+        {
+            DecrementJobExecution( jobId, workerJob.GetNumTasks() );
+            return false;
+        }
+
+        const WorkerJob::Tasks &tasks = workerJob.GetTasks();
+        WorkerJob::Tasks::const_iterator it = tasks.begin();
+        for( ; it != tasks.end(); ++it )
+        {
+            int taskId = *it;
+            needReschedule_.push_back( WorkerTask( jobId, taskId ) );
+        }
+        return true;
     }
     else
     {
         PS_LOG( "Scheduler::RescheduleTask: Job for jobId=" << jobId << " not found" );
     }
     return false;
+}
+
+bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int numCPU )
+{
+    int64_t jobId;
+    bool foundReschedJob = false;
+
+    // firstly, check if there is a task which needs to reschedule
+    if ( !needReschedule_.empty() )
+    {
+        std::list< WorkerTask >::iterator it = needReschedule_.begin();
+        for( ; it != needReschedule_.end(); )
+        {
+            if ( workerJob.GetNumTasks() >= numCPU )
+                break;
+
+            const WorkerTask &workerTask = *it;
+
+            if ( foundReschedJob )
+            {
+                if ( workerTask.GetJobId() == jobId )
+                {
+                    workerJob.AddTask( workerTask.GetTaskId() );
+                    needReschedule_.erase( it++ );
+                    continue;
+                }
+            }
+            else
+            {
+                jobId = workerTask.GetJobId();
+                if ( !failedWorkers_.IsWorkerFailedJob( worker->GetIP(), jobId ) )
+                {
+                    foundReschedJob = true;
+                    workerJob.AddTask( workerTask.GetTaskId() );
+                    needReschedule_.erase( it++ );
+                    continue;
+                }
+            }
+            ++it;
+        }
+    }
+
+    std::list< Job * >::const_iterator it = jobs_.begin();
+    for( ; it != jobs_.end(); ++it )
+    {
+        const Job *j = *it;
+
+        if ( foundReschedJob && jobId != j->GetJobId() )
+            continue;
+
+        if ( failedWorkers_.IsWorkerFailedJob( worker->GetIP(), j->GetJobId() ) )
+            continue;
+
+        std::set< int > &tasks = tasksToSend_[ j->GetJobId() ];
+        if ( !tasks.empty() )
+        {
+            std::set< int >::iterator it_task = tasks.begin();
+            for( ; it_task != tasks.end();  )
+            {
+                if ( workerJob.GetNumTasks() >= numCPU )
+                    break;
+                int taskId = *it_task;
+                workerJob.AddTask( taskId );
+
+                tasks.erase( it_task++ );
+                if ( tasks.empty() )
+                {
+                    tasksToSend_.erase( jobId );
+                    break;
+                }
+            }
+            break;
+        }
+    }
+
+    return workerJob.GetNumTasks() > 0;
 }
 
 bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **job )
@@ -247,38 +227,25 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **
 
     boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
 
-    int64_t jobId;
-    int taskId;
-
-    // firstly, check if there is a task which needs to reschedule
-    if ( !needReschedule_.empty() )
+    IPToNodeState::iterator it = nodeState_.begin();
+    for( ; it != nodeState_.end(); ++it )
     {
-        std::list< WorkerJob >::const_iterator it = needReschedule_.begin();
-        for( ; it != needReschedule_.end(); ++it )
+        NodeState &nodeState = it->second;
+        int freeCPU = nodeState.GetNumFreeCPU();
+        if ( freeCPU <= 0 )
+            continue;
+
+        Worker *w = nodeState.GetWorker();
+
+        if ( GetJobForWorker( w, workerJob, freeCPU ) )
         {
-            workerJob = *it;
-            jobId = workerJob.jobId_;
-            taskId = workerJob.taskId_;
+            w->SetJob( workerJob );
+            hostIP = w->GetIP();
+            *job = FindJobByJobId( workerJob.GetJobId() );
 
-            if ( ScheduleTask( workerJob, hostIP, job,
-                              jobId, taskId, true ) )
-                return true;
-        }
-    }
-
-    std::list< Job * >::const_iterator it = jobs_.begin();
-    for( ; it != jobs_.end(); ++it )
-    {
-        const Job *j = *it;
-        jobId = j->GetJobId();
-
-        const std::set< int > &tasks = tasksToSend_[ jobId ];
-        if ( !tasks.empty() )
-        {
-            taskId = *tasks.begin();
-            if ( ScheduleTask( workerJob, hostIP, job,
-                              jobId, taskId, false ) )
-                return true;
+            int numBusyCPU = nodeState.GetNumBusyCPU() + workerJob.GetNumTasks();
+            nodeState.SetNumBusyCPU( numBusyCPU );
+            return true;
         }
     }
 
@@ -310,13 +277,13 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
             Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
 
             PS_LOG( "Scheduler::OnTaskSendCompletion: job sending failed."
-                    " jobId=" << workerJob.jobId_ << ", ip=" << hostIP );
+                    " jobId=" << workerJob.GetJobId() << ", ip=" << hostIP );
 
             boost::mutex::scoped_lock scoped_lock( workersMut_ );
 
             /*
              */
-            failedWorkers_.Add( workerJob.jobId_, hostIP );
+            failedWorkers_.Add( workerJob.GetJobId(), hostIP );
             /*
              */
 
@@ -355,7 +322,7 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerJob &workerJob, const
         w->SetJob( WorkerJob() );
 
         boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
-        DecrementJobExecution( workerJob.jobId_ );
+        DecrementJobExecution( workerJob.GetJobId() );
     }
     else
     {
@@ -366,9 +333,9 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerJob &workerJob, const
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
 
         PS_LOG( "Scheduler::OnTaskCompletion: errCode=" << errCode <<
-                ", jobId=" << workerJob.jobId_ << ", ip=" << hostIP );
+                ", jobId=" << workerJob.GetJobId() << ", ip=" << hostIP );
 
-        failedWorkers_.Add( workerJob.jobId_, hostIP );
+        failedWorkers_.Add( workerJob.GetJobId(), hostIP );
 
         // worker is free for now, to get another job
         busyWorkers_.erase( hostIP );
@@ -395,7 +362,7 @@ void Scheduler::OnTaskTimeout( const WorkerJob &workerJob, const std::string &ho
         const WorkerJob &job = it->second->GetJob();
         if ( job == workerJob )
         {
-            PS_LOG( "Scheduler::OnJobTimeout " << workerJob.jobId_ << ":" << workerJob.taskId_ << " " << hostIP );
+            PS_LOG( "Scheduler::OnJobTimeout " << workerJob.GetJobId() << ":" << workerJob.GetTaskId() << " " << hostIP );
             OnTaskCompletion( NODE_JOB_TIMEOUT, workerJob, hostIP );
         }
     }
@@ -427,16 +394,13 @@ void Scheduler::RunJobCallback( Job *job, const char *completionStatus )
     job->RunCallback( ss.str() );
 }
 
-void Scheduler::DecrementJobExecution( int64_t jobId )
+void Scheduler::DecrementJobExecution( int64_t jobId, int numTasks )
 {
-    int numExecution = jobExecutions_[ jobId ];
-    if ( numExecution <= 1 )
+    int numExecution = jobExecutions_[ jobId ] - numTasks;
+    jobExecutions_[ jobId ] = numExecution;
+    if ( numExecution < 1 )
     {
         RemoveJob( jobId, "success" );
-    }
-    else
-    {
-        jobExecutions_[ jobId ] = numExecution - 1;
     }
 }
 
@@ -468,7 +432,7 @@ void Scheduler::StopWorkers( int64_t jobId )
         for( ; it != busyWorkers_.end(); )
         {
             Worker *w = it->second;
-            if ( w->GetJob().jobId_ == jobId )
+            if ( w->GetJob().GetJobId() == jobId )
             {
                 busyWorkers_.erase( it++ );
                 freeWorkers_[ w->GetIP() ] = w;
@@ -485,7 +449,7 @@ void Scheduler::StopWorkers( int64_t jobId )
         std::list< WorkerJob >::iterator it = needReschedule_.begin();
         for( ; it != needReschedule_.end(); )
         {
-            if ( it->jobId_ == jobId )
+            if ( it->GetJobId() == jobId )
             {
                 needReschedule_.erase( it++ );
                 continue;
@@ -554,7 +518,7 @@ void Scheduler::GetJobInfo( std::string &info, int64_t jobId )
         for( ; it != busyWorkers_.end(); ++it )
         {
             const WorkerJob &job = it->second->GetJob();
-            if ( job.jobId_ == jobId )
+            if ( job.GetJobId() == jobId )
                 ++num;
         }
         ss << "busy workers = " << num << std::endl;
@@ -566,7 +530,7 @@ void Scheduler::GetJobInfo( std::string &info, int64_t jobId )
         for( ; it != sendingJobWorkers_.end(); ++it )
         {
             const WorkerJob &job = it->second->GetJob();
-            if ( job.jobId_ == jobId )
+            if ( job.GetJobId() == jobId )
                 ++num;
         }
         ss << "sending workers = " << num << std::endl;

@@ -70,12 +70,11 @@ public:
 
 private:
     void PlanJobExecution();
-    bool ScheduleTask( WorkerJob &workerJob, std::string &hostIP, Job **job,
-                       int64_t jobId, int taskId, bool reschedule );
     bool RescheduleTask( const WorkerJob &workerJob );
+    bool GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int numCPU );
 
     void RunJobCallback( Job *job, const char *completionStatus );
-    void DecrementJobExecution( int64_t jobId );
+    void DecrementJobExecution( int64_t jobId, int numTasks );
     void RemoveJob( int64_t jobId, const char *completionStatus );
     void StopWorkers( int64_t jobId );
 
@@ -92,7 +91,7 @@ private:
     std::list< Job * > jobs_;
     std::map< int64_t, int > jobExecutions_; // job_id -> num job remaining executions (== 0, if job execution completed)
     std::map< int64_t, std::set< int > > tasksToSend_; // job_id -> set(task_id)
-    std::list< WorkerJob > needReschedule_;
+    std::list< WorkerTask > needReschedule_;
     boost::mutex jobsMut_;
 };
 

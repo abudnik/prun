@@ -66,12 +66,12 @@ void WorkerManager::OnNodePingResponse( const std::string &hostIP, int numCPU )
     }
 }
 
-void WorkerManager::OnNodeJobCompletion( const std::string &hostIP, int64_t jobId, int taskId )
+void WorkerManager::OnNodeTaskCompletion( const std::string &hostIP, int64_t jobId, int taskId )
 {
     if ( jobId < 0 || taskId < 0 )
         return;
 
-    std::pair< WorkerJob, std::string > worker( WorkerJob( jobId, taskId ), hostIP );
+    std::pair< WorkerTask, std::string > worker( WorkerTask( jobId, taskId ), hostIP );
 
     {
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
@@ -80,7 +80,7 @@ void WorkerManager::OnNodeJobCompletion( const std::string &hostIP, int64_t jobI
     NotifyAll();
 }
 
-bool WorkerManager::GetAchievedWorker( WorkerJob &worker, std::string &hostIP )
+bool WorkerManager::GetAchievedTask( WorkerTask &worker, std::string &hostIP )
 {
     if ( achievedWorkers_.empty() )
         return false;
@@ -91,7 +91,7 @@ bool WorkerManager::GetAchievedWorker( WorkerJob &worker, std::string &hostIP )
 
     PS_LOG( "GetAchievedWorker: num achieved workers=" << achievedWorkers_.size() );
 
-    const std::pair< WorkerJob, std::string > &w = achievedWorkers_.front();
+    const std::pair< WorkerTask, std::string > &w = achievedWorkers_.front();
     worker = w.first;
     hostIP = w.second;
     achievedWorkers_.pop();

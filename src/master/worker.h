@@ -16,16 +16,48 @@ enum WorkerState
     WORKER_STATE_FAILED    = 8
 };
 
-struct WorkerJob
+class WorkerJob
 {
-    WorkerJob( int64_t jobId, int taskId ) : jobId_( jobId ), taskId_( taskId ) {}
-    WorkerJob() : jobId_( -1 ), taskId_( -1 ) {}
+public:
+    typedef std::vector<int> Tasks;
 
-    bool operator == ( const WorkerJob &workerJob ) const
+public:
+    WorkerJob() : jobId_( -1 ) {}
+
+    /*bool operator == ( const WorkerJob &workerJob ) const
     {
         return jobId_ == workerJob.jobId_ && taskId_ == workerJob.taskId_;
+    }*/
+
+    void Reset()
+    {
+        jobId_ = -1;
+        tasks_.clear();
     }
 
+    void SetJobId( int64_t jobId ) { jobId_ = jobId; }
+    void AddTask( int taskId ) { tasks_.push_back( taskId ); }
+
+    int64_t GetJobId() const { return jobId_; }
+    const Tasks &GetTasks() const { return tasks_; }
+    int GetNumTasks() const { return (int)tasks_.size(); }
+
+private:
+    int64_t jobId_;
+    Tasks tasks_;
+};
+
+class WorkerTask
+{
+public:
+    WorkerTask( int64_t jobId, int taskId )
+    : jobId_( jobId ), taskId_( taskId ) {}
+    WorkerTask() : jobId_( -1 ), taskId_( -1 ) {}
+
+    int64_t GetJobId() const { return jobId_; }
+    int GetTaskId() const { return taskId_; }
+
+private:
     int64_t jobId_;
     int taskId_;
 };
