@@ -41,7 +41,7 @@ void Scheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
 
                 failedWorkers_.Add( jobId, worker->GetIP() );
                 nodeState.Reset();
-                worker->SetJob( WorkerJob() );
+                worker->ResetJob();
 
                 if ( RescheduleTask( workerJob ) )
                 {
@@ -260,18 +260,7 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **
 
 void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job )
 {
-    if ( success )
-    {
-        /*
-         */
-        Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
-        boost::mutex::scoped_lock scoped_lock( workersMut_ );
-        sendingJobWorkers_.erase( hostIP );
-        busyWorkers_[ hostIP ] = w;
-        /*
-         */
-    }
-    else
+    if ( !success )
     {
         {
             Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
@@ -281,24 +270,15 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
 
             boost::mutex::scoped_lock scoped_lock( workersMut_ );
 
-            /*
-             */
             failedWorkers_.Add( workerJob.GetJobId(), hostIP );
-            /*
-             */
-
-            // worker is free for now, to get another job
-            sendingJobWorkers_.erase( hostIP );
-            freeWorkers_[ hostIP ] = w;
-            // reset worker job
-            w->SetJob( WorkerJob() );
-
-            /*NodeState &nodeState = nodeState_[ hostIP ];
-            nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - 1 );
-            w->SetJob( WorkerJob() );*/
 
             // job need to be rescheduled to any other node
             RescheduleTask( workerJob );
+
+            NodeState &nodeState = nodeState_[ hostIP ];
+            int numTasks = workerJob.GetNumTasks();
+            nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - numTasks );
+            w->ResetJob();
         }
         NotifyAll();
     }

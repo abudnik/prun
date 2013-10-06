@@ -81,6 +81,7 @@ public:
     void SetNumCPU( int numCPU ) { numCPU_ = numCPU; }
     void SetState( WorkerState state ) { state_ = state; }
     void SetJob( const WorkerJob &job ) { job_ = job; }
+    void ResetJob() { job_.Reset(); }
     void SetNumPingResponse( int num ) { numPingResponse_ = num; }
     void IncNumPingResponse() { ++numPingResponse_; }
 
