@@ -26,12 +26,12 @@ public:
 
     void Run();
 
-    virtual void OnGetJobResult( bool success, int errCode, const WorkerJob &workerJob, const std::string &hostIP );
+    virtual void OnGetTaskResult( bool success, int errCode, const WorkerTask &workerTask, const std::string &hostIP );
 
 private:
     virtual void NotifyObserver( int event );
 
-    virtual void GetJobResult( const WorkerJob &workerJob, const std::string &hostIP ) = 0;
+    virtual void GetTaskResult( const WorkerTask &workerTask, const std::string &hostIP ) = 0;
 
 private:
     bool stopped_;
@@ -50,15 +50,15 @@ public:
 
 public:
     GetterBoost( boost::asio::io_service &io_service,
-                 ResultGetter *getter, const WorkerJob &workerJob,
+                 ResultGetter *getter, const WorkerTask &workerTask,
                  const std::string &hostIP )
     : io_service_( io_service ), socket_( io_service ),
      response_( false ), firstRead_( true ),
-     getter_( getter ), workerJob_( workerJob ),
+     getter_( getter ), workerTask_( workerTask ),
      hostIP_( hostIP )
     {}
 
-    void GetJobResult();
+    void GetTaskResult();
 
 private:
     void HandleConnect( const boost::system::error_code &error );
@@ -81,7 +81,7 @@ private:
     bool firstRead_;
     std::string request_;
     ResultGetter *getter_;
-    WorkerJob workerJob_;
+    WorkerTask workerTask_;
     std::string hostIP_;
 };
 
@@ -97,9 +97,9 @@ public:
     virtual void Start();
 
 private:
-    virtual void GetJobResult( const WorkerJob &workerJob, const std::string &hostIP );
+    virtual void GetTaskResult( const WorkerTask &workerTask, const std::string &hostIP );
 
-    virtual void OnGetJobResult( bool success, int errCode, const WorkerJob &workerJob, const std::string &hostIP );
+    virtual void OnGetTaskResult( bool success, int errCode, const WorkerTask &workerTask, const std::string &hostIP );
 
 private:
     boost::asio::io_service &io_service_;

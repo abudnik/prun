@@ -30,7 +30,7 @@ void JobSender::Run()
         getTask = scheduler.GetTaskToSend( workerJob, hostIP, &job );
         if ( getTask )
         {
-            PS_LOG( "Get task " << workerJob.jobId_ << " : " << workerJob.taskId_ );
+            PS_LOG( "Get task " << workerJob.GetJobId() );
             SendJob( workerJob, hostIP, job );
         }
     }
@@ -59,7 +59,7 @@ void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, c
         if ( !workerJob.taskId_ )
         {
             // first task send completion means that job execution started
-            timeoutManager_->PushJob( workerJob.jobId_, job->GetTimeout() );
+            timeoutManager_->PushJob( workerJob.GetJobId(), job->GetTimeout() );
         }
         timeoutManager_->PushTask( workerJob, hostIP, job->GetTaskTimeout() );
     }
@@ -150,7 +150,7 @@ void SenderBoost::MakeRequest()
 {
     python_server::ProtocolJson protocol;
     protocol.SendScript( request_, job_->GetScriptLanguage(), job_->GetScript(),
-                         workerJob_.jobId_, workerJob_.taskId_, job_->GetNumPlannedExec(),
+                         workerJob_.GetJobId(), workerJob_.taskId_, job_->GetNumPlannedExec(),
                          1, job_->GetTaskTimeout() );
 }
 

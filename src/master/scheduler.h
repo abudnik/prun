@@ -52,9 +52,9 @@ public:
 
     void OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job );
 
-    void OnTaskCompletion( int errCode, const WorkerJob &workerJob, const std::string &hostIP );
+    void OnTaskCompletion( int errCode, const WorkerTask &workerTask, const std::string &hostIP );
 
-    void OnTaskTimeout( const WorkerJob &workerJob, const std::string &hostIP );
+    void OnTaskTimeout( const WorkerTask &workerTask, const std::string &hostIP );
     void OnJobTimeout( int64_t jobId );
 
     void GetJobInfo( std::string &info, int64_t jobId );
@@ -82,9 +82,13 @@ private:
 
     Job *FindJobByJobId( int64_t jobId ) const;
 
+    // stats
+    int GetNumBusyWorkers() const;
+    int GetNumFreeWorkers() const;
+    int GetNumBusyCPU() const;
+
 private:
     IPToNodeState nodeState_;
-    IPToWorker busyWorkers_, freeWorkers_, sendingJobWorkers_;
     FailedWorkers failedWorkers_;
     boost::mutex workersMut_;
 

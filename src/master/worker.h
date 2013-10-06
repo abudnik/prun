@@ -24,11 +24,6 @@ public:
 public:
     WorkerJob() : jobId_( -1 ) {}
 
-    /*bool operator == ( const WorkerJob &workerJob ) const
-    {
-        return jobId_ == workerJob.jobId_ && taskId_ == workerJob.taskId_;
-    }*/
-
     void Reset()
     {
         jobId_ = -1;
@@ -37,6 +32,19 @@ public:
 
     void SetJobId( int64_t jobId ) { jobId_ = jobId; }
     void AddTask( int taskId ) { tasks_.push_back( taskId ); }
+    bool DeleteTask( int taskId )
+    {
+        Tasks::iterator it = tasks_.begin();
+        for( ; it != tasks_.end(); ++it )
+        {
+            if ( taskId == *it )
+            {
+                tasks_.erase( it );
+                return true;
+            }
+        }
+        return false;
+    }
 
     int64_t GetJobId() const { return jobId_; }
     const Tasks &GetTasks() const { return tasks_; }
@@ -90,6 +98,7 @@ public:
     int GetNumCPU() const { return numCPU_; }
     WorkerState GetState() const { return state_; }
     const WorkerJob &GetJob() const { return job_; }
+    WorkerJob &GetJob() { return job_; }
     int GetNumPingResponse() const { return numPingResponse_; }
 
 private:
