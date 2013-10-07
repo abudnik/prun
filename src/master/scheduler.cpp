@@ -171,6 +171,7 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int
                 if ( !failedWorkers_.IsWorkerFailedJob( worker->GetIP(), jobId ) )
                 {
                     foundReschedJob = true;
+                    workerJob.SetJobId( jobId );
                     workerJob.AddTask( workerTask.GetTaskId() );
                     needReschedule_.erase( it++ );
                     continue;
@@ -194,6 +195,8 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int
         std::set< int > &tasks = tasksToSend_[ j->GetJobId() ];
         if ( !tasks.empty() )
         {
+            workerJob.SetJobId( j->GetJobId() );
+
             std::set< int >::iterator it_task = tasks.begin();
             for( ; it_task != tasks.end();  )
             {
@@ -233,9 +236,14 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **
 
         if ( GetJobForWorker( w, workerJob, freeCPU ) )
         {
+            *job = FindJobByJobId( workerJob.GetJobId() );
+            if ( !*job )
+            {
+                PS_LOG( "Scheduler::GetTaskToSend: job not found with jobId=" << workerJob.GetJobId() );
+                continue;
+            }
             w->SetJob( workerJob );
             hostIP = w->GetIP();
-            *job = FindJobByJobId( workerJob.GetJobId() );
 
             int numBusyCPU = nodeState.GetNumBusyCPU() + workerJob.GetNumTasks();
             nodeState.SetNumBusyCPU( numBusyCPU );

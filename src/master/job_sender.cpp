@@ -32,6 +32,7 @@ void JobSender::Run()
         {
             PS_LOG( "Get task " << workerJob.GetJobId() );
             SendJob( workerJob, hostIP, job );
+            workerJob.Reset();
         }
     }
 }
