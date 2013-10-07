@@ -45,6 +45,16 @@ public:
         }
         return false;
     }
+    bool HasTask( int taskId ) const
+    {
+        Tasks::const_iterator it = tasks_.begin();
+        for( ; it != tasks_.end(); ++it )
+        {
+            if ( taskId == *it )
+                return true;
+        }
+        return false;
+    }
 
     int64_t GetJobId() const { return jobId_; }
     const Tasks &GetTasks() const { return tasks_; }

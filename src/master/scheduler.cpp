@@ -337,8 +337,15 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
 
 void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &hostIP )
 {
-    PS_LOG( "Scheduler::OnTaskTimeout " << workerTask.GetJobId() << ":" << workerTask.GetTaskId() << " " << hostIP );
-    OnTaskCompletion( NODE_JOB_TIMEOUT, workerTask, hostIP );
+    const Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
+    const WorkerJob &workerJob = w->GetJob();
+
+    if ( ( workerTask.GetJobId() == workerJob.GetJobId() ) &&
+         workerJob.HasTask( workerTask.GetTaskId() ) )
+    {
+        PS_LOG( "Scheduler::OnTaskTimeout " << workerTask.GetJobId() << ":" << workerTask.GetTaskId() << " " << hostIP );
+        OnTaskCompletion( NODE_JOB_TIMEOUT, workerTask, hostIP );
+    }
 }
 
 void Scheduler::OnJobTimeout( int64_t jobId )
@@ -560,7 +567,7 @@ void Scheduler::GetStatistics( std::string &stat )
 
 int Scheduler::GetNumBusyWorkers() const
 {
-    int num;
+    int num = 0;
     IPToNodeState::const_iterator it = nodeState_.begin();
     for( ; it != nodeState_.end(); ++it )
     {
@@ -573,7 +580,7 @@ int Scheduler::GetNumBusyWorkers() const
 
 int Scheduler::GetNumFreeWorkers() const
 {
-    int num;
+    int num = 0;
     IPToNodeState::const_iterator it = nodeState_.begin();
     for( ; it != nodeState_.end(); ++it )
     {
@@ -586,7 +593,7 @@ int Scheduler::GetNumFreeWorkers() const
 
 int Scheduler::GetNumBusyCPU() const
 {
-    int num;
+    int num = 0;
     IPToNodeState::const_iterator it = nodeState_.begin();
     for( ; it != nodeState_.end(); ++it )
     {
