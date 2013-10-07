@@ -447,18 +447,26 @@ class SendToPyExec : public Action
 {
     virtual void Execute( boost::shared_ptr< Job > &job )
     {
-        int taskId = job->GetTaskId();
-
-        for( int i = 1; i < job->GetNumCPU(); ++i )
+        const Job::Tasks &tasks = job->GetTasks();
+        if ( tasks.empty() )
         {
-            boost::asio::io_service *io_service = commDescrPool->GetIoService();
-
-            io_service->post( boost::bind( &SendToPyExec::DoSend,
-                                           boost::shared_ptr< SendToPyExec >( new SendToPyExec ),
-                                           boost::shared_ptr< Job >( job ), taskId + i ) );
+            PS_LOG( "SendToPyExec::Execute: empty tasks for jobId=" << job->GetJobId() );
+            job->OnError( NODE_FATAL );
+            return;
         }
 
-        DoSend( job, taskId );
+        boost::asio::io_service *io_service = commDescrPool->GetIoService();
+        Job::Tasks::const_iterator it = tasks.begin();
+
+        int firstTaskId = *it;
+        for( ++it; it != tasks.end(); ++it )
+        {
+            io_service->post( boost::bind( &SendToPyExec::DoSend,
+                                           boost::shared_ptr< SendToPyExec >( new SendToPyExec ),
+                                           boost::shared_ptr< Job >( job ), *it ) );
+        }
+
+        DoSend( job, firstTaskId );
     }
 
     void SaveCompletionResults( boost::shared_ptr< Job > &job, int taskId ) const

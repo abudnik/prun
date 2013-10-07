@@ -15,7 +15,7 @@ namespace python_server {
 class Job
 {
 public:
-    std::vector<int> Tasks;
+    typedef std::vector<int> Tasks;
 
 public:
     template< typename T >
@@ -78,14 +78,13 @@ public:
         errCode_ = err;
     }
 
-
-
     void SetMasterIP( const std::string &ip ) { masterIP_ = ip; }
 
     unsigned int GetScriptLength() const { return scriptLength_; }
     const std::string &GetScriptLanguage() const { return language_; }
     const std::string &GetScript() const { return script_; }
     int64_t GetJobId() const { return jobId_; }
+    int GetTaskId() const { return taskId_; }
     const Tasks &GetTasks() const { return tasks_; }
     int GetNumTasks() const { return numTasks_; }
     int GetTimeout() const { return timeout_; }
@@ -119,6 +118,7 @@ private:
     std::string script_;
     int64_t jobId_;
     Tasks tasks_;
+    int taskId_;
     int numTasks_;
     int timeout_;
     int errCode_;

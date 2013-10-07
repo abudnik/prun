@@ -70,7 +70,7 @@ void ResultGetterBoost::GetTaskResult( const WorkerTask &workerTask, const std::
     GetterBoost::getter_ptr getter(
         new GetterBoost( io_service_, this, workerTask, hostIP )
     );
-    getter->GetJobResult();
+    getter->GetTaskResult();
 }
 
 void ResultGetterBoost::OnGetTaskResult( bool success, int errCode, const WorkerTask &workerTask, const std::string &hostIP )

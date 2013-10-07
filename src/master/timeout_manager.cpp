@@ -7,7 +7,7 @@ namespace master {
 
 void TimeoutManager::TaskTimeoutHandler::HandleTimeout()
 {
-    Scheduler::Instance().OnTaskTimeout( workerJob_, hostIP_ );
+    Scheduler::Instance().OnTaskTimeout( workerTask_, hostIP_ );
 }
 
 void TimeoutManager::JobTimeoutHandler::HandleTimeout()
@@ -105,7 +105,7 @@ void TimeoutManager::PushJob( int64_t jobId, int jobTimeout )
     );
 }
 
-void TimeoutManager::PushTask( const WorkerJob &job, const std::string &hostIP, int timeout )
+void TimeoutManager::PushTask( const WorkerTask &task, const std::string &hostIP, int timeout )
 {
     if ( timeout < 0 )
         return;
@@ -115,7 +115,7 @@ void TimeoutManager::PushTask( const WorkerJob &job, const std::string &hostIP, 
     const pt::ptime deadline = now + pt::seconds( timeout );
 
     boost::shared_ptr< TaskTimeoutHandler > handler( new TaskTimeoutHandler );
-    handler->workerJob_ = job;
+    handler->workerTask_ = task;
     handler->hostIP_ = hostIP;
     Callback callback(
         boost::bind( &TaskTimeoutHandler::HandleTimeout, handler )

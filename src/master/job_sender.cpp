@@ -56,13 +56,21 @@ void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, c
     Scheduler::Instance().OnTaskSendCompletion( success, workerJob, hostIP, job );
     if ( success )
     {
-        // problem: if taskId == 0 rescheduled, then job timeout will be pushed twice
-        if ( !workerJob.taskId_ )
+        const WorkerJob::Tasks &tasks = workerJob.GetTasks();
+        WorkerJob::Tasks::const_iterator it = tasks.begin();
+        for( ; it != tasks.end(); ++it )
         {
-            // first task send completion means that job execution started
-            timeoutManager_->PushJob( workerJob.GetJobId(), job->GetTimeout() );
+            int taskId = *it;
+            if ( taskId == 0 )
+            {
+                // First task send completion means that job execution started.
+                // Even if task with id == 0 rescheduled, overall job timeout
+                // behavior will be normal
+                timeoutManager_->PushJob( workerJob.GetJobId(), job->GetTimeout() );
+            }
+            timeoutManager_->PushTask( WorkerTask( workerJob.GetJobId(), taskId ),
+                                       hostIP, job->GetTaskTimeout() );
         }
-        timeoutManager_->PushTask( workerJob, hostIP, job->GetTaskTimeout() );
     }
 }
 
