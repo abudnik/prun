@@ -4,6 +4,7 @@
 #include <stdint.h> // boost/atomic/atomic.hpp:202:16: error: ‘uintptr_t’ was not declared in this scope
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/foreach.hpp>
 #include "protocol.h"
 #include "log.h"
 
@@ -106,23 +107,33 @@ bool ProtocolJson::ParseJobCompletionPing( const std::string &msg, int64_t &jobI
 }
 
 bool ProtocolJson::SendScript( std::string &msg, const std::string &scriptLanguage,
-                               const std::string &script, int64_t jobId, int taskId, int numTasks,
-                               int numCPU, int timeout )
+                               const std::string &script, int64_t jobId, const std::vector<int> &tasks,
+                               int numTasks, int timeout )
 {
     msg = std::string( "{\"type\":\"exec\"}\n" );
     msg += std::string( "{\"lang\":\"" ) + scriptLanguage + "\",\"script\":\"" + script + "\","
         "\"job_id\":" + boost::lexical_cast<std::string>( jobId ) + ","
-        "\"task_id\":" + boost::lexical_cast<std::string>( taskId ) + ","
         "\"num_tasks\":" + boost::lexical_cast<std::string>( numTasks ) + ","
-        "\"num_cpu\":" + boost::lexical_cast<std::string>( numCPU ) + ","
-        "\"timeout\":" + boost::lexical_cast<std::string>( timeout ) + "}";
+        "\"timeout\":" + boost::lexical_cast<std::string>( timeout ) + ",";
+
+    msg += "\"tasks\":[";
+    std::vector<int>::const_iterator it = tasks.begin();
+    for( ; it != tasks.end(); ++it )
+    {
+        if ( it != tasks.begin() )
+            msg += ",";
+        int taskId = *it;
+        msg += boost::lexical_cast<std::string>( taskId );
+    }
+    msg += "]}";
+
     AddHeader( msg );
     return true;
 }
 
 bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptLanguage,
-                                    std::string &script, int64_t &jobId, int &taskId, int &numTasks,
-                                    int &numCPU, int &timeout )
+                                    std::string &script, int64_t &jobId, std::vector<int> &tasks,
+                                    int &numTasks, int &timeout )
 {
     std::istringstream ss( msg );
 
@@ -133,10 +144,14 @@ bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptL
         scriptLanguage = ptree.get<std::string>( "lang" );
         script = ptree.get<std::string>( "script" );
         jobId = ptree.get<int64_t>( "job_id" );
-        taskId = ptree.get<int>( "task_id" );
         numTasks = ptree.get<int>( "num_tasks" );
-        numCPU = ptree.get<int>( "num_cpu" );
         timeout = ptree.get<int>( "timeout" );
+
+        BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
+                       ptree.get_child( "tasks" ) )
+        {
+            tasks.push_back( v.second.get_value< int >() );
+        }
     }
     catch( std::exception &e )
     {

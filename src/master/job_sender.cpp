@@ -56,6 +56,7 @@ void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, c
     Scheduler::Instance().OnTaskSendCompletion( success, workerJob, hostIP, job );
     if ( success )
     {
+        // problem: if taskId == 0 rescheduled, then job timeout will be pushed twice
         if ( !workerJob.taskId_ )
         {
             // first task send completion means that job execution started
@@ -150,8 +151,8 @@ void SenderBoost::MakeRequest()
 {
     python_server::ProtocolJson protocol;
     protocol.SendScript( request_, job_->GetScriptLanguage(), job_->GetScript(),
-                         workerJob_.GetJobId(), workerJob_.taskId_, job_->GetNumPlannedExec(),
-                         1, job_->GetTaskTimeout() );
+                         workerJob_.GetJobId(), workerJob_.GetTasks(),
+                         job_->GetNumPlannedExec(), job_->GetTaskTimeout() );
 }
 
 } // namespace master

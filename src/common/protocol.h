@@ -17,11 +17,11 @@ public:
     virtual bool ParseJobCompletionPing( const std::string &msg, int64_t &jobId, int &taskId ) = 0;
 
     virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
-                             const std::string &script, int64_t jobId, int taskId, int numTasks,
-                             int numCPU, int timeout ) = 0;
+                             const std::string &script, int64_t jobId, const std::vector<int> &tasks,
+                             int numTasks, int timeout ) = 0;
     virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
-                                  std::string &script, int64_t &jobId, int &taskId, int &numTasks,
-                                  int &numCPU, int &timeout ) = 0;
+                                  std::string &script, int64_t &jobId, std::vector<int> &tasks,
+                                  int &numTasks, int &timeout ) = 0;
     virtual bool GetJobResult( std::string &msg, int64_t jobId, int taskId ) = 0;
     virtual bool ParseGetJobResult( const std::string &msg, int64_t &jobId, int &taskId ) = 0;
     virtual bool SendJobResult( std::string &msg, int errCode ) = 0;
@@ -54,12 +54,12 @@ public:
     virtual bool ParseJobCompletionPing( const std::string &msg, int64_t &jobId, int &taskId );
 
     virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
-                             const std::string &script, int64_t jobId, int taskId, int numTasks,
-                             int numCPU, int timeout );
+                             const std::string &script, int64_t jobId, const std::vector<int> &tasks,
+                             int numTasks, int timeout );
 
     virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
-                                  std::string &script, int64_t &jobId, int &taskId, int &numTasks,
-                                  int &numCPU, int &timeout );
+                                  std::string &script, int64_t &jobId, std::vector<int> &tasks,
+                                  int &numTasks, int &timeout );
 
     virtual bool GetJobResult( std::string &msg, int64_t jobId, int taskId );
 
