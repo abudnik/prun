@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 #include <string>
 #include <stdint.h> // int64_t
 
@@ -14,55 +15,6 @@ enum WorkerState
     WORKER_STATE_READY     = 2,
     WORKER_STATE_EXEC      = 4,
     WORKER_STATE_FAILED    = 8
-};
-
-class WorkerJob
-{
-public:
-    typedef std::vector<int> Tasks;
-
-public:
-    WorkerJob() : jobId_( -1 ) {}
-
-    void Reset()
-    {
-        jobId_ = -1;
-        tasks_.clear();
-    }
-
-    void SetJobId( int64_t jobId ) { jobId_ = jobId; }
-    void AddTask( int taskId ) { tasks_.push_back( taskId ); }
-    bool DeleteTask( int taskId )
-    {
-        Tasks::iterator it = tasks_.begin();
-        for( ; it != tasks_.end(); ++it )
-        {
-            if ( taskId == *it )
-            {
-                tasks_.erase( it );
-                return true;
-            }
-        }
-        return false;
-    }
-    bool HasTask( int taskId ) const
-    {
-        Tasks::const_iterator it = tasks_.begin();
-        for( ; it != tasks_.end(); ++it )
-        {
-            if ( taskId == *it )
-                return true;
-        }
-        return false;
-    }
-
-    int64_t GetJobId() const { return jobId_; }
-    const Tasks &GetTasks() const { return tasks_; }
-    int GetNumTasks() const { return (int)tasks_.size(); }
-
-private:
-    int64_t jobId_;
-    Tasks tasks_;
 };
 
 class WorkerTask
@@ -79,6 +31,112 @@ private:
     int64_t jobId_;
     int taskId_;
 };
+
+class WorkerJob
+{
+public:
+    typedef std::set<int> Tasks;
+
+private:
+    typedef std::map< int64_t, Tasks > JobIdToTasks;
+
+public:
+    void Reset()
+    {
+        jobs_.clear();
+    }
+
+    void AddTask( int64_t jobId, int taskId ) { jobs_[ jobId ].insert( taskId ); }
+    bool DeleteTask( int64_t jobId, int taskId )
+    {
+        JobIdToTasks::iterator it = jobs_.find( jobId );
+        if ( it != jobs_.end() )
+        {
+            Tasks &tasks = it->second;
+            Tasks::iterator it_tasks = tasks.find( taskId );
+            if ( it_tasks != tasks.end() )
+            {
+                tasks.erase( it_tasks );
+                if ( tasks.empty() )
+                    jobs_.erase( it );
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool HasTask( int64_t jobId, int taskId ) const
+    {
+        JobIdToTasks::const_iterator it = jobs_.find( jobId );
+        if ( it != jobs_.end() )
+        {
+            const Tasks &tasks = it->second;
+            Tasks::const_iterator it_tasks = tasks.find( taskId );
+            return it_tasks != tasks.end();
+        }
+        return false;
+    }
+
+    bool HasJob( int64_t jobId ) const
+    {
+        return jobs_.find( jobId ) != jobs_.end();
+    }
+
+    bool GetTasks( int64_t jobId, Tasks &tasks ) const
+    {
+        JobIdToTasks::const_iterator it = jobs_.find( jobId );
+        if ( it != jobs_.end() )
+        {
+            tasks = it->second;
+            return true;
+        }
+        return false;
+    }
+
+    void GetTasks( std::vector< WorkerTask > &tasks ) const
+    {
+        JobIdToTasks::const_iterator it = jobs_.begin();
+        for( ; it != jobs_.end(); ++it )
+        {
+            const Tasks &t = it->second;
+            Tasks::const_iterator it_tasks = t.begin();
+            for( ; it_tasks != t.end(); ++it_tasks )
+            {
+                int taskId = *it_tasks;
+                tasks.push_back( WorkerTask( it->first, taskId ) );
+            }
+        }
+    }
+
+    int GetNumTasks() const
+    {
+        int num = 0;
+        JobIdToTasks::const_iterator it = jobs_.begin();
+        for( ; it != jobs_.end(); ++it )
+        {
+            const Tasks &tasks = it->second;
+            num += (int)tasks.size();
+        }
+        return num;
+    }
+
+    WorkerJob &operator += ( const WorkerJob &workerJob )
+    {
+        std::vector< WorkerTask > tasks;
+        GetTasks( tasks );
+        std::vector< WorkerTask >::const_iterator it = tasks.begin();
+        for( ; it != tasks.end(); ++it )
+        {
+            const WorkerTask &task = *it;
+            AddTask( task.GetJobId(), task.GetTaskId() );
+        }
+        return *this;
+    }
+
+private:
+    JobIdToTasks jobs_;
+};
+
 
 class Worker
 {

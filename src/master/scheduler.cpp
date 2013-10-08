@@ -242,7 +242,7 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **
                 PS_LOG( "Scheduler::GetTaskToSend: job not found with jobId=" << workerJob.GetJobId() );
                 continue;
             }
-            w->SetJob( workerJob );
+            w->GetJob() += workerJob;
             hostIP = w->GetIP();
 
             int numBusyCPU = nodeState.GetNumBusyCPU() + workerJob.GetNumTasks();
