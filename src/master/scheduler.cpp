@@ -34,16 +34,15 @@ void Scheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
             {
                 NodeState &nodeState = it->second;
                 const WorkerJob workerJob = worker->GetJob();
-                int64_t jobId = workerJob.GetJobId();
 
                 PS_LOG( "Scheduler::OnChangedWorkerState: worker isn't available, while executing job"
-                        "; nodeIP=" << worker->GetIP() << ", jobId=" << jobId );
+                        "; nodeIP=" << worker->GetIP() << ", numTasks=" << workerJob.GetNumTasks() );
 
-                failedWorkers_.Add( jobId, worker->GetIP() );
+                failedWorkers_.Add( workerJob, worker->GetIP() );
                 nodeState.Reset();
                 worker->ResetJob();
 
-                if ( RescheduleTask( workerJob ) )
+                if ( RescheduleJob( workerJob ) )
                 {
                     scoped_lock.unlock();
                     NotifyAll();
@@ -102,42 +101,53 @@ void Scheduler::PlanJobExecution()
     NotifyAll();
 }
 
-bool Scheduler::RescheduleTask( const WorkerJob &workerJob )
+bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
 {
-    int64_t jobId = workerJob.GetJobId();
+    bool found = true;
+    std::set<int64_t> jobs;
+    workerJob.GetJobs( jobs );
+
+    std::set<int64_t>::const_iterator it = jobs.begin();
+
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-    const Job *job = FindJobByJobId( jobId );
-    if ( job )
-    {
-        size_t failedNodesCnt = failedWorkers_.GetFailedNodesCnt( jobId );
-        if ( failedNodesCnt >= (size_t)job->GetMaxFailedNodes() )
-        {
-            scoped_lock.unlock();
-            StopWorkers( jobId );
-            RemoveJob( jobId, "max failed nodes limit exceeded" );
-            return false;
-        }
 
-        if ( job->IsNoReschedule() )
-        {
-            DecrementJobExecution( jobId, workerJob.GetNumTasks() );
-            return false;
-        }
-
-        const WorkerJob::Tasks &tasks = workerJob.GetTasks();
-        WorkerJob::Tasks::const_iterator it = tasks.begin();
-        for( ; it != tasks.end(); ++it )
-        {
-            int taskId = *it;
-            needReschedule_.push_back( WorkerTask( jobId, taskId ) );
-        }
-        return true;
-    }
-    else
+    for( ; it != jobs.end(); ++it )
     {
-        PS_LOG( "Scheduler::RescheduleTask: Job for jobId=" << jobId << " not found" );
+        int64_t jobId = *it;
+        const Job *job = FindJobByJobId( jobId );
+        if ( job )
+        {
+            size_t failedNodesCnt = failedWorkers_.GetFailedNodesCnt( jobId );
+            if ( failedNodesCnt >= (size_t)job->GetMaxFailedNodes() )
+            {
+                scoped_lock.unlock();
+                StopWorkers( jobId );
+                RemoveJob( jobId, "max failed nodes limit exceeded" );
+                continue;
+            }
+
+            if ( job->IsNoReschedule() )
+            {
+                DecrementJobExecution( jobId, workerJob.GetNumTasks( jobId ) );
+                continue;
+            }
+
+            WorkerJob::Tasks tasks;
+            workerJob.GetTasks( jobId, tasks );
+            WorkerJob::Tasks::const_iterator it_task = tasks.begin();
+            for( ; it_task != tasks.end(); ++it_task )
+            {
+                int taskId = *it_task;
+                needReschedule_.push_back( WorkerTask( jobId, taskId ) );
+                found = true;
+            }
+        }
+        else
+        {
+            PS_LOG( "Scheduler::RescheduleJob: Job for jobId=" << jobId << " not found" );
+        }
     }
-    return false;
+    return found;
 }
 
 bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int numCPU )
@@ -160,7 +170,7 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int
             {
                 if ( workerTask.GetJobId() == jobId )
                 {
-                    workerJob.AddTask( workerTask.GetTaskId() );
+                    workerJob.AddTask( jobId, workerTask.GetTaskId() );
                     needReschedule_.erase( it++ );
                     continue;
                 }
@@ -171,8 +181,7 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int
                 if ( !failedWorkers_.IsWorkerFailedJob( worker->GetIP(), jobId ) )
                 {
                     foundReschedJob = true;
-                    workerJob.SetJobId( jobId );
-                    workerJob.AddTask( workerTask.GetTaskId() );
+                    workerJob.AddTask( jobId, workerTask.GetTaskId() );
                     needReschedule_.erase( it++ );
                     continue;
                 }
@@ -195,15 +204,13 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int
         std::set< int > &tasks = tasksToSend_[ j->GetJobId() ];
         if ( !tasks.empty() )
         {
-            workerJob.SetJobId( j->GetJobId() );
-
             std::set< int >::iterator it_task = tasks.begin();
             for( ; it_task != tasks.end();  )
             {
                 if ( workerJob.GetNumTasks() >= numCPU )
                     break;
                 int taskId = *it_task;
-                workerJob.AddTask( taskId );
+                workerJob.AddTask( j->GetJobId(), taskId );
 
                 tasks.erase( it_task++ );
                 if ( tasks.empty() )
@@ -275,7 +282,7 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
             failedWorkers_.Add( workerJob.GetJobId(), hostIP );
 
             // job need to be rescheduled to any other node
-            RescheduleTask( w->GetJob() );
+            RescheduleJob( w->GetJob() );
 
             NodeState &nodeState = nodeState_[ hostIP ];
             int numTasks = workerJob.GetNumTasks();
@@ -295,7 +302,7 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
         boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
 
         WorkerJob &workerJob = w->GetJob();
-        if ( !workerJob.DeleteTask( workerTask.GetTaskId() ) )
+        if ( !workerJob.DeleteTask( workerTask.GetJobId(), workerTask.GetTaskId() ) )
         {
             // task already processed
             // it can be when a few threads simultaneously gets success errCode from the same task
@@ -324,7 +331,7 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
 
         const WorkerJob &workerJob = w->GetJob();
         // job need to be rescheduled to any other node
-        RescheduleTask( workerJob );
+        RescheduleJob( workerJob );
 
         NodeState &nodeState = nodeState_[ hostIP ];
         int numTasks = workerJob.GetNumTasks();
@@ -340,8 +347,7 @@ void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &
     const Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
     const WorkerJob &workerJob = w->GetJob();
 
-    if ( ( workerTask.GetJobId() == workerJob.GetJobId() ) &&
-         workerJob.HasTask( workerTask.GetTaskId() ) )
+    if ( workerJob.HasTask( workerTask.GetJobId(), workerTask.GetTaskId() ) )
     {
         PS_LOG( "Scheduler::OnTaskTimeout " << workerTask.GetJobId() << ":" << workerTask.GetTaskId() << " " << hostIP );
         OnTaskCompletion( NODE_JOB_TIMEOUT, workerTask, hostIP );
@@ -413,13 +419,13 @@ void Scheduler::StopWorkers( int64_t jobId )
         {
             NodeState &nodeState = it->second;
             Worker *worker = nodeState.GetWorker();
-            const WorkerJob &workerJob = worker->GetJob();
+            WorkerJob &workerJob = worker->GetJob();
 
-            if ( workerJob.GetJobId() == jobId )
+            if ( workerJob.HasJob( jobId ) )
             {
-                int numTasks = workerJob.GetNumTasks();
+                int numTasks = workerJob.GetNumTasks( jobId );
                 nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - numTasks );
-                worker->ResetJob();
+                workerJob.DeleteJob( jobId );
             }
         }
     }
@@ -507,9 +513,9 @@ void Scheduler::GetJobInfo( std::string &info, int64_t jobId )
         for( ; it != nodeState_.end(); ++it )
         {
             const NodeState &nodeState = it->second;
-            const WorkerJob &job = nodeState.GetWorker()->GetJob();
+            const WorkerJob &workerJob = nodeState.GetWorker()->GetJob();
 
-            if ( job.GetJobId() == jobId )
+            if ( workerJob.HasJob( jobId ) )
                 ++num;
         }
         ss << "busy workers = " << num << std::endl;
@@ -521,9 +527,9 @@ void Scheduler::GetJobInfo( std::string &info, int64_t jobId )
         for( ; it != nodeState_.end(); ++it )
         {
             const NodeState &nodeState = it->second;
-            const WorkerJob &job = nodeState.GetWorker()->GetJob();
+            const WorkerJob &workerJob = nodeState.GetWorker()->GetJob();
 
-            if ( job.GetJobId() == jobId )
+            if ( workerJob.HasJob( jobId ) )
                 num += nodeState.GetNumBusyCPU();
         }
         ss << "busy cpu's = " << num << std::endl;

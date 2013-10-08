@@ -15,7 +15,7 @@ namespace python_server {
 class Job
 {
 public:
-    typedef std::vector<int> Tasks;
+    typedef std::set<int> Tasks;
 
 public:
     template< typename T >

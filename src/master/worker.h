@@ -47,6 +47,7 @@ public:
     }
 
     void AddTask( int64_t jobId, int taskId ) { jobs_[ jobId ].insert( taskId ); }
+
     bool DeleteTask( int64_t jobId, int taskId )
     {
         JobIdToTasks::iterator it = jobs_.find( jobId );
@@ -61,6 +62,17 @@ public:
                     jobs_.erase( it );
                 return true;
             }
+        }
+        return false;
+    }
+
+    bool DeleteJob( int64_t jobId )
+    {
+        JobIdToTasks::iterator it = jobs_.find( jobId );
+        if ( it != jobs_.end() )
+        {
+            jobs_.erase( it );
+            return true;
         }
         return false;
     }
@@ -108,6 +120,23 @@ public:
         }
     }
 
+    void GetJobs( std::set<int64_t> &jobs ) const
+    {
+        JobIdToTasks::const_iterator it = jobs_.begin();
+        for( ; it != jobs_.end(); ++it )
+        {
+            jobs.insert( it->first );
+        }
+    }
+
+    int64_t GetJobId() const
+    {
+        if ( jobs_.empty() )
+            return -1;
+        JobIdToTasks::const_iterator it = jobs_.begin();
+        return it->first;
+    }
+
     int GetNumTasks() const
     {
         int num = 0;
@@ -116,6 +145,22 @@ public:
         {
             const Tasks &tasks = it->second;
             num += (int)tasks.size();
+        }
+        return num;
+    }
+
+    int GetNumTasks( int64_t jobId ) const
+    {
+        int num = 0;
+        JobIdToTasks::const_iterator it = jobs_.begin();
+        for( ; it != jobs_.end(); ++it )
+        {
+            if ( it->first == jobId )
+            {
+                const Tasks &tasks = it->second;
+                num = (int)tasks.size();
+                break;
+            }
         }
         return num;
     }

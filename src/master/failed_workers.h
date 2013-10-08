@@ -2,6 +2,9 @@
 #define __FAILED_WORKERS_H
 
 #include "common/log.h"
+#include "worker.h"
+
+namespace master {
 
 class FailedWorkers
 {
@@ -9,6 +12,17 @@ public:
     void Add( int64_t jobId, const std::string &hostIP )
     {
         failedWorkers_[ jobId ].insert( hostIP );
+    }
+
+    void Add( const WorkerJob &workerJob, const std::string &hostIP )
+    {
+        std::set<int64_t> jobs;
+        workerJob.GetJobs( jobs );
+        std::set<int64_t>::const_iterator it = jobs.begin();
+        for( ; it != jobs.end(); ++it )
+        {
+            failedWorkers_[ *it ].insert( hostIP );
+        }
     }
 
     bool Delete( int64_t jobId )
@@ -53,5 +67,7 @@ public:
 private:
     std::map< int64_t, std::set< std::string > > failedWorkers_; // job_id -> set(worker_ip)
 };
+
+} // namespace master
 
 #endif

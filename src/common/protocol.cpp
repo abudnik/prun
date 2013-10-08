@@ -107,7 +107,7 @@ bool ProtocolJson::ParseJobCompletionPing( const std::string &msg, int64_t &jobI
 }
 
 bool ProtocolJson::SendScript( std::string &msg, const std::string &scriptLanguage,
-                               const std::string &script, int64_t jobId, const std::vector<int> &tasks,
+                               const std::string &script, int64_t jobId, const std::set<int> &tasks,
                                int numTasks, int timeout )
 {
     msg = std::string( "{\"type\":\"exec\"}\n" );
@@ -117,7 +117,7 @@ bool ProtocolJson::SendScript( std::string &msg, const std::string &scriptLangua
         "\"timeout\":" + boost::lexical_cast<std::string>( timeout ) + ",";
 
     msg += "\"tasks\":[";
-    std::vector<int>::const_iterator it = tasks.begin();
+    std::set<int>::const_iterator it = tasks.begin();
     for( ; it != tasks.end(); ++it )
     {
         if ( it != tasks.begin() )
@@ -132,7 +132,7 @@ bool ProtocolJson::SendScript( std::string &msg, const std::string &scriptLangua
 }
 
 bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptLanguage,
-                                    std::string &script, int64_t &jobId, std::vector<int> &tasks,
+                                    std::string &script, int64_t &jobId, std::set<int> &tasks,
                                     int &numTasks, int &timeout )
 {
     std::istringstream ss( msg );
@@ -150,7 +150,7 @@ bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptL
         BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
                        ptree.get_child( "tasks" ) )
         {
-            tasks.push_back( v.second.get_value< int >() );
+            tasks.insert( v.second.get_value< int >() );
         }
     }
     catch( std::exception &e )

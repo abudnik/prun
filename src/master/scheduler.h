@@ -70,7 +70,7 @@ public:
 
 private:
     void PlanJobExecution();
-    bool RescheduleTask( const WorkerJob &workerJob );
+    bool RescheduleJob( const WorkerJob &workerJob );
     bool GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int numCPU );
 
     void RunJobCallback( Job *job, const char *completionStatus );

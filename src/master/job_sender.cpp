@@ -57,7 +57,8 @@ void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, c
     Scheduler::Instance().OnTaskSendCompletion( success, workerJob, hostIP, job );
     if ( success )
     {
-        const WorkerJob::Tasks &tasks = workerJob.GetTasks();
+        WorkerJob::Tasks tasks;
+        workerJob.GetTasks( workerJob.GetJobId(), tasks );
         WorkerJob::Tasks::const_iterator it = tasks.begin();
         for( ; it != tasks.end(); ++it )
         {
@@ -158,9 +159,12 @@ void SenderBoost::HandleRead( const boost::system::error_code &error, size_t byt
 
 void SenderBoost::MakeRequest()
 {
+    WorkerJob::Tasks tasks;
+    workerJob_.GetTasks( workerJob_.GetJobId(), tasks );
+
     python_server::ProtocolJson protocol;
     protocol.SendScript( request_, job_->GetScriptLanguage(), job_->GetScript(),
-                         workerJob_.GetJobId(), workerJob_.GetTasks(),
+                         workerJob_.GetJobId(), tasks,
                          job_->GetNumPlannedExec(), job_->GetTaskTimeout() );
 }
 
