@@ -168,7 +168,7 @@ public:
     WorkerJob &operator += ( const WorkerJob &workerJob )
     {
         std::vector< WorkerTask > tasks;
-        GetTasks( tasks );
+        workerJob.GetTasks( tasks );
         std::vector< WorkerTask >::const_iterator it = tasks.begin();
         for( ; it != tasks.end(); ++it )
         {
