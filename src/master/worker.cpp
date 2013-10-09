@@ -2,6 +2,132 @@
 
 namespace master {
 
+bool WorkerJob::DeleteTask( int64_t jobId, int taskId )
+{
+    JobIdToTasks::iterator it = jobs_.find( jobId );
+    if ( it != jobs_.end() )
+    {
+        Tasks &tasks = it->second;
+        Tasks::iterator it_tasks = tasks.find( taskId );
+        if ( it_tasks != tasks.end() )
+        {
+            tasks.erase( it_tasks );
+            if ( tasks.empty() )
+                jobs_.erase( it );
+            return true;
+        }
+    }
+    return false;
+}
+
+bool WorkerJob::DeleteJob( int64_t jobId )
+{
+    JobIdToTasks::iterator it = jobs_.find( jobId );
+    if ( it != jobs_.end() )
+    {
+        jobs_.erase( it );
+        return true;
+    }
+    return false;
+}
+
+bool WorkerJob::HasTask( int64_t jobId, int taskId ) const
+{
+    JobIdToTasks::const_iterator it = jobs_.find( jobId );
+    if ( it != jobs_.end() )
+    {
+        const Tasks &tasks = it->second;
+        Tasks::const_iterator it_tasks = tasks.find( taskId );
+        return it_tasks != tasks.end();
+    }
+    return false;
+}
+
+bool WorkerJob::GetTasks( int64_t jobId, Tasks &tasks ) const
+{
+    JobIdToTasks::const_iterator it = jobs_.find( jobId );
+    if ( it != jobs_.end() )
+    {
+        tasks = it->second;
+        return true;
+    }
+    return false;
+}
+
+void WorkerJob::GetTasks( std::vector< WorkerTask > &tasks ) const
+{
+    JobIdToTasks::const_iterator it = jobs_.begin();
+    for( ; it != jobs_.end(); ++it )
+    {
+        const Tasks &t = it->second;
+        Tasks::const_iterator it_tasks = t.begin();
+        for( ; it_tasks != t.end(); ++it_tasks )
+        {
+            int taskId = *it_tasks;
+            tasks.push_back( WorkerTask( it->first, taskId ) );
+        }
+    }
+}
+
+void WorkerJob::GetJobs( std::set<int64_t> &jobs ) const
+{
+    JobIdToTasks::const_iterator it = jobs_.begin();
+    for( ; it != jobs_.end(); ++it )
+    {
+        jobs.insert( it->first );
+    }
+}
+
+int64_t WorkerJob::GetJobId() const
+{
+    if ( jobs_.empty() )
+        return -1;
+    JobIdToTasks::const_iterator it = jobs_.begin();
+    return it->first;
+}
+
+int WorkerJob::GetTotalNumTasks() const
+{
+    int num = 0;
+    JobIdToTasks::const_iterator it = jobs_.begin();
+    for( ; it != jobs_.end(); ++it )
+    {
+        const Tasks &tasks = it->second;
+        num += (int)tasks.size();
+    }
+    return num;
+}
+
+int WorkerJob::GetNumTasks( int64_t jobId ) const
+{
+    int num = 0;
+    JobIdToTasks::const_iterator it = jobs_.begin();
+    for( ; it != jobs_.end(); ++it )
+    {
+        if ( it->first == jobId )
+        {
+            const Tasks &tasks = it->second;
+            num = (int)tasks.size();
+            break;
+        }
+    }
+    return num;
+}
+
+WorkerJob &WorkerJob::operator += ( const WorkerJob &workerJob )
+{
+    std::vector< WorkerTask > tasks;
+    workerJob.GetTasks( tasks );
+    std::vector< WorkerTask >::const_iterator it = tasks.begin();
+    for( ; it != tasks.end(); ++it )
+    {
+        const WorkerTask &task = *it;
+        AddTask( task.GetJobId(), task.GetTaskId() );
+    }
+    return *this;
+}
+
+
 void WorkerList::AddWorker( Worker *worker )
 {
     workers_.push_back( worker );

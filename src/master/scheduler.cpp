@@ -36,7 +36,7 @@ void Scheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
                 const WorkerJob workerJob = worker->GetJob();
 
                 PS_LOG( "Scheduler::OnChangedWorkerState: worker isn't available, while executing job"
-                        "; nodeIP=" << worker->GetIP() << ", numTasks=" << workerJob.GetNumTasks() );
+                        "; nodeIP=" << worker->GetIP() << ", numTasks=" << workerJob.GetTotalNumTasks() );
 
                 failedWorkers_.Add( workerJob, worker->GetIP() );
                 nodeState.Reset();
@@ -161,7 +161,7 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int
         std::list< WorkerTask >::iterator it = needReschedule_.begin();
         for( ; it != needReschedule_.end(); )
         {
-            if ( workerJob.GetNumTasks() >= numCPU )
+            if ( workerJob.GetTotalNumTasks() >= numCPU )
                 break;
 
             const WorkerTask &workerTask = *it;
@@ -201,13 +201,17 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int
         if ( failedWorkers_.IsWorkerFailedJob( worker->GetIP(), j->GetJobId() ) )
             continue;
 
-        std::set< int > &tasks = tasksToSend_[ j->GetJobId() ];
+        std::map< int64_t, std::set< int > >::iterator it = tasksToSend_.find( j->GetJobId() );
+        if ( it == tasksToSend_.end() )
+            continue;
+
+        std::set< int > &tasks = it->second;
         if ( !tasks.empty() )
         {
             std::set< int >::iterator it_task = tasks.begin();
             for( ; it_task != tasks.end();  )
             {
-                if ( workerJob.GetNumTasks() >= numCPU )
+                if ( workerJob.GetTotalNumTasks() >= numCPU )
                     break;
                 int taskId = *it_task;
                 workerJob.AddTask( j->GetJobId(), taskId );
@@ -215,7 +219,7 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int
                 tasks.erase( it_task++ );
                 if ( tasks.empty() )
                 {
-                    tasksToSend_.erase( jobId );
+                    tasksToSend_.erase( it );
                     break;
                 }
             }
@@ -223,7 +227,7 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int
         }
     }
 
-    return workerJob.GetNumTasks() > 0;
+    return workerJob.GetTotalNumTasks() > 0;
 }
 
 bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **job )
@@ -246,13 +250,13 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **
             *job = FindJobByJobId( workerJob.GetJobId() );
             if ( !*job )
             {
-                PS_LOG( "Scheduler::GetTaskToSend: job not found with jobId=" << workerJob.GetJobId() );
+                PS_LOG( "Scheduler::GetTaskToSend: job not found for jobId=" << workerJob.GetJobId() );
                 continue;
             }
             w->GetJob() += workerJob;
             hostIP = w->GetIP();
 
-            int numBusyCPU = nodeState.GetNumBusyCPU() + workerJob.GetNumTasks();
+            int numBusyCPU = nodeState.GetNumBusyCPU() + workerJob.GetTotalNumTasks();
             nodeState.SetNumBusyCPU( numBusyCPU );
             return true;
         }
@@ -285,7 +289,7 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
             RescheduleJob( w->GetJob() );
 
             NodeState &nodeState = nodeState_[ hostIP ];
-            int numTasks = workerJob.GetNumTasks();
+            int numTasks = workerJob.GetTotalNumTasks();
             nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - numTasks );
             w->ResetJob();
         }
@@ -334,7 +338,7 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
         RescheduleJob( workerJob );
 
         NodeState &nodeState = nodeState_[ hostIP ];
-        int numTasks = workerJob.GetNumTasks();
+        int numTasks = workerJob.GetTotalNumTasks();
         nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - numTasks );
         w->ResetJob();
     }
@@ -550,7 +554,8 @@ void Scheduler::GetStatistics( std::string &stat )
         "busy workers = " << GetNumBusyWorkers() << std::endl <<
         "free workers = " << GetNumFreeWorkers() << std::endl <<
         "failed jobs = " << failedWorkers_.GetFailedJobsCnt() << std::endl <<
-        "busy cpu's = " << GetNumBusyCPU() << std::endl;
+        "busy cpu's = " << GetNumBusyCPU() << std::endl <<
+        "total cpu's = " << WorkerManager::Instance().GetTotalCPU() << std::endl;
 
     ss << "jobs = " << jobs_.size() << std::endl <<
         "need reschedule = " << needReschedule_.size() << std::endl;

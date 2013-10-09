@@ -48,135 +48,30 @@ public:
 
     void AddTask( int64_t jobId, int taskId ) { jobs_[ jobId ].insert( taskId ); }
 
-    bool DeleteTask( int64_t jobId, int taskId )
-    {
-        JobIdToTasks::iterator it = jobs_.find( jobId );
-        if ( it != jobs_.end() )
-        {
-            Tasks &tasks = it->second;
-            Tasks::iterator it_tasks = tasks.find( taskId );
-            if ( it_tasks != tasks.end() )
-            {
-                tasks.erase( it_tasks );
-                if ( tasks.empty() )
-                    jobs_.erase( it );
-                return true;
-            }
-        }
-        return false;
-    }
+    bool DeleteTask( int64_t jobId, int taskId );
 
-    bool DeleteJob( int64_t jobId )
-    {
-        JobIdToTasks::iterator it = jobs_.find( jobId );
-        if ( it != jobs_.end() )
-        {
-            jobs_.erase( it );
-            return true;
-        }
-        return false;
-    }
+    bool DeleteJob( int64_t jobId );
 
-    bool HasTask( int64_t jobId, int taskId ) const
-    {
-        JobIdToTasks::const_iterator it = jobs_.find( jobId );
-        if ( it != jobs_.end() )
-        {
-            const Tasks &tasks = it->second;
-            Tasks::const_iterator it_tasks = tasks.find( taskId );
-            return it_tasks != tasks.end();
-        }
-        return false;
-    }
+    bool HasTask( int64_t jobId, int taskId ) const;
 
     bool HasJob( int64_t jobId ) const
     {
         return jobs_.find( jobId ) != jobs_.end();
     }
 
-    bool GetTasks( int64_t jobId, Tasks &tasks ) const
-    {
-        JobIdToTasks::const_iterator it = jobs_.find( jobId );
-        if ( it != jobs_.end() )
-        {
-            tasks = it->second;
-            return true;
-        }
-        return false;
-    }
+    bool GetTasks( int64_t jobId, Tasks &tasks ) const;
 
-    void GetTasks( std::vector< WorkerTask > &tasks ) const
-    {
-        JobIdToTasks::const_iterator it = jobs_.begin();
-        for( ; it != jobs_.end(); ++it )
-        {
-            const Tasks &t = it->second;
-            Tasks::const_iterator it_tasks = t.begin();
-            for( ; it_tasks != t.end(); ++it_tasks )
-            {
-                int taskId = *it_tasks;
-                tasks.push_back( WorkerTask( it->first, taskId ) );
-            }
-        }
-    }
+    void GetTasks( std::vector< WorkerTask > &tasks ) const;
 
-    void GetJobs( std::set<int64_t> &jobs ) const
-    {
-        JobIdToTasks::const_iterator it = jobs_.begin();
-        for( ; it != jobs_.end(); ++it )
-        {
-            jobs.insert( it->first );
-        }
-    }
+    void GetJobs( std::set<int64_t> &jobs ) const;
 
-    int64_t GetJobId() const
-    {
-        if ( jobs_.empty() )
-            return -1;
-        JobIdToTasks::const_iterator it = jobs_.begin();
-        return it->first;
-    }
+    int64_t GetJobId() const;
 
-    int GetNumTasks() const
-    {
-        int num = 0;
-        JobIdToTasks::const_iterator it = jobs_.begin();
-        for( ; it != jobs_.end(); ++it )
-        {
-            const Tasks &tasks = it->second;
-            num += (int)tasks.size();
-        }
-        return num;
-    }
+    int GetTotalNumTasks() const;
 
-    int GetNumTasks( int64_t jobId ) const
-    {
-        int num = 0;
-        JobIdToTasks::const_iterator it = jobs_.begin();
-        for( ; it != jobs_.end(); ++it )
-        {
-            if ( it->first == jobId )
-            {
-                const Tasks &tasks = it->second;
-                num = (int)tasks.size();
-                break;
-            }
-        }
-        return num;
-    }
+    int GetNumTasks( int64_t jobId ) const;
 
-    WorkerJob &operator += ( const WorkerJob &workerJob )
-    {
-        std::vector< WorkerTask > tasks;
-        workerJob.GetTasks( tasks );
-        std::vector< WorkerTask >::const_iterator it = tasks.begin();
-        for( ; it != tasks.end(); ++it )
-        {
-            const WorkerTask &task = *it;
-            AddTask( task.GetJobId(), task.GetTaskId() );
-        }
-        return *this;
-    }
+    WorkerJob &operator += ( const WorkerJob &workerJob );
 
 private:
     JobIdToTasks jobs_;
