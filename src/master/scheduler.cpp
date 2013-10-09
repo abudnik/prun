@@ -33,6 +33,9 @@ void Scheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
             if ( it != nodeState_.end() )
             {
                 NodeState &nodeState = it->second;
+                if ( nodeState.GetNumBusyCPU() < 1 )
+                    continue;
+
                 const WorkerJob workerJob = worker->GetJob();
 
                 PS_LOG( "Scheduler::OnChangedWorkerState: worker isn't available, while executing job"

@@ -41,12 +41,7 @@ private:
     typedef std::map< int64_t, Tasks > JobIdToTasks;
 
 public:
-    void Reset()
-    {
-        jobs_.clear();
-    }
-
-    void AddTask( int64_t jobId, int taskId ) { jobs_[ jobId ].insert( taskId ); }
+    void AddTask( int64_t jobId, int taskId );
 
     bool DeleteTask( int64_t jobId, int taskId );
 
@@ -54,10 +49,7 @@ public:
 
     bool HasTask( int64_t jobId, int taskId ) const;
 
-    bool HasJob( int64_t jobId ) const
-    {
-        return jobs_.find( jobId ) != jobs_.end();
-    }
+    bool HasJob( int64_t jobId ) const;
 
     bool GetTasks( int64_t jobId, Tasks &tasks ) const;
 
@@ -72,6 +64,8 @@ public:
     int GetNumTasks( int64_t jobId ) const;
 
     WorkerJob &operator += ( const WorkerJob &workerJob );
+
+    void Reset();
 
 private:
     JobIdToTasks jobs_;

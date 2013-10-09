@@ -2,6 +2,11 @@
 
 namespace master {
 
+void WorkerJob::AddTask( int64_t jobId, int taskId )
+{
+    jobs_[ jobId ].insert( taskId );
+}
+
 bool WorkerJob::DeleteTask( int64_t jobId, int taskId )
 {
     JobIdToTasks::iterator it = jobs_.find( jobId );
@@ -41,6 +46,11 @@ bool WorkerJob::HasTask( int64_t jobId, int taskId ) const
         return it_tasks != tasks.end();
     }
     return false;
+}
+
+bool WorkerJob::HasJob( int64_t jobId ) const
+{
+    return jobs_.find( jobId ) != jobs_.end();
 }
 
 bool WorkerJob::GetTasks( int64_t jobId, Tasks &tasks ) const
@@ -125,6 +135,11 @@ WorkerJob &WorkerJob::operator += ( const WorkerJob &workerJob )
         AddTask( task.GetJobId(), task.GetTaskId() );
     }
     return *this;
+}
+
+void WorkerJob::Reset()
+{
+    jobs_.clear();
 }
 
 
