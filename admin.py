@@ -1,8 +1,10 @@
 import sys
 import socket
 import json
+import getopt
 from threading import Thread
 
+MASTER_HOST = 'localhost'
 MASTER_PORT = 5557
 
 def Exit(msg):
@@ -12,10 +14,10 @@ def Exit(msg):
 
 class Connection():
     def __init__(self):
-        print( "connecting to master..." )
+        print( "connecting to master %s:%d" % (MASTER_HOST, MASTER_PORT) )
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.connect(('localhost', MASTER_PORT))
+            self.socket.connect((MASTER_HOST, MASTER_PORT))
             print( "connected" )
         except Exception as e:
             Exit( "couldn't connect to master" )
@@ -136,7 +138,19 @@ def UserPrompt():
     print( "master admin v0.1" )
     print( "print `help` for more information" )
 
-def Main():
+def ParseOpt( argv ):
+    global MASTER_HOST
+    try:
+        opts, args = getopt.getopt( argv, '' )
+        for arg in args:
+            MASTER_HOST = arg
+            break
+    except getopt.GetoptError:
+        print( 'usage: admin.py [host]' )
+        sys.exit( 1 )
+
+def Main(argv):
+    ParseOpt( argv )
     UserPrompt()
     con = Connection()
     master = Master( con )
@@ -169,4 +183,5 @@ def Main():
     con.Close()
     resultGetter.join()
 
-Main()
+if __name__ == "__main__":
+   Main(sys.argv[1:])
