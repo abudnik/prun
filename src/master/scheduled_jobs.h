@@ -1,6 +1,8 @@
 #ifndef __SCHEDULED_JOBS_H
 #define __SCHEDULED_JOBS_H
 
+#include <list>
+#include <map>
 #include "job.h"
 #include "common/log.h"
 
@@ -50,15 +52,6 @@ public:
         return -1;
     }
 
-    void Clear()
-    {
-        while( !jobs_.empty() )
-        {
-            delete jobs_.front();
-            jobs_.pop_front();
-        }
-    }
-
     size_t GetNumJobs() const { return jobs_.size(); }
     const JobList &GetJobList() const { return jobs_; }
 
@@ -88,6 +81,15 @@ public:
         }
 
         PS_LOG( "ScheduledJobs::RemoveJob: job not found for jobId=" << jobId );
+    }
+
+    void Clear()
+    {
+        while( !jobs_.empty() )
+        {
+            delete jobs_.front();
+            jobs_.pop_front();
+        }
     }
 
 private:

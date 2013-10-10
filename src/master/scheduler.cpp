@@ -165,7 +165,7 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int
     // firstly, check if there is a task which needs to reschedule
     if ( !needReschedule_.empty() )
     {
-        std::list< WorkerTask >::iterator it = needReschedule_.begin();
+        TaskList::iterator it = needReschedule_.begin();
         for( ; it != needReschedule_.end(); )
         {
             if ( workerJob.GetTotalNumTasks() >= numCPU )
@@ -209,7 +209,7 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int
         if ( failedWorkers_.IsWorkerFailedJob( worker->GetIP(), j->GetJobId() ) )
             continue;
 
-        std::map< int64_t, std::set< int > >::iterator it = tasksToSend_.find( j->GetJobId() );
+        JobIdToTasks::iterator it = tasksToSend_.find( j->GetJobId() );
         if ( it == tasksToSend_.end() )
             continue;
 
@@ -405,7 +405,7 @@ void Scheduler::StopWorkers( int64_t jobId )
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     tasksToSend_.erase( jobId );
     {
-        std::list< WorkerTask >::iterator it = needReschedule_.begin();
+        TaskList::iterator it = needReschedule_.begin();
         for( ; it != needReschedule_.end(); )
         {
             if ( it->GetJobId() == jobId )

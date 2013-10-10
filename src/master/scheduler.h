@@ -2,6 +2,7 @@
 #define __SCHEDULER_H
 
 #include <set>
+#include <map>
 #include <list>
 #include <boost/thread/mutex.hpp>
 #include "common/observer.h"
@@ -42,6 +43,10 @@ typedef std::map< std::string, NodeState > IPToNodeState;
 
 class Scheduler : public python_server::Observable< true >
 {
+private:
+    typedef std::list< WorkerTask > TaskList;
+    typedef std::map< int64_t, std::set< int > > JobIdToTasks; // job_id -> set(task_id)
+
     Scheduler();
 
 public:
@@ -92,8 +97,8 @@ private:
     boost::mutex workersMut_;
 
     ScheduledJobs jobs_;
-    std::map< int64_t, std::set< int > > tasksToSend_; // job_id -> set(task_id)
-    std::list< WorkerTask > needReschedule_;
+    JobIdToTasks tasksToSend_;
+    TaskList needReschedule_;
     boost::mutex jobsMut_;
 };
 
