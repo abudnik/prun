@@ -1,7 +1,7 @@
 #include <boost/bind.hpp>
-#include <boost/thread.hpp>
 #include "master_ping.h"
 #include "common/log.h"
+#include "computer_info.h"
 
 namespace python_server {
 
@@ -26,7 +26,8 @@ void MasterPingBoost::HandleRead( const boost::system::error_code& error, size_t
         //std::string request( buffer_.begin(), buffer_.begin() + bytes_transferred );
         //PS_LOG( request );
 
-        const static int numThread = boost::thread::hardware_concurrency();
+        ComputerInfo &compInfo = ComputerInfo::Instance();
+        const int numThread = compInfo.GetNumCPU();
 
         std::string msg;
         protocol_->NodeResponsePing( msg, numThread );

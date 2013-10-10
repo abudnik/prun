@@ -47,6 +47,7 @@ the License.
 #include "master_ping.h"
 #include "node_job.h"
 #include "job_completion_ping.h"
+#include "computer_info.h"
 
 
 using namespace std;
@@ -936,7 +937,8 @@ int main( int argc, char* argv[], char **envp )
     try
     {
         // initialization
-        python_server::numJobThreads = 2 * boost::thread::hardware_concurrency();
+        python_server::ComputerInfo &compInfo = python_server::ComputerInfo::Instance();
+        python_server::numJobThreads = 2 * compInfo.GetNumCPU();
         python_server::isDaemon = false;
         python_server::uid = 0;
 
