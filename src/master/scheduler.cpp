@@ -8,6 +8,11 @@
 
 namespace master {
 
+Scheduler::Scheduler()
+{
+    jobs_.SetOnRemoveCallback( this, &Scheduler::OnRemoveJob );
+}
+
 void Scheduler::OnHostAppearance( Worker *worker )
 {
     {
@@ -97,8 +102,7 @@ void Scheduler::PlanJobExecution()
             tasks.insert( taskId );
         }
 
-        jobExecutions_[ jobId ] = numExec;
-        jobs_.push_back( job );
+        jobs_.Add( job, numExec );
     }
 
     NotifyAll();
@@ -117,7 +121,7 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
     for( ; it != jobs.end(); ++it )
     {
         int64_t jobId = *it;
-        const Job *job = FindJobByJobId( jobId );
+        const Job *job = jobs_.FindJobByJobId( jobId );
         if ( job )
         {
             size_t failedNodesCnt = failedWorkers_.GetFailedNodesCnt( jobId );
@@ -125,13 +129,13 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
             {
                 scoped_lock.unlock();
                 StopWorkers( jobId );
-                RemoveJob( jobId, "max failed nodes limit exceeded" );
+                jobs_.RemoveJob( jobId, "max failed nodes limit exceeded" );
                 continue;
             }
 
             if ( job->IsNoReschedule() )
             {
-                DecrementJobExecution( jobId, workerJob.GetNumTasks( jobId ) );
+                jobs_.DecrementJobExecution( jobId, workerJob.GetNumTasks( jobId ) );
                 continue;
             }
 
@@ -193,8 +197,9 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int
         }
     }
 
-    std::list< Job * >::const_iterator it = jobs_.begin();
-    for( ; it != jobs_.end(); ++it )
+    const ScheduledJobs::JobList &jobs = jobs_.GetJobList();
+    ScheduledJobs::JobList::const_iterator it = jobs.begin();
+    for( ; it != jobs.end(); ++it )
     {
         const Job *j = *it;
 
@@ -250,7 +255,7 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **
 
         if ( GetJobForWorker( w, workerJob, freeCPU ) )
         {
-            *job = FindJobByJobId( workerJob.GetJobId() );
+            *job = jobs_.FindJobByJobId( workerJob.GetJobId() );
             if ( !*job )
             {
                 PS_LOG( "Scheduler::GetTaskToSend: job not found for jobId=" << workerJob.GetJobId() );
@@ -321,7 +326,7 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
         nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - 1 );
 
         boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
-        DecrementJobExecution( workerTask.GetJobId(), 1 );
+        jobs_.DecrementJobExecution( workerTask.GetJobId(), 1 );
     }
     else
     {
@@ -366,56 +371,17 @@ void Scheduler::OnJobTimeout( int64_t jobId )
     {
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
 
-        if ( !FindJobByJobId( jobId ) )
+        if ( !jobs_.FindJobByJobId( jobId ) )
             return;
         StopWorkers( jobId );
-        RemoveJob( jobId, "timeout" );
+        jobs_.RemoveJob( jobId, "timeout" );
     }
     NotifyAll();
 }
 
-void Scheduler::RunJobCallback( Job *job, const char *completionStatus )
-{
-    std::ostringstream ss;
-    ss << "================" << std::endl <<
-        "Job completed, jobId = " << job->GetJobId() << std::endl <<
-        "completion status: " << completionStatus << std::endl <<
-        "================";
-
-    PS_LOG( ss.str() );
-
-    job->RunCallback( ss.str() );
-}
-
-void Scheduler::DecrementJobExecution( int64_t jobId, int numTasks )
-{
-    int numExecution = jobExecutions_[ jobId ] - numTasks;
-    jobExecutions_[ jobId ] = numExecution;
-    if ( numExecution < 1 )
-    {
-        RemoveJob( jobId, "success" );
-    }
-}
-
-void Scheduler::RemoveJob( int64_t jobId, const char *completionStatus )
+void Scheduler::OnRemoveJob( int64_t jobId )
 {
     failedWorkers_.Delete( jobId );
-
-    jobExecutions_.erase( jobId );
-    std::list< Job * >::iterator it = jobs_.begin();
-    for( ; it != jobs_.end(); ++it )
-    {
-        Job *job = *it;
-        if ( job->GetJobId() == jobId )
-        {
-            RunJobCallback( job, completionStatus );
-            jobs_.erase( it );
-            delete job;
-            return;
-        }
-    }
-
-    PS_LOG( "Scheduler::RemoveJob: job not found for jobId=" << jobId );
 }
 
 void Scheduler::StopWorkers( int64_t jobId )
@@ -437,7 +403,6 @@ void Scheduler::StopWorkers( int64_t jobId )
         }
     }
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-    jobExecutions_.erase( jobId );
     tasksToSend_.erase( jobId );
     {
         std::list< WorkerTask >::iterator it = needReschedule_.begin();
@@ -466,25 +431,9 @@ bool Scheduler::CanTakeNewJob() const
     return false;
 }
 
-Job *Scheduler::FindJobByJobId( int64_t jobId ) const
-{
-    std::list< Job * >::const_iterator it = jobs_.begin();
-    for( ; it != jobs_.end(); ++it )
-    {
-        Job *job = *it;
-        if ( job->GetJobId() == jobId )
-            return job;
-    }
-    return NULL;
-}
-
 void Scheduler::Shutdown()
 {
-    while( !jobs_.empty() )
-    {
-        delete jobs_.front();
-        jobs_.pop_front();
-    }
+    jobs_.Clear();
 }
 
 void Scheduler::GetJobInfo( std::string &info, int64_t jobId )
@@ -493,7 +442,7 @@ void Scheduler::GetJobInfo( std::string &info, int64_t jobId )
     boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
     boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
 
-    Job *job = FindJobByJobId( jobId );
+    Job *job = jobs_.FindJobByJobId( jobId );
     if ( !job )
     {
         ss << "job isn't executing now, jobId = " << jobId;
@@ -505,13 +454,10 @@ void Scheduler::GetJobInfo( std::string &info, int64_t jobId )
         "Job info, jobId = " << job->GetJobId() << std::endl;
 
     {
-        std::map< int64_t, int >::const_iterator it = jobExecutions_.find( jobId );
-        if ( it != jobExecutions_.end() )
-        {
-            int numNodes = job->GetNumPlannedExec();
-            ss << "job executions = " << numNodes - it->second << std::endl <<
-                "total planned executions = " << numNodes << std::endl;
-        }
+        int totalExec = job->GetNumPlannedExec();
+        int numExec = totalExec - jobs_.GetNumExec( jobId );
+        ss << "job executions = " << numExec << std::endl <<
+            "total planned executions = " << totalExec << std::endl;
     }
 
     {
@@ -560,14 +506,15 @@ void Scheduler::GetStatistics( std::string &stat )
         "busy cpu's = " << GetNumBusyCPU() << std::endl <<
         "total cpu's = " << WorkerManager::Instance().GetTotalCPU() << std::endl;
 
-    ss << "jobs = " << jobs_.size() << std::endl <<
+    ss << "jobs = " << jobs_.GetNumJobs() << std::endl <<
         "need reschedule = " << needReschedule_.size() << std::endl;
 
     ss << "executing jobs: {";
-    std::list< Job * >::const_iterator it = jobs_.begin();
-    for( ; it != jobs_.end(); ++it )
+    const ScheduledJobs::JobList &jobs = jobs_.GetJobList();
+    ScheduledJobs::JobList::const_iterator it = jobs.begin();
+    for( ; it != jobs.end(); ++it )
     {
-        if ( it != jobs_.begin() )
+        if ( it != jobs.begin() )
             ss << ", ";
         const Job *job = *it;
         ss << job->GetJobId();

@@ -1,5 +1,5 @@
-#ifndef __SHEDULER_H
-#define __SHEDULER_H
+#ifndef __SCHEDULER_H
+#define __SCHEDULER_H
 
 #include <set>
 #include <list>
@@ -8,6 +8,7 @@
 #include "worker.h"
 #include "job.h"
 #include "failed_workers.h"
+#include "scheduled_jobs.h"
 
 
 namespace master {
@@ -41,6 +42,8 @@ typedef std::map< std::string, NodeState > IPToNodeState;
 
 class Scheduler : public python_server::Observable< true >
 {
+    Scheduler();
+
 public:
     void OnHostAppearance( Worker *worker );
 
@@ -73,14 +76,10 @@ private:
     bool RescheduleJob( const WorkerJob &workerJob );
     bool GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int numCPU );
 
-    void RunJobCallback( Job *job, const char *completionStatus );
-    void DecrementJobExecution( int64_t jobId, int numTasks );
-    void RemoveJob( int64_t jobId, const char *completionStatus );
+    void OnRemoveJob( int64_t jobId );
     void StopWorkers( int64_t jobId );
 
     bool CanTakeNewJob() const;
-
-    Job *FindJobByJobId( int64_t jobId ) const;
 
     // stats
     int GetNumBusyWorkers() const;
@@ -92,8 +91,7 @@ private:
     FailedWorkers failedWorkers_;
     boost::mutex workersMut_;
 
-    std::list< Job * > jobs_;
-    std::map< int64_t, int > jobExecutions_; // job_id -> num job remaining executions (== 0, if job execution completed)
+    ScheduledJobs jobs_;
     std::map< int64_t, std::set< int > > tasksToSend_; // job_id -> set(task_id)
     std::list< WorkerTask > needReschedule_;
     boost::mutex jobsMut_;
