@@ -1,6 +1,6 @@
 #include <boost/bind.hpp>
 #include <boost/scoped_ptr.hpp>
-#include "result_getter.h"
+#include "command_sender.h"
 #include "worker_manager.h"
 #include "scheduler.h"
 #include "common/log.h"
@@ -9,13 +9,13 @@
 
 namespace master {
 
-void ResultGetter::Run()
+void CommandSender::Run()
 {
     WorkerTask workerTask;
     std::string hostIP;
 
     WorkerManager &workerMgr = WorkerManager::Instance();
-    workerMgr.Subscribe( this, WorkerManager::eTaskCompletion );
+    workerMgr.Subscribe( this );
 
     bool getTask = false;
     while( !stopped_ )
@@ -37,21 +37,21 @@ void ResultGetter::Run()
     }
 }
 
-void ResultGetter::Stop()
+void CommandSender::Stop()
 {
     stopped_ = true;
     boost::unique_lock< boost::mutex > lock( awakeMut_ );
     awakeCond_.notify_all();
 }
 
-void ResultGetter::NotifyObserver( int event )
+void CommandSender::NotifyObserver( int event )
 {
     boost::unique_lock< boost::mutex > lock( awakeMut_ );
     newJobAvailable_ = true;
     awakeCond_.notify_all();
 }
 
-void ResultGetter::OnGetTaskResult( bool success, int errCode, const WorkerTask &workerTask, const std::string &hostIP )
+void CommandSender::OnGetTaskResult( bool success, int errCode, const WorkerTask &workerTask, const std::string &hostIP )
 {
     if ( !success ) // retrieving of job result from message failed
         errCode = -1;

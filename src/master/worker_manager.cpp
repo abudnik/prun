@@ -71,13 +71,13 @@ void WorkerManager::OnNodeTaskCompletion( const std::string &hostIP, int64_t job
     if ( jobId < 0 || taskId < 0 )
         return;
 
-    std::pair< WorkerTask, std::string > worker( WorkerTask( jobId, taskId ), hostIP );
+    PairTypeAW worker( WorkerTask( jobId, taskId ), hostIP );
 
     {
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
         achievedWorkers_.push( worker );
     }
-    NotifyAll();
+    NotifyAll( eTaskCompletion );
 }
 
 bool WorkerManager::GetAchievedTask( WorkerTask &worker, std::string &hostIP )
@@ -91,10 +91,37 @@ bool WorkerManager::GetAchievedTask( WorkerTask &worker, std::string &hostIP )
 
     PS_LOG( "GetAchievedWorker: num achieved workers=" << achievedWorkers_.size() );
 
-    const std::pair< WorkerTask, std::string > &w = achievedWorkers_.front();
+    const PairTypeAW &w = achievedWorkers_.front();
     worker = w.first;
     hostIP = w.second;
     achievedWorkers_.pop();
+    return true;
+}
+
+void WorkerManager::AddCommand( CommandPtr &command, const std::string &hostIP )
+{
+    PairTypeC workerCommand( command, hostIP );
+
+    {
+        boost::mutex::scoped_lock scoped_lock( commandsMut_ );
+        commands_.push( workerCommand );
+    }
+    NotifyAll( eCommand );
+}
+
+bool WorkerManager::GetCommand( CommandPtr &command, std::string &hostIP )
+{
+    if ( commands_.empty() )
+        return false;
+
+    boost::mutex::scoped_lock scoped_lock( commandsMut_ );
+    if ( commands_.empty() )
+        return false;
+
+    const PairTypeC &c = commands_.front();
+    command = c.first;
+    hostIP = c.second;
+    commands_.pop();
     return true;
 }
 

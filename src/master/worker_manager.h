@@ -7,11 +7,15 @@
 #include <boost/thread/mutex.hpp>
 #include "common/observer.h"
 #include "worker.h"
+#include "command.h"
 
 namespace master {
 
 class WorkerManager : public python_server::Observable< true >
 {
+public:
+    enum ObserverEvent { eTaskCompletion, eCommand };
+
 public:
     template< class InputIterator >
     void Initialize( InputIterator first, InputIterator last )
@@ -34,6 +38,9 @@ public:
     void SetWorkerIP( Worker *worker, const std::string &ip );
     Worker *GetWorkerByIP( const std::string &ip ) const;
 
+    void AddCommand( CommandPtr &command, const std::string &hostIP );
+    bool GetCommand( CommandPtr &command, std::string &hostIP );
+
     WorkerList::WorkerContainer &GetWorkers() { return workers_.GetWorkers(); }
     int GetTotalWorkers() const { return workers_.GetTotalWorkers(); }
     int GetTotalCPU() const { return workers_.GetTotalCPU(); }
@@ -48,8 +55,12 @@ public:
 
 private:
     WorkerList workers_;
-    std::queue< std::pair< WorkerTask, std::string > > achievedWorkers_;
+    typedef std::pair< WorkerTask, std::string > PairTypeAW;
+    std::queue< PairTypeAW > achievedWorkers_;
     boost::mutex workersMut_;
+    typedef std::pair< CommandPtr, std::string > PairTypeC;
+    std::queue< PairTypeC > commands_;
+    boost::mutex commandsMut_;
 };
 
 bool ReadHosts( const char *filePath, std::list< std::string > &hosts );
