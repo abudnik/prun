@@ -31,7 +31,7 @@ void CommandSender::Run()
         getCommand = workerMgr.GetCommand( command, hostIP );
         if ( getCommand )
         {
-            //PS_LOG( "Get command " << command.GetName() << " : " << hostIP );
+            PS_LOG( "Get command '" << command.GetCommand() << "' : " << hostIP );
             SendCommand( workerTask, hostIP );
         }
     }
@@ -237,7 +237,7 @@ bool RpcBoost::HandleResponse()
 void RpcBoost::MakeRequest()
 {
     python_server::ProtocolJson protocol;
-    protocol.GetJobResult( request_, workerTask_.GetJobId(), workerTask_.GetTaskId() );
+    protocol.SendCommand( request_, , workerTask_.GetTaskId() );
 }
 
 } // namespace master

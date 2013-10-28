@@ -28,6 +28,7 @@ public:
         params_.insert( PairType( key, ss.str() ) );
     }
 
+    const std::string &GetCommand() const { return command_; }
     Params &GetAllParams() { return params_; }
 
 protected:
