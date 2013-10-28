@@ -3,6 +3,7 @@
 
 #include <string>
 #include <set>
+#include <list>
 #include <stdint.h>
 
 namespace python_server {
@@ -11,12 +12,15 @@ class Protocol
 {
 public:
     virtual ~Protocol() {}
+
+    // ping section
     virtual bool NodePing( std::string &msg, const std::string &hostName ) = 0;
     virtual bool NodeResponsePing( std::string &msg, int numCPU ) = 0;
     virtual bool ParseResponsePing( const std::string &msg, int &numCPU ) = 0;
     virtual bool NodeJobCompletionPing( std::string &msg, int64_t jobId, int taskId ) = 0;
     virtual bool ParseJobCompletionPing( const std::string &msg, int64_t &jobId, int &taskId ) = 0;
 
+    // script sending & results parsing
     virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
                              const std::string &script, int64_t jobId, const std::set<int> &tasks,
                              int numTasks, int timeout ) = 0;
@@ -27,7 +31,12 @@ public:
     virtual bool ParseGetJobResult( const std::string &msg, int64_t &jobId, int &taskId ) = 0;
     virtual bool SendJobResult( std::string &msg, int errCode ) = 0;
     virtual bool ParseJobResult( const std::string &msg, int &errCode ) = 0;
+    
+    // commands section
+    virtual bool SendCommand( std::string &msg, const std::string &command,
+                              const std::list< std::pair< std::string, std::string > > &params ) = 0;
 
+    // internals
     virtual bool ParseMsgType( const std::string &msg, std::string &type ) = 0;
 
     static bool ParseMsg( const std::string &msg, std::string &protocol, int &version,
@@ -69,6 +78,9 @@ public:
     virtual bool SendJobResult( std::string &msg, int errCode );
 
     virtual bool ParseJobResult( const std::string &msg, int &errCode );
+
+    virtual bool SendCommand( std::string &msg, const std::string &command,
+                              const std::list< std::pair< std::string, std::string > > &params );
 
     virtual bool ParseMsgType( const std::string &msg, std::string &type );
 

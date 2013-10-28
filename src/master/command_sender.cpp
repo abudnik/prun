@@ -237,7 +237,7 @@ bool RpcBoost::HandleResponse()
 void RpcBoost::MakeRequest()
 {
     python_server::ProtocolJson protocol;
-    protocol.SendCommand( request_, , workerTask_.GetTaskId() );
+    protocol.SendCommand( request_, command_->GetCommand(), command_->GetAllParams() );
 }
 
 } // namespace master

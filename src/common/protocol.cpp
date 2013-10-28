@@ -218,6 +218,24 @@ bool ProtocolJson::ParseJobResult( const std::string &msg, int &errCode )
     return true;
 }
 
+bool ProtocolJson::SendCommand( std::string &msg, const std::string &command,
+                                const std::list< std::pair< std::string, std::string > > &params )
+{
+    msg = std::string( "{\"type\":\"" ) + command + std::string( "\"}\n" );
+    msg += std::string( "{" );
+    std::list< std::pair< std::string, std::string > >::const_iterator it = params.begin();
+    for( ; it != params.end(); ++it )
+    {
+        if ( it != params.begin() )
+            msg += ",";
+        msg += std::string( "\"" ) + it->first + std::string( "\":" );
+        msg += std::string( "\"" ) + it->second + std::string( "\"" );
+    }
+    msg += std::string( "}" );
+    AddHeader( msg );
+    return true;
+}
+
 bool ProtocolJson::ParseMsgType( const std::string &msg, std::string &type )
 {
     std::istringstream ss( msg );

@@ -9,15 +9,15 @@ namespace master {
 class Command
 {
 public:
-    typedef std::multimap<std::string, std::string> Params;
     typedef std::pair< std::string, std::string > PairType;
+    typedef std::list< PairType > Params;
 
 public:
     virtual ~Command() {}
 
     void SetParam( const std::string &key, const std::string &value )
     {
-        params_.insert( PairType( key, value ) );
+        params_.push_back( PairType( key, value ) );
     }
 
     template< typename T >
@@ -25,11 +25,12 @@ public:
     {
         std::ostringstream ss;
         ss << value;
-        params_.insert( PairType( key, ss.str() ) );
+        params_.push_back( PairType( key, ss.str() ) );
     }
 
     const std::string &GetCommand() const { return command_; }
     Params &GetAllParams() { return params_; }
+    const Params &GetAllParams() const { return params_; }
 
 protected:
     std::string command_;
