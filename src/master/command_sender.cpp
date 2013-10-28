@@ -79,7 +79,7 @@ void CommandSenderBoost::OnSendCommand( bool success, int errCode, CommandPtr &c
     CommandSender::OnCommandSend( success, errCode, command, hostIP );
 }
 
-void SenderBoost::SendCommand()
+void RpcBoost::SendCommand()
 {
     tcp::endpoint nodeEndpoint(
         boost::asio::ip::address::from_string( hostIP_ ),
@@ -87,11 +87,11 @@ void SenderBoost::SendCommand()
     );
 
     socket_.async_connect( nodeEndpoint,
-                           boost::bind( &SenderBoost::HandleConnect, shared_from_this(),
+                           boost::bind( &RpcBoost::HandleConnect, shared_from_this(),
                                         boost::asio::placeholders::error ) );
 }
 
-void SenderBoost::HandleConnect( const boost::system::error_code &error )
+void RpcBoost::HandleConnect( const boost::system::error_code &error )
 {
     if ( !error )
     {
@@ -99,33 +99,33 @@ void SenderBoost::HandleConnect( const boost::system::error_code &error )
 
         boost::asio::async_read( socket_,
                                  boost::asio::buffer( &buffer_, sizeof( char ) ),
-                                 boost::bind( &SenderBoost::FirstRead, shared_from_this(),
+                                 boost::bind( &RpcBoost::FirstRead, shared_from_this(),
                                               boost::asio::placeholders::error,
                                               boost::asio::placeholders::bytes_transferred ) );
 
         boost::asio::async_write( socket_,
                                   boost::asio::buffer( request_ ),
-                                  boost::bind( &SenderBoost::HandleWrite, shared_from_this(),
+                                  boost::bind( &RpcBoost::HandleWrite, shared_from_this(),
                                                boost::asio::placeholders::error,
                                                boost::asio::placeholders::bytes_transferred ) );
     }
     else
     {
-        PS_LOG( "SenderBoost::HandleConnect error=" << error.message() );
+        PS_LOG( "RpcBoost::HandleConnect error=" << error.message() );
         sender_->OnSendCommand( false, 0, command_, hostIP_ );
     }
 }
 
-void SenderBoost::HandleWrite( const boost::system::error_code &error, size_t bytes_transferred )
+void RpcBoost::HandleWrite( const boost::system::error_code &error, size_t bytes_transferred )
 {
     if ( error )
     {
-        PS_LOG( "SenderBoost::HandleWrite error=" << error.message() );
+        PS_LOG( "RpcBoost::HandleWrite error=" << error.message() );
         sender_->OnSendCommand( false, 0, command_, hostIP_ );
     }
 }
 
-void SenderBoost::FirstRead( const boost::system::error_code& error, size_t bytes_transferred )
+void RpcBoost::FirstRead( const boost::system::error_code& error, size_t bytes_transferred )
 {
     if ( !error )
     {
@@ -134,7 +134,7 @@ void SenderBoost::FirstRead( const boost::system::error_code& error, size_t byte
             // skip node's read completion status byte
             firstRead_ = false;
             socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                                     boost::bind( &SenderBoost::FirstRead, shared_from_this(),
+                                     boost::bind( &RpcBoost::FirstRead, shared_from_this(),
                                                   boost::asio::placeholders::error,
                                                   boost::asio::placeholders::bytes_transferred ) );
             return;
@@ -144,7 +144,7 @@ void SenderBoost::FirstRead( const boost::system::error_code& error, size_t byte
         if ( ret == 0 )
         {
             socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                                     boost::bind( &SenderBoost::FirstRead, shared_from_this(),
+                                     boost::bind( &RpcBoost::FirstRead, shared_from_this(),
                                                   boost::asio::placeholders::error,
                                                   boost::asio::placeholders::bytes_transferred ) );
             return;
@@ -152,13 +152,13 @@ void SenderBoost::FirstRead( const boost::system::error_code& error, size_t byte
     }
     else
     {
-        PS_LOG( "SenderBoost::FirstRead error=" << error.message() );
+        PS_LOG( "RpcBoost::FirstRead error=" << error.message() );
     }
 
     HandleRead( error, bytes_transferred );
 }
 
-void SenderBoost::HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
+void RpcBoost::HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
 {
     if ( !error )
     {
@@ -167,7 +167,7 @@ void SenderBoost::HandleRead( const boost::system::error_code& error, size_t byt
         if ( !response_.IsReadCompleted() )
         {
             socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                                     boost::bind( &SenderBoost::HandleRead, shared_from_this(),
+                                     boost::bind( &RpcBoost::HandleRead, shared_from_this(),
                                                   boost::asio::placeholders::error,
                                                   boost::asio::placeholders::bytes_transferred ) );
         }
@@ -181,12 +181,12 @@ void SenderBoost::HandleRead( const boost::system::error_code& error, size_t byt
     }
     else
     {
-        PS_LOG( "SenderBoost::HandleRead error=" << error.message() );
+        PS_LOG( "RpcBoost::HandleRead error=" << error.message() );
         sender_->OnSendCommand( false, 0, command_, hostIP_ );
     }
 }
 
-bool SenderBoost::HandleResponse()
+bool RpcBoost::HandleResponse()
 {
     const std::string &msg = response_.GetString();
 
@@ -194,7 +194,7 @@ bool SenderBoost::HandleResponse()
     int version;
     if ( !python_server::Protocol::ParseMsg( msg, protocol, version, header, body ) )
     {
-        PS_LOG( "SenderBoost::HandleResponse: couldn't parse msg: " << msg );
+        PS_LOG( "RpcBoost::HandleResponse: couldn't parse msg: " << msg );
         return false;
     }
 
@@ -204,7 +204,7 @@ bool SenderBoost::HandleResponse()
     );
     if ( !parser )
     {
-        PS_LOG( "SenderBoost::HandleResponse: appropriate parser not found for protocol: "
+        PS_LOG( "RpcBoost::HandleResponse: appropriate parser not found for protocol: "
                 << protocol << " " << version );
         return false;
     }
@@ -213,7 +213,7 @@ bool SenderBoost::HandleResponse()
     parser->ParseMsgType( header, type );
     if ( !parser->ParseMsgType( header, type ) )
     {
-        PS_LOG( "SenderBoost::HandleResponse: couldn't parse msg type: " << header );
+        PS_LOG( "RpcBoost::HandleResponse: couldn't parse msg type: " << header );
         return false;
     }
 
@@ -228,13 +228,13 @@ bool SenderBoost::HandleResponse()
     }
     else
     {
-        PS_LOG( "SenderBoost::HandleResponse: unexpected msg type: " << type );
+        PS_LOG( "RpcBoost::HandleResponse: unexpected msg type: " << type );
     }
 
     return false;
 }
 
-void SenderBoost::MakeRequest()
+void RpcBoost::MakeRequest()
 {
     python_server::ProtocolJson protocol;
     protocol.GetJobResult( request_, workerTask_.GetJobId(), workerTask_.GetTaskId() );

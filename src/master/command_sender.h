@@ -42,15 +42,15 @@ private:
     bool newCommandAvailable_;
 };
 
-class SenderBoost : public boost::enable_shared_from_this< SenderBoost >
+class RpcBoost : public boost::enable_shared_from_this< RpcBoost >
 {
     typedef boost::array< char, 32 * 1024 > BufferType;
 
 public:
-    typedef boost::shared_ptr< SenderBoost > sender_ptr;
+    typedef boost::shared_ptr< RpcBoost > sender_ptr;
 
 public:
-    SenderBoost( boost::asio::io_service &io_service,
+    RpcBoost( boost::asio::io_service &io_service,
                  CommandSender *sender, CommandPtr &command,
                  const std::string &hostIP )
     : io_service_( io_service ), socket_( io_service ),
