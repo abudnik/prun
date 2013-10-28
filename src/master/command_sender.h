@@ -8,6 +8,7 @@
 #include "common/helper.h"
 #include "common/request.h"
 #include "worker.h"
+#include "command.h"
 
 using boost::asio::ip::tcp;
 
@@ -26,12 +27,12 @@ public:
 
     void Run();
 
-    virtual void OnGetTaskResult( bool success, int errCode, const WorkerTask &workerTask, const std::string &hostIP );
+    virtual void OnSendCommand( bool success, int errCode, CommandPtr &command, const std::string &hostIP );
 
 private:
     virtual void NotifyObserver( int event );
 
-    virtual void GetTaskResult( const WorkerTask &workerTask, const std::string &hostIP ) = 0;
+    virtual void SendCommand( CommandPtr &command, const std::string &hostIP ) = 0;
 
 private:
     bool stopped_;
@@ -46,19 +47,19 @@ class SenderBoost : public boost::enable_shared_from_this< SenderBoost >
     typedef boost::array< char, 32 * 1024 > BufferType;
 
 public:
-    typedef boost::shared_ptr< GetterBoost > getter_ptr;
+    typedef boost::shared_ptr< SenderBoost > sender_ptr;
 
 public:
     SenderBoost( boost::asio::io_service &io_service,
-                 ResultGetter *getter, const WorkerTask &workerTask,
+                 CommandSender *sender, CommandPtr &command,
                  const std::string &hostIP )
     : io_service_( io_service ), socket_( io_service ),
      response_( false ), firstRead_( true ),
-     getter_( getter ), workerTask_( workerTask ),
+     sender_( sender ), command_( command ),
      hostIP_( hostIP )
     {}
 
-    void GetTaskResult();
+    void SendCommand();
 
 private:
     void HandleConnect( const boost::system::error_code &error );
@@ -80,8 +81,8 @@ private:
     python_server::Request< BufferType > response_;
     bool firstRead_;
     std::string request_;
-    ResultGetter *getter_;
-    WorkerTask workerTask_;
+    CommandSender *sender_;
+    CommandPtr command_;
     std::string hostIP_;
 };
 
@@ -97,9 +98,9 @@ public:
     virtual void Start();
 
 private:
-    virtual void GetTaskResult( const WorkerTask &workerTask, const std::string &hostIP );
+    virtual void SendCommand( CommandPtr &command, const std::string &hostIP );
 
-    virtual void OnGetTaskResult( bool success, int errCode, const WorkerTask &workerTask, const std::string &hostIP );
+    virtual void OnCommandSend( bool success, int errCode, CommandPtr &command, const std::string &hostIP );
 
 private:
     boost::asio::io_service &io_service_;

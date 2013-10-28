@@ -11,28 +11,28 @@ namespace master {
 
 void CommandSender::Run()
 {
-    WorkerTask workerTask;
+    CommandPtr command;
     std::string hostIP;
 
     WorkerManager &workerMgr = WorkerManager::Instance();
-    workerMgr.Subscribe( this );
+    workerMgr.Subscribe( this, WorkerManager::eCommand );
 
-    bool getTask = false;
+    bool getCommand = false;
     while( !stopped_ )
     {
-        if ( !getTask )
+        if ( !getCommand )
         {
             boost::unique_lock< boost::mutex > lock( awakeMut_ );
             if ( !newJobAvailable_ )
                 awakeCond_.wait( lock );
-            newJobAvailable_ = false;
+            newCommandAvailable_ = false;
         }
 
-        getTask = workerMgr.GetAchievedTask( workerTask, hostIP );
-        if ( getTask )
+        getCommand = workerMgr.GetCommand( command, hostIP );
+        if ( getCommand )
         {
-            PS_LOG( "Get achieved work " << workerTask.GetJobId() << " : " << workerTask.GetTaskId() );
-            GetTaskResult( workerTask, hostIP );
+            //PS_LOG( "Get command " << command.GetName() << " : " << hostIP );
+            SendCommand( workerTask, hostIP );
         }
     }
 }
@@ -47,39 +47,39 @@ void CommandSender::Stop()
 void CommandSender::NotifyObserver( int event )
 {
     boost::unique_lock< boost::mutex > lock( awakeMut_ );
-    newJobAvailable_ = true;
+    newCommandAvailable_ = true;
     awakeCond_.notify_all();
 }
 
-void CommandSender::OnGetTaskResult( bool success, int errCode, const WorkerTask &workerTask, const std::string &hostIP )
+void CommandSender::OnSendCommand( bool success, int errCode, const WorkerTask &workerTask, const std::string &hostIP )
 {
     if ( !success ) // retrieving of job result from message failed
         errCode = -1;
-    Scheduler::Instance().OnTaskCompletion( errCode, workerTask, hostIP );
+    //Scheduler::Instance().OnTaskCompletion( errCode, workerTask, hostIP );
 }
 
-void ResultGetterBoost::Start()
+void CommandSenderBoost::Start()
 {
-    io_service_.post( boost::bind( &ResultGetter::Run, this ) );
+    io_service_.post( boost::bind( &CommandSender::Run, this ) );
 }
 
-void ResultGetterBoost::GetTaskResult( const WorkerTask &workerTask, const std::string &hostIP )
+void CommandSenderBoost::SendCommand( CommandPtr &command, const std::string &hostIP )
 {   
-    getJobsSem_.Wait();
+    cmdSenderSem_.Wait();
 
-    GetterBoost::getter_ptr getter(
-        new GetterBoost( io_service_, this, workerTask, hostIP )
+    SenderBoost::sender_ptr sender(
+        new SenderBoost( io_service_, this, command, hostIP )
     );
-    getter->GetTaskResult();
+    sender->SendCommand();
 }
 
-void ResultGetterBoost::OnGetTaskResult( bool success, int errCode, const WorkerTask &workerTask, const std::string &hostIP )
+void CommandSenderBoost::OnSendCommand( bool success, int errCode, CommandPtr &command, const std::string &hostIP )
 {
-    getJobsSem_.Notify();
-    ResultGetter::OnGetTaskResult( success, errCode, workerTask, hostIP );
+    cmdSenderSem_.Notify();
+    CommandSender::OnCommandSend( success, errCode, command, hostIP );
 }
 
-void GetterBoost::GetTaskResult()
+void SenderBoost::SendCommand()
 {
     tcp::endpoint nodeEndpoint(
         boost::asio::ip::address::from_string( hostIP_ ),
@@ -87,11 +87,11 @@ void GetterBoost::GetTaskResult()
     );
 
     socket_.async_connect( nodeEndpoint,
-                           boost::bind( &GetterBoost::HandleConnect, shared_from_this(),
+                           boost::bind( &SenderBoost::HandleConnect, shared_from_this(),
                                         boost::asio::placeholders::error ) );
 }
 
-void GetterBoost::HandleConnect( const boost::system::error_code &error )
+void SenderBoost::HandleConnect( const boost::system::error_code &error )
 {
     if ( !error )
     {
@@ -99,33 +99,33 @@ void GetterBoost::HandleConnect( const boost::system::error_code &error )
 
         boost::asio::async_read( socket_,
                                  boost::asio::buffer( &buffer_, sizeof( char ) ),
-                                 boost::bind( &GetterBoost::FirstRead, shared_from_this(),
+                                 boost::bind( &SenderBoost::FirstRead, shared_from_this(),
                                               boost::asio::placeholders::error,
                                               boost::asio::placeholders::bytes_transferred ) );
 
         boost::asio::async_write( socket_,
                                   boost::asio::buffer( request_ ),
-                                  boost::bind( &GetterBoost::HandleWrite, shared_from_this(),
+                                  boost::bind( &SenderBoost::HandleWrite, shared_from_this(),
                                                boost::asio::placeholders::error,
                                                boost::asio::placeholders::bytes_transferred ) );
     }
     else
     {
-        PS_LOG( "GetterBoost::HandleConnect error=" << error.message() );
-        getter_->OnGetTaskResult( false, 0, workerTask_, hostIP_ );
+        PS_LOG( "SenderBoost::HandleConnect error=" << error.message() );
+        sender_->OnSendCommand( false, 0, command_, hostIP_ );
     }
 }
 
-void GetterBoost::HandleWrite( const boost::system::error_code &error, size_t bytes_transferred )
+void SenderBoost::HandleWrite( const boost::system::error_code &error, size_t bytes_transferred )
 {
     if ( error )
     {
-        PS_LOG( "GetterBoost::HandleWrite error=" << error.message() );
-        getter_->OnGetTaskResult( false, 0, workerTask_, hostIP_ );
+        PS_LOG( "SenderBoost::HandleWrite error=" << error.message() );
+        sender_->OnSendCommand( false, 0, command_, hostIP_ );
     }
 }
 
-void GetterBoost::FirstRead( const boost::system::error_code& error, size_t bytes_transferred )
+void SenderBoost::FirstRead( const boost::system::error_code& error, size_t bytes_transferred )
 {
     if ( !error )
     {
@@ -134,7 +134,7 @@ void GetterBoost::FirstRead( const boost::system::error_code& error, size_t byte
             // skip node's read completion status byte
             firstRead_ = false;
             socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                                     boost::bind( &GetterBoost::FirstRead, shared_from_this(),
+                                     boost::bind( &SenderBoost::FirstRead, shared_from_this(),
                                                   boost::asio::placeholders::error,
                                                   boost::asio::placeholders::bytes_transferred ) );
             return;
@@ -144,7 +144,7 @@ void GetterBoost::FirstRead( const boost::system::error_code& error, size_t byte
         if ( ret == 0 )
         {
             socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                                     boost::bind( &GetterBoost::FirstRead, shared_from_this(),
+                                     boost::bind( &SenderBoost::FirstRead, shared_from_this(),
                                                   boost::asio::placeholders::error,
                                                   boost::asio::placeholders::bytes_transferred ) );
             return;
@@ -152,13 +152,13 @@ void GetterBoost::FirstRead( const boost::system::error_code& error, size_t byte
     }
     else
     {
-        PS_LOG( "GetterBoost::FirstRead error=" << error.message() );
+        PS_LOG( "SenderBoost::FirstRead error=" << error.message() );
     }
 
     HandleRead( error, bytes_transferred );
 }
 
-void GetterBoost::HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
+void SenderBoost::HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
 {
     if ( !error )
     {
@@ -167,7 +167,7 @@ void GetterBoost::HandleRead( const boost::system::error_code& error, size_t byt
         if ( !response_.IsReadCompleted() )
         {
             socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                                     boost::bind( &GetterBoost::HandleRead, shared_from_this(),
+                                     boost::bind( &SenderBoost::HandleRead, shared_from_this(),
                                                   boost::asio::placeholders::error,
                                                   boost::asio::placeholders::bytes_transferred ) );
         }
@@ -175,18 +175,18 @@ void GetterBoost::HandleRead( const boost::system::error_code& error, size_t byt
         {
             if ( !HandleResponse() )
             {
-                getter_->OnGetTaskResult( false, 0, workerTask_, hostIP_ );
+                sender_->OnSendCommand( false, 0, command_, hostIP_ );
             }
         }
     }
     else
     {
-        PS_LOG( "GetterBoost::HandleRead error=" << error.message() );
-        getter_->OnGetTaskResult( false, 0, workerTask_, hostIP_ );
+        PS_LOG( "SenderBoost::HandleRead error=" << error.message() );
+        sender_->OnSendCommand( false, 0, command_, hostIP_ );
     }
 }
 
-bool GetterBoost::HandleResponse()
+bool SenderBoost::HandleResponse()
 {
     const std::string &msg = response_.GetString();
 
@@ -194,7 +194,7 @@ bool GetterBoost::HandleResponse()
     int version;
     if ( !python_server::Protocol::ParseMsg( msg, protocol, version, header, body ) )
     {
-        PS_LOG( "GetterBoost::HandleResponse: couldn't parse msg: " << msg );
+        PS_LOG( "SenderBoost::HandleResponse: couldn't parse msg: " << msg );
         return false;
     }
 
@@ -204,7 +204,7 @@ bool GetterBoost::HandleResponse()
     );
     if ( !parser )
     {
-        PS_LOG( "GetterBoost::HandleResponse: appropriate parser not found for protocol: "
+        PS_LOG( "SenderBoost::HandleResponse: appropriate parser not found for protocol: "
                 << protocol << " " << version );
         return false;
     }
@@ -213,7 +213,7 @@ bool GetterBoost::HandleResponse()
     parser->ParseMsgType( header, type );
     if ( !parser->ParseMsgType( header, type ) )
     {
-        PS_LOG( "GetterBoost::HandleResponse: couldn't parse msg type: " << header );
+        PS_LOG( "SenderBoost::HandleResponse: couldn't parse msg type: " << header );
         return false;
     }
 
@@ -222,19 +222,19 @@ bool GetterBoost::HandleResponse()
         int errCode;
         if ( parser->ParseJobResult( body, errCode ) )
         {
-            getter_->OnGetTaskResult( true, errCode, workerTask_, hostIP_ );
+            sender_->OnSendCommand( true, errCode, command_, hostIP_ );
             return true;
         }
     }
     else
     {
-        PS_LOG( "GetterBoost::HandleResponse: unexpected msg type: " << type );
+        PS_LOG( "SenderBoost::HandleResponse: unexpected msg type: " << type );
     }
 
     return false;
 }
 
-void GetterBoost::MakeRequest()
+void SenderBoost::MakeRequest()
 {
     python_server::ProtocolJson protocol;
     protocol.GetJobResult( request_, workerTask_.GetJobId(), workerTask_.GetTaskId() );
