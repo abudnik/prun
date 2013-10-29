@@ -41,6 +41,7 @@ the License.
 #include "scheduler.h"
 #include "job_sender.h"
 #include "result_getter.h"
+#include "command_sender.h"
 #include "timeout_manager.h"
 #include "admin.h"
 #include "defines.h"
@@ -176,6 +177,7 @@ int main( int argc, char* argv[], char **envp )
         unsigned int numPingReceiverThread = cfg.Get<unsigned int>( "num_ping_receiver_thread" );
         unsigned int numJobSendThread = 1 + cfg.Get<unsigned int>( "num_job_send_thread" );
         unsigned int numResultGetterThread = 1 + cfg.Get<unsigned int>( "num_result_getter_thread" );
+        unsigned int numCommandSendThread = 1 + cfg.Get<unsigned int>( "num_command_send_thread" );
         unsigned int numPingThread = numHeartbeatThread + numPingReceiverThread;
 
         InitWorkerManager();
@@ -256,6 +258,23 @@ int main( int argc, char* argv[], char **envp )
             );
         }
 
+        boost::asio::io_service io_service_command_send;
+
+        // start command sender
+        int maxSimultCommandSend = cfg.Get<int>( "max_simult_command_send" );
+        boost::scoped_ptr< master::CommandSender > commandSender(
+            new master::CommandSenderBoost( io_service_command_send, maxSimultCommandSend )
+        );
+        commandSender->Start();
+
+        // create thread pool for command senders
+        for( unsigned int i = 0; i < numCommandSendThread; ++i )
+        {
+            worker_threads.create_thread(
+                boost::bind( &ThreadFun, &io_service_command_send )
+            );
+        }
+
         boost::asio::io_service io_service_admin;
 
         // create thread pool for admin connections
@@ -294,9 +313,11 @@ int main( int argc, char* argv[], char **envp )
         pinger->Stop();
         jobSender->Stop();
         resultGetter->Stop();
+        commandSender->Stop();
 
         // stop io services
         io_service_admin.stop();
+        io_service_command_send.stop();
         io_service_getters.stop();
         io_service_senders.stop();
         io_service_ping.stop();
