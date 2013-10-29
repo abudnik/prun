@@ -125,6 +125,10 @@ bool WorkerManager::GetCommand( CommandPtr &command, std::string &hostIP )
     return true;
 }
 
+void WorkerManager::OnCommandCompletion( int errCode, CommandPtr &command, const std::string &hostIP )
+{
+}
+
 void WorkerManager::SetWorkerIP( Worker *worker, const std::string &ip )
 {
     workers_.SetWorkerIP( worker, ip );

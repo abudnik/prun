@@ -7,7 +7,6 @@
 #include "common/observer.h"
 #include "common/helper.h"
 #include "common/request.h"
-#include "worker.h"
 #include "command.h"
 
 using boost::asio::ip::tcp;
@@ -100,7 +99,7 @@ public:
 private:
     virtual void SendCommand( CommandPtr &command, const std::string &hostIP );
 
-    virtual void OnCommandSend( bool success, int errCode, CommandPtr &command, const std::string &hostIP );
+    virtual void OnSendCommand( bool success, int errCode, CommandPtr &command, const std::string &hostIP );
 
 private:
     boost::asio::io_service &io_service_;

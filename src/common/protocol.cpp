@@ -236,6 +236,33 @@ bool ProtocolJson::SendCommand( std::string &msg, const std::string &command,
     return true;
 }
 
+bool ProtocolJson::SendCommandResult( std::string &msg, int errCode )
+{
+    msg = std::string( "{\"type\":\"send_command_result\"}\n" );
+    msg += std::string( "{\"err_code\":" ) + boost::lexical_cast<std::string>( errCode ) + "}";
+    AddHeader( msg );
+    return true;
+}
+
+bool ProtocolJson::ParseSendCommandResult( const std::string &msg, int &errCode )
+{
+    std::istringstream ss( msg );
+
+    boost::property_tree::ptree ptree;
+    try
+    {
+        boost::property_tree::read_json( ss, ptree );
+        errCode = ptree.get<int>( "err_code" );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "ProtocolJson::ParseSendCommandResult: " << e.what() );
+        return false;
+    }
+
+    return true;
+}
+
 bool ProtocolJson::ParseMsgType( const std::string &msg, std::string &type )
 {
     std::istringstream ss( msg );

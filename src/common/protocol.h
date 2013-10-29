@@ -35,6 +35,8 @@ public:
     // commands section
     virtual bool SendCommand( std::string &msg, const std::string &command,
                               const std::list< std::pair< std::string, std::string > > &params ) = 0;
+    virtual bool SendCommandResult( std::string &msg, int errCode ) = 0;
+    virtual bool ParseSendCommandResult( const std::string &msg, int &errCode ) = 0;
 
     // internals
     virtual bool ParseMsgType( const std::string &msg, std::string &type ) = 0;
@@ -81,6 +83,10 @@ public:
 
     virtual bool SendCommand( std::string &msg, const std::string &command,
                               const std::list< std::pair< std::string, std::string > > &params );
+
+    virtual bool SendCommandResult( std::string &msg, int errCode );
+
+    virtual bool ParseSendCommandResult( const std::string &msg, int &errCode );
 
     virtual bool ParseMsgType( const std::string &msg, std::string &type );
 

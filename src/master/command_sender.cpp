@@ -2,7 +2,6 @@
 #include <boost/scoped_ptr.hpp>
 #include "command_sender.h"
 #include "worker_manager.h"
-#include "scheduler.h"
 #include "common/log.h"
 #include "common/protocol.h"
 #include "defines.h"
@@ -23,7 +22,7 @@ void CommandSender::Run()
         if ( !getCommand )
         {
             boost::unique_lock< boost::mutex > lock( awakeMut_ );
-            if ( !newJobAvailable_ )
+            if ( !newCommandAvailable_ )
                 awakeCond_.wait( lock );
             newCommandAvailable_ = false;
         }
@@ -31,8 +30,8 @@ void CommandSender::Run()
         getCommand = workerMgr.GetCommand( command, hostIP );
         if ( getCommand )
         {
-            PS_LOG( "Get command '" << command.GetCommand() << "' : " << hostIP );
-            SendCommand( workerTask, hostIP );
+            PS_LOG( "Get command '" << command->GetCommand() << "' : " << hostIP );
+            SendCommand( command, hostIP );
         }
     }
 }
@@ -51,11 +50,11 @@ void CommandSender::NotifyObserver( int event )
     awakeCond_.notify_all();
 }
 
-void CommandSender::OnSendCommand( bool success, int errCode, const WorkerTask &workerTask, const std::string &hostIP )
+void CommandSender::OnSendCommand( bool success, int errCode, CommandPtr &command, const std::string &hostIP )
 {
     if ( !success ) // retrieving of job result from message failed
         errCode = -1;
-    //Scheduler::Instance().OnTaskCompletion( errCode, workerTask, hostIP );
+    WorkerManager::Instance().OnCommandCompletion( errCode, command, hostIP );
 }
 
 void CommandSenderBoost::Start()
@@ -67,8 +66,8 @@ void CommandSenderBoost::SendCommand( CommandPtr &command, const std::string &ho
 {   
     cmdSenderSem_.Wait();
 
-    SenderBoost::sender_ptr sender(
-        new SenderBoost( io_service_, this, command, hostIP )
+    RpcBoost::sender_ptr sender(
+        new RpcBoost( io_service_, this, command, hostIP )
     );
     sender->SendCommand();
 }
@@ -76,7 +75,7 @@ void CommandSenderBoost::SendCommand( CommandPtr &command, const std::string &ho
 void CommandSenderBoost::OnSendCommand( bool success, int errCode, CommandPtr &command, const std::string &hostIP )
 {
     cmdSenderSem_.Notify();
-    CommandSender::OnCommandSend( success, errCode, command, hostIP );
+    CommandSender::OnSendCommand( success, errCode, command, hostIP );
 }
 
 void RpcBoost::SendCommand()
@@ -217,10 +216,10 @@ bool RpcBoost::HandleResponse()
         return false;
     }
 
-    if ( type == "send_job_result" )
+    if ( type == "send_command_result" )
     {
         int errCode;
-        if ( parser->ParseJobResult( body, errCode ) )
+        if ( parser->ParseSendCommandResult( body, errCode ) )
         {
             sender_->OnSendCommand( true, errCode, command_, hostIP_ );
             return true;

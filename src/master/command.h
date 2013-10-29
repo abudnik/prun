@@ -2,6 +2,7 @@
 #define __COMMAND_H
 
 #include <sstream>
+#include <list>
 #include <boost/shared_ptr.hpp>
 
 namespace master {
