@@ -364,8 +364,10 @@ void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &
     {
         PS_LOG( "Scheduler::OnTaskTimeout " << workerTask.GetJobId() << ":" << workerTask.GetTaskId() << " " << hostIP );
 
+        // send stop command to worker
         StopTaskCommand *stopCommand = new StopTaskCommand();
-        stopCommand->SetTask( workerTask );
+        stopCommand->SetParam( "job_id", workerTask.GetJobId() );
+        stopCommand->SetParam( "task_id", workerTask.GetTaskId() );
         CommandPtr commandPtr( stopCommand );
         WorkerManager::Instance().AddCommand( commandPtr, hostIP );
 
@@ -403,10 +405,19 @@ void Scheduler::StopWorkers( int64_t jobId )
 
             if ( workerJob.HasJob( jobId ) )
             {
-                StopTaskCommand *stopCommand = new StopTaskCommand();
-                stopCommand->SetJob( jobId, workerJob );
-                CommandPtr commandPtr( stopCommand );
-                WorkerManager::Instance().AddCommand( commandPtr, worker->GetIP() );
+                // send stop command to worker
+                WorkerJob::Tasks tasks;
+                workerJob.GetTasks( jobId, tasks );
+                WorkerJob::Tasks::const_iterator it_task = tasks.begin();
+                for( ; it_task != tasks.end(); ++it_task )
+                {
+                    StopTaskCommand *stopCommand = new StopTaskCommand();
+                    stopCommand->SetParam( "job_id", jobId );
+                    stopCommand->SetParam( "task_id", *it_task );
+                    CommandPtr commandPtr( stopCommand );
+                    WorkerManager::Instance().AddCommand( commandPtr, worker->GetIP() );
+                }
+
 
                 int numTasks = workerJob.GetNumTasks( jobId );
                 nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - numTasks );
