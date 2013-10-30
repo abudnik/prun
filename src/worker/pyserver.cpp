@@ -247,13 +247,13 @@ ExecTable execTable;
 class Action
 {
 public:
-    virtual void Execute( boost::shared_ptr< Job > &job ) = 0;
+    virtual void Execute( const boost::shared_ptr< Job > &job ) = 0;
     virtual ~Action() {}
 };
 
 class NoAction : public Action
 {
-    virtual void Execute( boost::shared_ptr< Job > &job ) {}
+    virtual void Execute( const boost::shared_ptr< Job > &job ) {}
 };
 
 class PyExecConnection : public boost::enable_shared_from_this< PyExecConnection >
@@ -446,7 +446,7 @@ private:
 
 class SendToPyExec : public Action
 {
-    virtual void Execute( boost::shared_ptr< Job > &job )
+    virtual void Execute( const boost::shared_ptr< Job > &job )
     {
         const Job::Tasks &tasks = job->GetTasks();
         if ( tasks.empty() )
@@ -470,7 +470,7 @@ class SendToPyExec : public Action
         DoSend( job, firstTaskId );
     }
 
-    void SaveCompletionResults( boost::shared_ptr< Job > &job, int taskId ) const
+    void SaveCompletionResults( const boost::shared_ptr< Job > &job, int taskId ) const
     {
         JobDescriptor descr;
         JobCompletionStat stat;
@@ -481,7 +481,7 @@ class SendToPyExec : public Action
         JobCompletionTable::Instance().Set( descr, stat );
     }
 
-    void NodeJobCompletionPing( boost::shared_ptr< Job > &job, int taskId )
+    void NodeJobCompletionPing( const boost::shared_ptr< Job > &job, int taskId )
     {
         boost::asio::io_service *io_service = commDescrPool->GetIoService();
 
@@ -504,7 +504,7 @@ class SendToPyExec : public Action
     }
 
 public:
-    void DoSend( boost::shared_ptr< Job > job, int taskId )
+    void DoSend( const boost::shared_ptr< Job > &job, int taskId )
     {
         commDescrPool->AllocCommDescr();
         PyExecConnection::connection_ptr pyExecConnection( new PyExecConnection() );
