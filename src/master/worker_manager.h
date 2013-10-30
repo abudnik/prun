@@ -40,7 +40,6 @@ public:
 
     void AddCommand( CommandPtr &command, const std::string &hostIP );
     bool GetCommand( CommandPtr &command, std::string &hostIP );
-    void OnCommandCompletion( int errCode, CommandPtr &command, const std::string &hostIP );
 
     WorkerList::WorkerContainer &GetWorkers() { return workers_.GetWorkers(); }
     int GetTotalWorkers() const { return workers_.GetTotalWorkers(); }

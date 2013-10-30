@@ -3,6 +3,7 @@
 #include "common/error_code.h"
 #include "job_manager.h"
 #include "worker_manager.h"
+#include "worker_command.h"
 
 // hint: avoid deadlocks. always lock jobs mutex after workers mutex
 
@@ -362,6 +363,12 @@ void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &
     if ( workerJob.HasTask( workerTask.GetJobId(), workerTask.GetTaskId() ) )
     {
         PS_LOG( "Scheduler::OnTaskTimeout " << workerTask.GetJobId() << ":" << workerTask.GetTaskId() << " " << hostIP );
+
+        StopTaskCommand *stopCommand = new StopTaskCommand();
+        stopCommand->SetTask( workerTask );
+        CommandPtr commandPtr( stopCommand );
+        WorkerManager::Instance().AddCommand( commandPtr, hostIP );
+
         OnTaskCompletion( NODE_JOB_TIMEOUT, workerTask, hostIP );
     }
 }
@@ -396,6 +403,11 @@ void Scheduler::StopWorkers( int64_t jobId )
 
             if ( workerJob.HasJob( jobId ) )
             {
+                StopTaskCommand *stopCommand = new StopTaskCommand();
+                stopCommand->SetJob( jobId, workerJob );
+                CommandPtr commandPtr( stopCommand );
+                WorkerManager::Instance().AddCommand( commandPtr, worker->GetIP() );
+
                 int numTasks = workerJob.GetNumTasks( jobId );
                 nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - numTasks );
                 workerJob.DeleteJob( jobId );

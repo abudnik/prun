@@ -263,6 +263,26 @@ bool ProtocolJson::ParseSendCommandResult( const std::string &msg, int &errCode 
     return true;
 }
 
+bool ProtocolJson::ParseStopTask( const std::string &msg, int64_t &jobId, int &taskId )
+{
+    std::istringstream ss( msg );
+
+    boost::property_tree::ptree ptree;
+    try
+    {
+        boost::property_tree::read_json( ss, ptree );
+        jobId = ptree.get<int64_t>( "job_id" );
+        taskId = ptree.get<int>( "task_id" );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "ProtocolJson::ParseStopTask: " << e.what() );
+        return false;
+    }
+
+    return true;
+}
+
 bool ProtocolJson::ParseMsgType( const std::string &msg, std::string &type )
 {
     std::istringstream ss( msg );

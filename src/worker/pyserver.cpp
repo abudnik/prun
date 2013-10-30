@@ -624,6 +624,7 @@ private:
     {
         if ( job_->ParseRequest( request_ ) )
         {
+            
             boost::scoped_ptr< Action > action(
                 actionCreator_.Create( job_->GetTaskType() )
             );
@@ -640,6 +641,7 @@ private:
         }
         else
         {
+            PS_LOG(request_.GetString());
             job_->OnError( NODE_FATAL );
         }
 

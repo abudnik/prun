@@ -54,7 +54,7 @@ void CommandSender::OnSendCommand( bool success, int errCode, CommandPtr &comman
 {
     if ( !success ) // retrieving of job result from message failed
         errCode = -1;
-    WorkerManager::Instance().OnCommandCompletion( errCode, command, hostIP );
+    command->OnExec( errCode, hostIP );
 }
 
 void CommandSenderBoost::Start()

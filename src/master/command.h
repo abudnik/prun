@@ -4,6 +4,8 @@
 #include <sstream>
 #include <list>
 #include <boost/shared_ptr.hpp>
+#include <boost/function.hpp>
+#include <boost/bind.hpp>
 
 namespace master {
 
@@ -14,6 +16,9 @@ public:
     typedef std::list< PairType > Params;
 
 public:
+    Command( const std::string &command )
+    : command_( command )
+    {}
     virtual ~Command() {}
 
     void SetParam( const std::string &key, const std::string &value )
@@ -33,9 +38,28 @@ public:
     Params &GetAllParams() { return params_; }
     const Params &GetAllParams() const { return params_; }
 
+    template< typename T >
+    void SetCallback( T &obj, void (T::*f)( int errCode, const std::string &hostIP ) )
+    {
+        callback_ = boost::bind( f, obj, _1, _2 );
+    }
+
+    void OnExec( int errCode, const std::string &hostIP )
+    {
+        OnCompletion( errCode, hostIP );
+        if ( callback_ )
+            callback_( errCode, hostIP );
+    }
+
+private:
+    virtual void OnCompletion( int errCode, const std::string &hostIP ) = 0;
+
 protected:
     std::string command_;
     Params params_;
+
+private:
+    boost::function< void (int, const std::string &) > callback_;
 };
 
 typedef boost::shared_ptr< Command > CommandPtr;

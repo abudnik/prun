@@ -71,6 +71,12 @@ public:
                 protocol.SendJobResult( response, NODE_JOB_COMPLETION_NOT_FOUND );
             }
         }
+        else
+        if ( taskType_ == "stop_task" )
+        {
+            ProtocolJson protocol;
+            protocol.SendCommandResult( response, 0 );
+        }
     }
 
     void OnError( int err )
@@ -108,6 +114,10 @@ private:
         if ( taskType_ == "get_result" )
         {
             return parser->ParseGetJobResult( body, jobId_, taskId_ );
+        }
+        if ( taskType_ == "stop_task" )
+        {
+            return parser->ParseStopTask( body, jobId_, taskId_ );
         }
         return false;
     }
