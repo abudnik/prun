@@ -359,21 +359,60 @@ public:
     }
 };
 
-class Session : public boost::enable_shared_from_this< Session >
+class Session
+{
+public:
+    Session()
+    : job_( new Job )
+    {}
+
+protected:
+    template< typename T >
+    void HandleRequest( T &request )
+    {
+        if ( job_->ParseRequest( request ) )
+        {
+            boost::scoped_ptr< Action > action(
+                actionCreator_.Create( job_->GetTaskType() )
+            );
+            if ( action )
+            {
+                action->Execute( job_ );
+            }
+            else
+            {
+                PS_LOG( "Session::HandleRequest: appropriate action not found for task type: "
+                        << job_->GetTaskType() );
+                job_->OnError( NODE_FATAL );
+            }
+        }
+        else
+        {
+            PS_LOG( request.GetString() );
+            job_->OnError( NODE_FATAL );
+        }
+    }
+
+protected:
+    boost::shared_ptr< Job > job_;
+
+private:
+    ActionCreator actionCreator_;
+};
+
+class BoostSession : public Session, public boost::enable_shared_from_this< BoostSession >
 {
 public:
     typedef boost::array< char, 32 * 1024 > BufferType;
 
 public:
-    Session( boost::asio::io_service &io_service )
+    BoostSession( boost::asio::io_service &io_service )
     : socket_( io_service ),
      request_( false ),
-     job_( new Job ),
      io_service_( io_service )
-    {
-    }
+    {}
 
-    virtual ~Session()
+    virtual ~BoostSession()
     {
         taskSem->Notify();
         cout << "S: ~Session()" << endl;
@@ -385,9 +424,9 @@ public:
         job_->SetMasterIP( remoteAddress.to_string() );
 
         socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                                 boost::bind( &Session::FirstRead, shared_from_this(),
-                                            boost::asio::placeholders::error,
-                                            boost::asio::placeholders::bytes_transferred ) );
+                                 boost::bind( &BoostSession::FirstRead, shared_from_this(),
+                                              boost::asio::placeholders::error,
+                                              boost::asio::placeholders::bytes_transferred ) );
     }
 
     tcp::socket &GetSocket()
@@ -404,7 +443,7 @@ private:
             if ( ret == 0 )
             {
                 socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                                         boost::bind( &Session::FirstRead, shared_from_this(),
+                                         boost::bind( &BoostSession::FirstRead, shared_from_this(),
                                                       boost::asio::placeholders::error,
                                                       boost::asio::placeholders::bytes_transferred ) );
                 return;
@@ -432,14 +471,14 @@ private:
             if ( !request_.IsReadCompleted() )
             {
                 socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                                         boost::bind( &Session::HandleRead, shared_from_this(),
-                                                    boost::asio::placeholders::error,
-                                                    boost::asio::placeholders::bytes_transferred ) );
+                                         boost::bind( &BoostSession::HandleRead, shared_from_this(),
+                                                      boost::asio::placeholders::error,
+                                                      boost::asio::placeholders::bytes_transferred ) );
             }
             else
             {
                 OnReadCompletion( true );
-                HandleRequest();
+                HandleRequest( request_ );
                 WriteResponse();
             }
         }
@@ -451,38 +490,12 @@ private:
         }
     }
 
-    void HandleRequest()
-    {
-        if ( job_->ParseRequest( request_ ) )
-        {
-            
-            boost::scoped_ptr< Action > action(
-                actionCreator_.Create( job_->GetTaskType() )
-            );
-            if ( action )
-            {
-                action->Execute( job_ );
-            }
-            else
-            {
-                PS_LOG( "Session::HandleRequest: appropriate action not found for task type: "
-                        << job_->GetTaskType() );
-                job_->OnError( NODE_FATAL );
-            }
-        }
-        else
-        {
-            PS_LOG(request_.GetString());
-            job_->OnError( NODE_FATAL );
-        }
-    }
-
     void OnReadCompletion( bool success )
     {
         readStatus_ = success ? '1' : '0';
         boost::asio::async_write( socket_,
                                   boost::asio::buffer( &readStatus_, sizeof( readStatus_ ) ),
-                                  boost::bind( &Session::HandleWrite, shared_from_this(),
+                                  boost::bind( &BoostSession::HandleWrite, shared_from_this(),
                                                boost::asio::placeholders::error ) );
     }
 
@@ -493,7 +506,7 @@ private:
         {
             boost::asio::async_write( socket_,
                                       boost::asio::buffer( response_ ),
-                                      boost::bind( &Session::HandleWrite, shared_from_this(),
+                                      boost::bind( &BoostSession::HandleWrite, shared_from_this(),
                                                    boost::asio::placeholders::error ) );
         }
     }
@@ -510,8 +523,6 @@ protected:
     tcp::socket socket_;
     BufferType buffer_;
     Request< BufferType > request_;
-    boost::shared_ptr< Job > job_;
-    ActionCreator actionCreator_;
     char readStatus_;
     std::string response_;
     boost::asio::io_service &io_service_;
@@ -520,7 +531,7 @@ protected:
 
 class ConnectionAcceptor
 {
-    typedef boost::shared_ptr< Session > session_ptr;
+    typedef boost::shared_ptr< BoostSession > session_ptr;
 
 public:
     ConnectionAcceptor( boost::asio::io_service &io_service, unsigned short port )
@@ -547,7 +558,7 @@ public:
 private:
     void StartAccept()
     {
-        session_ptr session( new Session( io_service_ ) );
+        session_ptr session( new BoostSession( io_service_ ) );
         acceptor_.async_accept( session->GetSocket(),
                                 boost::bind( &ConnectionAcceptor::HandleAccept, this,
                                             session, boost::asio::placeholders::error ) );
@@ -559,7 +570,7 @@ private:
         {
             cout << "connection accepted..." << endl;
             taskSem->Wait();
-            io_service_.post( boost::bind( &Session::Start, session ) );
+            io_service_.post( boost::bind( &BoostSession::Start, session ) );
             StartAccept();
         }
         else
