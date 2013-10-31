@@ -73,41 +73,28 @@ ThreadInfo threadInfo;
 class Job
 {
 public:
-    template< typename T >
-    void ParseRequest( Request<T> &request )
+    Job()
+    : errCode_( 0 )
+    {}
+
+    void OnError( int err ) { errCode_ = err; }
+    int GetError() const { return errCode_; }
+
+private:
+    int errCode_;
+};
+
+class JobExec : public Job
+{
+public:
+    void ParseRequest( boost::property_tree::ptree &ptree )
     {
-        const std::string &requestStr = request.GetString();
-
-        std::istringstream ss( requestStr );
-
-        boost::property_tree::ptree ptree;
-        boost::property_tree::read_json( ss, ptree );
-
         jobId_ = ptree.get<int>( "id" );
         scriptLength_ = ptree.get<unsigned int>( "len" );
         language_ = ptree.get<std::string>( "lang" );
         taskId_ = ptree.get<int>( "task_id" );
         numTasks_ = ptree.get<int>( "num_tasks" );
         timeout_ = ptree.get<int>( "timeout" );
-    }
-
-    void GetResponse( std::string &response )
-    {
-        std::ostringstream ss;
-        boost::property_tree::ptree ptree;
-
-        ptree.put( "err", errCode_ );
-
-        boost::property_tree::write_json( ss, ptree, false );
-        size_t responseLength = ss.str().size();
-        response = boost::lexical_cast< std::string >( responseLength );
-        response += '\n';
-        response += ss.str();
-    }
-
-    void OnError( int err )
-    {
-        errCode_ = err;
     }
 
     int GetJobId() const { return jobId_; }
@@ -120,11 +107,27 @@ public:
 private:
     int jobId_;
     unsigned int scriptLength_;
-    int errCode_;
     std::string language_;
     int taskId_;
     int numTasks_;
     int timeout_;
+};
+
+class JobStopTask : public Job
+{
+public:
+    void ParseRequest( boost::property_tree::ptree &ptree )
+    {
+        jobId_ = ptree.get<int64_t>( "job_id" );
+        taskId_ = ptree.get<int>( "task_id" );
+    }
+
+    int64_t GetJobId() const { return jobId_; }
+    int GetTaskId() const { return taskId_; }
+
+private:
+    int64_t jobId_;
+    int taskId_;
 };
 
 class ScriptExec
@@ -132,7 +135,7 @@ class ScriptExec
 public:
     virtual ~ScriptExec() {}
 
-    virtual void Execute( Job *job )
+    virtual void Execute( JobExec *job )
     {
         if ( !InitLanguageEnv() )
         {
@@ -290,7 +293,7 @@ protected:
     }
 
 protected:
-    Job *job_;
+    JobExec *job_;
     std::string exePath_;
     std::string nodePath_;
 };
@@ -317,7 +320,7 @@ protected:
 class JavaExec : public ScriptExec
 {
 public:
-    virtual void Execute( Job *job )
+    virtual void Execute( JobExec *job )
     {
         if ( !InitLanguageEnv() )
         {
@@ -447,17 +450,99 @@ public:
     }
 };
 
-class Session : public boost::enable_shared_from_this< Session >
+class StopTaskAction
+{
+public:
+    void StopTask( JobStopTask &job )
+    {
+    }
+};
+
+class Session
+{
+protected:
+    template< typename T >
+    void HandleRequest( T &request )
+    {
+        const std::string &requestStr = request.GetString();
+        std::istringstream ss( requestStr );
+
+        boost::property_tree::ptree ptree;
+        boost::property_tree::read_json( ss, ptree );
+
+        std::string task = ptree.get<std::string>( "task" );
+
+        if ( task == "exec" )
+        {
+            JobExec job;
+            job.ParseRequest( ptree );
+            Execute( job );
+            errCode_ = job.GetError();
+        }
+        else
+        if ( task == "stop_task" )
+        {
+            JobStopTask job;
+            job.ParseRequest( ptree );
+            StopTaskAction action;
+            action.StopTask( job );
+            errCode_ = job.GetError();
+        }
+        else
+        {
+            PS_LOG( "Session::HandleRequest: unknow task: " << task );
+            errCode_ = NODE_FATAL;
+        }
+    }
+
+    void GetResponse( std::string &response ) const
+    {
+        std::ostringstream ss;
+        boost::property_tree::ptree ptree;
+
+        ptree.put( "err", errCode_ );
+
+        boost::property_tree::write_json( ss, ptree, false );
+        size_t responseLength = ss.str().size();
+        response = boost::lexical_cast< std::string >( responseLength );
+        response += '\n';
+        response += ss.str();
+    }
+
+private:
+    void Execute( JobExec &job )
+    {
+        ExecCreator execCreator;
+        boost::scoped_ptr< ScriptExec > scriptExec(
+            execCreator.Create( job.GetScriptLanguage() )
+        );
+        if ( scriptExec )
+        {
+            scriptExec->Execute( &job );
+        }
+        else
+        {
+            PS_LOG( "Session::HandleRequest: appropriate executor not found for language: "
+                    << job.GetScriptLanguage() );
+            errCode_ = NODE_LANG_NOT_SUPPORTED;
+        }
+    }
+
+protected:
+    int errCode_;
+};
+
+class SessionBoost : public Session, public boost::enable_shared_from_this< SessionBoost >
 {
     typedef boost::array< char, 1024 > BufferType;
 
 public:
-    Session( boost::asio::io_service &io_service )
+    SessionBoost( boost::asio::io_service &io_service )
     : socket_( io_service ), request_( true )
     {
     }
 
-    virtual ~Session()
+    virtual ~SessionBoost()
     {
         cout << "E: ~Session()" << endl;
     }
@@ -466,9 +551,9 @@ public:
     {
         memset( buffer_.c_array(), 0, buffer_.size() );
         socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                                 boost::bind( &Session::FirstRead, shared_from_this(),
-                                            boost::asio::placeholders::error,
-                                            boost::asio::placeholders::bytes_transferred ) );
+                                 boost::bind( &SessionBoost::FirstRead, shared_from_this(),
+                                              boost::asio::placeholders::error,
+                                              boost::asio::placeholders::bytes_transferred ) );
     }
 
     tcp::socket &GetSocket()
@@ -485,21 +570,21 @@ protected:
             if ( ret == 0 )
             {
                 socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                                         boost::bind( &Session::FirstRead, shared_from_this(),
+                                         boost::bind( &SessionBoost::FirstRead, shared_from_this(),
                                                       boost::asio::placeholders::error,
                                                       boost::asio::placeholders::bytes_transferred ) );
                 return;
             }
             if ( ret < 0 )
             {
-                job_.OnError( NODE_FATAL );
+                errCode_ = NODE_FATAL;
                 WriteResponse();
                 return;
             }
         }
         else
         {
-            PS_LOG( "Session::FirstRead error=" << error.message() );
+            PS_LOG( "SessionBoost::FirstRead error=" << error.message() );
         }
 
         HandleRead( error, bytes_transferred );
@@ -514,53 +599,33 @@ protected:
             if ( !request_.IsReadCompleted() )
             {
                 socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                                         boost::bind( &Session::HandleRead, shared_from_this(),
+                                         boost::bind( &SessionBoost::HandleRead, shared_from_this(),
                                                     boost::asio::placeholders::error,
                                                     boost::asio::placeholders::bytes_transferred ) );
             }
             else
             {
-                HandleRequest();
+                HandleRequest( request_ );
+
+                request_.Reset();
+                Start();
+                WriteResponse();
             }
         }
         else
         {
-            PS_LOG( "Session::HandleRead error=" << error.message() );
+            PS_LOG( "SessionBoost::HandleRead error=" << error.message() );
             //HandleError( error );
         }
     }
 
-    void HandleRequest()
-    {
-        job_.ParseRequest( request_ );
-
-        boost::scoped_ptr< ScriptExec > scriptExec(
-            execCreator_.Create( job_.GetScriptLanguage() )
-        );
-        if ( scriptExec )
-        {
-            scriptExec->Execute( &job_ );
-        }
-        else
-        {
-            PS_LOG( "Session::HandleRequest: appropriate executor not found for language: "
-                    << job_.GetScriptLanguage() );
-            job_.OnError( NODE_LANG_NOT_SUPPORTED );
-        }
-
-        request_.Reset();
-        Start();
-
-        WriteResponse();
-    }
-
     void WriteResponse()
     {
-        job_.GetResponse( response_ );
+        GetResponse( response_ );
 
         boost::asio::async_write( socket_,
                                 boost::asio::buffer( response_ ),
-                                boost::bind( &Session::HandleWrite, shared_from_this(),
+                                boost::bind( &SessionBoost::HandleWrite, shared_from_this(),
                                              boost::asio::placeholders::error,
                                              boost::asio::placeholders::bytes_transferred ) );
     }
@@ -569,7 +634,7 @@ protected:
     {
         if ( error )
         {
-            PS_LOG( "Session::HandleWrite error=" << error.message() );
+            PS_LOG( "SessionBoost::HandleWrite error=" << error.message() );
         }
     }
 
@@ -577,15 +642,13 @@ protected:
     tcp::socket socket_;
     BufferType buffer_;
     Request< BufferType > request_;
-    Job job_;
-    ExecCreator execCreator_;
     std::string response_;
 };
 
 
 class ConnectionAcceptor
 {
-    typedef boost::shared_ptr< Session > session_ptr;
+    typedef boost::shared_ptr< SessionBoost > session_ptr;
 
 public:
     ConnectionAcceptor( boost::asio::io_service &io_service, unsigned short port )
@@ -612,10 +675,10 @@ public:
 private:
     void StartAccept()
     {
-        session_ptr session( new Session( io_service_ ) );
+        session_ptr session( new SessionBoost( io_service_ ) );
         acceptor_.async_accept( session->GetSocket(),
                                 boost::bind( &ConnectionAcceptor::HandleAccept, this,
-                                            session, boost::asio::placeholders::error ) );
+                                             session, boost::asio::placeholders::error ) );
     }
 
     void HandleAccept( session_ptr session, const boost::system::error_code &error )
@@ -623,7 +686,7 @@ private:
         if ( !error )
         {
             cout << "connection accepted..." << endl;
-            io_service_.post( boost::bind( &Session::Start, session ) );
+            io_service_.post( boost::bind( &SessionBoost::Start, session ) );
             StartAccept();
         }
         else

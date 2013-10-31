@@ -323,6 +323,7 @@ public:
         boost::property_tree::ptree ptree;
         std::ostringstream ss, ss2;
 
+        ptree.put( "task", "exec" );
         ptree.put( "id", commDescr.shmemBlockId );
         ptree.put( "len", script.size() );
         ptree.put( "lang", job->GetScriptLanguage() );
@@ -355,6 +356,26 @@ class StopTask : public Action
             job->OnError( NODE_TASK_NOT_FOUND );
             return;
         }
+
+        commDescrPool->AllocCommDescr();
+        PyExecConnection::connection_ptr pyExecConnection( new PyExecConnection() );
+
+        // prepare json command
+        boost::property_tree::ptree ptree;
+        std::ostringstream ss, ss2;
+
+        ptree.put( "task", "stop_task" );
+        ptree.put( "job_id", job->GetJobId() );
+        ptree.put( "task_id", job->GetTaskId() );
+
+        boost::property_tree::write_json( ss, ptree, false );
+
+        ss2 << ss.str().size() << '\n' << ss.str();
+
+        int errCode = pyExecConnection->Send( ss2.str() );
+        job->OnError( errCode );
+
+        commDescrPool->FreeCommDescr();
     }
 };
 
@@ -470,7 +491,7 @@ private:
         }
         else
         {
-            PS_LOG( "Session::FirstRead error=" << error.message() );
+            PS_LOG( "SessionBoost::FirstRead error=" << error.message() );
         }
 
         HandleRead( error, bytes_transferred );
@@ -498,7 +519,7 @@ private:
         }
         else
         {
-            PS_LOG( "Session::HandleRead error=" << error.message() );
+            PS_LOG( "SessionBoost::HandleRead error=" << error.message() );
             //HandleError( error );
             OnReadCompletion( false );
         }
@@ -529,7 +550,7 @@ private:
     {
         if ( error )
         {
-            PS_LOG( "Session::HandleWrite error=" << error.message() );
+            PS_LOG( "SessionBoost::HandleWrite error=" << error.message() );
         }
     }
 
