@@ -92,25 +92,28 @@ class JobExec : public Job
 public:
     void ParseRequest( boost::property_tree::ptree &ptree )
     {
-        jobId_ = ptree.get<int>( "id" );
+        commId_ = ptree.get<int>( "id" );
         scriptLength_ = ptree.get<unsigned int>( "len" );
         language_ = ptree.get<std::string>( "lang" );
+        jobId_ = ptree.get<int64_t>( "job_id" );
         taskId_ = ptree.get<int>( "task_id" );
         numTasks_ = ptree.get<int>( "num_tasks" );
         timeout_ = ptree.get<int>( "timeout" );
     }
 
-    int GetJobId() const { return jobId_; }
+    int GetCommId() const { return commId_; }
     unsigned int GetScriptLength() const { return scriptLength_; }
     const std::string &GetScriptLanguage() const { return language_; }
+    int64_t GetJobId() const { return jobId_; }
     int GetTaskId() const { return taskId_; }
     int GetNumTasks() const { return numTasks_; }
     int GetTimeout() const { return timeout_; }
 
 private:
-    int jobId_;
+    int commId_;
     unsigned int scriptLength_;
     std::string language_;
+    int64_t jobId_;
     int taskId_;
     int numTasks_;
     int timeout_;
@@ -154,7 +157,7 @@ public:
 
         string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
 
-        size_t offset = job->GetJobId() * SHMEM_BLOCK_SIZE;
+        size_t offset = job->GetCommId() * SHMEM_BLOCK_SIZE;
         string shmemOffset = boost::lexical_cast<std::string>( offset );
 
         string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
@@ -467,7 +470,8 @@ public:
     void StopTask( JobStopTask &job )
     {
         ExecInfo execInfo;
-        if ( execTable.Find( job.GetJobId(), job.GetTaskId(), execInfo ) )
+        if ( execTable.Find( job.GetJobId(), job.GetTaskId(), execInfo ) &&
+             execTable.Delete( job.GetJobId(), job.GetTaskId() ) )
         {
             pid_t pid = execInfo.pid_;
             int ret = kill( pid, SIGTERM );
@@ -476,8 +480,11 @@ public:
                 PS_LOG( "StopTaskAction::StopTask: process killing failed: pid=" << pid << ", err=" << strerror(errno) );
                 job.OnError( NODE_FATAL );
             }
-
-            execTable.Delete( job.GetJobId(), job.GetTaskId() );
+            else
+            {
+                PS_LOG( "StopTaskAction::StopTask: task stopped, pid=" << pid <<
+                        ", jobId=" << job.GetJobId() << ", taskId=" << job.GetTaskId() );
+            }
         }
         else
         {

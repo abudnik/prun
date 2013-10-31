@@ -327,6 +327,7 @@ public:
         ptree.put( "id", commDescr.shmemBlockId );
         ptree.put( "len", script.size() );
         ptree.put( "lang", job->GetScriptLanguage() );
+        ptree.put( "job_id", job->GetJobId() );
         ptree.put( "task_id", taskId );
         ptree.put( "num_tasks", job->GetNumTasks() );
         ptree.put( "timeout", job->GetTimeout() );
