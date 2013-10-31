@@ -41,6 +41,7 @@ the License.
 #include "common/config.h"
 #include "common/error_code.h"
 #include "common/configure.h"
+#include "exec_info.h"
 #ifdef HAVE_SYS_PRCTL_H
 #include <sys/prctl.h>
 #endif
@@ -68,6 +69,8 @@ struct ThreadParams
 
 typedef std::map< boost::thread::id, ThreadParams > ThreadInfo;
 ThreadInfo threadInfo;
+
+ExecTable execTable;
 
 
 class Job
@@ -157,7 +160,7 @@ public:
         string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
         string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
 
-        ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+        const ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 
         int ret = execl( exePath_.c_str(), job->GetScriptLanguage().c_str(),
                          nodePath_.c_str(),
@@ -194,10 +197,18 @@ protected:
             ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
             threadParams.pid = pid;
 
+            ExecInfo execInfo;
+            execInfo.jobId_ = job_->GetJobId();
+            execInfo.taskId_ = job_->GetTaskId();
+            execInfo.pid_ = pid;
+            execTable.Add( execInfo );
+
             if ( DoFifoIO( threadParams.writeFifoFD, false, pid ) )
             {
                 DoFifoIO( threadParams.readFifoFD, true, pid );
             }
+
+            execTable.Delete( job_->GetJobId(), job_->GetTaskId() );
             //PS_LOG( "wait child done " << pid );
         }
         else
@@ -342,7 +353,7 @@ public:
         string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
         string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
 
-        ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+        const ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 
         int ret = execl( exePath_.c_str(), job->GetScriptLanguage().c_str(),
                          "-cp", nodePath_.c_str(),
@@ -455,6 +466,23 @@ class StopTaskAction
 public:
     void StopTask( JobStopTask &job )
     {
+        ExecInfo execInfo;
+        if ( execTable.Find( job.GetJobId(), job.GetTaskId(), execInfo ) )
+        {
+            pid_t pid = execInfo.pid_;
+            int ret = kill( pid, SIGTERM );
+            if ( ret == -1 )
+            {
+                PS_LOG( "StopTaskAction::StopTask: process killing failed: pid=" << pid << ", err=" << strerror(errno) );
+                job.OnError( NODE_FATAL );
+            }
+
+            execTable.Delete( job.GetJobId(), job.GetTaskId() );
+        }
+        else
+        {
+            job.OnError( NODE_TASK_NOT_FOUND );
+        }
     }
 };
 

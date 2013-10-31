@@ -13,6 +13,7 @@ struct ExecInfo
 {
     int64_t jobId_;
     int taskId_;
+    pid_t pid_; // used in pyexec
     boost::function< void () > callback_;
 };
 
@@ -27,7 +28,7 @@ public:
         table_.push_back( execInfo );
     }
 
-    void Delete( int64_t jobId, int taskId )
+    bool Delete( int64_t jobId, int taskId )
     {
         boost::unique_lock< boost::mutex > lock( mut_ );
         Container::iterator it = table_.begin();
@@ -37,9 +38,10 @@ public:
             if ( execInfo.jobId_ == jobId && execInfo.taskId_ == taskId )
             {
                 table_.erase( it );
-                break;
+                return true;
             }
         }
+        return false;
     }
 
     bool Contains( int64_t jobId, int taskId )
@@ -51,6 +53,22 @@ public:
             const ExecInfo &execInfo = *it;
             if ( execInfo.jobId_ == jobId && execInfo.taskId_ == taskId )
                 return true;
+        }
+        return false;
+    }
+
+    bool Find( int64_t jobId, int taskId, ExecInfo &info )
+    {
+        boost::unique_lock< boost::mutex > lock( mut_ );
+        Container::const_iterator it = table_.begin();
+        for( ; it != table_.end(); ++it )
+        {
+            const ExecInfo &execInfo = *it;
+            if ( execInfo.jobId_ == jobId && execInfo.taskId_ == taskId )
+            {
+                info = execInfo;
+                return true;
+            }
         }
         return false;
     }
