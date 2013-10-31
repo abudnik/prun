@@ -44,8 +44,10 @@ the License.
 #include "common/daemon.h"
 #include "common/request.h"
 #include "common.h"
+#include "comm_descriptor.h"
 #include "master_ping.h"
 #include "node_job.h"
+#include "exec_info.h"
 #include "job_completion_ping.h"
 #include "computer_info.h"
 
@@ -67,180 +69,8 @@ boost::interprocess::mapped_region *mappedRegion;
 
 Semaphore *taskSem;
 
-struct ThreadComm
-{
-    int connectId;
-};
-
-struct CommDescr
-{
-    CommDescr() {}
-
-    CommDescr( const CommDescr &descr )
-    {
-        *this = descr;
-    }
-
-    CommDescr & operator = ( const CommDescr &descr )
-    {
-        if ( this != &descr )
-        {
-            shmemBlockId = descr.shmemBlockId;
-            shmemAddr = descr.shmemAddr;
-            socket = descr.socket;
-            used = descr.used;
-        }
-        return *this;
-    }
-
-    int shmemBlockId;
-    char *shmemAddr;
-    boost::shared_ptr< tcp::socket > socket;
-    bool used;
-};
-
-class CommDescrPool
-{
-    typedef std::map< boost::thread::id, ThreadComm > CommParams;
-
-public:
-    CommDescrPool( int numJobThreads, boost::asio::io_service *io_service )
-    : sem_( new Semaphore( numJobThreads ) ),
-     io_service_( io_service )
-    {
-        for( int i = 0; i < numJobThreads; ++i )
-        {
-            // init shmem block associated with created thread
-            CommDescr commDescr;
-            commDescr.shmemBlockId = i;
-            commDescr.shmemAddr = (char*)mappedRegion->get_address() + i * SHMEM_BLOCK_SIZE;
-            commDescr.used = false;
-
-            memset( commDescr.shmemAddr, 0, SHMEM_BLOCK_SIZE );
-
-            boost::system::error_code ec;
-
-            // open socket to pyexec
-            tcp::resolver resolver( *io_service );
-            tcp::resolver::query query( tcp::v4(), "localhost", boost::lexical_cast<std::string>( DEFAULT_PYEXEC_PORT ) );
-            tcp::resolver::iterator iterator = resolver.resolve( query );
-
-            commDescr.socket = boost::shared_ptr< tcp::socket >( new tcp::socket( *io_service ) );
-            commDescr.socket->connect( *iterator, ec );
-            if ( ec )
-            {
-                PS_LOG( "CommDescrPool(): socket_.connect() failed " << ec.message() );
-                exit( 1 );
-            }
-
-            AddCommDescr( commDescr );
-        }
-    }
-
-    void AddCommDescr( const CommDescr &descr )
-    {
-        boost::unique_lock< boost::mutex > lock( commDescrMut_ );
-        commDescr_.push_back( descr );
-    }
-
-    CommDescr &GetCommDescr()
-    {
-        boost::unique_lock< boost::mutex > lock( commDescrMut_ );
-        ThreadComm &threadComm = commParams_[ boost::this_thread::get_id() ];
-        return commDescr_[ threadComm.connectId ];
-    }
-
-    void AllocCommDescr()
-    {
-        sem_->Wait();
-        boost::unique_lock< boost::mutex > lock( commDescrMut_ );
-        for( size_t i = 0; i < commDescr_.size(); ++i )
-        {
-            if ( !commDescr_[i].used )
-            {
-                commDescr_[i].used = true;
-                ThreadComm &threadComm = commParams_[ boost::this_thread::get_id() ];
-                threadComm.connectId = i;
-                return;
-            }
-        }
-        PS_LOG( "AllocCommDescr: available communication descriptor not found" );
-    }
-
-    void FreeCommDescr()
-    {
-        {
-            boost::unique_lock< boost::mutex > lock( commDescrMut_ );
-            ThreadComm &threadComm = commParams_[ boost::this_thread::get_id() ];
-            commDescr_[ threadComm.connectId ].used = false;
-            threadComm.connectId = -1;
-        }
-        sem_->Notify();
-    }
-
-    boost::asio::io_service *GetIoService() const { return io_service_; }
-
-private:
-    std::vector< CommDescr > commDescr_;
-    boost::mutex commDescrMut_;
-
-    CommParams commParams_;
-    boost::scoped_ptr< Semaphore > sem_;
-    boost::asio::io_service *io_service_;
-};
-
 CommDescrPool *commDescrPool;
 
-struct ExecInfo
-{
-    int64_t jobId_;
-    int taskId_;
-    boost::function< void () > callback_;
-};
-
-class ExecTable
-{
-    typedef std::list< ExecInfo > Container;
-
-public:
-    void Add( const ExecInfo &execInfo )
-    {
-        boost::unique_lock< boost::mutex > lock( mut_ );
-        table_.push_back( execInfo );
-    }
-
-    void Delete( int64_t jobId, int taskId )
-    {
-        boost::unique_lock< boost::mutex > lock( mut_ );
-        Container::iterator it = table_.begin();
-        for( ; it != table_.end(); ++it )
-        {
-            const ExecInfo &execInfo = *it;
-            if ( execInfo.jobId_ == jobId && execInfo.taskId_ == taskId )
-            {
-                table_.erase( it );
-                break;
-            }
-        }
-    }
-
-    void Clear()
-    {
-        boost::unique_lock< boost::mutex > lock( mut_ );
-        Container::iterator it = table_.begin();
-        for( ; it != table_.end(); ++it )
-        {
-            const ExecInfo &execInfo = *it;
-            if ( execInfo.callback_ )
-                execInfo.callback_();
-        }
-        table_.clear();
-    }
-
-private:
-    Container table_;
-    boost::mutex mut_;
-};
 ExecTable execTable;
 
 
@@ -610,6 +440,7 @@ private:
             {
                 OnReadCompletion( true );
                 HandleRequest();
+                WriteResponse();
             }
         }
         else
@@ -644,8 +475,6 @@ private:
             PS_LOG(request_.GetString());
             job_->OnError( NODE_FATAL );
         }
-
-        WriteResponse();
     }
 
     void OnReadCompletion( bool success )
@@ -1019,7 +848,8 @@ int main( int argc, char* argv[], char **envp )
             new boost::asio::io_service::work( io_service ) );
 
         boost::scoped_ptr< python_server::CommDescrPool > commDescrPool(
-            new python_server::CommDescrPool( python_server::numJobThreads, &io_service ) );
+            new python_server::CommDescrPool( python_server::numJobThreads, &io_service,
+                                              (char*)python_server::mappedRegion->get_address() ) );
         python_server::commDescrPool = commDescrPool.get();
 
         python_server::taskSem = new python_server::Semaphore( python_server::numJobThreads );
