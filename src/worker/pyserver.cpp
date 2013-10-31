@@ -102,81 +102,51 @@ public:
         memset( buffer_.c_array(), 0, buffer_.size() );
     }
 
-    int Send( Job *job, int taskId )
+    int Send( const std::string &message )
     {
-        job_ = job;
+        errCode_ = 0;
 
-        const std::string &script = job->GetScript();
-        CommDescr &commDescr = commDescrPool->GetCommDescr();
-        memcpy( commDescr.shmemAddr, script.c_str(), script.size() );
-        char *shmemRequestEnd = commDescr.shmemAddr + script.size();
-        *shmemRequestEnd = '\0';
-
-        int ret = 0;
-
-        execCompleted_ = false;
-
-        ExecInfo execInfo;
-        execInfo.jobId_ = job->GetJobId();
-        execInfo.taskId_ = taskId;
-        execInfo.callback_ = boost::bind( &PyExecConnection::Cancel, this );
-        execTable.Add( execInfo );
+        completed_ = false;
 
         try
         {
-            std::ostringstream ss, ss2;
-
-            ptree_.put( "id", commDescr.shmemBlockId );
-            ptree_.put( "len", script.size() );
-            ptree_.put( "lang", job->GetScriptLanguage() );
-            ptree_.put( "task_id", taskId );
-            ptree_.put( "num_tasks", job->GetNumTasks() );
-            ptree_.put( "timeout", job->GetTimeout() );
-
-            boost::property_tree::write_json( ss, ptree_, false );
-
-            ss2 << ss.str().size() << '\n' << ss.str();
-
             socket_->async_read_some( boost::asio::buffer( buffer_ ),
                                      boost::bind( &PyExecConnection::FirstRead, shared_from_this(),
                                                   boost::asio::placeholders::error,
                                                   boost::asio::placeholders::bytes_transferred ) );
 
             boost::asio::async_write( *socket_,
-                                      boost::asio::buffer( ss2.str() ),
+                                      boost::asio::buffer( message ),
                                       boost::bind( &PyExecConnection::HandleWrite, shared_from_this(),
                                                    boost::asio::placeholders::error,
                                                    boost::asio::placeholders::bytes_transferred ) );
 
             boost::unique_lock< boost::mutex > lock( responseMut_ );
-            while( !execCompleted_ )
+            while( !completed_ )
             {
                 const boost::system_time timeout = boost::get_system_time() + boost::posix_time::milliseconds( RESPONSE_TIMEOUT );
                 if ( responseCond_.timed_wait( lock, timeout ) )
                 {
-                    ret = job->GetErrorCode();
                     break;
                 }
                 else
                 {
-                    PS_LOG( "PyExecConnection::Send(): waiting task completion: jobId=" << job->GetJobId() <<
-                            ", taskId=" << taskId );
+                    PS_LOG( "PyExecConnection::Send(): waiting task completion" );
                 }
             }
         }
         catch( boost::system::system_error &e )
         {
             PS_LOG( "PyExecConnection::Send() failed: " << e.what() );
-            ret = -1;
+            errCode_ = NODE_FATAL;
         }
 
-        execTable.Delete( job->GetJobId(), taskId );
-        return ret;
+        return errCode_;
     }
 
     void Cancel()
     {
-        job_->OnError( NODE_FATAL );
+        errCode_ = NODE_FATAL;
         NotifyResponseCondVar();
     }
 
@@ -201,14 +171,14 @@ private:
             if ( ret == 0 )
             {
                 socket_->async_read_some( boost::asio::buffer( buffer_ ),
-                                         boost::bind( &PyExecConnection::FirstRead, shared_from_this(),
-                                                      boost::asio::placeholders::error,
-                                                      boost::asio::placeholders::bytes_transferred ) );
+                                          boost::bind( &PyExecConnection::FirstRead, shared_from_this(),
+                                                       boost::asio::placeholders::error,
+                                                       boost::asio::placeholders::bytes_transferred ) );
                 return;
             }
             if ( ret < 0 )
             {
-                job_->OnError( NODE_FATAL );
+                errCode_ = NODE_FATAL;
                 NotifyResponseCondVar();
                 return;
             }
@@ -226,9 +196,9 @@ private:
             if ( !response_.IsReadCompleted() )
             {
                 socket_->async_read_some( boost::asio::buffer( buffer_ ),
-                                         boost::bind( &PyExecConnection::HandleRead, shared_from_this(),
-                                                    boost::asio::placeholders::error,
-                                                    boost::asio::placeholders::bytes_transferred ) );
+                                          boost::bind( &PyExecConnection::HandleRead, shared_from_this(),
+                                                       boost::asio::placeholders::error,
+                                                       boost::asio::placeholders::bytes_transferred ) );
             }
             else
             {
@@ -239,7 +209,7 @@ private:
         else
         {
             PS_LOG( "PyExecConnection::HandleRead error=" << error.message() );
-            job_->OnError( NODE_FATAL );
+            errCode_ = NODE_FATAL;
             NotifyResponseCondVar();
         }
     }
@@ -247,30 +217,27 @@ private:
     void HandleResponse()
     {
         std::istringstream ss( response_.GetString() );
-        ptree_.clear();
 
-        boost::property_tree::read_json( ss, ptree_ );
-
-        int errCode = ptree_.get<int>( "err" );
-        job_->OnError( errCode );
+        boost::property_tree::ptree ptree;
+        boost::property_tree::read_json( ss, ptree );
+        errCode_ = ptree.get<int>( "err" );
     }
 
     void NotifyResponseCondVar()
     {
-        execCompleted_ = true;
+        completed_ = true;
         boost::unique_lock< boost::mutex > lock( responseMut_ );
         responseCond_.notify_one();
     }
 
 private:
-    boost::property_tree::ptree ptree_;
     tcp::socket *socket_;
     BufferType buffer_;
     Request< BufferType > response_;
-    bool execCompleted_; // true, if pyexec completed script execution
+    bool completed_;
     boost::condition_variable responseCond_;
     boost::mutex responseMut_;
-    Job *job_;
+    int errCode_;
     const static int RESPONSE_TIMEOUT = 60 * 1000; // 60 sec
 };
 
@@ -338,7 +305,40 @@ public:
     {
         commDescrPool->AllocCommDescr();
         PyExecConnection::connection_ptr pyExecConnection( new PyExecConnection() );
-        pyExecConnection->Send( job.get(), taskId );
+
+        ExecInfo execInfo;
+        execInfo.jobId_ = job->GetJobId();
+        execInfo.taskId_ = taskId;
+        execInfo.callback_ = boost::bind( &PyExecConnection::Cancel, pyExecConnection );
+        execTable.Add( execInfo );
+
+        // write script into shared memory
+        const std::string &script = job->GetScript();
+        CommDescr &commDescr = commDescrPool->GetCommDescr();
+        memcpy( commDescr.shmemAddr, script.c_str(), script.size() );
+        char *shmemRequestEnd = commDescr.shmemAddr + script.size();
+        *shmemRequestEnd = '\0';
+
+        // prepare json command
+        boost::property_tree::ptree ptree;
+        std::ostringstream ss, ss2;
+
+        ptree.put( "id", commDescr.shmemBlockId );
+        ptree.put( "len", script.size() );
+        ptree.put( "lang", job->GetScriptLanguage() );
+        ptree.put( "task_id", taskId );
+        ptree.put( "num_tasks", job->GetNumTasks() );
+        ptree.put( "timeout", job->GetTimeout() );
+
+        boost::property_tree::write_json( ss, ptree, false );
+
+        ss2 << ss.str().size() << '\n' << ss.str();
+
+        int errCode = pyExecConnection->Send( ss2.str() );
+        job->OnError( errCode );
+
+        execTable.Delete( job->GetJobId(), taskId );
+
         commDescrPool->FreeCommDescr();
 
         SaveCompletionResults( job, taskId );

@@ -42,6 +42,19 @@ public:
         }
     }
 
+    bool Contains( int64_t jobId, int taskId )
+    {
+        boost::unique_lock< boost::mutex > lock( mut_ );
+        Container::const_iterator it = table_.begin();
+        for( ; it != table_.end(); ++it )
+        {
+            const ExecInfo &execInfo = *it;
+            if ( execInfo.jobId_ == jobId && execInfo.taskId_ == taskId )
+                return true;
+        }
+        return false;
+    }
+
     void Clear()
     {
         boost::unique_lock< boost::mutex > lock( mut_ );
