@@ -192,6 +192,8 @@ protected:
 
     virtual pid_t DoFork()
     {
+        FlushFifo();
+
         pid_t pid = fork();
 
         if ( pid > 0 )
@@ -257,6 +259,7 @@ protected:
                     ret = read( fifo, &errCode, sizeof( errCode ) );
                     if ( ret > 0 )
                     {
+                        job_->OnError( errCode );
                         return true;
                     }
                     else
@@ -309,6 +312,32 @@ protected:
             job_->OnError( NODE_FATAL );
         }
         return false;
+    }
+
+private:
+    void FlushFifo()
+    {
+        ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+        int fifo = threadParams.readFifoFD;
+        if ( fifo != -1 )
+        {
+            pollfd pfd[1];
+            pfd[0].fd = fifo;
+            pfd[0].events = POLLIN;
+
+            while( 1 )
+            {
+                int ret = poll( pfd, 1, 0 );
+                if ( ret > 0 )
+                {
+                    char buf[64];
+                    ret = read( fifo, buf, sizeof( buf ) );
+                    if ( ret > 0 )
+                        continue;
+                }
+                break;
+            }
+        }
     }
 
 protected:
@@ -479,6 +508,20 @@ public:
              execTable.Delete( job.GetJobId(), job.GetTaskId() ) )
         {
             pid_t pid = execInfo.pid_;
+
+            int fifo = FindFifo( pid );
+            if ( fifo != -1 )
+            {
+                int errCode = NODE_JOB_TIMEOUT;
+                int ret = write( fifo, &errCode, sizeof( errCode ) );
+                if ( ret == -1 )
+                    PS_LOG( "StopTaskAction::StopTask: write fifo failed, err=" << strerror(errno) );
+            }
+            else
+            {
+                PS_LOG( "StopTaskAction::StopTask: fifo not found for pid=" << pid );
+            }
+
             int ret = kill( pid, SIGTERM );
             if ( ret == -1 )
             {
@@ -496,6 +539,19 @@ public:
             PS_LOG( "StopTaskAction::StopTask: task not found, jobId=" << job.GetJobId() << ", taskId=" << job.GetTaskId() );
             job.OnError( NODE_TASK_NOT_FOUND );
         }
+    }
+
+private:
+    int FindFifo( pid_t pid )
+    {
+        ThreadInfo::const_iterator it = threadInfo.begin();
+        for( ; it != threadInfo.end(); ++it )
+        {
+            const ThreadParams &threadParams = it->second;
+            if ( threadParams.pid == pid )
+                return threadParams.readFifoFD;
+        }
+        return -1;
     }
 };
 
@@ -518,7 +574,6 @@ protected:
             JobExec job;
             job.ParseRequest( ptree );
             Execute( job );
-            errCode_ = job.GetError();
         }
         else
         if ( task == "stop_task" )
@@ -560,6 +615,7 @@ private:
         if ( scriptExec )
         {
             scriptExec->Execute( &job );
+            errCode_ = job.GetError();
         }
         else
         {
