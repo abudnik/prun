@@ -241,14 +241,14 @@ private:
     const static int RESPONSE_TIMEOUT = 60 * 1000; // 60 sec
 };
 
-class SendToPyExec : public Action
+class ExecuteTask : public Action
 {
     virtual void Execute( const boost::shared_ptr< Job > &job )
     {
         const Job::Tasks &tasks = job->GetTasks();
         if ( tasks.empty() )
         {
-            PS_LOG( "SendToPyExec::Execute: empty tasks for jobId=" << job->GetJobId() );
+            PS_LOG( "ExecuteTask::Execute: empty tasks for jobId=" << job->GetJobId() );
             job->OnError( NODE_FATAL );
             return;
         }
@@ -259,8 +259,8 @@ class SendToPyExec : public Action
         int firstTaskId = *it;
         for( ++it; it != tasks.end(); ++it )
         {
-            io_service->post( boost::bind( &SendToPyExec::DoSend,
-                                           boost::shared_ptr< SendToPyExec >( new SendToPyExec ),
+            io_service->post( boost::bind( &ExecuteTask::DoSend,
+                                           boost::shared_ptr< ExecuteTask >( new ExecuteTask ),
                                            boost::shared_ptr< Job >( job ), *it ) );
         }
 
@@ -296,7 +296,7 @@ class SendToPyExec : public Action
         }
         catch( boost::system::system_error &e )
         {
-            PS_LOG( "SendToPyExec::NodeJobCompletionPing: send_to failed: " << e.what() << ", host : " << master_endpoint );
+            PS_LOG( "ExecuteTask::NodeJobCompletionPing: send_to failed: " << e.what() << ", host : " << master_endpoint );
         }
     }
 
@@ -346,15 +346,29 @@ public:
     }
 };
 
+class StopTask : public Action
+{
+    virtual void Execute( const boost::shared_ptr< Job > &job )
+    {
+        if ( !execTable.Contains( job->GetJobId(), job->GetTaskId() ) )
+        {
+            job->OnError( NODE_TASK_NOT_FOUND );
+            return;
+        }
+    }
+};
+
 class ActionCreator
 {
 public:
     virtual Action *Create( const std::string &taskType )
     {
         if ( taskType == "exec" )
-            return new SendToPyExec();
+            return new ExecuteTask();
         if ( taskType == "get_result" )
             return new NoAction();
+        if ( taskType == "stop_task" )
+            return new StopTask();
         return NULL;
     }
 };

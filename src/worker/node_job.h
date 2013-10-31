@@ -75,7 +75,7 @@ public:
         if ( taskType_ == "stop_task" )
         {
             ProtocolJson protocol;
-            protocol.SendCommandResult( response, 0 );
+            protocol.SendCommandResult( response, GetErrorCode() );
         }
     }
 

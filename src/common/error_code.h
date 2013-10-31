@@ -6,5 +6,6 @@
 #define NODE_JOB_TIMEOUT -3
 #define NODE_LANG_NOT_SUPPORTED -4
 #define NODE_SCRIPT_EXEC_FAILED -5
+#define NODE_TASK_NOT_FOUND -6
 
 #endif
