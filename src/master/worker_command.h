@@ -1,6 +1,7 @@
 #ifndef __WORKER_COMMAND_H
 #define __WORKER_COMMAND_H
 
+#include "common/log.h"
 #include "command.h"
 #include "worker.h"
 
@@ -16,6 +17,7 @@ public:
 private:
     virtual void OnCompletion( int errCode, const std::string &hostIP )
     {
+        PS_LOG( "Stopping task on worker " << hostIP << ", errCode=" << errCode );
     }
 };
 

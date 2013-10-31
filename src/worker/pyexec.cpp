@@ -481,6 +481,7 @@ public:
         }
         else
         {
+            PS_LOG( "StopTaskAction::StopTask: task not found, jobId=" << job.GetJobId() << ", taskId=" << job.GetTaskId() );
             job.OnError( NODE_TASK_NOT_FOUND );
         }
     }
