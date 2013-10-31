@@ -217,6 +217,11 @@ protected:
         else
         if ( pid == 0 )
         {
+            sigset_t sigset;
+            sigemptyset( &sigset );
+            sigaddset( &sigset, SIGTERM );
+            pthread_sigmask( SIG_UNBLOCK, &sigset, NULL );
+
             isFork = true;
             // linux-only. kill child process, if parent exits
 #ifdef HAVE_SYS_PRCTL_H
