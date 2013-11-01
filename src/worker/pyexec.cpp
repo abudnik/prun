@@ -180,10 +180,18 @@ public:
     virtual void KillExec( pid_t pid )
     {
         PS_LOG( "poll timed out, trying to kill process: " << pid );
-        int ret = kill( pid, SIGTERM );
-        if ( ret == -1 )
+
+        if ( execTable.Delete( job_->GetJobId(), job_->GetTaskId() ) )
         {
-            PS_LOG( "process killing failed: pid=" << pid << ", err=" << strerror(errno) );
+            int ret = kill( pid, SIGTERM );
+            if ( ret == -1 )
+            {
+                PS_LOG( "process killing failed: pid=" << pid << ", err=" << strerror(errno) );
+            }
+        }
+        else
+        {
+            PS_LOG( "ScriptExec::KillExec: it seems that process is already killed, pid=" << pid );
         }
     }
 
