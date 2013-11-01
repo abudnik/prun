@@ -135,14 +135,14 @@ void TimeoutManager::PushTask( const WorkerTask &task, const std::string &hostIP
     );
 }
 
-void TimeoutManager::PushCommand( CommandPtr &command, const std::string &hostIP, int timeout )
+void TimeoutManager::PushCommand( CommandPtr &command, const std::string &hostIP, int delay )
 {
-    if ( timeout < 0 )
+    if ( delay < 0 )
         return;
 
     namespace pt = boost::posix_time;
     const pt::ptime now = pt::second_clock::local_time();
-    const pt::ptime deadline = now + pt::seconds( timeout );
+    const pt::ptime deadline = now + pt::seconds( delay );
 
     boost::shared_ptr< StopTaskTimeoutHandler > handler( new StopTaskTimeoutHandler );
     handler->command_ = command;

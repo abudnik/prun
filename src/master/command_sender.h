@@ -41,7 +41,6 @@ private:
     boost::mutex awakeMut_;
     boost::condition_variable awakeCond_;
     bool newCommandAvailable_;
-    const static int COMMAND_REPEAT_TIMEOUT = 60; // 60 sec
 };
 
 class RpcBoost : public boost::enable_shared_from_this< RpcBoost >

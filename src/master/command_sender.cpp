@@ -55,7 +55,7 @@ void CommandSender::OnSendCommand( bool success, int errCode, CommandPtr &comman
     if ( !success ) // retrieving of job result from message failed
     {
         errCode = -1;
-        timeoutManager_->PushCommand( command, hostIP, COMMAND_REPEAT_TIMEOUT );
+        timeoutManager_->PushCommand( command, hostIP, command->GetRepeatDelay() );
     }
     command->OnExec( errCode, hostIP );
 }

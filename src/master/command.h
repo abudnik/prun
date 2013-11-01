@@ -51,6 +51,8 @@ public:
             callback_( errCode, hostIP );
     }
 
+    virtual int GetRepeatDelay() const = 0;
+
 private:
     virtual void OnCompletion( int errCode, const std::string &hostIP ) = 0;
 

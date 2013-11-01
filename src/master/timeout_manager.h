@@ -58,7 +58,7 @@ public:
     void PushJob( int64_t jobId, int jobTimeout );
     void PushTask( const WorkerTask &task, const std::string &hostIP, int timeout );
 
-    void PushCommand( CommandPtr &command, const std::string &hostIP, int timeout );
+    void PushCommand( CommandPtr &command, const std::string &hostIP, int delay );
 
 private:
     void CheckTimeouts();

@@ -18,6 +18,14 @@ private:
     {
         PS_LOG( "Stopping task on worker " << hostIP << ", errCode=" << errCode );
     }
+
+    virtual int GetRepeatDelay() const
+    {
+        return REPEAT_DELAY;
+    }
+
+private:
+    const static int REPEAT_DELAY = 60; // 60 sec
 };
 
 } // namespace master
