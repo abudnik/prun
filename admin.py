@@ -71,6 +71,15 @@ class Command_Run():
             raise e
         return json.JSONEncoder().encode( {"command" : "run", "file" : path} )
 
+class Command_Stop():
+    def Prepare(self, cmd):
+        try:
+            jobId = int( cmd.split()[1] )
+        except Exception as e:
+            print( "invalid jobId argument" )
+            raise e
+        return json.JSONEncoder().encode( {"command" : "stop", "job_id" : jobId} )
+
 class Command_Info():
     def Prepare(self, cmd):
         try:
@@ -94,6 +103,7 @@ class CommandDispatcher():
     _instance = None
     def __init__(self):
         self.map_ = {'run'   : Command_Run(),
+                     'stop'  : Command_Stop(),
                      'info'  : Command_Info(),
                      'stat'  : Command_Stat(),
                      'test'  : Command_Test()}
@@ -129,6 +139,7 @@ class Master():
 def PrintHelp():
     print( "Commands:" )
     print( "  run /path/to/job/file -- run job, which described in .job file" )
+    print( "  stop <job_id>         -- interrupt job execution" )
     print( "  info <job_id>         -- show job execution statistics" )
     print( "  stat                  -- show master statistics" )
     print( "  repeat, r             -- repeat last command" )

@@ -50,6 +50,24 @@ void AdminCommand_Run::PrintJobInfo( Job *job, AdminSession *session ) const
     session->OnCommandCompletion( ss.str() );
 }
 
+void AdminCommand_Stop::Execute( const std::string &command,
+                                 const boost::property_tree::ptree &ptree,
+                                 AdminSession *session )
+{
+    try
+    {
+        int64_t jobId = ptree.get<int64_t>( "job_id" );
+        if ( !JobManager::Instance().DeleteJob( jobId ) )
+        {
+            Scheduler::Instance().OnJobTimeout( jobId );
+        }
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_Stop::Execute: " << e.what() );
+    }
+}
+
 void AdminCommand_Info::Execute( const std::string &command,
                                  const boost::property_tree::ptree &ptree,
                                  AdminSession *session )
@@ -63,7 +81,7 @@ void AdminCommand_Info::Execute( const std::string &command,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_Stat::Execute: " << e.what() );
+        PS_LOG( "AdminCommand_Info::Execute: " << e.what() );
     }
 }
 
@@ -87,6 +105,7 @@ void AdminCommand_Stat::Execute( const std::string &command,
 void AdminCommandDispatcher::Initialize()
 {
     map_[ "run" ] = new AdminCommand_Run;
+    map_[ "stop" ] = new AdminCommand_Stop;
     map_[ "info" ] = new AdminCommand_Info;
     map_[ "stat" ] = new AdminCommand_Stat;
 }

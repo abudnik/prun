@@ -34,6 +34,14 @@ private:
     void PrintJobInfo( Job *job, AdminSession *session ) const;
 };
 
+class AdminCommand_Stop : public AdminCommand
+{
+public:
+    virtual void Execute( const std::string &command,
+                          const boost::property_tree::ptree &ptree,
+                          AdminSession *session );
+};
+
 class AdminCommand_Info : public AdminCommand
 {
 public:

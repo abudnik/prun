@@ -263,7 +263,8 @@ int main( int argc, char* argv[], char **envp )
         // start command sender
         int maxSimultCommandSend = cfg.Get<int>( "max_simult_command_send" );
         boost::scoped_ptr< master::CommandSender > commandSender(
-            new master::CommandSenderBoost( io_service_command_send, maxSimultCommandSend )
+            new master::CommandSenderBoost( io_service_command_send, timeoutManager.get(),
+                                            maxSimultCommandSend )
         );
         commandSender->Start();
 

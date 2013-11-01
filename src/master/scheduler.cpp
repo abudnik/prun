@@ -418,7 +418,6 @@ void Scheduler::StopWorkers( int64_t jobId )
                     WorkerManager::Instance().AddCommand( commandPtr, worker->GetIP() );
                 }
 
-
                 int numTasks = workerJob.GetNumTasks( jobId );
                 nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - numTasks );
                 workerJob.DeleteJob( jobId );

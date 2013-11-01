@@ -8,6 +8,7 @@
 #include "common/helper.h"
 #include "common/request.h"
 #include "command.h"
+#include "timeout_manager.h"
 
 using boost::asio::ip::tcp;
 
@@ -16,8 +17,9 @@ namespace master {
 class CommandSender : python_server::Observer
 {
 public:
-    CommandSender()
-    : stopped_( false ), newCommandAvailable_( false )
+    CommandSender( TimeoutManager *timeoutManager )
+    : stopped_( false ), timeoutManager_( timeoutManager ),
+     newCommandAvailable_( false )
     {}
 
     virtual void Start() = 0;
@@ -35,10 +37,11 @@ private:
 
 private:
     bool stopped_;
-
+    TimeoutManager *timeoutManager_;
     boost::mutex awakeMut_;
     boost::condition_variable awakeCond_;
     bool newCommandAvailable_;
+    const static int COMMAND_REPEAT_TIMEOUT = 60; // 60 sec
 };
 
 class RpcBoost : public boost::enable_shared_from_this< RpcBoost >
@@ -89,8 +92,10 @@ class CommandSenderBoost : public CommandSender
 {
 public:
     CommandSenderBoost( boost::asio::io_service &io_service,
+                        TimeoutManager *timeoutManager,
                         int maxSimultCommandSenders )
-    : io_service_( io_service ),
+    : CommandSender( timeoutManager ),
+     io_service_( io_service ),
      cmdSenderSem_( maxSimultCommandSenders )
     {}
 

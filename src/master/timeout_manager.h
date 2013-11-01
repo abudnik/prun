@@ -1,5 +1,5 @@
-#ifndef __JOB_TIMEOUT_H
-#define __JOB_TIMEOUT_H
+#ifndef __TIMEOUT_MANAGER_H
+#define __TIMEOUT_MANAGER_H
 
 #include <boost/asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -7,6 +7,7 @@
 #include <boost/thread/mutex.hpp>
 #include "common/helper.h"
 #include "worker.h"
+#include "command.h"
 
 namespace master {
 
@@ -35,6 +36,12 @@ class TimeoutManager
         void HandleTimeout();
         int64_t jobId_;
     };
+    struct StopTaskTimeoutHandler
+    {
+        void HandleTimeout();
+        CommandPtr command_;
+        std::string hostIP_;
+    };
 
 public:
     TimeoutManager( boost::asio::io_service &io_service )
@@ -50,6 +57,8 @@ public:
     void PushJobQueue( int64_t jobId, int queueTimeout );
     void PushJob( int64_t jobId, int jobTimeout );
     void PushTask( const WorkerTask &task, const std::string &hostIP, int timeout );
+
+    void PushCommand( CommandPtr &command, const std::string &hostIP, int timeout );
 
 private:
     void CheckTimeouts();

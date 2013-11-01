@@ -50,9 +50,9 @@ Job *JobManager::GetJobById( int64_t jobId )
     return jobs_.GetJobById( jobId );
 }
 
-void JobManager::DeleteJob( int64_t jobId )
+bool JobManager::DeleteJob( int64_t jobId )
 {
-    jobs_.DeleteJob( jobId );
+    return jobs_.DeleteJob( jobId );
 }
 
 Job *JobManager::PopJob()

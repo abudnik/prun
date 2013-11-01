@@ -53,7 +53,10 @@ void CommandSender::NotifyObserver( int event )
 void CommandSender::OnSendCommand( bool success, int errCode, CommandPtr &command, const std::string &hostIP )
 {
     if ( !success ) // retrieving of job result from message failed
+    {
         errCode = -1;
+        timeoutManager_->PushCommand( command, hostIP, COMMAND_REPEAT_TIMEOUT );
+    }
     command->OnExec( errCode, hostIP );
 }
 

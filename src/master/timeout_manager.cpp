@@ -2,6 +2,7 @@
 #include "timeout_manager.h"
 #include "scheduler.h"
 #include "job_manager.h"
+#include "worker_manager.h"
 
 namespace master {
 
@@ -18,6 +19,11 @@ void TimeoutManager::JobTimeoutHandler::HandleTimeout()
 void TimeoutManager::JobQueueTimeoutHandler::HandleTimeout()
 {
     JobManager::Instance().DeleteJob( jobId_ );
+}
+
+void TimeoutManager::StopTaskTimeoutHandler::HandleTimeout()
+{
+    WorkerManager::Instance().AddCommand( command_, hostIP_ );
 }
 
 
@@ -119,6 +125,30 @@ void TimeoutManager::PushTask( const WorkerTask &task, const std::string &hostIP
     handler->hostIP_ = hostIP;
     Callback callback(
         boost::bind( &TaskTimeoutHandler::HandleTimeout, handler )
+    );
+
+    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    jobs_.insert( std::pair< pt::ptime, Callback >(
+                      deadline,
+                      callback
+                )
+    );
+}
+
+void TimeoutManager::PushCommand( CommandPtr &command, const std::string &hostIP, int timeout )
+{
+    if ( timeout < 0 )
+        return;
+
+    namespace pt = boost::posix_time;
+    const pt::ptime now = pt::second_clock::local_time();
+    const pt::ptime deadline = now + pt::seconds( timeout );
+
+    boost::shared_ptr< StopTaskTimeoutHandler > handler( new StopTaskTimeoutHandler );
+    handler->command_ = command;
+    handler->hostIP_ = hostIP;
+    Callback callback(
+        boost::bind( &StopTaskTimeoutHandler::HandleTimeout, handler )
     );
 
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );

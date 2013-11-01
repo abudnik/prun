@@ -20,14 +20,14 @@ Job *JobQueue::GetJobById( int64_t jobId )
     return NULL;
 }
 
-void JobQueue::DeleteJob( int64_t jobId )
+bool JobQueue::DeleteJob( int64_t jobId )
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
 
     {
         IdToJob::iterator it = idToJob_.find( jobId );
         if ( it == idToJob_.end() )
-            return;
+            return false;
         idToJob_.erase( it );
     }
 
@@ -48,8 +48,9 @@ void JobQueue::DeleteJob( int64_t jobId )
 
         jobs_.erase( it );
         --numJobs_;
-        break;
+        return true;
     }
+    return false;
 }
 
 Job *JobQueue::PopJob()

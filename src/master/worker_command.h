@@ -3,7 +3,6 @@
 
 #include "common/log.h"
 #include "command.h"
-#include "worker.h"
 
 namespace master {
 

@@ -92,7 +92,7 @@ public:
     Job *GetTopJob();
 
     Job *GetJobById( int64_t jobId );
-    void DeleteJob( int64_t jobId );
+    bool DeleteJob( int64_t jobId );
 
     void Clear( bool doDelete = true );
 
