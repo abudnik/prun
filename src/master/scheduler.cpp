@@ -284,6 +284,8 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
 {
     if ( !success )
     {
+        if ( !jobs_.FindJobByJobId( workerJob.GetJobId() ) )
+            return;
         {
             Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
 
@@ -309,6 +311,10 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
 void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, const std::string &hostIP )
 {
     PS_LOG( "Scheduler::OnTaskCompletion " << errCode );
+
+    if ( !jobs_.FindJobByJobId( workerTask.GetJobId() ) )
+        return;
+
     if ( !errCode )
     {
         Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
