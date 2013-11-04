@@ -55,7 +55,7 @@ the License.
 using namespace std;
 using boost::asio::ip::tcp;
 
-namespace python_server {
+namespace worker {
 
 bool isDaemon;
 uid_t uid;
@@ -620,20 +620,20 @@ private:
     tcp::acceptor acceptor_;
 };
 
-} // namespace python_server
+} // namespace worker
 
 
 namespace {
 
 void VerifyCommandlineParams()
 {
-    if ( python_server::uid )
+    if ( worker::uid )
     {
         // check uid existance
         char line[256] = { '\0' };
 
         std::ostringstream command;
-        command << "getent passwd " << python_server::uid << "|cut -d: -f1";
+        command << "getent passwd " << worker::uid << "|cut -d: -f1";
 
         FILE *cmd = popen( command.str().c_str(), "r" );
         fgets( line, sizeof(line), cmd );
@@ -641,7 +641,7 @@ void VerifyCommandlineParams()
 
         if ( !strlen( line ) )
         {
-            std::cout << "Unknown uid: " << python_server::uid << std::endl;
+            std::cout << "Unknown uid: " << worker::uid << std::endl;
             exit( 1 );
         }
     }
@@ -659,10 +659,10 @@ void SigHandler( int s )
     if ( s == SIGCHLD )
     {
         int status;
-        pid_t pid = waitpid( python_server::pyexecPid, &status, WNOHANG );
-        // if ( pid != python_server::pyexecPid )
+        pid_t pid = waitpid( worker::pyexecPid, &status, WNOHANG );
+        // if ( pid != worker::pyexecPid )
         // {
-        //  PS_LOG( "SigHandler: waitpid() failed, pid= " << python_server::pyexecPid << ", err= " << strerror(errno) );
+        //  PS_LOG( "SigHandler: waitpid() failed, pid= " << worker::pyexecPid << ", err= " << strerror(errno) );
         // }
         // else
         // {
@@ -719,15 +719,15 @@ void RunPyExecProcess()
     else
     if ( pid == 0 )
     {
-        std::string exePath( python_server::exeDir );
+        std::string exePath( worker::exeDir );
         exePath += "/pyexec";
 
         int ret = execl( exePath.c_str(), "pyexec", "--num_thread",
-                         ( boost::lexical_cast<std::string>( python_server::numJobThreads ) ).c_str(),
-                         "--exe_dir", python_server::exeDir.c_str(),
-                         python_server::isDaemon ? "--d" : " ",
-                         python_server::uid != 0 ? "--u" : " ",
-                         python_server::uid != 0 ? ( boost::lexical_cast<std::string>( python_server::uid ) ).c_str() : " ",
+                         ( boost::lexical_cast<std::string>( worker::numJobThreads ) ).c_str(),
+                         "--exe_dir", worker::exeDir.c_str(),
+                         worker::isDaemon ? "--d" : " ",
+                         worker::uid != 0 ? "--u" : " ",
+                         worker::uid != 0 ? ( boost::lexical_cast<std::string>( worker::uid ) ).c_str() : " ",
                          NULL );
 
         if ( ret < 0 )
@@ -740,7 +740,7 @@ void RunPyExecProcess()
     if ( pid > 0 )
     {
         // wait while pyexec completes initialization
-        python_server::pyexecPid = pid;
+        worker::pyexecPid = pid;
         siginfo_t info;
         sigset_t waitset;
         sigemptyset( &waitset );
@@ -755,16 +755,16 @@ void SetupPyExecIPC()
 {
     namespace ipc = boost::interprocess;
 
-    ipc::shared_memory_object::remove( python_server::SHMEM_NAME );
+    ipc::shared_memory_object::remove( worker::SHMEM_NAME );
 
     try
     {
-        python_server::sharedMemPool = new ipc::shared_memory_object( ipc::create_only, python_server::SHMEM_NAME, ipc::read_write );
+        worker::sharedMemPool = new ipc::shared_memory_object( ipc::create_only, worker::SHMEM_NAME, ipc::read_write );
 
-        size_t shmemSize = python_server::numJobThreads * python_server::SHMEM_BLOCK_SIZE;
-        python_server::sharedMemPool->truncate( shmemSize );
+        size_t shmemSize = worker::numJobThreads * worker::SHMEM_BLOCK_SIZE;
+        worker::sharedMemPool->truncate( shmemSize );
 
-        python_server::mappedRegion = new ipc::mapped_region( *python_server::sharedMemPool, ipc::read_write );
+        worker::mappedRegion = new ipc::mapped_region( *worker::sharedMemPool, ipc::read_write );
     }
     catch( std::exception &e )
     {
@@ -778,19 +778,19 @@ void AtExit()
     namespace ipc = boost::interprocess;
 
     // send stop signal to PyExec proccess
-    kill( python_server::pyexecPid, SIGTERM );
+    kill( worker::pyexecPid, SIGTERM );
 
     // remove shared memory
-    ipc::shared_memory_object::remove( python_server::SHMEM_NAME );
+    ipc::shared_memory_object::remove( worker::SHMEM_NAME );
 
-    delete python_server::mappedRegion;
-    python_server::mappedRegion = NULL;
+    delete worker::mappedRegion;
+    worker::mappedRegion = NULL;
 
-    delete python_server::sharedMemPool;
-    python_server::sharedMemPool = NULL;
+    delete worker::sharedMemPool;
+    worker::sharedMemPool = NULL;
 
-    delete python_server::taskSem;
-    python_server::taskSem = NULL;
+    delete worker::taskSem;
+    worker::taskSem = NULL;
 
     common::logger::ShutdownLogger();
 }
@@ -815,12 +815,12 @@ int main( int argc, char* argv[], char **envp )
     try
     {
         // initialization
-        python_server::ComputerInfo &compInfo = python_server::ComputerInfo::Instance();
-        python_server::numJobThreads = 2 * compInfo.GetNumCPU();
-        python_server::isDaemon = false;
-        python_server::uid = 0;
+        worker::ComputerInfo &compInfo = worker::ComputerInfo::Instance();
+        worker::numJobThreads = 2 * compInfo.GetNumCPU();
+        worker::isDaemon = false;
+        worker::uid = 0;
 
-        python_server::exeDir = boost::filesystem::system_complete( argv[0] ).branch_path().string();
+        worker::exeDir = boost::filesystem::system_complete( argv[0] ).branch_path().string();
 
         // parse input command line options
         namespace po = boost::program_options;
@@ -851,36 +851,36 @@ int main( int argc, char* argv[], char **envp )
 
         if ( vm.count( "u" ) )
         {
-            python_server::uid = vm[ "u" ].as<uid_t>();
+            worker::uid = vm[ "u" ].as<uid_t>();
         }
         VerifyCommandlineParams();
 
         if ( vm.count( "d" ) )
         {
             common::StartAsDaemon();
-            python_server::isDaemon = true;
+            worker::isDaemon = true;
         }
 
         if ( vm.count( "num_thread" ) )
         {
-            python_server::numJobThreads = vm[ "num_thread" ].as<unsigned int>();
+            worker::numJobThreads = vm[ "num_thread" ].as<unsigned int>();
         }
         // 1. accept thread
         // 2. additional worker thread for async reading results from pyexec
-        python_server::numThread = python_server::numJobThreads + 2;
+        worker::numThread = worker::numJobThreads + 2;
 
-        common::logger::InitLogger( python_server::isDaemon, "pyserver" );
+        common::logger::InitLogger( worker::isDaemon, "pyserver" );
 
-        common::Config::Instance().ParseConfig( python_server::exeDir.c_str() );
+        common::Config::Instance().ParseConfig( worker::exeDir.c_str() );
 
         string pidfilePath = common::Config::Instance().Get<string>( "pidfile" );
         if ( pidfilePath[0] != '/' )
         {
-            pidfilePath = python_server::exeDir + '/' + pidfilePath;
+            pidfilePath = worker::exeDir + '/' + pidfilePath;
         }
         common::Pidfile pidfile( pidfilePath.c_str() );
 
-        python_server::JobCompletionTable::Instance();
+        worker::JobCompletionTable::Instance();
 
         SetupSignalHandlers();
         SetupSignalMask();
@@ -894,33 +894,33 @@ int main( int argc, char* argv[], char **envp )
         boost::scoped_ptr<boost::asio::io_service::work> work(
             new boost::asio::io_service::work( io_service ) );
 
-        boost::scoped_ptr< python_server::CommDescrPool > commDescrPool(
-            new python_server::CommDescrPool( python_server::numJobThreads, &io_service,
-                                              (char*)python_server::mappedRegion->get_address() ) );
-        python_server::commDescrPool = commDescrPool.get();
+        boost::scoped_ptr< worker::CommDescrPool > commDescrPool(
+            new worker::CommDescrPool( worker::numJobThreads, &io_service,
+                                              (char*)worker::mappedRegion->get_address() ) );
+        worker::commDescrPool = commDescrPool.get();
 
-        python_server::taskSem = new common::Semaphore( python_server::numJobThreads );
+        worker::taskSem = new common::Semaphore( worker::numJobThreads );
 
         // create thread pool
         boost::thread_group worker_threads;
-        for( unsigned int i = 0; i < python_server::numThread; ++i )
+        for( unsigned int i = 0; i < worker::numThread; ++i )
         {
             worker_threads.create_thread(
                 boost::bind( &ThreadFun, &io_service )
             );
         }
 
-        python_server::ConnectionAcceptor acceptor( io_service, python_server::DEFAULT_PORT );
+        worker::ConnectionAcceptor acceptor( io_service, worker::DEFAULT_PORT );
 
         boost::asio::io_service io_service_ping;
 
         int completionPingTimeout = common::Config::Instance().Get<int>( "completion_ping_timeout" );
-        boost::scoped_ptr< python_server::JobCompletionPinger > completionPing(
-            new python_server::JobCompletionPingerBoost( io_service_ping, completionPingTimeout ) );
+        boost::scoped_ptr< worker::JobCompletionPinger > completionPing(
+            new worker::JobCompletionPingerBoost( io_service_ping, completionPingTimeout ) );
         completionPing->StartPing();
 
-        boost::scoped_ptr< python_server::MasterPing > masterPing(
-            new python_server::MasterPingBoost( io_service_ping ) );
+        boost::scoped_ptr< worker::MasterPing > masterPing(
+            new worker::MasterPingBoost( io_service_ping ) );
         masterPing->Start();
 
         // create thread pool for pingers
@@ -936,7 +936,7 @@ int main( int argc, char* argv[], char **envp )
 
         UnblockSighandlerMask();
 
-        if ( !python_server::isDaemon )
+        if ( !worker::isDaemon )
         {
             UserInteraction();
         }
@@ -964,9 +964,9 @@ int main( int argc, char* argv[], char **envp )
         work.reset();
         io_service.stop();
 
-        python_server::taskSem->Notify();
+        worker::taskSem->Notify();
 
-        python_server::execTable.Clear();
+        worker::execTable.Clear();
 
         worker_threads.join_all();
     }

@@ -49,7 +49,7 @@ the License.
 using namespace std;
 using boost::asio::ip::tcp;
 
-namespace python_server {
+namespace worker {
 
 bool isDaemon;
 bool isFork;
@@ -278,7 +278,7 @@ protected:
                 else
                 {
                     size_t offset = job_->GetJobId() * SHMEM_BLOCK_SIZE;
-                    char *shmemAddr = (char*)python_server::mappedRegion->get_address() + offset;
+                    char *shmemAddr = (char*)worker::mappedRegion->get_address() + offset;
 
                     offset = 0;
                     unsigned int bytesToWrite = job_->GetScriptLength();
@@ -805,7 +805,7 @@ private:
     tcp::acceptor acceptor_;
 };
 
-} // namespace python_server
+} // namespace worker
 
 
 namespace {
@@ -861,8 +861,8 @@ void SetupPyExecIPC()
 
     try
     {
-        python_server::sharedMemPool = new ipc::shared_memory_object( ipc::open_only, python_server::SHMEM_NAME, ipc::read_only );
-        python_server::mappedRegion = new ipc::mapped_region( *python_server::sharedMemPool, ipc::read_only );
+        worker::sharedMemPool = new ipc::shared_memory_object( ipc::open_only, worker::SHMEM_NAME, ipc::read_only );
+        worker::mappedRegion = new ipc::mapped_region( *worker::sharedMemPool, ipc::read_only );
     }
     catch( std::exception &e )
     {
@@ -876,7 +876,7 @@ void SetupLanguageRuntime()
     pid_t pid = fork();
     if ( pid == 0 )
     {
-        python_server::isFork = true;
+        worker::isFork = true;
         std::string javacPath;
         try
         {
@@ -886,7 +886,7 @@ void SetupLanguageRuntime()
         {
             PS_LOG( "SetupLanguageRuntime: get javac path failed: " << e.what() );
         }
-        std::string nodePath = python_server::exeDir + '/' + python_server::NODE_SCRIPT_NAME_JAVA;
+        std::string nodePath = worker::exeDir + '/' + worker::NODE_SCRIPT_NAME_JAVA;
         if ( access( javacPath.c_str(), F_OK ) != -1 )
         {
             int ret = execl( javacPath.c_str(), "javac", nodePath.c_str(), NULL );
@@ -916,31 +916,31 @@ void SetupLanguageRuntime()
 
 void Impersonate()
 {
-    if ( python_server::uid )
+    if ( worker::uid )
     {
-        int ret = setuid( python_server::uid );
+        int ret = setuid( worker::uid );
         if ( ret < 0 )
         {
-            PS_LOG( "impersonate uid=" << python_server::uid << " failed : " << strerror(errno) );
+            PS_LOG( "impersonate uid=" << worker::uid << " failed : " << strerror(errno) );
             exit( 1 );
         }
 
-        PS_LOG( "successfully impersonated, uid=" << python_server::uid );
+        PS_LOG( "successfully impersonated, uid=" << worker::uid );
     }
 }
 
 void AtExit()
 {
-    if ( python_server::isFork )
+    if ( worker::isFork )
         return;
 
     // cleanup threads
-    python_server::ThreadInfo::iterator it;
-    for( it = python_server::threadInfo.begin();
-         it != python_server::threadInfo.end();
+    worker::ThreadInfo::iterator it;
+    for( it = worker::threadInfo.begin();
+         it != worker::threadInfo.end();
        ++it )
     {
-        python_server::ThreadParams &threadParams = it->second;
+        worker::ThreadParams &threadParams = it->second;
 
         if ( threadParams.readFifoFD != -1 )
             close( threadParams.readFifoFD );
@@ -955,11 +955,11 @@ void AtExit()
             unlink( threadParams.writeFifo.c_str() );
     }
 
-    delete python_server::mappedRegion;
-    python_server::mappedRegion = NULL;
+    delete worker::mappedRegion;
+    worker::mappedRegion = NULL;
 
-    delete python_server::sharedMemPool;
-    python_server::sharedMemPool = NULL;
+    delete worker::sharedMemPool;
+    worker::sharedMemPool = NULL;
 
     common::logger::ShutdownLogger();
 
@@ -973,9 +973,9 @@ int CreateFifo( const std::string &fifoName )
     int ret = mkfifo( fifoName.c_str(), S_IRUSR | S_IWUSR );
     if ( !ret )
     {
-        if ( python_server::uid )
+        if ( worker::uid )
         {
-            ret = chown( fifoName.c_str(), python_server::uid, (gid_t)-1 );
+            ret = chown( fifoName.c_str(), worker::uid, (gid_t)-1 );
             if ( ret == -1 )
                 PS_LOG( "CreateFifo: chown failed " << strerror(errno) );
         }
@@ -998,12 +998,12 @@ void OnThreadCreate( const boost::thread *thread )
 {
     static int threadCnt = 0;
 
-    python_server::ThreadParams threadParams;
+    worker::ThreadParams threadParams;
     threadParams.writeFifoFD = -1;
     threadParams.readFifoFD = -1;
 
     std::ostringstream ss;
-    ss << python_server::FIFO_NAME << 'w' << threadCnt;
+    ss << worker::FIFO_NAME << 'w' << threadCnt;
     threadParams.writeFifo = ss.str();
 
     threadParams.writeFifoFD = CreateFifo( threadParams.writeFifo );
@@ -1013,7 +1013,7 @@ void OnThreadCreate( const boost::thread *thread )
     }
 
     std::ostringstream ss2;
-    ss2 << python_server::FIFO_NAME << 'r' << threadCnt;
+    ss2 << worker::FIFO_NAME << 'r' << threadCnt;
     threadParams.readFifo = ss2.str();
 
     threadParams.readFifoFD = CreateFifo( threadParams.readFifo );
@@ -1022,7 +1022,7 @@ void OnThreadCreate( const boost::thread *thread )
         threadParams.readFifo.clear();
     }
 
-    python_server::threadInfo[ thread->get_id() ] = threadParams;
+    worker::threadInfo[ thread->get_id() ] = threadParams;
     ++threadCnt;
 }
 
@@ -1050,9 +1050,9 @@ int main( int argc, char* argv[], char **envp )
     try
     {
         // initialization
-        python_server::isDaemon = false;
-        python_server::isFork = false;
-        python_server::uid = 0;
+        worker::isDaemon = false;
+        worker::isFork = false;
+        worker::uid = 0;
 
         // parse input command line options
         namespace po = boost::program_options;
@@ -1072,27 +1072,27 @@ int main( int argc, char* argv[], char **envp )
 
         if ( vm.count( "d" ) )
         {
-            python_server::isDaemon = true;
+            worker::isDaemon = true;
         }
 
-        common::logger::InitLogger( python_server::isDaemon, "PyExec" );
+        common::logger::InitLogger( worker::isDaemon, "PyExec" );
 
         if ( vm.count( "u" ) )
         {
-            python_server::uid = vm[ "u" ].as<uid_t>();
+            worker::uid = vm[ "u" ].as<uid_t>();
         }
 
         if ( vm.count( "num_thread" ) )
         {
-            python_server::numThread = vm[ "num_thread" ].as<unsigned int>();
+            worker::numThread = vm[ "num_thread" ].as<unsigned int>();
         }
 
         if ( vm.count( "exe_dir" ) )
         {
-            python_server::exeDir = vm[ "exe_dir" ].as<std::string>();
+            worker::exeDir = vm[ "exe_dir" ].as<std::string>();
         }
 
-        common::Config::Instance().ParseConfig( python_server::exeDir.c_str() );
+        common::Config::Instance().ParseConfig( worker::exeDir.c_str() );
 
         SetupLanguageRuntime();
 
@@ -1101,11 +1101,11 @@ int main( int argc, char* argv[], char **envp )
         // start accepting connections
         boost::asio::io_service io_service;
 
-        python_server::ConnectionAcceptor acceptor( io_service, python_server::DEFAULT_PYEXEC_PORT );
+        worker::ConnectionAcceptor acceptor( io_service, worker::DEFAULT_PYEXEC_PORT );
 
         // create thread pool
         boost::thread_group worker_threads;
-        for( unsigned int i = 0; i < python_server::numThread; ++i )
+        for( unsigned int i = 0; i < worker::numThread; ++i )
         {
             boost::thread *thread = worker_threads.create_thread(
                 boost::bind( &ThreadFun, &io_service )
@@ -1120,7 +1120,7 @@ int main( int argc, char* argv[], char **envp )
 
         UnblockSighandlerMask();
 
-        if ( python_server::isDaemon )
+        if ( worker::isDaemon )
         {
 			PS_LOG( "started" );
         }

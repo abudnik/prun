@@ -3,7 +3,7 @@
 #include "common/log.h"
 #include "computer_info.h"
 
-namespace python_server {
+namespace worker {
 
 void MasterPingBoost::Start()
 {
@@ -51,5 +51,5 @@ void MasterPingBoost::HandleRead( const boost::system::error_code& error, size_t
     StartReceive();
 }
 
-} // namespace python_server
+} // namespace worker
 

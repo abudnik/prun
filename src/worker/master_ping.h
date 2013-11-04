@@ -5,7 +5,7 @@
 #include "common/protocol.h"
 #include "common.h"
 
-namespace python_server {
+namespace worker {
 
 class MasterPing
 {
@@ -47,6 +47,6 @@ private:
     udp::endpoint remote_endpoint_;
 };
 
-} // namespace python_server
+} // namespace worker
 
 #endif

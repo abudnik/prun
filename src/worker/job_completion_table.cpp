@@ -1,6 +1,6 @@
 #include "job_completion_table.h"
 
-namespace python_server {
+namespace worker {
 
 
 void JobCompletionTable::Set( const JobDescriptor &descr, const JobCompletionStat &stat )
@@ -29,4 +29,4 @@ bool JobCompletionTable::Erase( const JobDescriptor &descr )
     return table_.erase( descr ) > 0;
 }
 
-} // namespace python_server
+} // namespace worker

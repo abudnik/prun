@@ -22,7 +22,7 @@ the License.
 #ifndef __COMMON_H
 #define __COMMON_H
 
-namespace python_server {
+namespace worker {
 
 extern unsigned int SHMEM_BLOCK_SIZE;
 extern unsigned int MAX_SCRIPT_SIZE;
@@ -41,6 +41,6 @@ extern const char NODE_SCRIPT_NAME_SHELL[];
 extern const char NODE_SCRIPT_NAME_RUBY[];
 extern const char NODE_SCRIPT_NAME_JS[];
 
-} // namespace python_server
+} // namespace worker
 
 #endif

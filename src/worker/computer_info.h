@@ -3,7 +3,7 @@
 
 #include <boost/thread.hpp>
 
-namespace python_server {
+namespace worker {
 
 class ComputerInfo
 {
@@ -25,6 +25,6 @@ private:
     int numCPU_;
 };
 
-} // namespace python_server
+} // namespace worker
 
 #endif

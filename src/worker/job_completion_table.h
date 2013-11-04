@@ -6,7 +6,7 @@
 #include <boost/thread/locks.hpp>  
 #include <boost/thread/shared_mutex.hpp> 
 
-namespace python_server {
+namespace worker {
 
 struct JobCompletionStat
 {
@@ -76,6 +76,6 @@ private:
     boost::shared_mutex tableMut_;
 };
 
-} // namespace python_server
+} // namespace worker
 
 #endif

@@ -3,7 +3,7 @@
 #include "job_completion_ping.h"
 #include "common/log.h"
 
-namespace python_server {
+namespace worker {
 
 void JobCompletionPinger::Stop()
 {
@@ -56,4 +56,4 @@ void JobCompletionPingerBoost::PingMaster( const JobDescriptor &descr )
     }
 }
 
-} // namespace python_server
+} // namespace worker

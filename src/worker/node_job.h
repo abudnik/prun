@@ -10,7 +10,7 @@
 #include "common/error_code.h"
 #include "job_completion_table.h"
 
-namespace python_server {
+namespace worker {
 
 class Job
 {
@@ -136,6 +136,6 @@ private:
     std::string masterIP_;
 };
 
-} // namespace python_server
+} // namespace worker
 
 #endif

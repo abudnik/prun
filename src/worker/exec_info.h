@@ -7,7 +7,7 @@
 #include <boost/thread.hpp>
 
 
-namespace python_server {
+namespace worker {
 
 struct ExecInfo
 {
@@ -91,6 +91,6 @@ private:
     boost::mutex mut_;
 };
 
-} // namespace python_server
+} // namespace worker
 
 #endif

@@ -10,7 +10,7 @@
 
 using boost::asio::ip::tcp;
 
-namespace python_server {
+namespace worker {
 
 struct ThreadComm
 {
@@ -134,6 +134,6 @@ private:
     boost::asio::io_service *io_service_;
 };
 
-} // namespace python_server
+} // namespace worker
 
 #endif

@@ -8,7 +8,7 @@
 #include "common.h"
 #include "job_completion_table.h"
 
-namespace python_server {
+namespace worker {
 
 class JobCompletionPinger
 {
@@ -64,6 +64,6 @@ private:
     udp::socket socket_;
 };
 
-} // namespace python_server
+} // namespace worker
 
 #endif

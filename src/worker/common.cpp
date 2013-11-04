@@ -22,7 +22,7 @@ the License.
 
 #include "common.h"
 
-namespace python_server {
+namespace worker {
 
 unsigned int SHMEM_BLOCK_SIZE = 512 * 1024;
 unsigned int MAX_SCRIPT_SIZE = SHMEM_BLOCK_SIZE - 1;
@@ -41,4 +41,4 @@ char const NODE_SCRIPT_NAME_SHELL[] = "node/node.sh";
 char const NODE_SCRIPT_NAME_RUBY[] = "node/node.rb";
 char const NODE_SCRIPT_NAME_JS[] = "node/node.js";
 
-} // namespace python_server
+} // namespace worker
