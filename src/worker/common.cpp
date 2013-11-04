@@ -28,12 +28,12 @@ unsigned int SHMEM_BLOCK_SIZE = 512 * 1024;
 unsigned int MAX_SCRIPT_SIZE = SHMEM_BLOCK_SIZE - 1;
 
 unsigned short DEFAULT_PORT = 5555;
-unsigned short DEFAULT_PYEXEC_PORT = DEFAULT_PORT + 1;
+unsigned short DEFAULT_PREXEC_PORT = DEFAULT_PORT + 1;
 unsigned short DEFAULT_UDP_PORT = DEFAULT_PORT - 1;
 unsigned short DEFAULT_MASTER_UDP_PORT = DEFAULT_PORT - 2;
 
-char const SHMEM_NAME[] = "pyexec_shmem";
-char const FIFO_NAME[] = "/tmp/pyexec";
+char const SHMEM_NAME[] = "prexec_shmem";
+char const FIFO_NAME[] = "/tmp/prexec";
 
 char const NODE_SCRIPT_NAME_PY[] = "node/node.py";
 char const NODE_SCRIPT_NAME_JAVA[] = "node/node.java";

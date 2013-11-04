@@ -67,7 +67,7 @@ public:
 
             // open socket to pyexec
             tcp::resolver resolver( *io_service );
-            tcp::resolver::query query( tcp::v4(), "localhost", boost::lexical_cast<std::string>( DEFAULT_PYEXEC_PORT ) );
+            tcp::resolver::query query( tcp::v4(), "localhost", boost::lexical_cast<std::string>( DEFAULT_PREXEC_PORT ) );
             tcp::resolver::iterator iterator = resolver.resolve( query );
 
             commDescr.socket = boost::shared_ptr< tcp::socket >( new tcp::socket( *io_service ) );

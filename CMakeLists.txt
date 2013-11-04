@@ -30,26 +30,26 @@ endforeach(cpp)
 add_library(common STATIC ${SRC_COMMON})
 
 
-set(APP_NAME pyserver)
+set(APP_NAME pworker)
 
 set(WORKER_DIR ${SRC_DIR}/worker)
 
-set(SRC_PYSERVER_CPP common.cpp master_ping.cpp job_completion_ping.cpp job_completion_table.cpp pyserver.cpp)
-foreach(cpp ${SRC_PYSERVER_CPP})
-  list(APPEND SRC_PYSERVER ${WORKER_DIR}/${cpp} )
+set(SRC_PWORKER_CPP common.cpp master_ping.cpp job_completion_ping.cpp job_completion_table.cpp pworker.cpp)
+foreach(cpp ${SRC_PWORKER_CPP})
+  list(APPEND SRC_PWORKER ${WORKER_DIR}/${cpp} )
 endforeach(cpp)
 
-add_executable( ${APP_NAME} ${SRC_PYSERVER} )
+add_executable( ${APP_NAME} ${SRC_PWORKER} )
 target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt )
 
-set(APP_NAME pyexec)
+set(APP_NAME prexec)
 
-set(SRC_PYEXEC_CPP common.cpp pyexec.cpp)
-foreach(cpp ${SRC_PYEXEC_CPP})
-  list(APPEND SRC_PYEXEC ${WORKER_DIR}/${cpp} )
+set(SRC_PREXEC_CPP common.cpp prexec.cpp)
+foreach(cpp ${SRC_PREXEC_CPP})
+  list(APPEND SRC_PREXEC ${WORKER_DIR}/${cpp} )
 endforeach(cpp)
 
-add_executable( ${APP_NAME} ${SRC_PYEXEC} )
+add_executable( ${APP_NAME} ${SRC_PREXEC} )
 target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt )
 
 
