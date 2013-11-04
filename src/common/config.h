@@ -4,7 +4,7 @@
 #include <boost/property_tree/ptree.hpp>
 
 
-namespace python_server {
+namespace common {
 
 class Config
 {
@@ -30,6 +30,6 @@ private:
     boost::property_tree::ptree ptree_;
 };
 
-} // namespace python_server
+} // namespace common
 
 #endif

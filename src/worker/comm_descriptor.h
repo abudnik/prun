@@ -50,7 +50,7 @@ class CommDescrPool
 
 public:
     CommDescrPool( int numJobThreads, boost::asio::io_service *io_service, char *shmemAddr )
-    : sem_( new Semaphore( numJobThreads ) ),
+    : sem_( new common::Semaphore( numJobThreads ) ),
      io_service_( io_service )
     {
         for( int i = 0; i < numJobThreads; ++i )
@@ -130,7 +130,7 @@ private:
     boost::mutex commDescrMut_;
 
     CommParams commParams_;
-    boost::scoped_ptr< Semaphore > sem_;
+    boost::scoped_ptr< common::Semaphore > sem_;
     boost::asio::io_service *io_service_;
 };
 

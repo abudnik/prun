@@ -25,7 +25,7 @@ the License.
 #include "log.h"
 
 
-namespace python_server {
+namespace common {
 
 namespace logger
 {
@@ -67,4 +67,4 @@ void Log( const char *msg )
 
 } // namespace logger
 
-} // namespace python_server
+} // namespace common

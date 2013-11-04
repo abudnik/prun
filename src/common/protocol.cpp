@@ -8,7 +8,7 @@
 #include "protocol.h"
 #include "log.h"
 
-namespace python_server {
+namespace common {
 
 
 void Protocol::AddHeader( std::string &msg )
@@ -302,4 +302,4 @@ bool ProtocolJson::ParseMsgType( const std::string &msg, std::string &type )
     return true;
 }
 
-} // namespace python_server
+} // namespace common

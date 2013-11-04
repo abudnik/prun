@@ -6,7 +6,7 @@
 #include <list>
 #include <stdint.h>
 
-namespace python_server {
+namespace common {
 
 class Protocol
 {
@@ -110,6 +110,6 @@ public:
     }
 };
 
-} // namespace python_server
+} // namespace common
 
 #endif

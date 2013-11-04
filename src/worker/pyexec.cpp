@@ -361,7 +361,7 @@ protected:
     {
         try
         {
-            exePath_ = Config::Instance().Get<string>( "python" );
+            exePath_ = common::Config::Instance().Get<string>( "python" );
             nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_PY;
         }
         catch( std::exception &e )
@@ -418,7 +418,7 @@ protected:
     {
         try
         {
-            exePath_ = Config::Instance().Get<string>( "java" );
+            exePath_ = common::Config::Instance().Get<string>( "java" );
             nodePath_ = exeDir + "/node";
         }
         catch( std::exception &e )
@@ -437,7 +437,7 @@ protected:
     {
         try
         {
-            exePath_ = Config::Instance().Get<string>( "shell" );
+            exePath_ = common::Config::Instance().Get<string>( "shell" );
             nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_SHELL;
         }
         catch( std::exception &e )
@@ -456,7 +456,7 @@ protected:
     {
         try
         {
-            exePath_ = Config::Instance().Get<string>( "ruby" );
+            exePath_ = common::Config::Instance().Get<string>( "ruby" );
             nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_RUBY;
         }
         catch( std::exception &e )
@@ -475,7 +475,7 @@ protected:
     {
         try
         {
-            exePath_ = Config::Instance().Get<string>( "js" );
+            exePath_ = common::Config::Instance().Get<string>( "js" );
             nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_JS;
         }
         catch( std::exception &e )
@@ -746,7 +746,7 @@ protected:
 protected:
     tcp::socket socket_;
     BufferType buffer_;
-    Request< BufferType > request_;
+    common::Request< BufferType > request_;
     std::string response_;
 };
 
@@ -880,7 +880,7 @@ void SetupLanguageRuntime()
         std::string javacPath;
         try
         {
-            javacPath = python_server::Config::Instance().Get<std::string>( "javac" );
+            javacPath = common::Config::Instance().Get<std::string>( "javac" );
         }
         catch( std::exception &e )
         {
@@ -961,7 +961,7 @@ void AtExit()
     delete python_server::sharedMemPool;
     python_server::sharedMemPool = NULL;
 
-    python_server::logger::ShutdownLogger();
+    common::logger::ShutdownLogger();
 
     kill( getppid(), SIGTERM );
 }
@@ -1075,7 +1075,7 @@ int main( int argc, char* argv[], char **envp )
             python_server::isDaemon = true;
         }
 
-        python_server::logger::InitLogger( python_server::isDaemon, "PyExec" );
+        common::logger::InitLogger( python_server::isDaemon, "PyExec" );
 
         if ( vm.count( "u" ) )
         {
@@ -1092,7 +1092,7 @@ int main( int argc, char* argv[], char **envp )
             python_server::exeDir = vm[ "exe_dir" ].as<std::string>();
         }
 
-        python_server::Config::Instance().ParseConfig( python_server::exeDir.c_str() );
+        common::Config::Instance().ParseConfig( python_server::exeDir.c_str() );
 
         SetupLanguageRuntime();
 

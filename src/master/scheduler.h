@@ -41,7 +41,7 @@ private:
 typedef std::map< std::string, NodeState > IPToNodeState;
 
 
-class Scheduler : public python_server::Observable< true >
+class Scheduler : public common::Observable< true >
 {
 private:
     typedef std::list< WorkerTask > TaskList;

@@ -28,10 +28,10 @@ the License.
 {\
     std::ostringstream os;\
     os << MSG;\
-    python_server::logger::Log( os.str().c_str() ); \
+    common::logger::Log( os.str().c_str() ); \
 }
 
-namespace python_server {
+namespace common {
 
 namespace logger
 {
@@ -44,6 +44,6 @@ void Log( const char *msg );
 
 } // namespace logger
 
-} // namespace python_server
+} // namespace common
 
 #endif

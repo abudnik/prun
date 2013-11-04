@@ -162,7 +162,7 @@ void SenderBoost::MakeRequest()
     WorkerJob::Tasks tasks;
     workerJob_.GetTasks( workerJob_.GetJobId(), tasks );
 
-    python_server::ProtocolJson protocol;
+    common::ProtocolJson protocol;
     protocol.SendScript( request_, job_->GetScriptLanguage(), job_->GetScript(),
                          workerJob_.GetJobId(), tasks,
                          job_->GetNumPlannedExec(), job_->GetTaskTimeout() );

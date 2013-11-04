@@ -66,7 +66,7 @@ private:
 private:
     boost::asio::io_service &io_service_;
     bool stopped_;
-    python_server::SyncTimer timer_;
+    common::SyncTimer timer_;
     TimeToCallback jobs_;
     boost::mutex jobsMut_;
 };

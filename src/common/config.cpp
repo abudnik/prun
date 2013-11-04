@@ -6,7 +6,7 @@
 #include "config.h"
 #include "log.h"
 
-using namespace python_server;
+using namespace common;
 
 const char Config::defaultCfgName[] = "main.cfg";
 

@@ -11,7 +11,7 @@
 
 namespace master {
 
-class WorkerManager : public python_server::Observable< true >
+class WorkerManager : public common::Observable< true >
 {
 public:
     enum ObserverEvent { eTaskCompletion, eCommand };

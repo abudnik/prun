@@ -6,7 +6,7 @@
 #include <boost/thread/locks.hpp>  
 #include <boost/thread/shared_mutex.hpp> 
 
-namespace python_server {
+namespace common {
 
 class Observer
 {
@@ -102,6 +102,6 @@ private:
     boost::shared_mutex mut_;
 };
 
-} // namespace python_server
+} // namespace common
 
 #endif

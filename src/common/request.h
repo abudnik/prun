@@ -5,7 +5,7 @@
 #include "common/log.h"
 
 
-namespace python_server {
+namespace common {
 
 template< typename BufferT >
 class Request
@@ -101,6 +101,6 @@ private:
     bool skipHeader_;
 };
 
-} // namespace python_server
+} // namespace common
 
 #endif

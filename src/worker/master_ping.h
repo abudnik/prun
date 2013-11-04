@@ -12,7 +12,7 @@ class MasterPing
 public:
     MasterPing()
     {
-        protocol_ = new python_server::ProtocolJson;
+        protocol_ = new common::ProtocolJson;
     }
 
     virtual ~MasterPing()
@@ -23,7 +23,7 @@ public:
     virtual void Start() = 0;
 
 protected:
-    python_server::Protocol *protocol_;
+    common::Protocol *protocol_;
 };
 
 using boost::asio::ip::udp;

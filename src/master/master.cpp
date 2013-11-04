@@ -49,18 +49,11 @@ the License.
 using namespace std;
 
 
-namespace master {
-
-bool isDaemon;
-string exeDir;
-
-} // namespace master
-
 namespace {
 
-void InitWorkerManager()
+void InitWorkerManager( const std::string &exeDir )
 {
-    string hostsPath = master::exeDir + '/' + master::HOSTS_FILE_NAME;
+    string hostsPath = exeDir + '/' + master::HOSTS_FILE_NAME;
     list< string > hosts;
 
     if ( master::ReadHosts( hostsPath.c_str(), hosts ) )
@@ -70,10 +63,10 @@ void InitWorkerManager()
     }
 }
 
-void RunTests()
+void RunTests( const std::string &exeDir )
 {
     // read job description from file
-    string filePath = master::exeDir + "/test/test.job";
+    string filePath = exeDir + "/test/test.job";
     ifstream file( filePath.c_str() );
     if ( !file.is_open() )
     {
@@ -99,7 +92,7 @@ void AtExit()
     master::JobManager::Instance().Shutdown();
     master::Scheduler::Instance().Shutdown();
 
-    python_server::logger::ShutdownLogger();
+    common::logger::ShutdownLogger();
 }
 
 void UserInteraction()
@@ -119,16 +112,197 @@ void ThreadFun( boost::asio::io_service *io_service )
     }
 }
 
+class MasterApplication
+{
+public:
+    MasterApplication(  const std::string &exeDir, bool isDaemon )
+    : exeDir_( exeDir ),
+     isDaemon_( isDaemon )
+    {}
+
+    void Initialize()
+    {
+        common::logger::InitLogger( isDaemon_, "Master" );
+
+        common::Config &cfg = common::Config::Instance();
+        cfg.ParseConfig( exeDir_.c_str(), "master.cfg" );
+
+        unsigned int numHeartbeatThread = 1;
+        unsigned int numPingReceiverThread = cfg.Get<unsigned int>( "num_ping_receiver_thread" );
+        unsigned int numJobSendThread = 1 + cfg.Get<unsigned int>( "num_job_send_thread" );
+        unsigned int numResultGetterThread = 1 + cfg.Get<unsigned int>( "num_result_getter_thread" );
+        unsigned int numCommandSendThread = 1 + cfg.Get<unsigned int>( "num_command_send_thread" );
+        unsigned int numPingThread = numHeartbeatThread + numPingReceiverThread;
+
+        InitWorkerManager( exeDir_ );
+
+        timeoutManager_.reset( new master::TimeoutManager( io_service_timeout_ ) );
+        master::JobManager::Instance().Initialize( exeDir_, timeoutManager_.get() );
+
+        master::Scheduler::Instance();
+        master::AdminCommandDispatcher::Instance().Initialize();
+
+        atexit( AtExit );
+
+        timeoutManager_->Start();
+        worker_threads_.create_thread(
+            boost::bind( &ThreadFun, &io_service_timeout_ )
+        );
+
+        // start ping from nodes receiver threads
+        pingReceiver_.reset( new master::PingReceiverBoost( io_service_ping_ ) );
+        pingReceiver_->Start();
+
+        // start node pinger
+        int heartbeatTimeout = cfg.Get<int>( "heartbeat_timeout" );
+        int maxDroped = cfg.Get<int>( "heartbeat_max_droped" );
+        pinger_.reset( new master::PingerBoost( io_service_ping_, heartbeatTimeout, maxDroped ) );
+        pinger_->StartPing();
+
+        // create thread pool for pingers
+        for( unsigned int i = 0; i < numPingThread; ++i )
+        {
+            worker_threads_.create_thread(
+                boost::bind( &ThreadFun, &io_service_ping_ )
+            );
+        }
+
+        // start job sender thread
+        int sendBufferSize = cfg.Get<int>( "send_buffer_size" );
+        int maxSimultSendingJobs = cfg.Get<int>( "max_simult_sending_jobs" );
+        jobSender_.reset(
+            new master::JobSenderBoost( io_service_senders_, timeoutManager_.get(),
+                                        sendBufferSize, maxSimultSendingJobs )
+        );
+        jobSender_->Start();
+
+        // create thread pool for job senders
+        for( unsigned int i = 0; i < numJobSendThread; ++i )
+        {
+            worker_threads_.create_thread(
+                boost::bind( &ThreadFun, &io_service_senders_ )
+            );
+        }
+
+        // start result getter
+        int maxSimultResultGetters = cfg.Get<int>( "max_simult_result_getters" );
+        resultGetter_.reset( new master::ResultGetterBoost( io_service_getters_, maxSimultResultGetters ) );
+        resultGetter_->Start();
+
+        // create thread pool for job result getters
+        for( unsigned int i = 0; i < numResultGetterThread; ++i )
+        {
+            worker_threads_.create_thread(
+                boost::bind( &ThreadFun, &io_service_getters_ )
+            );
+        }
+
+        // start command sender
+        int maxSimultCommandSend = cfg.Get<int>( "max_simult_command_send" );
+        commandSender_.reset(
+            new master::CommandSenderBoost( io_service_command_send_, timeoutManager_.get(),
+                                            maxSimultCommandSend )
+        );
+        commandSender_->Start();
+
+        // create thread pool for command senders
+        for( unsigned int i = 0; i < numCommandSendThread; ++i )
+        {
+            worker_threads_.create_thread(
+                boost::bind( &ThreadFun, &io_service_command_send_ )
+            );
+        }
+
+        // create thread for admin connections
+        adminConnection_.reset( new master::AdminConnection( io_service_admin_ ) );
+        worker_threads_.create_thread(
+            boost::bind( &ThreadFun, &io_service_admin_ )
+        );
+    }
+
+    void Shutdown()
+    {
+        timeoutManager_->Stop();
+        pinger_->Stop();
+        jobSender_->Stop();
+        resultGetter_->Stop();
+        commandSender_->Stop();
+
+        // stop io services
+        io_service_admin_.stop();
+        io_service_command_send_.stop();
+        io_service_getters_.stop();
+        io_service_senders_.stop();
+        io_service_ping_.stop();
+
+        // stop thread pool
+        worker_threads_.join_all();
+    }
+
+    void Run()
+    {
+        common::Config &cfg = common::Config::Instance();
+        string pidfilePath = cfg.Get<string>( "pidfile" );
+        if ( pidfilePath[0] != '/' )
+        {
+            pidfilePath = exeDir_ + '/' + pidfilePath;
+        }
+        common::Pidfile pidfile( pidfilePath.c_str() );
+
+        if ( !isDaemon_ )
+        {
+            UserInteraction();
+        }
+        else
+        {
+            PS_LOG( "started" );
+
+            sigset_t waitset;
+            int sig;
+            sigemptyset( &waitset );
+            sigaddset( &waitset, SIGTERM );
+			sigprocmask( SIG_BLOCK, &waitset, NULL );
+            while( 1 )
+            {
+                int ret = sigwait( &waitset, &sig );
+                if ( !ret )
+                    break;
+                PS_LOG( "main(): sigwait failed: " << strerror(errno) );
+            }
+        }
+    }
+
+private:
+    std::string exeDir_;
+    bool isDaemon_;
+
+    boost::thread_group worker_threads_;
+
+    boost::asio::io_service io_service_timeout_;
+    boost::asio::io_service io_service_ping_;
+    boost::asio::io_service io_service_senders_;
+    boost::asio::io_service io_service_getters_;
+    boost::asio::io_service io_service_command_send_;
+    boost::asio::io_service io_service_admin_;
+
+    boost::shared_ptr< master::TimeoutManager > timeoutManager_;
+    boost::shared_ptr< master::PingReceiver > pingReceiver_;
+    boost::shared_ptr< master::Pinger > pinger_;
+    boost::shared_ptr< master::JobSender > jobSender_;
+    boost::shared_ptr< master::ResultGetter > resultGetter_;
+    boost::shared_ptr< master::CommandSender > commandSender_;
+    boost::shared_ptr< master::AdminConnection > adminConnection_;
+
+};
+
 } // anonymous namespace
 
 int main( int argc, char* argv[], char **envp )
 {
     try
     {
-        // initialization
-        master::isDaemon = false;
-
-        master::exeDir = boost::filesystem::system_complete( argv[0] ).branch_path().string();
+        bool isDaemon = false;
+        std::string exeDir = boost::filesystem::system_complete( argv[0] ).branch_path().string();
 
         // parse input command line options
         namespace po = boost::program_options;
@@ -152,179 +326,23 @@ int main( int argc, char* argv[], char **envp )
 
         if ( vm.count( "stop" ) )
         {
-            return python_server::StopDaemon( "master" );
+            return common::StopDaemon( "master" );
         }
 
         if ( vm.count( "d" ) )
         {
-            python_server::StartAsDaemon();
-            master::isDaemon = true;
+            common::StartAsDaemon();
+            isDaemon = true;
         }
 
-        python_server::logger::InitLogger( master::isDaemon, "Master" );
+        MasterApplication app( exeDir, isDaemon );
+        app.Initialize();
 
-        python_server::Config &cfg = python_server::Config::Instance();
-        cfg.ParseConfig( master::exeDir.c_str(), "master.cfg" );
+        RunTests( exeDir );
 
-        string pidfilePath = cfg.Get<string>( "pidfile" );
-        if ( pidfilePath[0] != '/' )
-        {
-            pidfilePath = master::exeDir + '/' + pidfilePath;
-        }
-        python_server::Pidfile pidfile( pidfilePath.c_str() );
+        app.Run();
 
-        unsigned int numHeartbeatThread = 1;
-        unsigned int numPingReceiverThread = cfg.Get<unsigned int>( "num_ping_receiver_thread" );
-        unsigned int numJobSendThread = 1 + cfg.Get<unsigned int>( "num_job_send_thread" );
-        unsigned int numResultGetterThread = 1 + cfg.Get<unsigned int>( "num_result_getter_thread" );
-        unsigned int numCommandSendThread = 1 + cfg.Get<unsigned int>( "num_command_send_thread" );
-        unsigned int numPingThread = numHeartbeatThread + numPingReceiverThread;
-
-        InitWorkerManager();
-
-        boost::asio::io_service io_service_timeout;
-        boost::scoped_ptr< master::TimeoutManager > timeoutManager(
-            new master::TimeoutManager( io_service_timeout )
-        );
-        master::JobManager::Instance().Initialize( master::exeDir, timeoutManager.get() );
-
-        master::Scheduler::Instance();
-        master::AdminCommandDispatcher::Instance().Initialize();
-
-        atexit( AtExit );
-
-        boost::thread_group worker_threads;
-
-        timeoutManager->Start();
-        worker_threads.create_thread(
-            boost::bind( &ThreadFun, &io_service_timeout )
-        );
-
-        boost::asio::io_service io_service_ping;
-
-        // start ping from nodes receiver threads
-        boost::scoped_ptr< master::PingReceiver > pingReceiver(
-             new master::PingReceiverBoost( io_service_ping ) );
-        pingReceiver->Start();
-
-        // start node pinger
-        int heartbeatTimeout = cfg.Get<int>( "heartbeat_timeout" );
-        int maxDroped = cfg.Get<int>( "heartbeat_max_droped" );
-        boost::scoped_ptr< master::Pinger > pinger(
-            new master::PingerBoost( io_service_ping, heartbeatTimeout, maxDroped ) );
-        pinger->StartPing();
-
-        // create thread pool for pingers
-        for( unsigned int i = 0; i < numPingThread; ++i )
-        {
-            worker_threads.create_thread(
-                boost::bind( &ThreadFun, &io_service_ping )
-            );
-        }
-
-        boost::asio::io_service io_service_senders;
-
-        // start job sender thread
-        int sendBufferSize = cfg.Get<int>( "send_buffer_size" );
-        int maxSimultSendingJobs = cfg.Get<int>( "max_simult_sending_jobs" );
-        boost::scoped_ptr< master::JobSender > jobSender(
-            new master::JobSenderBoost( io_service_senders, timeoutManager.get(),
-                                        sendBufferSize, maxSimultSendingJobs )
-        );
-        jobSender->Start();
-
-        // create thread pool for job senders
-        for( unsigned int i = 0; i < numJobSendThread; ++i )
-        {
-            worker_threads.create_thread(
-                boost::bind( &ThreadFun, &io_service_senders )
-            );
-        }
-
-        boost::asio::io_service io_service_getters;
-
-        // start result getter
-        int maxSimultResultGetters = cfg.Get<int>( "max_simult_result_getters" );
-        boost::scoped_ptr< master::ResultGetter > resultGetter(
-            new master::ResultGetterBoost( io_service_getters, maxSimultResultGetters )
-        );
-        resultGetter->Start();
-
-        // create thread pool for job result getters
-        for( unsigned int i = 0; i < numResultGetterThread; ++i )
-        {
-            worker_threads.create_thread(
-                boost::bind( &ThreadFun, &io_service_getters )
-            );
-        }
-
-        boost::asio::io_service io_service_command_send;
-
-        // start command sender
-        int maxSimultCommandSend = cfg.Get<int>( "max_simult_command_send" );
-        boost::scoped_ptr< master::CommandSender > commandSender(
-            new master::CommandSenderBoost( io_service_command_send, timeoutManager.get(),
-                                            maxSimultCommandSend )
-        );
-        commandSender->Start();
-
-        // create thread pool for command senders
-        for( unsigned int i = 0; i < numCommandSendThread; ++i )
-        {
-            worker_threads.create_thread(
-                boost::bind( &ThreadFun, &io_service_command_send )
-            );
-        }
-
-        boost::asio::io_service io_service_admin;
-
-        // create thread pool for admin connections
-        boost::scoped_ptr< master::AdminConnection > adminConnection(
-            new master::AdminConnection( io_service_admin )
-        );
-        worker_threads.create_thread(
-            boost::bind( &ThreadFun, &io_service_admin )
-        );
-
-        RunTests();
-
-        if ( !master::isDaemon )
-        {
-            UserInteraction();
-        }
-        else
-        {
-            PS_LOG( "started" );
-
-            sigset_t waitset;
-            int sig;
-            sigemptyset( &waitset );
-            sigaddset( &waitset, SIGTERM );
-			sigprocmask( SIG_BLOCK, &waitset, NULL );
-            while( 1 )
-            {
-                int ret = sigwait( &waitset, &sig );
-                if ( !ret )
-                    break;
-                PS_LOG( "main(): sigwait failed: " << strerror(errno) );
-            }
-        }
-
-        timeoutManager->Stop();
-        pinger->Stop();
-        jobSender->Stop();
-        resultGetter->Stop();
-        commandSender->Stop();
-
-        // stop io services
-        io_service_admin.stop();
-        io_service_command_send.stop();
-        io_service_getters.stop();
-        io_service_senders.stop();
-        io_service_ping.stop();
-
-        // stop thread pool
-        worker_threads.join_all();
+        app.Shutdown();
     }
     catch( std::exception &e )
     {

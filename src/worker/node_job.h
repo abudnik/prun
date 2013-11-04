@@ -19,20 +19,20 @@ public:
 
 public:
     template< typename T >
-    bool ParseRequest( Request<T> &request )
+    bool ParseRequest( common::Request<T> &request )
     {
         const std::string &req = request.GetString();
 
         std::string protocol, header, body;
         int version;
-        if ( !Protocol::ParseMsg( req, protocol, version, header, body ) )
+        if ( !common::Protocol::ParseMsg( req, protocol, version, header, body ) )
         {
             PS_LOG( "Job::ParseRequest: couldn't parse request: " << req );
             return false;
         }
 
-        ProtocolCreator protocolCreator;
-        boost::scoped_ptr< Protocol > parser(
+        common::ProtocolCreator protocolCreator;
+        boost::scoped_ptr< common::Protocol > parser(
             protocolCreator.Create( protocol, version )
         );
         if ( !parser )
@@ -53,7 +53,7 @@ public:
         {
             JobDescriptor descr;
             JobCompletionStat stat;
-            ProtocolJson protocol;
+            common::ProtocolJson protocol;
 
             descr.jobId = GetJobId();
             descr.taskId = GetTaskId();
@@ -74,7 +74,7 @@ public:
         else
         if ( taskType_ == "stop_task" )
         {
-            ProtocolJson protocol;
+            common::ProtocolJson protocol;
             protocol.SendCommandResult( response, GetErrorCode() );
         }
     }
@@ -99,13 +99,13 @@ public:
     const std::string &GetMasterIP() const { return masterIP_; }
 
 private:
-    bool ParseRequestBody( const std::string &body, Protocol *parser )
+    bool ParseRequestBody( const std::string &body, common::Protocol *parser )
     {
         if ( taskType_ == "exec" )
         {
             std::string script64;
             parser->ParseSendScript( body, language_, script64, jobId_, tasks_, numTasks_, timeout_ );
-            if ( !DecodeBase64( script64, script_ ) )
+            if ( !common::DecodeBase64( script64, script_ ) )
                 return false;
 
             scriptLength_ = script_.size();

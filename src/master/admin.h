@@ -108,7 +108,7 @@ private:
 private:
     tcp::socket socket_;
     BufferType buffer_;
-    python_server::Request< BufferType > request_;
+    common::Request< BufferType > request_;
     std::string remoteIP_;
     boost::asio::io_service &io_service_;
 };

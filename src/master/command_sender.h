@@ -14,7 +14,7 @@ using boost::asio::ip::tcp;
 
 namespace master {
 
-class CommandSender : python_server::Observer
+class CommandSender : common::Observer
 {
 public:
     CommandSender( TimeoutManager *timeoutManager )
@@ -79,7 +79,7 @@ private:
     boost::asio::io_service &io_service_;
     tcp::socket socket_;
     BufferType buffer_;
-    python_server::Request< BufferType > response_;
+    common::Request< BufferType > response_;
     bool firstRead_;
     std::string request_;
     CommandSender *sender_;
@@ -107,7 +107,7 @@ private:
 
 private:
     boost::asio::io_service &io_service_;
-    python_server::Semaphore cmdSenderSem_;
+    common::Semaphore cmdSenderSem_;
 };
 
 } // namespace master

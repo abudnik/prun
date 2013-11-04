@@ -67,7 +67,7 @@ string exeDir;
 boost::interprocess::shared_memory_object *sharedMemPool;
 boost::interprocess::mapped_region *mappedRegion;
 
-Semaphore *taskSem;
+common::Semaphore *taskSem;
 
 CommDescrPool *commDescrPool;
 
@@ -233,7 +233,7 @@ private:
 private:
     tcp::socket *socket_;
     BufferType buffer_;
-    Request< BufferType > response_;
+    common::Request< BufferType > response_;
     bool completed_;
     boost::condition_variable responseCond_;
     boost::mutex responseMut_;
@@ -286,7 +286,7 @@ class ExecuteTask : public Action
         udp::socket socket( *io_service, udp::endpoint( udp::v4(), 0 ) );
         udp::endpoint master_endpoint( boost::asio::ip::address::from_string( job->GetMasterIP() ), DEFAULT_MASTER_UDP_PORT );
 
-        ProtocolJson protocol;
+        common::ProtocolJson protocol;
         std::string msg;
         protocol.NodeJobCompletionPing( msg, job->GetJobId(), taskId );
 
@@ -558,7 +558,7 @@ private:
 protected:
     tcp::socket socket_;
     BufferType buffer_;
-    Request< BufferType > request_;
+    common::Request< BufferType > request_;
     char readStatus_;
     std::string response_;
     boost::asio::io_service &io_service_;
@@ -792,7 +792,7 @@ void AtExit()
     delete python_server::taskSem;
     python_server::taskSem = NULL;
 
-    python_server::logger::ShutdownLogger();
+    common::logger::ShutdownLogger();
 }
 
 void ThreadFun( boost::asio::io_service *io_service )
@@ -846,7 +846,7 @@ int main( int argc, char* argv[], char **envp )
 
         if ( vm.count( "stop" ) )
         {
-            return python_server::StopDaemon( "pyserver" );
+            return common::StopDaemon( "pyserver" );
         }
 
         if ( vm.count( "u" ) )
@@ -857,7 +857,7 @@ int main( int argc, char* argv[], char **envp )
 
         if ( vm.count( "d" ) )
         {
-            python_server::StartAsDaemon();
+            common::StartAsDaemon();
             python_server::isDaemon = true;
         }
 
@@ -869,16 +869,16 @@ int main( int argc, char* argv[], char **envp )
         // 2. additional worker thread for async reading results from pyexec
         python_server::numThread = python_server::numJobThreads + 2;
 
-        python_server::logger::InitLogger( python_server::isDaemon, "PythonServer" );
+        common::logger::InitLogger( python_server::isDaemon, "pyserver" );
 
-        python_server::Config::Instance().ParseConfig( python_server::exeDir.c_str() );
+        common::Config::Instance().ParseConfig( python_server::exeDir.c_str() );
 
-        string pidfilePath = python_server::Config::Instance().Get<string>( "pidfile" );
+        string pidfilePath = common::Config::Instance().Get<string>( "pidfile" );
         if ( pidfilePath[0] != '/' )
         {
             pidfilePath = python_server::exeDir + '/' + pidfilePath;
         }
-        python_server::Pidfile pidfile( pidfilePath.c_str() );
+        common::Pidfile pidfile( pidfilePath.c_str() );
 
         python_server::JobCompletionTable::Instance();
 
@@ -899,7 +899,7 @@ int main( int argc, char* argv[], char **envp )
                                               (char*)python_server::mappedRegion->get_address() ) );
         python_server::commDescrPool = commDescrPool.get();
 
-        python_server::taskSem = new python_server::Semaphore( python_server::numJobThreads );
+        python_server::taskSem = new common::Semaphore( python_server::numJobThreads );
 
         // create thread pool
         boost::thread_group worker_threads;
@@ -914,7 +914,7 @@ int main( int argc, char* argv[], char **envp )
 
         boost::asio::io_service io_service_ping;
 
-        int completionPingTimeout = python_server::Config::Instance().Get<int>( "completion_ping_timeout" );
+        int completionPingTimeout = common::Config::Instance().Get<int>( "completion_ping_timeout" );
         boost::scoped_ptr< python_server::JobCompletionPinger > completionPing(
             new python_server::JobCompletionPingerBoost( io_service_ping, completionPingTimeout ) );
         completionPing->StartPing();

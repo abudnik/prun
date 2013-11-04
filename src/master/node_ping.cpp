@@ -13,14 +13,14 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
 
     std::string protocol, header, body;
     int version;
-    if ( !python_server::Protocol::ParseMsg( msg, protocol, version, header, body ) )
+    if ( !common::Protocol::ParseMsg( msg, protocol, version, header, body ) )
     {
         PS_LOG( "PingReceiver::OnNodePing: couldn't parse msg: " << msg );
         return;
     }
 
-    python_server::ProtocolCreator protocolCreator;
-    boost::scoped_ptr< python_server::Protocol > parser(
+    common::ProtocolCreator protocolCreator;
+    boost::scoped_ptr< common::Protocol > parser(
         protocolCreator.Create( protocol, version )
     );
     if ( !parser )

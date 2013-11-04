@@ -8,7 +8,7 @@
 
 using namespace boost::interprocess;
 
-namespace python_server {
+namespace common {
 
 class Pidfile
 {
@@ -62,6 +62,6 @@ private:
     std::ofstream file_;
 };
 
-} // namespace python_server
+} // namespace common
 
 #endif

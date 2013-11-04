@@ -13,7 +13,7 @@ using boost::asio::ip::tcp;
 
 namespace master {
 
-class ResultGetter : python_server::Observer
+class ResultGetter : common::Observer
 {
 public:
     ResultGetter()
@@ -77,7 +77,7 @@ private:
     boost::asio::io_service &io_service_;
     tcp::socket socket_;
     BufferType buffer_;
-    python_server::Request< BufferType > response_;
+    common::Request< BufferType > response_;
     bool firstRead_;
     std::string request_;
     ResultGetter *getter_;
@@ -103,7 +103,7 @@ private:
 
 private:
     boost::asio::io_service &io_service_;
-    python_server::Semaphore getJobsSem_;
+    common::Semaphore getJobsSem_;
 };
 
 } // namespace master

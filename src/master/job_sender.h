@@ -14,7 +14,7 @@ using boost::asio::ip::tcp;
 
 namespace master {
 
-class JobSender : python_server::Observer
+class JobSender : common::Observer
 {
 public:
     JobSender( TimeoutManager *timeoutManager )
@@ -101,7 +101,7 @@ private:
 private:
     boost::asio::io_service &io_service_;
     int sendBufferSize_;
-    python_server::Semaphore sendJobsSem_;
+    common::Semaphore sendJobsSem_;
 };
 
 } // namespace master

@@ -29,7 +29,7 @@ the License.
 #include <boost/archive/iterators/transform_width.hpp>
 #include "common/log.h"
 
-namespace python_server {
+namespace common {
 
 class Semaphore
 {
@@ -133,6 +133,6 @@ bool DecodeBase64( std::string &data, Container &out )
     return true;
 }
 
-} // namespace python_server
+} // namespace common
 
 #endif

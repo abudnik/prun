@@ -10,7 +10,7 @@
 #include <sstream>
 #include "daemon.h"
 
-namespace python_server {
+namespace common {
 
 int StartAsDaemon()
 {
@@ -81,4 +81,4 @@ int StopDaemon( const char *procName )
     return kill( pid, SIGTERM );
 }
 
-} // namespace python_server
+} // namespace common

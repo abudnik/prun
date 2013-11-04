@@ -18,7 +18,7 @@ public:
      pingTimeout_( pingTimeout ), maxDroped_( maxDroped ),
      numPings_( 0 )
     {
-        protocol_ = new python_server::ProtocolJson;
+        protocol_ = new common::ProtocolJson;
     }
 
     virtual ~Pinger()
@@ -42,11 +42,11 @@ protected:
 
 protected:
     bool stopped_;
-    python_server::SyncTimer timer_;
+    common::SyncTimer timer_;
     int pingTimeout_;
     int maxDroped_;
     int numPings_;
-    python_server::Protocol *protocol_;
+    common::Protocol *protocol_;
 };
 
 

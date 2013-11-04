@@ -16,7 +16,7 @@ public:
     JobCompletionPinger( int pingTimeout )
     : stopped_( false ), pingTimeout_( pingTimeout )
     {
-        protocol_ = new ProtocolJson;
+        protocol_ = new common::ProtocolJson;
     }
 
     virtual ~JobCompletionPinger()
@@ -36,9 +36,9 @@ protected:
 
 protected:
     bool stopped_;
-    SyncTimer timer_;
+    common::SyncTimer timer_;
     int pingTimeout_;
-    Protocol *protocol_;
+    common::Protocol *protocol_;
 };
 
 
