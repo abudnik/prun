@@ -128,7 +128,6 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
             size_t failedNodesCnt = failedWorkers_.GetFailedNodesCnt( jobId );
             if ( failedNodesCnt >= (size_t)job->GetMaxFailedNodes() )
             {
-                scoped_lock.unlock();
                 StopWorkers( jobId );
                 jobs_.RemoveJob( jobId, "max failed nodes limit exceeded" );
                 continue;
@@ -284,8 +283,6 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
 {
     if ( !success )
     {
-        if ( !jobs_.FindJobByJobId( workerJob.GetJobId() ) )
-            return;
         {
             Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
 
@@ -293,6 +290,11 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
                     " jobId=" << workerJob.GetJobId() << ", ip=" << hostIP );
 
             boost::mutex::scoped_lock scoped_lock( workersMut_ );
+            {
+                boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+                if ( !jobs_.FindJobByJobId( workerJob.GetJobId() ) )
+                    return;
+            }
 
             failedWorkers_.Add( workerJob.GetJobId(), hostIP );
 
@@ -312,13 +314,14 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
 {
     PS_LOG( "Scheduler::OnTaskCompletion " << errCode );
 
-    if ( !jobs_.FindJobByJobId( workerTask.GetJobId() ) )
-        return;
-
     if ( !errCode )
     {
         Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
         boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+        boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+
+        if ( !jobs_.FindJobByJobId( workerTask.GetJobId() ) )
+            return;
 
         WorkerJob &workerJob = w->GetJob();
         if ( !workerJob.DeleteTask( workerTask.GetJobId(), workerTask.GetTaskId() ) )
@@ -332,7 +335,6 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
         NodeState &nodeState = nodeState_[ hostIP ];
         nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - 1 );
 
-        boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
         jobs_.DecrementJobExecution( workerTask.GetJobId(), 1 );
     }
     else
@@ -342,6 +344,11 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
 
         Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
+        {
+            boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+            if ( !jobs_.FindJobByJobId( workerTask.GetJobId() ) )
+                return;
+        }
 
         PS_LOG( "Scheduler::OnTaskCompletion: errCode=" << errCode <<
                 ", jobId=" << workerTask.GetJobId() << ", ip=" << hostIP );
@@ -384,7 +391,8 @@ void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &
 void Scheduler::OnJobTimeout( int64_t jobId )
 {
     {
-        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+        boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+        boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
 
         if ( !jobs_.FindJobByJobId( jobId ) )
             return;
@@ -430,7 +438,7 @@ void Scheduler::StopWorkers( int64_t jobId )
             }
         }
     }
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+
     tasksToSend_.erase( jobId );
     {
         TaskList::iterator it = needReschedule_.begin();
