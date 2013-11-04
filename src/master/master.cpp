@@ -125,10 +125,6 @@ public:
         common::logger::InitLogger( isDaemon_, "Master" );
 
         common::Config &cfg = common::Config::Instance();
-
-        common::logger::InitLogger( isDaemon_, "Master" );
-
-        common::Config &cfg = python_server::Config::Instance();
         cfg.ParseConfig( exeDir_.c_str(), "master.cfg" );
 
         unsigned int numHeartbeatThread = 1;
@@ -245,7 +241,7 @@ public:
 
     void Run()
     {
-        common::Config &cfg = python_server::Config::Instance();
+        common::Config &cfg = common::Config::Instance();
 
         string pidfilePath = cfg.Get<string>( "pidfile" );
         if ( pidfilePath[0] != '/' )
