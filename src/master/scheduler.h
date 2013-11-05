@@ -10,43 +10,19 @@
 #include "job.h"
 #include "failed_workers.h"
 #include "scheduled_jobs.h"
+#include "node_state.h"
 
 
 namespace master {
 
-class NodeState
-{
-public:
-    NodeState()
-    : numBusyCPU_( 0 ),
-     worker_( NULL )
-    {}
-
-    void Reset()
-    {
-        numBusyCPU_ = 0;
-    }
-
-    int GetNumBusyCPU() const { return numBusyCPU_; }
-    void SetNumBusyCPU( int num ) { numBusyCPU_ = num; }
-    int GetNumFreeCPU() const { return worker_->GetNumCPU() - numBusyCPU_; }
-    void SetWorker( Worker *w ) { worker_ = w; }
-    Worker *GetWorker() const { return worker_; }
-
-private:
-    int numBusyCPU_;
-    Worker *worker_;
-
-};
-typedef std::map< std::string, NodeState > IPToNodeState;
-
-
 class Scheduler : public common::Observable< true >
 {
 private:
+    typedef std::map< std::string, NodeState > IPToNodeState;
     typedef std::list< WorkerTask > TaskList;
     typedef std::map< int64_t, std::set< int > > JobIdToTasks; // job_id -> set(task_id)
 
+private:
     Scheduler();
 
 public:
