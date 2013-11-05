@@ -241,12 +241,15 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int
 bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **job )
 {
     boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+
+    workerPriority_.Sort( nodeState_.begin(), nodeState_.end(), nodeState_.size()/*, CompareByCPU()*/ );
+
     boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
 
-    IPToNodeState::iterator it = nodeState_.begin();
-    for( ; it != nodeState_.end(); ++it )
+    WorkerPriority::iterator it = workerPriority_.Begin();
+    for( ; it != workerPriority_.End(); ++it )
     {
-        NodeState &nodeState = it->second;
+        NodeState &nodeState = *(*it);
         int freeCPU = nodeState.GetNumFreeCPU();
         if ( freeCPU <= 0 )
             continue;

@@ -11,6 +11,7 @@
 #include "failed_workers.h"
 #include "scheduled_jobs.h"
 #include "node_state.h"
+#include "worker_priority.h"
 
 
 namespace master {
@@ -69,6 +70,7 @@ private:
 
 private:
     IPToNodeState nodeState_;
+    WorkerPriority workerPriority_;
     FailedWorkers failedWorkers_;
     boost::mutex workersMut_;
 
