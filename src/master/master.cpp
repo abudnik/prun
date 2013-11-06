@@ -21,13 +21,11 @@ the License.
 */
 
 #include <iostream>
-#include <fstream> // for RunTests() only
 #include <list>
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
-#include <boost/ptr_container/ptr_vector.hpp>
 #include <csignal>
 #include <sys/wait.h>
 #include "common/log.h"
@@ -45,6 +43,7 @@ the License.
 #include "timeout_manager.h"
 #include "admin.h"
 #include "defines.h"
+#include "test.h"
 
 using namespace std;
 
@@ -60,28 +59,6 @@ void InitWorkerManager( const std::string &exeDir )
     {
         master::WorkerManager &mgr = master::WorkerManager::Instance();
         mgr.Initialize( hosts.begin(), hosts.end() );
-    }
-}
-
-void RunTests( const std::string &exeDir )
-{
-    // read job description from file
-    string filePath = exeDir + "/test/test.job";
-    ifstream file( filePath.c_str() );
-    if ( !file.is_open() )
-    {
-        PS_LOG( "RunTests: couldn't open " << filePath );
-        return;
-    }
-    string jobDescr, line;
-    while( getline( file, line ) )
-        jobDescr += line;
-
-    master::Job *job = master::JobManager::Instance().CreateJob( jobDescr );
-    if ( job )
-    {
-        // add job to job queue
-        master::JobManager::Instance().PushJob( job );
     }
 }
 
@@ -340,7 +317,7 @@ int main( int argc, char* argv[], char **envp )
         MasterApplication app( exeDir, isDaemon );
         app.Initialize();
 
-        RunTests( exeDir );
+        master::RunTests( exeDir );
 
         app.Run();
 

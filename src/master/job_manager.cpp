@@ -2,6 +2,7 @@
 
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/algorithm/string.hpp>
+#include <iterator>
 #include "job_manager.h"
 #include "common/log.h"
 #include "common/helper.h"
@@ -34,6 +35,70 @@ Job *JobManager::CreateJob( const std::string &job_description ) const
         return NULL;
 
     return CreateJob( ptree );
+}
+
+void JobManager::CreateMetaJob( const std::string &meta_description, std::list< Job * > &jobs ) const
+{
+    std::istringstream ss( meta_description );
+    std::string line;
+    typedef std::set< std::string > StringSet;
+    StringSet jobFiles;
+
+    // read job description file pathes
+    std::copy( std::istream_iterator<std::string>( ss ),
+               std::istream_iterator<std::string>(),
+               std::inserter< std::set< std::string > >( jobFiles, jobFiles.begin() ) );
+
+    int index = 0;
+    std::map< std::string, int > jobFileToIndex;
+    std::map< int, Job * > indexToJob;
+
+    // parse job files 
+    StringSet::const_iterator it = jobFiles.begin();
+    bool allParsed = true;
+    for( ; it != jobFiles.end(); ++it )
+    {
+        // read job description from file
+        std::string filePath = exeDir_ + '/' + *it;
+        std::ifstream file( filePath.c_str() );
+        if ( !file.is_open() )
+        {
+            PS_LOG( "CreateMetaJob: couldn't open " << filePath );
+            allParsed = false;
+            break;
+        }
+        std::string jobDescr, line;
+        while( getline( file, line ) )
+            jobDescr += line;
+
+        master::Job *job = master::JobManager::Instance().CreateJob( jobDescr );
+        if ( job )
+        {
+            jobFileToIndex[*it] = index;
+            indexToJob[index] = job;
+            ++index;
+            jobs.push_back( job );
+        }
+        else
+        {
+            PS_LOG( "JobManager::CreateMetaJob: CreateJob failed, job=" << *it );
+            allParsed = false;
+            break;
+        }
+    }
+    if ( allParsed )
+    {
+        TopologicalSort( ss, jobFileToIndex, indexToJob );
+    }
+    else
+    {
+        std::list< Job * >::iterator it = jobs.begin();
+        for( ; it != jobs.end(); )
+        {
+            delete *it;
+            jobs.erase( it++ );
+        }
+    }
 }
 
 void JobManager::PushJob( Job *job )
@@ -140,6 +205,12 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
         PS_LOG( "JobManager::CreateJob exception: " << e.what() );
         return NULL;
     }
+}
+
+void JobManager::TopologicalSort( const std::istringstream &ss,
+                                  const std::map< std::string, int > &jobFileToIndex,
+                                  const std::map< int, Job * > &indexToJob) const
+{
 }
 
 }

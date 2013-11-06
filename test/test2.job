@@ -1,5 +1,5 @@
 {
-    "script" : "test/example/simple.py",
+    "script" : "test/example/hello.sh",
     "language" : "python",
     "priority" : 4,
     "job_timeout" : 120,

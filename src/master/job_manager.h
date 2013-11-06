@@ -26,6 +26,7 @@ class JobManager
 {
 public:
     Job *CreateJob( const std::string &job_description ) const;
+    void CreateMetaJob( const std::string &meta_description, std::list< Job * > &jobs ) const;
     void PushJob( Job *job );
 
     Job *GetJobById( int64_t jobId );
@@ -46,6 +47,10 @@ public:
 private:
     bool ReadScript( const std::string &fileName, std::string &script ) const;
     Job *CreateJob( boost::property_tree::ptree &ptree ) const;
+
+    void TopologicalSort( const std::istringstream &ss,
+                          const std::map< std::string, int > &jobFileToIndex,
+                          const std::map< int, Job * > &indexToJob) const;
 
 private:
     JobQueue jobs_;

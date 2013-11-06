@@ -15,7 +15,7 @@ def IsSimple( value ):
 def main():
 	#file = open( "out.txt", "w" )
 	simples = []
-	for i in xrange( 1, 100000 ):
+	for i in xrange( 1, 1000000 ):
 		if IsSimple( i ):
 			simples.append( i )
 			#file.write( "%d\n" % i )
