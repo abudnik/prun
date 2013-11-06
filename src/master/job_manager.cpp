@@ -2,6 +2,8 @@
 
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/topological_sort.hpp>
 #include <iterator>
 #include "job_manager.h"
 #include "common/log.h"
@@ -207,10 +209,34 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
     }
 }
 
-void JobManager::TopologicalSort( const std::istringstream &ss,
+void JobManager::TopologicalSort( std::istringstream &ss,
                                   const std::map< std::string, int > &jobFileToIndex,
-                                  const std::map< int, Job * > &indexToJob) const
+                                  const std::map< int, Job * > &indexToJob ) const
 {
+    using namespace boost;
+    typedef adjacency_list<vecS, vecS, directedS, 
+                           property<vertex_color_t, default_color_type> > Graph;
+
+    typedef boost::graph_traits<Graph>::vertex_descriptor Vertex;
+
+    typedef std::pair< int, int > Pair;
+    std::vector< Pair > edges;
+    //Pair edges[6] = { Pair(0,1), Pair(2,4), ...};
+
+    ss.clear();
+    ss.seekg( 0, ss.beg );
+    std::string line;
+    while( std::getline( ss, line ) )
+    {
+    }
+
+    Graph G( edges.begin(), edges.end(), edges.size() );
+
+    boost::property_map<Graph, vertex_index_t>::type id = get( vertex_index, G );
+
+    typedef std::vector< Vertex > container;
+    container c;
+    topological_sort( G, std::back_inserter( c ) );
 }
 
 }
