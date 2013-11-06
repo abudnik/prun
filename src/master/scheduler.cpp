@@ -85,11 +85,11 @@ void Scheduler::PlanJobExecution()
         return;
 
     int totalCPU = WorkerManager::Instance().GetTotalCPU();
-    int numExec = static_cast<int>( totalCPU * ( job->GetMaxCPU() / 100. ) );
+    int numExec = job->GetMaxCPU();
+    if ( numExec < 0 || numExec > totalCPU )
+        numExec = totalCPU;
     if ( numExec < 1 )
         numExec = 1;
-    if ( numExec > totalCPU )
-        numExec = totalCPU;
 
     job->SetNumPlannedExec( numExec );
 
