@@ -48,9 +48,10 @@ private:
     bool ReadScript( const std::string &fileName, std::string &script ) const;
     Job *CreateJob( boost::property_tree::ptree &ptree ) const;
 
-    void TopologicalSort( std::istringstream &ss,
-                          const std::map< std::string, int > &jobFileToIndex,
-                          const std::map< int, Job * > &indexToJob ) const;
+    bool TopologicalSort( std::istringstream &ss,
+                          std::map< std::string, int > &jobFileToIndex,
+                          const std::vector< Job * > &indexToJob,
+                          std::list< Job * > &jobs ) const;
 
 private:
     JobQueue jobs_;

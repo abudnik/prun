@@ -4,12 +4,28 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/topological_sort.hpp>
+#include <boost/graph/visitors.hpp>
 #include <iterator>
 #include "job_manager.h"
 #include "common/log.h"
 #include "common/helper.h"
 #include "scheduler.h"
 #include "timeout_manager.h"
+
+namespace boost {
+
+struct cycle_detector : public dfs_visitor<>
+{
+    cycle_detector( bool &has_cycle )
+    : has_cycle_( has_cycle ) {}
+
+    template< class Edge, class Graph >
+    void back_edge( Edge, Graph & ) { has_cycle_ = true; }
+private:
+    bool &has_cycle_;
+};
+
+} // namespace boost
 
 namespace master {
 
@@ -52,11 +68,11 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
 
     int index = 0;
     std::map< std::string, int > jobFileToIndex;
-    std::map< int, Job * > indexToJob;
+    std::vector< Job * > indexToJob;
 
     // parse job files 
     StringSet::const_iterator it = jobFiles.begin();
-    bool allParsed = true;
+    bool succeeded = true;
     for( ; it != jobFiles.end(); ++it )
     {
         // read job description from file
@@ -65,7 +81,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
         if ( !file.is_open() )
         {
             PS_LOG( "CreateMetaJob: couldn't open " << filePath );
-            allParsed = false;
+            succeeded = false;
             break;
         }
         std::string jobDescr, line;
@@ -75,23 +91,23 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
         Job *job = CreateJob( jobDescr );
         if ( job )
         {
-            jobFileToIndex[*it] = index;
-            indexToJob[index] = job;
-            ++index;
+            jobFileToIndex[*it] = index++;
+            indexToJob.push_back( job );
             jobs.push_back( job );
         }
         else
         {
             PS_LOG( "JobManager::CreateMetaJob: CreateJob failed, job=" << *it );
-            allParsed = false;
+            succeeded = false;
             break;
         }
     }
-    if ( allParsed )
+    if ( succeeded )
     {
-        TopologicalSort( ss, jobFileToIndex, indexToJob );
+        succeeded = TopologicalSort( ss, jobFileToIndex, indexToJob, jobs );
     }
-    else
+
+    if ( !succeeded )
     {
         std::list< Job * >::iterator it = jobs.begin();
         for( ; it != jobs.end(); )
@@ -178,6 +194,7 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
             return NULL;
 
         std::string language = ptree.get<std::string>( "language" );
+        int priority = ptree.get<int>( "priority" );
         int timeout = ptree.get<int>( "job_timeout" );
         int queueTimeout = ptree.get<int>( "queue_timeout" );
         int taskTimeout = ptree.get<int>( "task_timeout" );
@@ -190,7 +207,8 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
             taskTimeout = -1;
 
         Job *job = new Job( script, language,
-                            maxFailedNodes, maxCPU, timeout, queueTimeout, taskTimeout,
+                            priority, maxFailedNodes, maxCPU,
+                            timeout, queueTimeout, taskTimeout,
                             noReschedule, exclusiveExec );
         return job;
     }
@@ -201,34 +219,106 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
     }
 }
 
-void JobManager::TopologicalSort( std::istringstream &ss,
-                                  const std::map< std::string, int > &jobFileToIndex,
-                                  const std::map< int, Job * > &indexToJob ) const
+bool JobManager::TopologicalSort( std::istringstream &ss,
+                                  std::map< std::string, int > &jobFileToIndex,
+                                  const std::vector< Job * > &indexToJob,
+                                  std::list< Job * > &jobs ) const
 {
     using namespace boost;
-    typedef adjacency_list<vecS, vecS, directedS, 
-                           property<vertex_color_t, default_color_type> > Graph;
+    typedef adjacency_list<vecS, vecS, bidirectionalS > Graph;
 
     typedef boost::graph_traits<Graph>::vertex_descriptor Vertex;
 
     typedef std::pair< int, int > Pair;
     std::vector< Pair > edges;
-    //Pair edges[6] = { Pair(0,1), Pair(2,4), ...};
 
+    // create graph
     ss.clear();
     ss.seekg( 0, ss.beg );
     std::string line;
+    std::vector< std::string > jobFiles;
     while( std::getline( ss, line ) )
     {
+        std::istringstream ss2( line );
+        std::copy( std::istream_iterator<std::string>( ss2 ),
+                   std::istream_iterator<std::string>(),
+                   std::back_inserter( jobFiles ) );
+
+        int v1, v2;
+
+        std::vector< std::string >::const_iterator first = jobFiles.begin();
+        std::vector< std::string >::const_iterator second = first + 1;
+
+        v1 = jobFileToIndex[*first];
+
+        for( ; second != jobFiles.end(); ++second )
+        {
+            v2 = jobFileToIndex[*second];
+
+            edges.push_back( Pair( v1, v2 ) );
+
+            v1 = v2;
+            first = second;
+        }
+
+        jobFiles.clear();
     }
 
-    Graph G( edges.begin(), edges.end(), edges.size() );
+    Graph graph( edges.begin(), edges.end(), edges.size() );
 
-    boost::property_map<Graph, vertex_index_t>::type id = get( vertex_index, G );
+    // validate graph
+    {
+        bool has_cycle = false;
+        cycle_detector vis( has_cycle );
+        depth_first_search( graph, visitor( vis ) );
+        if ( has_cycle )
+        {
+            PS_LOG( "JobManager::TopologicalSort: job graph has cycle" );
+            return false;
+        }
+    }
 
-    typedef std::vector< Vertex > container;
-    container c;
-    topological_sort( G, std::back_inserter( c ) );
+    // topological sort
+    boost::property_map<Graph, vertex_index_t>::type id = get( vertex_index, graph );
+
+    typedef std::list< Vertex > Container;
+    Container c;
+    topological_sort( graph, std::front_inserter( c ) );
+
+    // calculate job rank in graph
+    std::vector< int > rank( c.size(), 0 );
+
+    Container::const_iterator i = c.begin();
+    for( ; i != c.end(); ++i )
+    {
+        // Walk through the in_edges an calculate the maximum rank.
+        if ( in_degree( *i, graph ) > 0 )
+        {
+            Graph::in_edge_iterator j, j_end;
+            int maxRank = 0;
+            // Through the order from topological sort, we are sure that every
+            // time we are using here is already initialized.
+            for( tie( j, j_end ) = in_edges( *i, graph ); j != j_end; ++j )
+            {
+                maxRank = std::max( rank[ source( *j, graph ) ], maxRank );
+            }
+            rank[ *i ] = maxRank + 1;
+        }
+    }
+
+    // fill jobs
+    jobs.clear();
+
+    std::vector< int >::const_iterator it_rank = rank.begin();
+    Container::const_iterator it = c.begin();
+    for( ; it != c.end(); ++it, ++it_rank )
+    {
+        int index = id[ *it ];
+        Job *job = indexToJob[ index ];
+        job->SetRank( *it_rank );
+        jobs.push_back( job );
+    }
+    return true;
 }
 
-}
+} // namespace master

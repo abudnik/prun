@@ -19,11 +19,12 @@ class Job
 {
 public:
     Job( const std::string &script, const std::string &scriptLanguage,
-         int maxFailedNodes, int maxCPU, int timeout, int queueTimeout, int taskTimeout,
+         int priority, int maxFailedNodes, int maxCPU,
+         int timeout, int queueTimeout, int taskTimeout,
          bool noReschedule, bool exclusiveExec )
     : script_( script ), scriptLanguage_( scriptLanguage ),
-     maxFailedNodes_( maxFailedNodes ), maxCPU_( maxCPU ), timeout_( timeout ),
-     queueTimeout_( queueTimeout ), taskTimeout_( taskTimeout ),
+     priority_( priority ), rank_( -1 ), maxFailedNodes_( maxFailedNodes ), maxCPU_( maxCPU ),
+     timeout_( timeout ), queueTimeout_( queueTimeout ), taskTimeout_( taskTimeout ),
      flags_( 0 )
     {
         if ( noReschedule )
@@ -40,6 +41,8 @@ public:
     const std::string &GetScriptLanguage() const { return scriptLanguage_; }
     unsigned int GetScriptLength() const { return scriptLength_; }
 
+    int GetPriority() const { return priority_; }
+    int GetRank() const { return rank_; }
     int GetNumPlannedExec() const { return numPlannedExec_; }
     int GetMaxFailedNodes() const { return maxFailedNodes_; }
     int GetMaxCPU() const { return maxCPU_; }
@@ -51,6 +54,7 @@ public:
     int64_t GetJobId() const { return id_; }
 
     void SetNumPlannedExec( int val ) { numPlannedExec_ = val; }
+    void SetRank( int val ) { rank_ = val; }
 
     template< typename T >
     void SetCallback( T *obj, void (T::*f)( const std::string &result ) )
@@ -69,6 +73,8 @@ private:
     std::string scriptLanguage_;
     unsigned int scriptLength_;
 
+    int priority_;
+    int rank_;
     int numPlannedExec_;
     int maxFailedNodes_;
     int maxCPU_;
