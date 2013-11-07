@@ -267,8 +267,7 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **
             w->GetJob() += workerJob;
             hostIP = w->GetIP();
 
-            int numBusyCPU = nodeState.GetNumBusyCPU() + workerJob.GetTotalNumTasks();
-            nodeState.SetNumBusyCPU( numBusyCPU );
+            nodeState.AllocCPU( workerJob.GetTotalNumTasks() );
             return true;
         }
     }
@@ -305,8 +304,7 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
             RescheduleJob( w->GetJob() );
 
             NodeState &nodeState = nodeState_[ hostIP ];
-            int numTasks = workerJob.GetTotalNumTasks();
-            nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - numTasks );
+            nodeState.FreeCPU( workerJob.GetTotalNumTasks() );
             w->ResetJob();
         }
         NotifyAll();
@@ -336,7 +334,7 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
         }
 
         NodeState &nodeState = nodeState_[ hostIP ];
-        nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - 1 );
+        nodeState.FreeCPU( 1 );
 
         jobs_.DecrementJobExecution( workerTask.GetJobId(), 1 );
     }
@@ -363,8 +361,7 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
         RescheduleJob( workerJob );
 
         NodeState &nodeState = nodeState_[ hostIP ];
-        int numTasks = workerJob.GetTotalNumTasks();
-        nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - numTasks );
+        nodeState.FreeCPU( workerJob.GetTotalNumTasks() );
         w->ResetJob();
     }
 
@@ -435,8 +432,7 @@ void Scheduler::StopWorkers( int64_t jobId )
                     WorkerManager::Instance().AddCommand( commandPtr, worker->GetIP() );
                 }
 
-                int numTasks = workerJob.GetNumTasks( jobId );
-                nodeState.SetNumBusyCPU( nodeState.GetNumBusyCPU() - numTasks );
+                nodeState.FreeCPU( workerJob.GetNumTasks( jobId ) );
                 workerJob.DeleteJob( jobId );
             }
         }
