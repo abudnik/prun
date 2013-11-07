@@ -4,7 +4,7 @@
     "priority" : 4,
     "job_timeout" : 120,
     "queue_timeout" : 60,
-    "task_timeout" : 5,
+    "task_timeout" : 15,
     "max_failed_nodes" : 10,
     "max_cpu" : 1,
     "no_reschedule" : false,

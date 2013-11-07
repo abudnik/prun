@@ -157,9 +157,6 @@ public:
 
         string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
 
-        size_t offset = job->GetCommId() * SHMEM_BLOCK_SIZE;
-        string shmemOffset = boost::lexical_cast<std::string>( offset );
-
         string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
         string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
 
@@ -277,7 +274,7 @@ protected:
                 }
                 else
                 {
-                    size_t offset = job_->GetJobId() * SHMEM_BLOCK_SIZE;
+                    size_t offset = job_->GetCommId() * SHMEM_BLOCK_SIZE;
                     char *shmemAddr = (char*)worker::mappedRegion->get_address() + offset;
 
                     offset = 0;
@@ -391,9 +388,6 @@ public:
             return;
 
         string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
-
-        size_t offset = job->GetJobId() * SHMEM_BLOCK_SIZE;
-        string shmemOffset = boost::lexical_cast<std::string>( offset );
 
         string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
         string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );

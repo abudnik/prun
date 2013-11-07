@@ -15,8 +15,7 @@ namespace master {
 
 bool JDLJason::ParseJob( const std::string &job_description, boost::property_tree::ptree &ptree )
 {
-    std::stringstream ss;
-    ss << job_description;
+    std::istringstream ss( job_description );
     try
     {
         boost::property_tree::read_json( ss, ptree );
@@ -73,7 +72,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
         while( getline( file, line ) )
             jobDescr += line;
 
-        master::Job *job = master::JobManager::Instance().CreateJob( jobDescr );
+        Job *job = CreateJob( jobDescr );
         if ( job )
         {
             jobFileToIndex[*it] = index;
@@ -189,13 +188,6 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
 
         if ( taskTimeout < 0 )
             taskTimeout = -1;
-
-        if ( maxCPU > 100 || maxCPU < 1 )
-        {
-            PS_LOG( "JobManager::CreateJob invalid maxCPU value=" << maxCPU <<
-                    ", set maxCPU value to 100" );
-            maxCPU = 100;
-        }
 
         Job *job = new Job( script, language,
                             maxFailedNodes, maxCPU, timeout, queueTimeout, taskTimeout,
