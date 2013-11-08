@@ -25,7 +25,7 @@ public:
     : script_( script ), scriptLanguage_( scriptLanguage ),
      priority_( priority ), rank_( -1 ), maxFailedNodes_( maxFailedNodes ), maxCPU_( maxCPU ),
      timeout_( timeout ), queueTimeout_( queueTimeout ), taskTimeout_( taskTimeout ),
-     flags_( 0 )
+     flags_( 0 ), groupId_( -1 )
     {
         if ( noReschedule )
             flags_ |= JOB_FLAG_NO_RESCHEDULE;
@@ -52,9 +52,11 @@ public:
     bool IsNoReschedule() const { return flags_ & JOB_FLAG_NO_RESCHEDULE; }
     bool IsExclusiveAccess() const { return flags_ & JOB_FLAG_EXCLUSIVE_EXEC; }
     int64_t GetJobId() const { return id_; }
+    int64_t GetGroupId() const { return groupId_; }
 
     void SetNumPlannedExec( int val ) { numPlannedExec_ = val; }
     void SetRank( int val ) { rank_ = val; }
+    void SetGroupId( int64_t val ) { groupId_ = val; }
 
     template< typename T >
     void SetCallback( T *obj, void (T::*f)( const std::string &result ) )
@@ -81,6 +83,7 @@ private:
     int timeout_, queueTimeout_, taskTimeout_;
     int flags_;
     int64_t id_;
+    int64_t groupId_;
 
     boost::function< void (const std::string &) > callback_;
 };
@@ -92,7 +95,8 @@ class JobQueue
 public:
     JobQueue() : numJobs_( 0 ) {}
 
-    void PushJob( Job *job );
+    void PushJob( Job *job, int64_t groupId );
+    void PushJobs( std::list< Job * > &jobs, int64_t groupId );
 
     Job *PopJob();
     Job *GetTopJob();
@@ -101,6 +105,10 @@ public:
     bool DeleteJob( int64_t jobId );
 
     void Clear( bool doDelete = true );
+
+private:
+    void Sort( std::list< Job * > &jobs );
+    void PrintJobs( const std::list< Job * > &jobs ) const; // debug only
 
 private:
     std::list< Job * > jobs_;

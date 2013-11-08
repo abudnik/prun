@@ -28,6 +28,7 @@ public:
     Job *CreateJob( const std::string &job_description ) const;
     void CreateMetaJob( const std::string &meta_description, std::list< Job * > &jobs ) const;
     void PushJob( Job *job );
+    void PushJobs( std::list< Job * > &jobs );
 
     Job *GetJobById( int64_t jobId );
     bool DeleteJob( int64_t jobId );
@@ -57,6 +58,7 @@ private:
     JobQueue jobs_;
     TimeoutManager *timeoutManager_;
     std::string exeDir_;
+    static int64_t numJobGroups_;
 };
 
 } // namespace master

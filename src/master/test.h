@@ -46,16 +46,14 @@ void TestMetaJob( const std::string &exeDir )
     typedef std::list< master::Job * > JobList;
     JobList jobs;
     master::JobManager::Instance().CreateMetaJob( metaDescr, jobs );
-    JobList::const_iterator it = jobs.begin();
-    for( ; it != jobs.end(); ++it )
-    {
-        // add job to job queue
-        master::JobManager::Instance().PushJob( *it );
-    }
+    master::JobManager::Instance().PushJobs( jobs );
+
 }
 
 void RunTests( const std::string &exeDir )
 {
+    TestMetaJob( exeDir );
+    TestMetaJob( exeDir );
     TestMetaJob( exeDir );
 }
 

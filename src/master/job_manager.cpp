@@ -44,6 +44,8 @@ bool JDLJason::ParseJob( const std::string &job_description, boost::property_tre
     return true;
 }
 
+int64_t JobManager::numJobGroups_ = 0;
+
 Job *JobManager::CreateJob( const std::string &job_description ) const
 {
     boost::property_tree::ptree ptree;
@@ -71,8 +73,8 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
     std::vector< Job * > indexToJob;
 
     // parse job files 
-    StringSet::const_iterator it = jobFiles.begin();
     bool succeeded = true;
+    StringSet::const_iterator it = jobFiles.begin();
     for( ; it != jobFiles.end(); ++it )
     {
         // read job description from file
@@ -121,10 +123,25 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
 void JobManager::PushJob( Job *job )
 {
     PS_LOG( "push job" );
-    jobs_.PushJob( job );
+    jobs_.PushJob( job, numJobGroups_++ );
 
-    Scheduler::Instance().OnNewJob( job );
+    Scheduler::Instance().OnNewJob();
     timeoutManager_->PushJobQueue( job->GetJobId(), job->GetQueueTimeout() );
+}
+
+void JobManager::PushJobs( std::list< Job * > &jobs )
+{
+    PS_LOG( "push jobs" );
+    jobs_.PushJobs( jobs, numJobGroups_++ );
+
+    Scheduler::Instance().OnNewJob();
+
+    std::list< Job * >::const_iterator it = jobs.begin();
+    for( ; it != jobs.end(); ++it )
+    {
+        Job *job = *it;
+        timeoutManager_->PushJobQueue( job->GetJobId(), job->GetQueueTimeout() );
+    }
 }
 
 Job *JobManager::GetJobById( int64_t jobId )

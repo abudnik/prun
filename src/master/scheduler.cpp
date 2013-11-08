@@ -72,7 +72,7 @@ void Scheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
     }
 }
 
-void Scheduler::OnNewJob( Job *job )
+void Scheduler::OnNewJob()
 {
     if ( CanTakeNewJob() )
         PlanJobExecution();

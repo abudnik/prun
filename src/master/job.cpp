@@ -3,12 +3,27 @@
 
 namespace master {
 
-void JobQueue::PushJob( Job *job )
+void JobQueue::PushJob( Job *job, int64_t groupId )
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    job->SetGroupId( groupId );
     jobs_.push_back( job );
     idToJob_[ job->GetJobId() ] = job;
     ++numJobs_;
+}
+
+void JobQueue::PushJobs( std::list< Job * > &jobs, int64_t groupId )
+{
+    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    std::list< Job * >::const_iterator it = jobs.begin();
+    for( ; it != jobs.end(); ++it )
+    {
+        Job *job = *it;
+        job->SetGroupId( groupId );
+        jobs_.push_back( job );
+        idToJob_[ job->GetJobId() ] = job;
+        ++numJobs_;
+    }
 }
 
 Job *JobQueue::GetJobById( int64_t jobId )
@@ -58,8 +73,21 @@ Job *JobQueue::PopJob()
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     if ( numJobs_ )
     {
-        Job *job = jobs_.front();
-        jobs_.pop_front();
+        std::list< Job * > jobs;
+        Sort( jobs );
+
+        Job *job = jobs.front();
+
+        std::list< Job * >::iterator it = jobs_.begin();
+        for( ; it != jobs_.end(); ++it )
+        {
+            if ( job == *it )
+            {
+                jobs_.erase( it );
+                break;
+            }
+        }
+
         idToJob_.erase( job->GetJobId() );
         --numJobs_;
         return job;
@@ -89,6 +117,82 @@ void JobQueue::Clear( bool doDelete )
     jobs_.clear();
     idToJob_.clear();
     numJobs_ = 0;
+}
+
+struct JobComparatorGroup
+{
+    bool operator() ( const Job *a, const Job *b ) const
+    {
+        if ( a->GetGroupId() < b->GetGroupId() )
+            return true;
+        if ( a->GetGroupId() == b->GetGroupId() )
+        {
+            if ( a->GetRank() < b->GetRank() )
+                return true;
+        }
+        return false;
+    }
+};
+
+struct JobComparatorPriority
+{
+    bool operator() ( const Job *a, const Job *b ) const
+    {
+        if ( a->GetPriority() < b->GetPriority() )
+            return true;
+        if ( a->GetPriority() == b->GetPriority() )
+        {
+            if ( a->GetGroupId() < b->GetGroupId() )
+                return true;
+        }
+        return false;
+    }
+};
+
+void JobQueue::Sort( std::list< Job * > &jobs )
+{
+    jobs_.sort( JobComparatorGroup() );
+    std::list< Job * >::const_iterator it = jobs_.begin();
+    Job *job = *it;
+    int64_t groupId = job->GetGroupId();
+    int rank = job->GetRank();
+    // fill jobs list with most ranked jobs from each job group
+    for( ; it != jobs_.end(); ++it )
+    {
+        job = *it;
+        if ( groupId != job->GetGroupId() )
+        {
+            groupId = job->GetGroupId();
+            rank = job->GetRank();
+            jobs.push_back( job );
+        }
+        else
+        {
+            if ( rank == job->GetRank() )
+            {
+                jobs.push_back( job );
+            }
+        }
+    }
+
+    // sort jobs by priority, saving group order
+    jobs.sort( JobComparatorPriority() );
+    //PrintJobs( jobs );
+}
+
+void JobQueue::PrintJobs( const std::list< Job * > &jobs ) const
+{
+    std::ostringstream ss;
+    ss << std::endl;
+    std::list< Job * >::const_iterator it = jobs.begin();
+    for( ; it != jobs.end(); ++it )
+    {
+        if ( it != jobs.begin() )
+            ss << "," << std::endl;
+        ss << "(priority=" << (*it)->GetPriority() << ", groupid=" <<
+            (*it)->GetGroupId() << ", rank=" << (*it)->GetRank() << ")";
+    }
+    PS_LOG( ss.str() );
 }
 
 } // namespace master

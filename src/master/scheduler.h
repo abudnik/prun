@@ -31,7 +31,7 @@ public:
 
     void OnChangedWorkerState( const std::vector< Worker * > &workers );
 
-    void OnNewJob( Job *job );
+    void OnNewJob();
 
     bool GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **job );
 
