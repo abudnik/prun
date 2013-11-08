@@ -3,19 +3,20 @@
 
 namespace master {
 
-void JobGroup::OnJobCompletion()
+void JobGroup::OnJobCompletion( const JobVertex &vertex )
 {
-    if ( currentRank_ > (int)jobExec_.size() )
-        return;
-    if ( --jobExec_[ currentRank_ ] <= 0 )
-        ++currentRank_;
-}
+    using namespace boost;
 
-void JobGroup::IncrementRank( int rank )
-{
-    if ( rank + 1 > (int)jobExec_.size() )
-        jobExec_.resize( rank + 1, 0 );
-    ++jobExec_[ rank ];
+    JobGraph::out_edge_iterator i, i_end;
+    for( tie( i, i_end ) = out_edges( vertex, graph_ ); i != i_end; ++i )
+    {
+        JobVertex out = target( *i, graph_ );
+        int index = propMap_[ out ];
+        Job *job = indexToJob_[ index ];
+        
+        int numDeps = job->GetNumDepends();
+        job->SetNumDepends( numDeps - 1 );
+    }
 }
 
 void JobQueue::PushJob( Job *job, int64_t groupId )
@@ -95,7 +96,7 @@ Job *JobQueue::PopJob()
         for( ; it != jobs.end(); ++it )
         {
             Job *job = *it;
-            if ( job->GetCurrentRank() < job->GetRank() )
+            if ( job->GetNumDepends() > 0 )
                 continue;
 
             std::list< Job * >::iterator i = jobs_.begin();
@@ -140,21 +141,6 @@ void JobQueue::Clear( bool doDelete )
     numJobs_ = 0;
 }
 
-struct JobComparatorGroup
-{
-    bool operator() ( const Job *a, const Job *b ) const
-    {
-        if ( a->GetGroupId() < b->GetGroupId() )
-            return true;
-        if ( a->GetGroupId() == b->GetGroupId() )
-        {
-            if ( a->GetRank() < b->GetRank() )
-                return true;
-        }
-        return false;
-    }
-};
-
 struct JobComparatorPriority
 {
     bool operator() ( const Job *a, const Job *b ) const
@@ -172,27 +158,13 @@ struct JobComparatorPriority
 
 void JobQueue::Sort( std::list< Job * > &jobs )
 {
-    jobs_.sort( JobComparatorGroup() );
     std::list< Job * >::const_iterator it = jobs_.begin();
-    Job *job = *it;
-    int64_t groupId = job->GetGroupId();
-    int rank = job->GetRank();
-    // fill jobs list with most ranked jobs from each job group
     for( ; it != jobs_.end(); ++it )
     {
-        job = *it;
-        if ( groupId != job->GetGroupId() )
+        Job *job = *it;
+        if ( job->GetNumDepends() == 0 )
         {
-            groupId = job->GetGroupId();
-            rank = job->GetRank();
             jobs.push_back( job );
-        }
-        else
-        {
-            if ( rank == job->GetRank() )
-            {
-                jobs.push_back( job );
-            }
         }
     }
 
@@ -210,8 +182,8 @@ void JobQueue::PrintJobs( const std::list< Job * > &jobs ) const
     {
         if ( it != jobs.begin() )
             ss << "," << std::endl;
-        ss << "(priority=" << (*it)->GetPriority() << ", groupid=" <<
-            (*it)->GetGroupId() << ", rank=" << (*it)->GetRank() << ")";
+        ss << "(priority=" << (*it)->GetPriority() <<
+            ", groupid=" << (*it)->GetGroupId() << ")";
     }
     PS_LOG( ss.str() );
 }

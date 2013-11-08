@@ -6,6 +6,7 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
+#include <boost/graph/adjacency_list.hpp>
 #include <stdint.h> // int64_t
 
 namespace master {
@@ -16,22 +17,29 @@ enum JobFlag
     JOB_FLAG_EXCLUSIVE_EXEC = 2
 };
 
+typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::bidirectionalS > JobGraph;
+
+typedef boost::graph_traits<JobGraph>::vertex_descriptor JobVertex;
+
+class Job;
 class JobGroup
 {
 public:
-    JobGroup()
-    : currentRank_( 0 )
-    {}
+    typedef typename boost::property_map< JobGraph, boost::vertex_index_t >::type PropertyMap;
 
-    void OnJobCompletion();
+public:
+    void OnJobCompletion( const JobVertex &vertex );
 
-    void IncrementRank( int rank );
+    JobGraph &GetGraph() { return graph_; }
 
-    int GetCurrentRank() const { return currentRank_; }
+    void InitPropertyMap() { propMap_ = boost::get( boost::vertex_index, graph_ ); }
+    PropertyMap &GetPropertyMap() { return propMap_; }
+    std::vector< Job * > &GetIndexToJob() { return indexToJob_; }
 
 private:
-    int currentRank_;
-    std::vector< int > jobExec_;
+    JobGraph graph_;
+    PropertyMap propMap_;
+    std::vector< Job * > indexToJob_;
 };
 
 class Job
@@ -42,7 +50,7 @@ public:
          int timeout, int queueTimeout, int taskTimeout,
          bool noReschedule, bool exclusiveExec )
     : script_( script ), scriptLanguage_( scriptLanguage ),
-     priority_( priority ), rank_( -1 ), maxFailedNodes_( maxFailedNodes ), maxCPU_( maxCPU ),
+     priority_( priority ), numDepends_( 0 ), maxFailedNodes_( maxFailedNodes ), maxCPU_( maxCPU ),
      timeout_( timeout ), queueTimeout_( queueTimeout ), taskTimeout_( taskTimeout ),
      flags_( 0 ), groupId_( -1 )
     {
@@ -59,7 +67,7 @@ public:
     ~Job()
     {
         if ( jobGroup_ )
-            jobGroup_->OnJobCompletion();
+            jobGroup_->OnJobCompletion( graphVertex_ );
     }
 
     const std::string &GetScript() const { return script_; }
@@ -67,7 +75,7 @@ public:
     unsigned int GetScriptLength() const { return scriptLength_; }
 
     int GetPriority() const { return priority_; }
-    int GetRank() const { return rank_; }
+    int GetNumDepends() const { return numDepends_; }
     int GetNumPlannedExec() const { return numPlannedExec_; }
     int GetMaxFailedNodes() const { return maxFailedNodes_; }
     int GetMaxCPU() const { return maxCPU_; }
@@ -78,16 +86,11 @@ public:
     bool IsExclusiveAccess() const { return flags_ & JOB_FLAG_EXCLUSIVE_EXEC; }
     int64_t GetJobId() const { return id_; }
     int64_t GetGroupId() const { return groupId_; }
-    int GetCurrentRank() const
-    {
-        if ( jobGroup_ )
-            return jobGroup_->GetCurrentRank();
-        return 0;
-    }
 
     void SetNumPlannedExec( int val ) { numPlannedExec_ = val; }
-    void SetRank( int val ) { rank_ = val; }
+    void SetNumDepends( int val ) { numDepends_ = val; }
     void SetGroupId( int64_t val ) { groupId_ = val; }
+    void SetJobVertex( const JobVertex &vertex ) { graphVertex_ = vertex; }
     void SetJobGroup( boost::shared_ptr< JobGroup > &jobGroup ) { jobGroup_ = jobGroup; }
 
     template< typename T >
@@ -108,7 +111,7 @@ private:
     unsigned int scriptLength_;
 
     int priority_;
-    int rank_;
+    int numDepends_;
     int numPlannedExec_;
     int maxFailedNodes_;
     int maxCPU_;
@@ -117,6 +120,7 @@ private:
     int64_t id_;
     int64_t groupId_;
 
+    JobVertex graphVertex_;
     boost::shared_ptr< JobGroup > jobGroup_;
     boost::function< void (const std::string &) > callback_;
 };

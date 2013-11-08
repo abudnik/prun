@@ -2,7 +2,6 @@
 
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/topological_sort.hpp>
 #include <boost/graph/visitors.hpp>
 #include <iterator>
@@ -70,7 +69,9 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
 
     int index = 0;
     std::map< std::string, int > jobFileToIndex;
-    std::vector< Job * > indexToJob;
+
+    boost::shared_ptr< JobGroup > jobGroup( new JobGroup() );
+    std::vector< Job * > &indexToJob = jobGroup->GetIndexToJob();
 
     // parse job files 
     bool succeeded = true;
@@ -93,7 +94,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
         Job *job = CreateJob( jobDescr );
         if ( job )
         {
-            jobFileToIndex[*it] = index++;
+            jobFileToIndex[ *it ] = index++;
             indexToJob.push_back( job );
             jobs.push_back( job );
         }
@@ -106,7 +107,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
     }
     if ( succeeded )
     {
-        succeeded = TopologicalSort( ss, jobFileToIndex, indexToJob, jobs );
+        succeeded = TopologicalSort( ss, jobFileToIndex, jobGroup, jobs );
     }
 
     if ( !succeeded )
@@ -238,18 +239,14 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
 
 bool JobManager::TopologicalSort( std::istringstream &ss,
                                   std::map< std::string, int > &jobFileToIndex,
-                                  const std::vector< Job * > &indexToJob,
+                                  boost::shared_ptr< JobGroup > &jobGroup,
                                   std::list< Job * > &jobs ) const
 {
     using namespace boost;
-    typedef adjacency_list<vecS, vecS, bidirectionalS > Graph;
-
-    typedef boost::graph_traits<Graph>::vertex_descriptor Vertex;
-
-    typedef std::pair< int, int > Pair;
-    std::vector< Pair > edges;
 
     // create graph
+    JobGraph &graph = jobGroup->GetGraph();
+
     ss.clear();
     ss.seekg( 0, ss.beg );
     std::string line;
@@ -272,7 +269,7 @@ bool JobManager::TopologicalSort( std::istringstream &ss,
         {
             v2 = jobFileToIndex[*second];
 
-            edges.push_back( Pair( v1, v2 ) );
+            add_edge( v1, v2, graph );
 
             v1 = v2;
             first = second;
@@ -280,8 +277,6 @@ bool JobManager::TopologicalSort( std::istringstream &ss,
 
         jobFiles.clear();
     }
-
-    Graph graph( edges.begin(), edges.end(), edges.size() );
 
     // validate graph
     {
@@ -296,47 +291,27 @@ bool JobManager::TopologicalSort( std::istringstream &ss,
     }
 
     // topological sort
-    boost::property_map<Graph, vertex_index_t>::type id = get( vertex_index, graph );
+    jobGroup->InitPropertyMap();
+    JobGroup::PropertyMap &propMap = jobGroup->GetPropertyMap();
 
-    typedef std::list< Vertex > Container;
+    typedef std::list< JobVertex > Container;
     Container c;
     topological_sort( graph, std::front_inserter( c ) );
-
-    // calculate job rank in graph
-    std::vector< int > rank( c.size(), 0 );
-
-    Container::const_iterator i = c.begin();
-    for( ; i != c.end(); ++i )
-    {
-        // Walk through the in_edges an calculate the maximum rank.
-        if ( in_degree( *i, graph ) > 0 )
-        {
-            Graph::in_edge_iterator j, j_end;
-            int maxRank = 0;
-            // Through the order from topological sort, we are sure that every
-            // time we are using here is already initialized.
-            for( tie( j, j_end ) = in_edges( *i, graph ); j != j_end; ++j )
-            {
-                maxRank = std::max( rank[ source( *j, graph ) ], maxRank );
-            }
-            rank[ *i ] = maxRank + 1;
-        }
-    }
 
     // fill jobs
     jobs.clear();
 
-    boost::shared_ptr< JobGroup > jobGroup( new JobGroup() );
-
-    std::vector< int >::const_iterator it_rank = rank.begin();
     Container::const_iterator it = c.begin();
-    for( ; it != c.end(); ++it, ++it_rank )
+    for( ; it != c.end(); ++it )
     {
-        int index = id[ *it ];
-        Job *job = indexToJob[ index ];
-        job->SetRank( *it_rank );
-        jobGroup->IncrementRank( *it_rank );
+        int index = propMap[ *it ];
+        Job *job = jobGroup->GetIndexToJob()[ index ];
+
+        job->SetJobVertex( *it );
+        int deps = in_degree( *it, graph );
+        job->SetNumDepends( deps );
         job->SetJobGroup( jobGroup );
+
         jobs.push_back( job );
     }
     return true;

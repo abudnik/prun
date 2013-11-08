@@ -51,7 +51,7 @@ private:
 
     bool TopologicalSort( std::istringstream &ss,
                           std::map< std::string, int > &jobFileToIndex,
-                          const std::vector< Job * > &indexToJob,
+                          boost::shared_ptr< JobGroup > &jobGroup,
                           std::list< Job * > &jobs ) const;
 
 private:
