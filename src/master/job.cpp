@@ -170,7 +170,7 @@ void JobQueue::Sort( std::list< Job * > &jobs )
 
     // sort jobs by priority, saving group order
     jobs.sort( JobComparatorPriority() );
-    PrintJobs( jobs );
+    //PrintJobs( jobs );
 }
 
 void JobQueue::PrintJobs( const std::list< Job * > &jobs ) const

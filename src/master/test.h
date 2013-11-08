@@ -52,9 +52,10 @@ void TestMetaJob( const std::string &exeDir )
 
 void RunTests( const std::string &exeDir )
 {
-    TestMetaJob( exeDir );
-    TestMetaJob( exeDir );
-    TestMetaJob( exeDir );
+    for( int i = 0; i < 3; ++i )
+    {
+        TestMetaJob( exeDir );
+    }
 }
 
 } // namespace master
