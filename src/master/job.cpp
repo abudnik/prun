@@ -3,6 +3,21 @@
 
 namespace master {
 
+void JobGroup::OnJobCompletion()
+{
+    if ( currentRank_ > (int)jobExec_.size() )
+        return;
+    if ( --jobExec_[ currentRank_ ] <= 0 )
+        ++currentRank_;
+}
+
+void JobGroup::IncrementRank( int rank )
+{
+    if ( rank + 1 > (int)jobExec_.size() )
+        jobExec_.resize( rank + 1, 0 );
+    ++jobExec_[ rank ];
+}
+
 void JobQueue::PushJob( Job *job, int64_t groupId )
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
@@ -76,21 +91,27 @@ Job *JobQueue::PopJob()
         std::list< Job * > jobs;
         Sort( jobs );
 
-        Job *job = jobs.front();
-
-        std::list< Job * >::iterator it = jobs_.begin();
-        for( ; it != jobs_.end(); ++it )
+        std::list< Job * >::const_iterator it = jobs.begin();
+        for( ; it != jobs.end(); ++it )
         {
-            if ( job == *it )
-            {
-                jobs_.erase( it );
-                break;
-            }
-        }
+            Job *job = *it;
+            if ( job->GetCurrentRank() < job->GetRank() )
+                continue;
 
-        idToJob_.erase( job->GetJobId() );
-        --numJobs_;
-        return job;
+            std::list< Job * >::iterator i = jobs_.begin();
+            for( ; i != jobs_.end(); ++i )
+            {
+                if ( job == *i )
+                {
+                    jobs_.erase( i );
+                    break;
+                }
+            }
+
+            idToJob_.erase( job->GetJobId() );
+            --numJobs_;
+            return job;
+        }
     }
     return NULL;
 }
@@ -177,7 +198,7 @@ void JobQueue::Sort( std::list< Job * > &jobs )
 
     // sort jobs by priority, saving group order
     jobs.sort( JobComparatorPriority() );
-    //PrintJobs( jobs );
+    PrintJobs( jobs );
 }
 
 void JobQueue::PrintJobs( const std::list< Job * > &jobs ) const

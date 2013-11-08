@@ -2,6 +2,7 @@
 #define __JOB_H
 
 #include <list>
+#include <vector>
 #include <boost/thread/mutex.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
@@ -13,6 +14,24 @@ enum JobFlag
 {
     JOB_FLAG_NO_RESCHEDULE = 1,
     JOB_FLAG_EXCLUSIVE_EXEC = 2
+};
+
+class JobGroup
+{
+public:
+    JobGroup()
+    : currentRank_( 0 )
+    {}
+
+    void OnJobCompletion();
+
+    void IncrementRank( int rank );
+
+    int GetCurrentRank() const { return currentRank_; }
+
+private:
+    int currentRank_;
+    std::vector< int > jobExec_;
 };
 
 class Job
@@ -37,6 +56,12 @@ public:
         id_ = numJobs++;
     }
 
+    ~Job()
+    {
+        if ( jobGroup_ )
+            jobGroup_->OnJobCompletion();
+    }
+
     const std::string &GetScript() const { return script_; }
     const std::string &GetScriptLanguage() const { return scriptLanguage_; }
     unsigned int GetScriptLength() const { return scriptLength_; }
@@ -53,10 +78,17 @@ public:
     bool IsExclusiveAccess() const { return flags_ & JOB_FLAG_EXCLUSIVE_EXEC; }
     int64_t GetJobId() const { return id_; }
     int64_t GetGroupId() const { return groupId_; }
+    int GetCurrentRank() const
+    {
+        if ( jobGroup_ )
+            return jobGroup_->GetCurrentRank();
+        return 0;
+    }
 
     void SetNumPlannedExec( int val ) { numPlannedExec_ = val; }
     void SetRank( int val ) { rank_ = val; }
     void SetGroupId( int64_t val ) { groupId_ = val; }
+    void SetJobGroup( boost::shared_ptr< JobGroup > &jobGroup ) { jobGroup_ = jobGroup; }
 
     template< typename T >
     void SetCallback( T *obj, void (T::*f)( const std::string &result ) )
@@ -85,6 +117,7 @@ private:
     int64_t id_;
     int64_t groupId_;
 
+    boost::shared_ptr< JobGroup > jobGroup_;
     boost::function< void (const std::string &) > callback_;
 };
 

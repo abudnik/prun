@@ -326,6 +326,8 @@ bool JobManager::TopologicalSort( std::istringstream &ss,
     // fill jobs
     jobs.clear();
 
+    boost::shared_ptr< JobGroup > jobGroup( new JobGroup() );
+
     std::vector< int >::const_iterator it_rank = rank.begin();
     Container::const_iterator it = c.begin();
     for( ; it != c.end(); ++it, ++it_rank )
@@ -333,6 +335,8 @@ bool JobManager::TopologicalSort( std::istringstream &ss,
         int index = id[ *it ];
         Job *job = indexToJob[ index ];
         job->SetRank( *it_rank );
+        jobGroup->IncrementRank( *it_rank );
+        job->SetJobGroup( jobGroup );
         jobs.push_back( job );
     }
     return true;
