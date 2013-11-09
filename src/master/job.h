@@ -32,13 +32,10 @@ public:
 
     JobGraph &GetGraph() { return graph_; }
 
-    void InitPropertyMap() { propMap_ = boost::get( boost::vertex_index, graph_ ); }
-    PropertyMap &GetPropertyMap() { return propMap_; }
     std::vector< Job * > &GetIndexToJob() { return indexToJob_; }
 
 private:
     JobGraph graph_;
-    PropertyMap propMap_;
     std::vector< Job * > indexToJob_;
 };
 

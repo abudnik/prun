@@ -11,9 +11,8 @@ void JobGroup::OnJobCompletion( const JobVertex &vertex )
     for( tie( i, i_end ) = out_edges( vertex, graph_ ); i != i_end; ++i )
     {
         JobVertex out = target( *i, graph_ );
-        int index = propMap_[ out ];
-        Job *job = indexToJob_[ index ];
-        
+        Job *job = indexToJob_[ out ];
+
         int numDeps = job->GetNumDepends();
         job->SetNumDepends( numDeps - 1 );
     }

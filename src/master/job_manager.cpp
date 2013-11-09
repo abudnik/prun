@@ -290,30 +290,23 @@ bool JobManager::TopologicalSort( std::istringstream &ss,
         }
     }
 
-    // topological sort
-    jobGroup->InitPropertyMap();
-    JobGroup::PropertyMap &propMap = jobGroup->GetPropertyMap();
-
-    typedef std::list< JobVertex > Container;
-    Container c;
-    topological_sort( graph, std::front_inserter( c ) );
-
     // fill jobs
     jobs.clear();
 
-    Container::const_iterator it = c.begin();
-    for( ; it != c.end(); ++it )
+    typedef graph_traits<JobGraph>::vertex_iterator VertexIter;
+    VertexIter i, i_end;
+    for( tie( i, i_end ) = vertices( graph ); i != i_end; ++i )
     {
-        int index = propMap[ *it ];
-        Job *job = jobGroup->GetIndexToJob()[ index ];
+        Job *job = jobGroup->GetIndexToJob()[ *i ];
 
-        job->SetJobVertex( *it );
-        int deps = in_degree( *it, graph );
+        job->SetJobVertex( *i );
+        int deps = in_degree( *i, graph );
         job->SetNumDepends( deps );
         job->SetJobGroup( jobGroup );
 
         jobs.push_back( job );
     }
+
     return true;
 }
 
