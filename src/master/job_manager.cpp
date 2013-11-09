@@ -2,6 +2,7 @@
 
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/foreach.hpp>
 #include <boost/graph/topological_sort.hpp>
 #include <boost/graph/visitors.hpp>
 #include <iterator>
@@ -219,6 +220,30 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
         int maxFailedNodes = ptree.get<int>( "max_failed_nodes" );
         int maxCPU = ptree.get<int>( "max_cpu" );
         bool noReschedule = ptree.get<bool>( "no_reschedule" );
+
+        if ( ptree.count( "hosts" ) > 0 )
+        {
+            using boost::asio::ip::udp;
+            udp::resolver resolver( io_service_ );
+
+            BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
+                           ptree.get_child( "hosts" ) )
+            {
+                std::string host = v.second.get_value< std::string >();
+                udp::resolver::query query( udp::v4(), host, "" );
+
+                boost::system::error_code error;
+                udp::resolver::iterator iter = resolver.resolve( query, error );
+                if ( error )
+                {
+                    PS_LOG( "JobManager::CreateJob address not resolved: " << host );
+                    continue;
+                }
+
+                udp::endpoint dest = *iter;
+                std::string ip = dest.address().to_string();
+            }
+        }
 
         if ( taskTimeout < 0 )
             taskTimeout = -1;

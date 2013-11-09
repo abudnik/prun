@@ -2,6 +2,7 @@
 #define __JOB_MANAGER_H
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/asio.hpp> // for host name ip resolving
 #include "job.h"
 
 
@@ -59,6 +60,7 @@ private:
     TimeoutManager *timeoutManager_;
     std::string exeDir_;
     static int64_t numJobGroups_;
+    mutable boost::asio::io_service io_service_;
 };
 
 } // namespace master
