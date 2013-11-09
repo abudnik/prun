@@ -7,6 +7,5 @@
     "task_timeout" : 15,
     "max_failed_nodes" : 10,
     "max_cpu" : 1,
-    "no_reschedule" : false,
-    "exclusive_exec" : false
+    "no_reschedule" : false
 }
