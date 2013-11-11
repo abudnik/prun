@@ -3,7 +3,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
-#include <boost/graph/topological_sort.hpp>
+#include <boost/graph/depth_first_search.hpp>
 #include <boost/graph/visitors.hpp>
 #include <iterator>
 #include "job_manager.h"
