@@ -80,6 +80,15 @@ class Command_Stop():
             raise e
         return json.JSONEncoder().encode( {"command" : "stop", "job_id" : jobId} )
 
+class Command_StopGroup():
+    def Prepare(self, cmd):
+        try:
+            groupId = int( cmd.split()[1] )
+        except Exception as e:
+            print( "invalid groupId argument" )
+            raise e
+        return json.JSONEncoder().encode( {"command" : "stop_group", "group_id" : groupId} )
+
 class Command_Info():
     def Prepare(self, cmd):
         try:
@@ -104,6 +113,7 @@ class CommandDispatcher():
     def __init__(self):
         self.map_ = {'run'   : Command_Run(),
                      'stop'  : Command_Stop(),
+                     'stopg' : Command_StopGroup(),
                      'info'  : Command_Info(),
                      'stat'  : Command_Stat(),
                      'test'  : Command_Test()}
@@ -140,6 +150,7 @@ def PrintHelp():
     print( "Commands:" )
     print( "  run /path/to/job/file -- run job, which described in .job file" )
     print( "  stop <job_id>         -- interrupt job execution" )
+    print( "  stopg <group_id>      -- interrupt group of jobs execution" )
     print( "  info <job_id>         -- show job execution statistics" )
     print( "  stat                  -- show master statistics" )
     print( "  repeat, r             -- repeat last command" )

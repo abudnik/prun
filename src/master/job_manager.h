@@ -33,6 +33,7 @@ public:
 
     Job *GetJobById( int64_t jobId );
     bool DeleteJob( int64_t jobId );
+    bool DeleteJobGroup( int64_t groupId );
 
     Job *PopJob();
     Job *GetTopJob();

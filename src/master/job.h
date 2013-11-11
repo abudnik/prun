@@ -126,6 +126,7 @@ private:
 class JobQueue
 {
     typedef std::map< int64_t, Job * > IdToJob;
+    typedef std::list< Job * > JobList;
 
 public:
     JobQueue() : numJobs_( 0 ) {}
@@ -138,15 +139,16 @@ public:
 
     Job *GetJobById( int64_t jobId );
     bool DeleteJob( int64_t jobId );
+    bool DeleteJobGroup( int64_t groupId );
 
     void Clear( bool doDelete = true );
 
 private:
-    void Sort( std::list< Job * > &jobs );
-    void PrintJobs( const std::list< Job * > &jobs ) const; // debug only
+    void Sort( JobList &jobs );
+    void PrintJobs( const JobList &jobs ) const; // debug only
 
 private:
-    std::list< Job * > jobs_;
+    JobList jobs_;
     IdToJob idToJob_;
     unsigned int numJobs_;
     boost::mutex jobsMut_;

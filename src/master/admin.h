@@ -42,6 +42,14 @@ public:
                           AdminSession *session );
 };
 
+class AdminCommand_StopGroup : public AdminCommand
+{
+public:
+    virtual void Execute( const std::string &command,
+                          const boost::property_tree::ptree &ptree,
+                          AdminSession *session );
+};
+
 class AdminCommand_Info : public AdminCommand
 {
 public:

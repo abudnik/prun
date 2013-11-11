@@ -75,7 +75,7 @@ bool JobQueue::DeleteJob( int64_t jobId )
         idToJob_.erase( it );
     }
 
-    std::list< Job * >::iterator it = jobs_.begin();
+    JobList::iterator it = jobs_.begin();
     for( ; it != jobs_.end(); ++it )
     {
         Job *job = *it;
@@ -97,22 +97,48 @@ bool JobQueue::DeleteJob( int64_t jobId )
     return false;
 }
 
+bool JobQueue::DeleteJobGroup( int64_t groupId )
+{
+    std::list< Job * > jobs;
+    bool deleted = false;
+    {
+        boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+        JobList::const_iterator it = jobs_.begin();
+        for( ; it != jobs_.end(); ++it )
+        {
+            Job *job = *it;
+            if ( job->GetGroupId() == groupId )
+                jobs.push_back( job );
+        }
+    }
+
+    JobList::const_iterator it = jobs.begin();
+    for( ; it != jobs.end(); ++it )
+    {
+        const Job *job = *it;
+        if ( job->GetGroupId() == groupId )
+            deleted = DeleteJob( job->GetJobId() );
+    }
+
+    return deleted;
+}
+
 Job *JobQueue::PopJob()
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     if ( numJobs_ )
     {
-        std::list< Job * > jobs;
+        JobList jobs;
         Sort( jobs );
 
-        std::list< Job * >::const_iterator it = jobs.begin();
+        JobList::const_iterator it = jobs.begin();
         for( ; it != jobs.end(); ++it )
         {
             Job *job = *it;
             if ( job->GetNumDepends() > 0 )
                 continue;
 
-            std::list< Job * >::iterator i = jobs_.begin();
+            JobList::iterator i = jobs_.begin();
             for( ; i != jobs_.end(); ++i )
             {
                 if ( job == *i )
@@ -143,7 +169,7 @@ void JobQueue::Clear( bool doDelete )
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     if ( doDelete )
     {
-        std::list< Job * >::iterator it = jobs_.begin();
+        JobList::iterator it = jobs_.begin();
         for( ; it != jobs_.end(); ++it )
         {
             delete *it;
@@ -169,9 +195,9 @@ struct JobComparatorPriority
     }
 };
 
-void JobQueue::Sort( std::list< Job * > &jobs )
+void JobQueue::Sort( JobList &jobs )
 {
-    std::list< Job * >::const_iterator it = jobs_.begin();
+    JobList::const_iterator it = jobs_.begin();
     for( ; it != jobs_.end(); ++it )
     {
         Job *job = *it;
@@ -186,11 +212,11 @@ void JobQueue::Sort( std::list< Job * > &jobs )
     //PrintJobs( jobs );
 }
 
-void JobQueue::PrintJobs( const std::list< Job * > &jobs ) const
+void JobQueue::PrintJobs( const JobList &jobs ) const
 {
     std::ostringstream ss;
     ss << std::endl;
-    std::list< Job * >::const_iterator it = jobs.begin();
+    JobList::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
         if ( it != jobs.begin() )

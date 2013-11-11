@@ -42,6 +42,17 @@ public:
         return NULL;
     }
 
+    void GetJobGroup( int64_t groupId, std::list< Job * > &jobs ) const
+    {
+        JobList::const_iterator it = jobs_.begin();
+        for( ; it != jobs_.end(); ++it )
+        {
+            Job *job = *it;
+            if ( job->GetGroupId() == groupId )
+                jobs.push_back( job );
+        }
+    }
+
     int GetNumExec( int64_t jobId ) const
     {
         std::map< int64_t, int >::const_iterator it = jobExecutions_.find( jobId );

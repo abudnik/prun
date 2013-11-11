@@ -156,6 +156,11 @@ bool JobManager::DeleteJob( int64_t jobId )
     return jobs_.DeleteJob( jobId );
 }
 
+bool JobManager::DeleteJobGroup( int64_t groupId )
+{
+    return jobs_.DeleteJobGroup( groupId );
+}
+
 Job *JobManager::PopJob()
 {
     return jobs_.PopJob();

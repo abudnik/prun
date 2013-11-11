@@ -46,7 +46,8 @@ void AdminCommand_Run::Execute( const std::string &command,
 void AdminCommand_Run::PrintJobInfo( Job *job, AdminSession *session ) const
 {
     std::ostringstream ss;
-    ss << "Job pushed to queue, jobId = " << job->GetJobId();
+    ss << "Job pushed to queue, jobId = " << job->GetJobId() <<
+        ", groupId = " << job->GetGroupId();
     session->OnCommandCompletion( ss.str() );
 }
 
@@ -59,12 +60,28 @@ void AdminCommand_Stop::Execute( const std::string &command,
         int64_t jobId = ptree.get<int64_t>( "job_id" );
         if ( !JobManager::Instance().DeleteJob( jobId ) )
         {
-            Scheduler::Instance().OnJobTimeout( jobId );
+            Scheduler::Instance().StopJob( jobId );
         }
     }
     catch( std::exception &e )
     {
         PS_LOG( "AdminCommand_Stop::Execute: " << e.what() );
+    }
+}
+
+void AdminCommand_StopGroup::Execute( const std::string &command,
+                                      const boost::property_tree::ptree &ptree,
+                                      AdminSession *session )
+{
+    try
+    {
+        int64_t groupId = ptree.get<int64_t>( "group_id" );
+        JobManager::Instance().DeleteJobGroup( groupId );
+        Scheduler::Instance().StopJobGroup( groupId );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_StopGroup::Execute: " << e.what() );
     }
 }
 
@@ -106,6 +123,7 @@ void AdminCommandDispatcher::Initialize()
 {
     map_[ "run" ] = new AdminCommand_Run;
     map_[ "stop" ] = new AdminCommand_Stop;
+    map_[ "stop_group" ] = new AdminCommand_StopGroup;
     map_[ "info" ] = new AdminCommand_Info;
     map_[ "stat" ] = new AdminCommand_Stat;
 }

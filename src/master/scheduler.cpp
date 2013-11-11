@@ -404,6 +404,26 @@ void Scheduler::OnJobTimeout( int64_t jobId )
     NotifyAll();
 }
 
+void Scheduler::StopJob( int64_t jobId )
+{
+    OnJobTimeout( jobId );
+}
+
+void Scheduler::StopJobGroup( int64_t groupId )
+{
+    std::list< Job * > jobs;
+    {
+        boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+        jobs_.GetJobGroup( groupId, jobs );
+    }
+    std::list< Job * >::const_iterator it = jobs.begin();
+    for( ; it != jobs.end(); ++it )
+    {
+        const Job *job = *it;
+        StopJob( job->GetJobId() );
+    }
+}
+
 void Scheduler::OnRemoveJob( int64_t jobId )
 {
     failedWorkers_.Delete( jobId );
