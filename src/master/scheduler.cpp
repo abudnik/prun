@@ -157,7 +157,7 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
     return found;
 }
 
-bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int numCPU )
+bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, Job **job, int numCPU )
 {
     int64_t jobId;
     bool foundReschedJob = false;
@@ -187,6 +187,10 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int
                 jobId = workerTask.GetJobId();
                 if ( !failedWorkers_.IsWorkerFailedJob( worker->GetIP(), jobId ) )
                 {
+                    *job = jobs_.FindJobByJobId( workerJob.GetJobId() );
+                    if ( !*job || !(*job)->IsHostAvailable( worker->GetIP() ) )
+                        continue;
+
                     foundReschedJob = true;
                     workerJob.AddTask( jobId, workerTask.GetTaskId() );
                     needReschedule_.erase( it++ );
@@ -216,6 +220,10 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, int
         std::set< int > &tasks = it->second;
         if ( !tasks.empty() )
         {
+            *job = const_cast<Job *>( j );
+            if ( !j->IsHostAvailable( worker->GetIP() ) )
+                continue;
+
             std::set< int >::iterator it_task = tasks.begin();
             for( ; it_task != tasks.end();  )
             {
@@ -256,14 +264,8 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **
 
         Worker *w = nodeState.GetWorker();
 
-        if ( GetJobForWorker( w, workerJob, freeCPU ) )
+        if ( GetJobForWorker( w, workerJob, job, freeCPU ) )
         {
-            *job = jobs_.FindJobByJobId( workerJob.GetJobId() );
-            if ( !*job )
-            {
-                PS_LOG( "Scheduler::GetTaskToSend: job not found for jobId=" << workerJob.GetJobId() );
-                continue;
-            }
             w->GetJob() += workerJob;
             hostIP = w->GetIP();
 

@@ -18,6 +18,20 @@ void JobGroup::OnJobCompletion( const JobVertex &vertex )
     }
 }
 
+bool Job::IsHostAvailable( const std::string &hostIP ) const
+{
+    if ( !hosts_.size() )
+        return true;
+
+    std::set< std::string >::const_iterator it = hosts_.begin();
+    for( ; it != hosts_.end(); ++it )
+    {
+        if ( *it == hostIP )
+            return true;
+    }
+    return false;
+}
+
 void JobQueue::PushJob( Job *job, int64_t groupId )
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );

@@ -221,6 +221,14 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
         int maxCPU = ptree.get<int>( "max_cpu" );
         bool noReschedule = ptree.get<bool>( "no_reschedule" );
 
+        if ( taskTimeout < 0 )
+            taskTimeout = -1;
+
+        Job *job = new Job( script, language,
+                            priority, maxFailedNodes, maxCPU,
+                            timeout, queueTimeout, taskTimeout,
+                            noReschedule );
+
         if ( ptree.count( "hosts" ) > 0 )
         {
             using boost::asio::ip::udp;
@@ -242,16 +250,10 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
 
                 udp::endpoint dest = *iter;
                 std::string ip = dest.address().to_string();
+                job->AddHost( ip );
             }
         }
 
-        if ( taskTimeout < 0 )
-            taskTimeout = -1;
-
-        Job *job = new Job( script, language,
-                            priority, maxFailedNodes, maxCPU,
-                            timeout, queueTimeout, taskTimeout,
-                            noReschedule );
         return job;
     }
     catch( std::exception &e )
