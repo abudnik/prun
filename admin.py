@@ -22,15 +22,14 @@ class Connection():
         except Exception as e:
             Exit( "couldn't connect to master" )
 
-    def AddHeader(self, msg):
-        header = str(len(msg)) + '\n'
-        msg = header + msg
-        return msg
+    def MakeJsonRpc(self, msg):
+        rpc = { "jsonrpc" : "2.0", "method" : msg["method"], "params" : msg["params"], "id" : "0" } # todo: id
+        return json.JSONEncoder().encode( rpc )
 
     def Send(self, msg):
-        msg = self.AddHeader( msg )
+        rpc = self.MakeJsonRpc( msg )
         try:
-            self.socket.send( msg.encode( "utf-8" ) )
+            self.socket.send( rpc.encode( "utf-8" ) )
         except Exception as e:
             Exit( "couldn't send command to master" )
 
@@ -69,7 +68,7 @@ class Command_Run():
         except Exception as e:
             print( "no file path given" )
             raise e
-        return json.JSONEncoder().encode( {"command" : "run", "file" : path} )
+        return {"method" : "run", "params" : {"file" : path} }
 
 class Command_Stop():
     def Prepare(self, cmd):
@@ -78,7 +77,7 @@ class Command_Stop():
         except Exception as e:
             print( "invalid jobId argument" )
             raise e
-        return json.JSONEncoder().encode( {"command" : "stop", "job_id" : jobId} )
+        return {"method" : "stop", "params" : {"job_id" : jobId} }
 
 class Command_StopGroup():
     def Prepare(self, cmd):
@@ -87,7 +86,7 @@ class Command_StopGroup():
         except Exception as e:
             print( "invalid groupId argument" )
             raise e
-        return json.JSONEncoder().encode( {"command" : "stop_group", "group_id" : groupId} )
+        return {"method" : "stop_group", "params" : {"group_id" : groupId} }
 
 class Command_Info():
     def Prepare(self, cmd):
@@ -96,15 +95,15 @@ class Command_Info():
         except Exception as e:
             print( "invalid jobId argument" )
             raise e
-        return json.JSONEncoder().encode( {"command" : "info", "job_id" : jobId} )
+        return {"method" : "info", "params" : {"job_id" : jobId} }
 
 class Command_Stat():
     def Prepare(self, cmd):
-        return json.JSONEncoder().encode( {"command" : "stat"} )
+        return {"method" : "stat"}
 
 class Command_Test():
     def Prepare(self, cmd):
-        msg = '{"command":"run","file":"/home/budnik/dev/prun/test/test.job"}'
+        msg = '{"method":"run","params":{"file":"/home/budnik/dev/prun/test/test.job"}}'
         return msg
 
 

@@ -193,7 +193,8 @@ void AdminSession::HandleWrite( const boost::system::error_code& error, size_t b
 void AdminSession::HandleRequest()
 {
     PS_LOG( request_ );
-    common::JsonRpc::Instance().HandleRequest( request_, this );
+    int errCode = common::JsonRpc::Instance().HandleRequest( request_, this );
+    PS_LOG( errCode );
 }
 
 

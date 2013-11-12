@@ -27,13 +27,16 @@ public:
 
 class JsonRpc
 {
+private:
+    JsonRpc();
+
 public:
-    bool HandleRequest( const std::string &request, JsonRpcCaller *caller );
+    int HandleRequest( const std::string &request, JsonRpcCaller *caller );
 
     bool HandleResponse( const std::string &response );
 
     bool RegisterHandler( const std::string &command, JsonRpcHandler *handler );
-    
+
     void Shutdown();
 
     static JsonRpc &Instance()
@@ -43,12 +46,14 @@ public:
     }
 
     static bool ValidateJsonBraces( const std::string &json );
+    bool GetErrorDescription( int errCode, std::string &descr ) const;
 
 private:
     const char *GetProtocolVersion() const { return "2.0"; }
 
 private:
     std::map< std::string, JsonRpcHandler * > cmdToHandler_;
+    std::map< int, std::string > errDescription_;
 };
 
 } // namespace common
