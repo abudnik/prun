@@ -10,10 +10,10 @@
 
 namespace master {
 
-void AdminCommand_Run::Execute( const std::string &command,
-                                const boost::property_tree::ptree &ptree,
-                                AdminSession *session )
+int AdminCommand_Run::Execute( const boost::property_tree::ptree &ptree,
+                               common::JsonRpcCaller *caller )
 {
+    AdminSession *session = dynamic_cast< AdminSession * >( caller );
     try
     {
         std::string filePath = ptree.get<std::string>( "file" );
@@ -22,7 +22,7 @@ void AdminCommand_Run::Execute( const std::string &command,
         if ( !file.is_open() )
         {
             PS_LOG( "AdminCommand_Run::Execute: couldn't open " << filePath );
-            return;
+            return 0; // todo: error code
         }
         std::string jobDescr, line;
         while( std::getline( file, line ) )
@@ -31,29 +31,35 @@ void AdminCommand_Run::Execute( const std::string &command,
         Job *job = JobManager::Instance().CreateJob( jobDescr );
         if ( job )
         {
-            job->SetCallback( session, &AdminSession::OnCommandCompletion );
+            PrintJobInfo( job, caller );
+            job->SetCallback( session, &common::JsonRpcCaller::RpcCall );
             // add job to job queue
             JobManager::Instance().PushJob( job );
-            PrintJobInfo( job, session );
         }
     }
     catch( std::exception &e )
     {
         PS_LOG( "AdminCommand_Run::Execute: " << e.what() );
     }
+    return 0;
 }
 
-void AdminCommand_Run::PrintJobInfo( Job *job, AdminSession *session ) const
+void AdminCommand_Run::PrintJobInfo( const Job *job, common::JsonRpcCaller *caller ) const
 {
     std::ostringstream ss;
     ss << "Job pushed to queue, jobId = " << job->GetJobId() <<
         ", groupId = " << job->GetGroupId();
-    session->OnCommandCompletion( ss.str() );
+
+    boost::property_tree::ptree params;
+    params.put( "job_id", job->GetJobId() );
+    params.put( "group_id", job->GetGroupId() );
+    params.put( "user_msg", ss.str() );
+
+    caller->RpcCall( "on_command_run", params );
 }
 
-void AdminCommand_Stop::Execute( const std::string &command,
-                                 const boost::property_tree::ptree &ptree,
-                                 AdminSession *session )
+int AdminCommand_Stop::Execute( const boost::property_tree::ptree &ptree,
+                                common::JsonRpcCaller *caller )
 {
     try
     {
@@ -67,11 +73,11 @@ void AdminCommand_Stop::Execute( const std::string &command,
     {
         PS_LOG( "AdminCommand_Stop::Execute: " << e.what() );
     }
+    return 0;
 }
 
-void AdminCommand_StopGroup::Execute( const std::string &command,
-                                      const boost::property_tree::ptree &ptree,
-                                      AdminSession *session )
+int AdminCommand_StopGroup::Execute( const boost::property_tree::ptree &ptree,
+                                     common::JsonRpcCaller *caller )
 {
     try
     {
@@ -83,108 +89,75 @@ void AdminCommand_StopGroup::Execute( const std::string &command,
     {
         PS_LOG( "AdminCommand_StopGroup::Execute: " << e.what() );
     }
+    return 0;
 }
 
-void AdminCommand_Info::Execute( const std::string &command,
-                                 const boost::property_tree::ptree &ptree,
-                                 AdminSession *session )
+int AdminCommand_Info::Execute( const boost::property_tree::ptree &ptree,
+                                common::JsonRpcCaller *caller )
 {
     try
     {
         int64_t jobId = ptree.get<int64_t>( "job_id" );
         std::string info;
         Scheduler::Instance().GetJobInfo( info, jobId );
-        session->OnCommandCompletion( info );
+        //session->OnCommandCompletion( info );
     }
     catch( std::exception &e )
     {
         PS_LOG( "AdminCommand_Info::Execute: " << e.what() );
     }
+    return 0;
 }
 
 
-void AdminCommand_Stat::Execute( const std::string &command,
-                                 const boost::property_tree::ptree &ptree,
-                                 AdminSession *session )
+int AdminCommand_Stat::Execute( const boost::property_tree::ptree &ptree,
+                                common::JsonRpcCaller *caller )
 {
     try
     {
         std::string stat;
         Scheduler::Instance().GetStatistics( stat );
-        session->OnCommandCompletion( stat );
+        //session->OnCommandCompletion( stat );
     }
     catch( std::exception &e )
     {
         PS_LOG( "AdminCommand_Stat::Execute: " << e.what() );
     }
+    return 0;
 }
 
-void AdminCommandDispatcher::Initialize()
+
+void AdminSession::InitializeRpcHandlers()
 {
-    map_[ "run" ] = new AdminCommand_Run;
-    map_[ "stop" ] = new AdminCommand_Stop;
-    map_[ "stop_group" ] = new AdminCommand_StopGroup;
-    map_[ "info" ] = new AdminCommand_Info;
-    map_[ "stat" ] = new AdminCommand_Stat;
+    common::JsonRpc &rpc = common::JsonRpc::Instance();
+    rpc.RegisterHandler( "run",        new AdminCommand_Run );
+    rpc.RegisterHandler( "stop",       new AdminCommand_Stop );
+    rpc.RegisterHandler( "stop_group", new AdminCommand_StopGroup );
+    rpc.RegisterHandler( "info",       new AdminCommand_Info );
+    rpc.RegisterHandler( "stat",       new AdminCommand_Stat );
 }
-
-void AdminCommandDispatcher::Shutdown()
-{
-    std::map< std::string, AdminCommand * >::const_iterator it = map_.begin();
-    for( ; it != map_.end(); ++it )
-    {
-        delete it->second;
-    }
-}
-
-AdminCommand *AdminCommandDispatcher::Get( const std::string &command ) const
-{
-    std::map< std::string, AdminCommand * >::const_iterator it = map_.find( command );
-    if ( it != map_.end() )
-        return it->second;
-    return NULL;
-}
-
 
 void AdminSession::Start()
 {
     remoteIP_ = socket_.remote_endpoint().address().to_string();
 
     socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                             boost::bind( &AdminSession::FirstRead, shared_from_this(),
+                             boost::bind( &AdminSession::HandleRead, shared_from_this(),
                                           boost::asio::placeholders::error,
                                           boost::asio::placeholders::bytes_transferred ) );
 }
 
-void AdminSession::FirstRead( const boost::system::error_code &error, size_t bytes_transferred )
+void AdminSession::RpcCall( const std::string &method, const boost::property_tree::ptree &params )
 {
-    if ( !error )
-    {
-        int ret = request_.OnFirstRead( buffer_, bytes_transferred );
-        if ( ret == 0 )
-        {
-            socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                                     boost::bind( &AdminSession::FirstRead, shared_from_this(),
-                                                  boost::asio::placeholders::error,
-                                                  boost::asio::placeholders::bytes_transferred ) );
-            return;
-        }
-    }
-    else
-    {
-        PS_LOG( "AdminSession::FirstRead error=" << error.message() );
-    }
-
-    HandleRead( error, bytes_transferred );
 }
 
 void AdminSession::HandleRead( const boost::system::error_code &error, size_t bytes_transferred )
 {
     if ( !error )
     {
-        request_.OnRead( buffer_, bytes_transferred );
+        request_.append( buffer_.begin(), buffer_.begin() + bytes_transferred );
 
-        if ( !request_.IsReadCompleted() )
+        if ( !common::JsonRpc::ValidateJsonBraces( request_ ) )
         {
             socket_.async_read_some( boost::asio::buffer( buffer_ ),
                                      boost::bind( &AdminSession::HandleRead, shared_from_this(),
@@ -196,9 +169,9 @@ void AdminSession::HandleRead( const boost::system::error_code &error, size_t by
             HandleRequest();
 
             // read next command
-            request_.Reset();
+            request_.clear();
             socket_.async_read_some( boost::asio::buffer( buffer_ ),
-                                     boost::bind( &AdminSession::FirstRead, shared_from_this(),
+                                     boost::bind( &AdminSession::HandleRead, shared_from_this(),
                                                   boost::asio::placeholders::error,
                                                   boost::asio::placeholders::bytes_transferred ) );
         }
@@ -219,41 +192,8 @@ void AdminSession::HandleWrite( const boost::system::error_code& error, size_t b
 
 void AdminSession::HandleRequest()
 {
-    PS_LOG( request_.GetString() );
-
-    std::string command;
-    std::istringstream ss( request_.GetString() );
-
-    boost::property_tree::ptree ptree;
-    try
-    {
-        boost::property_tree::read_json( ss, ptree );
-        command = ptree.get<std::string>( "command" );
-    }
-    catch( std::exception &e )
-    {
-        PS_LOG( "AdminSession::HandleRequest: " << e.what() );
-        return;
-    }
-
-    AdminCommand *adminCommand = AdminCommandDispatcher::Instance().Get( command );
-    if ( adminCommand )
-    {
-        adminCommand->Execute( command, ptree, this );
-    }
-    else
-    {
-        PS_LOG( "AdminSession::HandleRequest: unknown command: " << command );
-    }
-}
-
-void AdminSession::OnCommandCompletion( const std::string &result )
-{
-    boost::asio::async_write( socket_,
-                              boost::asio::buffer( result ),
-                              boost::bind( &AdminSession::HandleWrite, shared_from_this(),
-                                           boost::asio::placeholders::error,
-                                           boost::asio::placeholders::bytes_transferred ) );
+    PS_LOG( request_ );
+    common::JsonRpc::Instance().HandleRequest( request_, this );
 }
 
 
@@ -262,7 +202,7 @@ void AdminConnection::StartAccept()
     session_ptr session( new AdminSession( io_service_ ) );
     acceptor_.async_accept( session->GetSocket(),
                             boost::bind( &AdminConnection::HandleAccept, this,
-                                        session, boost::asio::placeholders::error ) );
+                                         session, boost::asio::placeholders::error ) );
 }
 
 void AdminConnection::HandleAccept( session_ptr session, const boost::system::error_code &error )

@@ -64,7 +64,7 @@ void InitWorkerManager( const std::string &exeDir )
 
 void AtExit()
 {
-    master::AdminCommandDispatcher::Instance().Shutdown();
+    common::JsonRpc::Instance().Shutdown();
     master::WorkerManager::Instance().Shutdown();
     master::JobManager::Instance().Shutdown();
     master::Scheduler::Instance().Shutdown();
@@ -117,7 +117,7 @@ public:
         master::JobManager::Instance().Initialize( exeDir_, timeoutManager_.get() );
 
         master::Scheduler::Instance();
-        master::AdminCommandDispatcher::Instance().Initialize();
+        master::AdminSession::InitializeRpcHandlers();
 
         atexit( AtExit );
 

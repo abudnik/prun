@@ -4,6 +4,7 @@
 #include <list>
 #include <vector>
 #include <boost/thread/mutex.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <boost/graph/adjacency_list.hpp>
@@ -89,16 +90,16 @@ public:
     void AddHost( const std::string &hostIP ) { hosts_.insert( hostIP ); }
     bool IsHostAvailable( const std::string &hostIP ) const;
 
-    template< typename T >
-    void SetCallback( T *obj, void (T::*f)( const std::string &result ) )
+    template< typename T, typename U >
+    void SetCallback( T *obj, void (U::*f)( const std::string &method, const boost::property_tree::ptree &params ) )
     {
-        callback_ = boost::bind( f, obj->shared_from_this(), _1 );
+        callback_ = boost::bind( f, obj->shared_from_this(), _1, _2 );
     }
 
-    void RunCallback( const std::string &result ) const
+    void RunCallback( const std::string &method, const boost::property_tree::ptree &params ) const
     {
         if ( callback_ )
-            callback_( result );
+            callback_( method, params );
     }
 
 private:
@@ -120,7 +121,7 @@ private:
 
     JobVertex graphVertex_;
     boost::shared_ptr< JobGroup > jobGroup_;
-    boost::function< void (const std::string &) > callback_;
+    boost::function< void (const std::string &method, const boost::property_tree::ptree &params) > callback_;
 };
 
 class JobQueue

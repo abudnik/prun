@@ -87,7 +87,11 @@ bool JobQueue::DeleteJob( int64_t jobId )
 
         PS_LOG( ss.str() );
 
-        job->RunCallback( ss.str() );
+        boost::property_tree::ptree params;
+        params.put( "job_id", job->GetJobId() );
+        params.put( "user_msg", ss.str() );
+
+        job->RunCallback( "on_job_deletion", params );
         delete job;
 
         jobs_.erase( it );

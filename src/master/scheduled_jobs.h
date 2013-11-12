@@ -114,7 +114,11 @@ private:
 
         PS_LOG( ss.str() );
 
-        job->RunCallback( ss.str() );
+        boost::property_tree::ptree params;
+        params.put( "job_id", job->GetJobId() );
+        params.put( "status", completionStatus );
+
+        job->RunCallback( "on_job_completion", params );
     }
 
 private:
