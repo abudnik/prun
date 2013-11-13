@@ -30,9 +30,38 @@ int AdminCommand_Run::Execute( const boost::property_tree::ptree &params,
         std::ifstream file( filePath.c_str() );
         if ( !file.is_open() )
         {
-            PS_LOG( "AdminCommand_Run::Execute: couldn't open " << filePath );
+            PS_LOG( "AdminCommand_Run::Execute: couldn't open '" << filePath << "'" );
             return JSON_RPC_INTERNAL_ERROR;
         }
+
+        size_t found = filePath.rfind( '.' );
+        if ( found == std::string::npos )
+        {
+            PS_LOG( "AdminCommand_Run::Execute: couldn't extract job file extension '" << filePath << "'" );
+            return JSON_RPC_INTERNAL_ERROR;
+        }
+        std::string ext = filePath.substr( found + 1 );
+
+        if ( ext == "job" )
+            return RunJob( file, result );
+        else
+        if ( ext == "meta" )
+            return RunMetaJob( file, result );
+        else
+            PS_LOG( "AdminCommand_Run::Execute: unknown file extension '" << ext << "'" );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_Run::Execute: " << e.what() );
+        return JSON_RPC_INTERNAL_ERROR;
+    }
+    return 0;
+}
+
+int AdminCommand_Run::RunJob( std::ifstream &file, std::string &result ) const
+{
+    try
+    {
         std::string jobDescr, line;
         while( std::getline( file, line ) )
             jobDescr += line;
@@ -48,7 +77,38 @@ int AdminCommand_Run::Execute( const boost::property_tree::ptree &params,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_Run::Execute: " << e.what() );
+        PS_LOG( "AdminCommand_Run::RunJob: " << e.what() );
+        return JSON_RPC_INTERNAL_ERROR;
+    }
+    return 0;
+}
+
+int AdminCommand_Run::RunMetaJob( std::ifstream &file, std::string &result ) const
+{
+    try
+    {
+        std::string metaDescr, line;
+        while( getline( file, line ) )
+            metaDescr += line + '\n';
+
+        std::list< master::Job * > jobs;
+        master::JobManager::Instance().CreateMetaJob( metaDescr, jobs );
+        master::JobManager::Instance().PushJobs( jobs );
+
+        std::ostringstream ss;
+        ss << "----------------" << std::endl;
+        std::list< master::Job * >::const_iterator it = jobs.begin();
+        for( ; it != jobs.end(); ++it )
+        {
+            PrintJobInfo( *it, result );
+            ss << result << std::endl;
+        }
+        ss << "----------------" << std::endl;
+        result = ss.str();
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_Run::RunMetaJob: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;

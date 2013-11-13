@@ -43,8 +43,7 @@ void TestMetaJob( const std::string &exeDir )
     while( getline( file, line ) )
         metaDescr += line + '\n';
 
-    typedef std::list< master::Job * > JobList;
-    JobList jobs;
+    std::list< master::Job * > jobs;
     master::JobManager::Instance().CreateMetaJob( metaDescr, jobs );
     master::JobManager::Instance().PushJobs( jobs );
 

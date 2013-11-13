@@ -20,6 +20,8 @@ public:
                          std::string &result );
 
 private:
+    int RunJob( std::ifstream &file, std::string &result ) const;
+    int RunMetaJob( std::ifstream &file, std::string &result ) const;
     void PrintJobInfo( const Job *job, std::string &result ) const;
 };
 
