@@ -6,23 +6,22 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/function.hpp>
 
+#define JSON_RPC_PARSER_ERROR     -32700
+#define JSON_RPC_INVALID_REQUEST  -32600
+#define JSON_RPC_METHOD_NOT_FOUND -32601
+#define JSON_RPC_INVALID_PARAMS   -32602
+#define JSON_RPC_INTERNAL_ERROR   -32603
+//--------------------------------------
+#define JSON_RPC_VERSION_MISMATCH -32000
+
 namespace common {
-
-typedef boost::function< void (const std::string &method, const boost::property_tree::ptree &params) > JsonRpcCallback;
-
-class JsonRpcCaller
-{
-public:
-    virtual ~JsonRpcCaller() {}
-    virtual void RpcCall( const std::string &method, const boost::property_tree::ptree &params ) = 0;
-};
 
 class JsonRpcHandler
 {
 public:
     virtual ~JsonRpcHandler() {}
-    virtual int Execute( const boost::property_tree::ptree &ptree,
-                         JsonRpcCaller *caller ) = 0;
+    virtual int Execute( const boost::property_tree::ptree &params,
+                         std::string &result ) = 0;
 };
 
 class JsonRpc
@@ -31,11 +30,9 @@ private:
     JsonRpc();
 
 public:
-    int HandleRequest( const std::string &request, JsonRpcCaller *caller );
+    int HandleRequest( const std::string &request, std::string &requestId, std::string &result );
 
-    bool HandleResponse( const std::string &response );
-
-    bool RegisterHandler( const std::string &command, JsonRpcHandler *handler );
+    bool RegisterHandler( const std::string &method, JsonRpcHandler *handler );
 
     void Shutdown();
 
@@ -48,8 +45,10 @@ public:
     static bool ValidateJsonBraces( const std::string &json );
     bool GetErrorDescription( int errCode, std::string &descr ) const;
 
+    static const char *GetProtocolVersion() { return "2.0"; }
+
 private:
-    const char *GetProtocolVersion() const { return "2.0"; }
+    JsonRpcHandler *GetHandler( const std::string &method ) const;
 
 private:
     std::map< std::string, JsonRpcHandler * > cmdToHandler_;

@@ -18,12 +18,14 @@ class Connection():
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((MASTER_HOST, MASTER_PORT))
+            self.rpc_id = 0
             print( "connected" )
         except Exception as e:
             Exit( "couldn't connect to master" )
 
     def MakeJsonRpc(self, msg):
-        rpc = { "jsonrpc" : "2.0", "method" : msg["method"], "params" : msg["params"], "id" : "0" } # todo: id
+        rpc = { "jsonrpc" : "2.0", "method" : msg["method"], "params" : msg["params"], "id" : str( self.rpc_id ) }
+        self.rpc_id += 1
         return json.JSONEncoder().encode( rpc )
 
     def Send(self, msg):
@@ -57,9 +59,22 @@ class ResultGetter(Thread):
             msg = self.connection.Receive()
             if msg is None or len(msg) == 0:
                 break
-            print( msg.decode( "utf-8" ) )
+
+            self.OnResponse( msg )
             sys.stdout.write( '> ' )
             sys.stdout.flush()
+
+    def OnResponse(self, msg):
+        try:
+            msg = msg.decode( "utf-8" )
+            rpc = json.JSONDecoder().decode( msg )
+
+            if 'result' in rpc:
+                print( rpc['result'] )
+            elif 'error' in rpc:
+                print( rpc['error'] )
+        except Exception as e:
+            print( e )
 
 class Command_Run():
     def Prepare(self, cmd):
@@ -99,7 +114,7 @@ class Command_Info():
 
 class Command_Stat():
     def Prepare(self, cmd):
-        return {"method" : "stat"}
+        return {"method" : "stat", "params" : []}
 
 class Command_Test():
     def Prepare(self, cmd):
@@ -147,7 +162,7 @@ class Master():
 
 def PrintHelp():
     print( "Commands:" )
-    print( "  run /path/to/job/file -- run job, which described in .job file" )
+    print( "  run /path/to/job/file -- run job, which described in '.job' or '.meta' file" )
     print( "  stop <job_id>         -- interrupt job execution" )
     print( "  stopg <group_id>      -- interrupt group of jobs execution" )
     print( "  info <job_id>         -- show job execution statistics" )

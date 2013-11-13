@@ -16,43 +16,43 @@ class Job;
 class AdminCommand_Run : public common::JsonRpcHandler
 {
 public:
-    virtual int Execute( const boost::property_tree::ptree &ptree,
-                         common::JsonRpcCaller *caller );
+    virtual int Execute( const boost::property_tree::ptree &params,
+                         std::string &result );
 
 private:
-    void PrintJobInfo( const Job *job, common::JsonRpcCaller *caller ) const;
+    void PrintJobInfo( const Job *job, std::string &result ) const;
 };
 
 class AdminCommand_Stop : public common::JsonRpcHandler
 {
 public:
-    virtual int Execute( const boost::property_tree::ptree &ptree,
-                         common::JsonRpcCaller *caller );
+    virtual int Execute( const boost::property_tree::ptree &params,
+                         std::string &result );
 };
 
 class AdminCommand_StopGroup : public common::JsonRpcHandler
 {
 public:
-    virtual int Execute( const boost::property_tree::ptree &ptree,
-                         common::JsonRpcCaller *caller );
+    virtual int Execute( const boost::property_tree::ptree &params,
+                         std::string &result );
 };
 
 class AdminCommand_Info : public common::JsonRpcHandler
 {
 public:
-    virtual int Execute( const boost::property_tree::ptree &ptree,
-                         common::JsonRpcCaller *caller );
+    virtual int Execute( const boost::property_tree::ptree &params,
+                         std::string &result );
 };
 
 class AdminCommand_Stat : public common::JsonRpcHandler
 {
 public:
-    virtual int Execute( const boost::property_tree::ptree &ptree,
-                         common::JsonRpcCaller *caller );
+    virtual int Execute( const boost::property_tree::ptree &params,
+                         std::string &result );
 };
 
 
-class AdminSession : public common::JsonRpcCaller, public boost::enable_shared_from_this< AdminSession >
+class AdminSession : public boost::enable_shared_from_this< AdminSession >
 {
     typedef boost::array< char, 32 * 1024 > BufferType;
 
@@ -74,8 +74,6 @@ public:
 
     tcp::socket &GetSocket() { return socket_; }
 
-    virtual void RpcCall( const std::string &method, const boost::property_tree::ptree &params );
-
 private:
     void HandleRead( const boost::system::error_code &error, size_t bytes_transferred );
     void HandleWrite( const boost::system::error_code& error, size_t bytes_transferred );
@@ -85,7 +83,7 @@ private:
 private:
     tcp::socket socket_;
     BufferType buffer_;
-    std::string request_;
+    std::string request_, response_;
     std::string remoteIP_;
     boost::asio::io_service &io_service_;
 };
