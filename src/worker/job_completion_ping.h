@@ -42,17 +42,13 @@ protected:
 };
 
 
-using boost::asio::ip::udp;
-
 class JobCompletionPingerBoost : public JobCompletionPinger
 {
 public:
     JobCompletionPingerBoost( boost::asio::io_service &io_service, int pingTimeout )
     : JobCompletionPinger( pingTimeout ),
-     io_service_( io_service ),
-     socket_( io_service, udp::endpoint( udp::v4(), 0 ) )
-    {
-    }
+     io_service_( io_service )
+    {}
 
     virtual void StartPing();
 
@@ -61,7 +57,6 @@ private:
 
 private:
     boost::asio::io_service &io_service_;
-    udp::socket socket_;
 };
 
 } // namespace worker

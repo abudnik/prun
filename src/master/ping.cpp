@@ -82,9 +82,10 @@ void PingerBoost::PingWorker( Worker *worker )
     //PS_LOG( msg );
     //PS_LOG( node_ip );
 
+    udp::socket socket( io_service_, udp::endpoint( it->second.protocol(), 0 ) );
     try
     {
-        socket_.send_to( boost::asio::buffer( msg ), it->second );
+        socket.send_to( boost::asio::buffer( msg ), it->second );
     }
     catch( boost::system::system_error &e )
     {

@@ -283,8 +283,9 @@ class ExecuteTask : public Action
         boost::asio::io_service *io_service = commDescrPool->GetIoService();
 
         using boost::asio::ip::udp;
-        udp::socket socket( *io_service, udp::endpoint( udp::v4(), 0 ) );
-        udp::endpoint master_endpoint( boost::asio::ip::address::from_string( job->GetMasterIP() ), DEFAULT_MASTER_UDP_PORT );
+        boost::asio::ip::address address( boost::asio::ip::address::from_string( job->GetMasterIP() ) );
+        udp::endpoint master_endpoint( address, DEFAULT_MASTER_UDP_PORT );
+        udp::socket socket( *io_service, udp::endpoint( master_endpoint.protocol(), 0 ) );
 
         common::ProtocolJson protocol;
         std::string msg;

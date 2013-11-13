@@ -60,7 +60,6 @@ public:
     PingerBoost( boost::asio::io_service &io_service, int pingTimeout, int maxDroped )
     : Pinger( pingTimeout, maxDroped ),
      io_service_( io_service ),
-     socket_( io_service, udp::endpoint( udp::v4(), 0 ) ),
      resolver_( io_service )
     {
         std::ostringstream ss;
@@ -75,7 +74,6 @@ private:
 
 private:
     boost::asio::io_service &io_service_;
-    udp::socket socket_;
     udp::resolver resolver_;
     std::string port_;
     EndpointMap endpoints_;
