@@ -6,6 +6,7 @@
     "queue_timeout" : 60,
     "task_timeout" : 15,
     "max_failed_nodes" : 10,
+    "num_execution" : -1,
     "max_cpu" : 1,
     "no_reschedule" : false,
     "hosts" : ["localhost"]

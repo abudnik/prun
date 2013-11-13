@@ -84,13 +84,7 @@ void Scheduler::PlanJobExecution()
     if ( !job )
         return;
 
-    int totalCPU = WorkerManager::Instance().GetTotalCPU();
-    int numExec = job->GetMaxCPU();
-    if ( numExec < 0 || numExec > totalCPU )
-        numExec = totalCPU;
-    if ( numExec < 1 )
-        numExec = 1;
-
+    int numExec = GetNumPlannedExec( job );
     job->SetNumPlannedExec( numExec );
 
     int64_t jobId = job->GetJobId();
@@ -486,6 +480,25 @@ bool Scheduler::CanTakeNewJob() const
     }
 
     return false;
+}
+
+int Scheduler::GetNumPlannedExec( const Job *job ) const
+{
+    if ( job->GetNumExec() > 0 )
+        return job->GetNumExec();
+
+    int totalCPU = WorkerManager::Instance().GetTotalCPU();
+    int maxCPU = job->GetMaxCPU();
+    int numExec = 1; // init just to suppress compiler warning
+
+    if ( maxCPU <= 0 )
+        numExec = totalCPU;
+    else
+        numExec = std::min( maxCPU, totalCPU );
+
+    if ( numExec < 1 )
+        numExec = 1;
+    return numExec;
 }
 
 void Scheduler::Shutdown()

@@ -43,11 +43,12 @@ class Job
 {
 public:
     Job( const std::string &script, const std::string &scriptLanguage,
-         int priority, int maxFailedNodes, int maxCPU,
+         int priority, int maxFailedNodes, int numExec, int maxCPU,
          int timeout, int queueTimeout, int taskTimeout,
          bool noReschedule )
     : script_( script ), scriptLanguage_( scriptLanguage ),
-     priority_( priority ), numDepends_( 0 ), maxFailedNodes_( maxFailedNodes ), maxCPU_( maxCPU ),
+     priority_( priority ), numDepends_( 0 ), maxFailedNodes_( maxFailedNodes ),
+     numExec_( numExec ), maxCPU_( maxCPU ),
      timeout_( timeout ), queueTimeout_( queueTimeout ), taskTimeout_( taskTimeout ),
      flags_( 0 ), groupId_( -1 )
     {
@@ -73,6 +74,7 @@ public:
     int GetNumDepends() const { return numDepends_; }
     int GetNumPlannedExec() const { return numPlannedExec_; }
     int GetMaxFailedNodes() const { return maxFailedNodes_; }
+    int GetNumExec() const { return numExec_; }
     int GetMaxCPU() const { return maxCPU_; }
     int GetTimeout() const { return timeout_; }
     int GetQueueTimeout() const { return queueTimeout_; }
@@ -111,6 +113,7 @@ private:
     int numDepends_;
     int numPlannedExec_;
     int maxFailedNodes_;
+    int numExec_;
     int maxCPU_;
     int timeout_, queueTimeout_, taskTimeout_;
     int flags_;

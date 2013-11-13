@@ -66,6 +66,8 @@ private:
 
     bool CanTakeNewJob() const;
 
+    int GetNumPlannedExec( const Job *job ) const;
+
     // stats
     int GetNumBusyWorkers() const;
     int GetNumFreeWorkers() const;
