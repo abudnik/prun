@@ -6,6 +6,7 @@
 #include <boost/lexical_cast.hpp>
 #include "common/log.h"
 #include "common/helper.h"
+#include "common/config.h"
 #include "common.h"
 
 using boost::asio::ip::tcp;
@@ -67,7 +68,11 @@ public:
 
             // open socket to pyexec
             tcp::resolver resolver( *io_service );
-            tcp::resolver::query query( tcp::v4(), "localhost", boost::lexical_cast<std::string>( DEFAULT_PREXEC_PORT ) );
+
+            common::Config &cfg = common::Config::Instance();
+            bool ipv6 = cfg.Get<bool>( "ipv6" );
+
+            tcp::resolver::query query( ipv6 ? tcp::v6() : tcp::v4(), "localhost", boost::lexical_cast<std::string>( DEFAULT_PREXEC_PORT ) );
             tcp::resolver::iterator iterator = resolver.resolve( query );
 
             commDescr.socket = boost::shared_ptr< tcp::socket >( new tcp::socket( *io_service ) );

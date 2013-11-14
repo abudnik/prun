@@ -58,7 +58,9 @@ void PingerBoost::PingWorker( Worker *worker )
     EndpointMap::iterator it = endpoints_.find( worker->GetHost() );
     if ( it == endpoints_.end() )
     {
-        udp::resolver::query query( udp::v4(), worker->GetHost(), port_ );
+        common::Config &cfg = common::Config::Instance();
+        bool ipv6 = cfg.Get<bool>( "ipv6" );
+        udp::resolver::query query( ipv6 ? udp::v6() : udp::v4(), worker->GetHost(), port_ );
 
         boost::system::error_code error;
         udp::resolver::iterator iterator = resolver_.resolve( query, error );
@@ -82,10 +84,9 @@ void PingerBoost::PingWorker( Worker *worker )
     //PS_LOG( msg );
     //PS_LOG( node_ip );
 
-    udp::socket socket( io_service_, udp::endpoint( it->second.protocol(), 0 ) );
     try
     {
-        socket.send_to( boost::asio::buffer( msg ), it->second );
+        socket_.send_to( boost::asio::buffer( msg ), it->second );
     }
     catch( boost::system::system_error &e )
     {

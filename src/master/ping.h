@@ -5,6 +5,7 @@
 #include <sstream>
 #include "common/helper.h"
 #include "common/protocol.h"
+#include "common/config.h"
 #include "defines.h"
 #include "worker.h"
 
@@ -60,8 +61,14 @@ public:
     PingerBoost( boost::asio::io_service &io_service, int pingTimeout, int maxDroped )
     : Pinger( pingTimeout, maxDroped ),
      io_service_( io_service ),
+     socket_( io_service ),
      resolver_( io_service )
     {
+        common::Config &cfg = common::Config::Instance();
+        bool ipv6 = cfg.Get<bool>( "ipv6" );
+
+        socket_.open( ipv6 ? udp::v6() : udp::v4() );
+
         std::ostringstream ss;
         ss << master::NODE_UDP_PORT;
         port_ = ss.str();
@@ -74,6 +81,7 @@ private:
 
 private:
     boost::asio::io_service &io_service_;
+    udp::socket socket_;
     udp::resolver resolver_;
     std::string port_;
     EndpointMap endpoints_;

@@ -2,6 +2,7 @@
 #define __NODE_PING_H
 
 #include <boost/asio.hpp>
+#include "common/config.h"
 #include "defines.h"
 
 namespace master {
@@ -23,8 +24,14 @@ class PingReceiverBoost : public PingReceiver
 {
 public:
     PingReceiverBoost( boost::asio::io_service &io_service )
-    : socket_( io_service, udp::endpoint( udp::v4(), master::MASTER_UDP_PORT ) )
+    : socket_( io_service )
     {
+        common::Config &cfg = common::Config::Instance();
+        bool ipv6 = cfg.Get<bool>( "ipv6" );
+
+        socket_.open( ipv6 ? udp::v6() : udp::v4() );
+        socket_.bind( udp::endpoint( ipv6 ? udp::v6() : udp::v4(), master::MASTER_UDP_PORT ) );
+
         memset( buffer_.c_array(), 0, buffer_.size() );
     }
 

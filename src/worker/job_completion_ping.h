@@ -5,6 +5,7 @@
 #include <sstream>
 #include "common/helper.h"
 #include "common/protocol.h"
+#include "common/config.h"
 #include "common.h"
 #include "job_completion_table.h"
 
@@ -42,13 +43,20 @@ protected:
 };
 
 
+using boost::asio::ip::udp;
+
 class JobCompletionPingerBoost : public JobCompletionPinger
 {
 public:
     JobCompletionPingerBoost( boost::asio::io_service &io_service, int pingTimeout )
     : JobCompletionPinger( pingTimeout ),
-     io_service_( io_service )
-    {}
+     io_service_( io_service ),
+     socket_( io_service )
+    {
+        common::Config &cfg = common::Config::Instance();
+        bool ipv6 = cfg.Get<bool>( "ipv6" );
+        socket_.open( ipv6 ? udp::v6() : udp::v4() );
+    }
 
     virtual void StartPing();
 
@@ -57,6 +65,7 @@ private:
 
 private:
     boost::asio::io_service &io_service_;
+    udp::socket socket_;
 };
 
 } // namespace worker

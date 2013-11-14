@@ -44,14 +44,11 @@ void JobCompletionPingerBoost::PingMaster( const JobDescriptor &descr )
     protocol_->NodeJobCompletionPing( msg, descr.jobId, descr.taskId );
     PS_LOG( msg );
 
-    using boost::asio::ip::udp;
-
     boost::asio::ip::address address( boost::asio::ip::address::from_string( descr.masterIP ) );
     udp::endpoint master_endpoint( address, DEFAULT_MASTER_UDP_PORT );
-    udp::socket socket( io_service_, udp::endpoint( master_endpoint.protocol(), 0 ) );
     try
     {
-        socket.send_to( boost::asio::buffer( msg ), master_endpoint );
+        socket_.send_to( boost::asio::buffer( msg ), master_endpoint );
     }
     catch( boost::system::system_error &e )
     {

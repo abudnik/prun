@@ -8,6 +8,7 @@
 #include <iterator>
 #include "job_manager.h"
 #include "common/log.h"
+#include "common/config.h"
 #include "common/helper.h"
 #include "scheduler.h"
 #include "timeout_manager.h"
@@ -241,11 +242,14 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
             using boost::asio::ip::udp;
             udp::resolver resolver( io_service_ );
 
+            common::Config &cfg = common::Config::Instance();
+            bool ipv6 = cfg.Get<bool>( "ipv6" );
+
             BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
                            ptree.get_child( "hosts" ) )
             {
                 std::string host = v.second.get_value< std::string >();
-                udp::resolver::query query( udp::v4(), host, "" );
+                udp::resolver::query query( ipv6 ? udp::v6() : udp::v4(), host, "" );
 
                 boost::system::error_code error;
                 udp::resolver::iterator iter = resolver.resolve( query, error );
