@@ -756,7 +756,10 @@ public:
     {
         try
         {
-            tcp::endpoint endpoint( tcp::v4(), port );
+            common::Config &cfg = common::Config::Instance();
+            bool ipv6 = cfg.Get<bool>( "ipv6" );
+
+            tcp::endpoint endpoint( ipv6 ? tcp::v6() : tcp::v4(), port );
             acceptor_.open( endpoint.protocol() );
             acceptor_.set_option( tcp::acceptor::reuse_address( true ) );
             acceptor_.set_option( tcp::no_delay( true ) );

@@ -252,8 +252,8 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
                 udp::resolver::query query( ipv6 ? udp::v6() : udp::v4(), host, "" );
 
                 boost::system::error_code error;
-                udp::resolver::iterator iter = resolver.resolve( query, error );
-                if ( error )
+                udp::resolver::iterator iter = resolver.resolve( query, error ), end;
+                if ( error || iter == end )
                 {
                     PS_LOG( "JobManager::CreateJob address not resolved: " << host );
                     continue;

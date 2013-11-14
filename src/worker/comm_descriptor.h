@@ -73,7 +73,12 @@ public:
             bool ipv6 = cfg.Get<bool>( "ipv6" );
 
             tcp::resolver::query query( ipv6 ? tcp::v6() : tcp::v4(), "localhost", boost::lexical_cast<std::string>( DEFAULT_PREXEC_PORT ) );
-            tcp::resolver::iterator iterator = resolver.resolve( query );
+            tcp::resolver::iterator iterator = resolver.resolve( query, ec ), end;
+            if ( ec || iterator == end )
+            {
+                PS_LOG( "CommDescrPool() address not resolved: 'localhost'" );
+                exit( 1 );
+            }
 
             commDescr.socket = boost::shared_ptr< tcp::socket >( new tcp::socket( *io_service ) );
             commDescr.socket->connect( *iterator, ec );

@@ -4,6 +4,7 @@
 #include <boost/asio.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include "common/json_rpc.h"
+#include "common/config.h"
 #include "common/log.h"
 #include "defines.h"
 
@@ -101,7 +102,10 @@ public:
     {
         try
         {
-            tcp::endpoint endpoint( tcp::v4(), MASTER_ADMIN_PORT );
+            common::Config &cfg = common::Config::Instance();
+            bool ipv6 = cfg.Get<bool>( "ipv6" );
+
+            tcp::endpoint endpoint( ipv6 ? tcp::v6() : tcp::v4(), MASTER_ADMIN_PORT );
             acceptor_.open( endpoint.protocol() );
             acceptor_.set_option( tcp::acceptor::reuse_address( true ) );
             acceptor_.set_option( tcp::no_delay( true ) );

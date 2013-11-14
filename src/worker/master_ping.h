@@ -3,6 +3,7 @@
 
 #include <boost/asio.hpp>
 #include "common/protocol.h"
+#include "common/config.h"
 #include "common.h"
 
 namespace worker {
@@ -32,8 +33,14 @@ class MasterPingBoost : public MasterPing
 {
 public:
     MasterPingBoost( boost::asio::io_service &io_service )
-    : socket_( io_service, udp::endpoint( udp::v4(), DEFAULT_UDP_PORT ) )
-    {}
+    : socket_( io_service )
+    {
+        common::Config &cfg = common::Config::Instance();
+        bool ipv6 = cfg.Get<bool>( "ipv6" );
+
+        socket_.open( ipv6 ? udp::v6() : udp::v4() );
+        socket_.bind( udp::endpoint( ipv6 ? udp::v6() : udp::v4(), DEFAULT_UDP_PORT ) );
+    }
 
     virtual void Start();
 

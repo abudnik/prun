@@ -63,8 +63,8 @@ void PingerBoost::PingWorker( Worker *worker )
         udp::resolver::query query( ipv6 ? udp::v6() : udp::v4(), worker->GetHost(), port_ );
 
         boost::system::error_code error;
-        udp::resolver::iterator iterator = resolver_.resolve( query, error );
-        if ( error )
+        udp::resolver::iterator iterator = resolver_.resolve( query, error ), end;
+        if ( error || iterator == end )
         {
             PS_LOG( "PingerBoost::PingWorker address not resolved: " << worker->GetHost() );
             return;
