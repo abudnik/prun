@@ -89,7 +89,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
             succeeded = false;
             break;
         }
-        std::string jobDescr, line;
+        std::string jobDescr;
         while( getline( file, line ) )
             jobDescr += line;
 
@@ -109,7 +109,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
     }
     if ( succeeded )
     {
-        succeeded = TopologicalSort( ss, jobFileToIndex, jobGroup, jobs );
+        succeeded = PrepareJobGraph( ss, jobFileToIndex, jobGroup );
     }
 
     if ( !succeeded )
@@ -142,7 +142,7 @@ void JobManager::PushJobs( std::list< Job * > &jobs )
     std::list< Job * >::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
-        Job *job = *it;
+        const Job *job = *it;
         timeoutManager_->PushJobQueue( job->GetJobId(), job->GetQueueTimeout() );
     }
 }
@@ -203,7 +203,7 @@ bool JobManager::ReadScript( const std::string &fileName, std::string &script ) 
     return common::EncodeBase64( data.c_str(), data.size(), script );
 }
 
-Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
+Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
 {
     try
     {
@@ -239,30 +239,7 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
 
         if ( ptree.count( "hosts" ) > 0 )
         {
-            using boost::asio::ip::udp;
-            udp::resolver resolver( io_service_ );
-
-            common::Config &cfg = common::Config::Instance();
-            bool ipv6 = cfg.Get<bool>( "ipv6" );
-
-            BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
-                           ptree.get_child( "hosts" ) )
-            {
-                std::string host = v.second.get_value< std::string >();
-                udp::resolver::query query( ipv6 ? udp::v6() : udp::v4(), host, "" );
-
-                boost::system::error_code error;
-                udp::resolver::iterator iter = resolver.resolve( query, error ), end;
-                if ( error || iter == end )
-                {
-                    PS_LOG( "JobManager::CreateJob address not resolved: " << host );
-                    continue;
-                }
-
-                udp::endpoint dest = *iter;
-                std::string ip = dest.address().to_string();
-                job->AddHost( ip );
-            }
+            ReadHosts( job, ptree );
         }
 
         return job;
@@ -274,10 +251,37 @@ Job *JobManager::CreateJob( boost::property_tree::ptree &ptree ) const
     }
 }
 
-bool JobManager::TopologicalSort( std::istringstream &ss,
+void JobManager::ReadHosts( Job *job, const boost::property_tree::ptree &ptree ) const
+{
+    using boost::asio::ip::udp;
+    udp::resolver resolver( io_service_ );
+
+    common::Config &cfg = common::Config::Instance();
+    bool ipv6 = cfg.Get<bool>( "ipv6" );
+
+    BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
+                   ptree.get_child( "hosts" ) )
+    {
+        std::string host = v.second.get_value< std::string >();
+        udp::resolver::query query( ipv6 ? udp::v6() : udp::v4(), host, "" );
+
+        boost::system::error_code error;
+        udp::resolver::iterator iter = resolver.resolve( query, error ), end;
+        if ( error || iter == end )
+        {
+            PS_LOG( "JobManager::ReadHosts: address not resolved '" << host << "'" );
+            continue;
+        }
+
+        udp::endpoint dest = *iter;
+        std::string ip = dest.address().to_string();
+        job->AddHost( ip );
+    }
+}
+
+bool JobManager::PrepareJobGraph( std::istringstream &ss,
                                   std::map< std::string, int > &jobFileToIndex,
-                                  boost::shared_ptr< JobGroup > &jobGroup,
-                                  std::list< Job * > &jobs ) const
+                                  boost::shared_ptr< JobGroup > &jobGroup ) const
 {
     using namespace boost;
 
@@ -322,13 +326,10 @@ bool JobManager::TopologicalSort( std::istringstream &ss,
         depth_first_search( graph, visitor( vis ) );
         if ( has_cycle )
         {
-            PS_LOG( "JobManager::TopologicalSort: job graph has cycle" );
+            PS_LOG( "JobManager::PrepareJobGraph: job graph has cycle" );
             return false;
         }
     }
-
-    // fill jobs
-    jobs.clear();
 
     typedef graph_traits<JobGraph>::vertex_iterator VertexIter;
     VertexIter i, i_end;
@@ -340,8 +341,6 @@ bool JobManager::TopologicalSort( std::istringstream &ss,
         int deps = in_degree( *i, graph );
         job->SetNumDepends( deps );
         job->SetJobGroup( jobGroup );
-
-        jobs.push_back( job );
     }
 
     return true;

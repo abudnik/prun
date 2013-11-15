@@ -49,12 +49,12 @@ public:
 
 private:
     bool ReadScript( const std::string &fileName, std::string &script ) const;
-    Job *CreateJob( boost::property_tree::ptree &ptree ) const;
+    Job *CreateJob( const boost::property_tree::ptree &ptree ) const;
+    void ReadHosts( Job *job, const boost::property_tree::ptree &ptree ) const;
 
-    bool TopologicalSort( std::istringstream &ss,
+    bool PrepareJobGraph( std::istringstream &ss,
                           std::map< std::string, int > &jobFileToIndex,
-                          boost::shared_ptr< JobGroup > &jobGroup,
-                          std::list< Job * > &jobs ) const;
+                          boost::shared_ptr< JobGroup > &jobGroup ) const;
 
 private:
     JobQueue jobs_;
