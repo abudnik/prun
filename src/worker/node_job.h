@@ -58,6 +58,7 @@ public:
             descr.jobId = GetJobId();
             descr.taskId = GetTaskId();
             descr.masterIP = GetMasterIP();
+            descr.masterId = GetMasterId();
             if ( JobCompletionTable::Instance().Get( descr, stat ) )
             {
                 JobCompletionTable::Instance().Erase( descr );
@@ -65,9 +66,11 @@ public:
             }
             else
             {
+                JobCompletionTable::Instance().ErasePending( descr );
+
                 PS_LOG( "Job::GetResponse: job not found in completion table: "
                         "jobId=" << GetJobId() << ", taskId=" << GetTaskId() <<
-                        ", masterIP=" << GetMasterIP() );
+                        ", masterIP=" << GetMasterIP() << ", masterId=" << GetMasterId() );
                 protocol.SendJobResult( response, NODE_JOB_COMPLETION_NOT_FOUND );
             }
         }
@@ -85,6 +88,7 @@ public:
     }
 
     void SetMasterIP( const std::string &ip ) { masterIP_ = ip; }
+    void SetMasterId( const std::string &id ) { masterId_ = id; }
 
     unsigned int GetScriptLength() const { return scriptLength_; }
     const std::string &GetScriptLanguage() const { return language_; }
@@ -97,6 +101,7 @@ public:
     int GetErrorCode() const { return errCode_; }
     const std::string &GetTaskType() const { return taskType_; }
     const std::string &GetMasterIP() const { return masterIP_; }
+    const std::string &GetMasterId() const { return masterId_; }
 
 private:
     bool ParseRequestBody( const std::string &body, common::Protocol *parser )
@@ -133,7 +138,7 @@ private:
     int timeout_;
     int errCode_;
     std::string taskType_;
-    std::string masterIP_;
+    std::string masterIP_, masterId_;
 };
 
 } // namespace worker

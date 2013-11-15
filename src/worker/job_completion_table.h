@@ -18,6 +18,9 @@ struct JobDescriptor
     int64_t jobId;
     int taskId;
     std::string masterIP;
+    std::string masterId;
+
+    bool Equal( const JobDescriptor &descr ) const;
 };
 
 class JobCompletionTable
@@ -34,6 +37,10 @@ class JobCompletionTable
                 if ( a.taskId == b.taskId )
                 {
                     int cmp = a.masterIP.compare( b.masterIP );
+                    if ( !cmp )
+                    {
+                        return a.masterId.compare( b.masterId ) < 0;
+                    }
                     return cmp < 0;
                 }
                 return a.taskId < b.taskId;
@@ -70,6 +77,8 @@ public:
     }
 
     bool Erase( const JobDescriptor &descr );
+
+    bool ErasePending( const JobDescriptor &descr );
 
 private:
     Table table_;

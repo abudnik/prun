@@ -2,6 +2,11 @@
 
 namespace worker {
 
+bool JobDescriptor::Equal( const JobDescriptor &descr ) const
+{
+    return jobId == descr.jobId && taskId == descr.taskId && masterIP == descr.masterIP;
+}
+
 
 void JobCompletionTable::Set( const JobDescriptor &descr, const JobCompletionStat &stat )
 {
@@ -27,6 +32,28 @@ bool JobCompletionTable::Erase( const JobDescriptor &descr )
     boost::upgrade_lock< boost::shared_mutex > lock( tableMut_ );
     boost::upgrade_to_unique_lock< boost::shared_mutex > uniqueLock( lock );
     return table_.erase( descr ) > 0;
+}
+
+bool JobCompletionTable::ErasePending( const JobDescriptor &descr )
+{
+    boost::upgrade_lock< boost::shared_mutex > lock( tableMut_ );
+    boost::upgrade_to_unique_lock< boost::shared_mutex > uniqueLock( lock );
+
+    bool removed = false;
+    Table::iterator it = table_.begin();
+    for( ; it != table_.end(); )
+    {
+        const JobDescriptor &d = it->first;
+        if ( d.Equal( descr ) && ( d.masterId != descr.masterId ) )
+        {
+            table_.erase( it++ );
+            removed = true;
+            continue;
+        }
+        ++it;
+    }
+
+    return removed;
 }
 
 } // namespace worker
