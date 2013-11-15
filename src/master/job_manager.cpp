@@ -172,8 +172,9 @@ Job *JobManager::GetTopJob()
     return jobs_.GetTopJob();
 }
 
-void JobManager::Initialize( const std::string &exeDir, TimeoutManager *timeoutManager )
+void JobManager::Initialize( const std::string &masterId, const std::string &exeDir, TimeoutManager *timeoutManager )
 {
+    masterId_ = masterId;
     exeDir_ = exeDir;
     timeoutManager_ = timeoutManager;
 }

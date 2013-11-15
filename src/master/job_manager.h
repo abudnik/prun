@@ -38,13 +38,15 @@ public:
     Job *PopJob();
     Job *GetTopJob();
 
+    const std::string &GetMasterId() const { return masterId_; }
+
     static JobManager &Instance()
     {
         static JobManager instance_;
         return instance_;
     }
 
-    void Initialize( const std::string &exeDir, TimeoutManager *timeoutManager );
+    void Initialize( const std::string &masterId, const std::string &exeDir, TimeoutManager *timeoutManager );
     void Shutdown();
 
 private:
@@ -60,6 +62,7 @@ private:
     JobQueue jobs_;
     TimeoutManager *timeoutManager_;
     std::string exeDir_;
+    std::string masterId_;
     static int64_t numJobGroups_;
     mutable boost::asio::io_service io_service_;
 };

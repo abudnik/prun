@@ -26,6 +26,9 @@ the License.
 #include <boost/thread.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <csignal>
 #include <sys/wait.h>
 #include "common/log.h"
@@ -95,7 +98,9 @@ public:
     MasterApplication(  const std::string &exeDir, bool isDaemon )
     : exeDir_( exeDir ),
      isDaemon_( isDaemon )
-    {}
+    {
+        masterId_ = boost::uuids::random_generator()();
+    }
 
     void Initialize()
     {
@@ -114,7 +119,9 @@ public:
         InitWorkerManager( exeDir_ );
 
         timeoutManager_.reset( new master::TimeoutManager( io_service_timeout_ ) );
-        master::JobManager::Instance().Initialize( exeDir_, timeoutManager_.get() );
+
+        std::string masterId = boost::lexical_cast< std::string >( masterId_ );
+        master::JobManager::Instance().Initialize( masterId, exeDir_, timeoutManager_.get() );
 
         master::Scheduler::Instance();
         master::AdminSession::InitializeRpcHandlers();
@@ -254,6 +261,7 @@ public:
 private:
     std::string exeDir_;
     bool isDaemon_;
+    boost::uuids::uuid masterId_;
 
     boost::thread_group worker_threads_;
 
@@ -271,7 +279,6 @@ private:
     boost::shared_ptr< master::ResultGetter > resultGetter_;
     boost::shared_ptr< master::CommandSender > commandSender_;
     boost::shared_ptr< master::AdminConnection > adminConnection_;
-
 };
 
 } // anonymous namespace
