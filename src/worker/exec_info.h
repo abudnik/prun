@@ -13,6 +13,7 @@ struct ExecInfo
 {
     int64_t jobId_;
     int taskId_;
+    std::string masterId_;
     pid_t pid_; // used in pyexec
     boost::function< void () > callback_;
 };
@@ -28,14 +29,16 @@ public:
         table_.push_back( execInfo );
     }
 
-    bool Delete( int64_t jobId, int taskId )
+    bool Delete( int64_t jobId, int taskId, const std::string &masterId )
     {
         boost::unique_lock< boost::mutex > lock( mut_ );
         Container::iterator it = table_.begin();
         for( ; it != table_.end(); ++it )
         {
             const ExecInfo &execInfo = *it;
-            if ( execInfo.jobId_ == jobId && execInfo.taskId_ == taskId )
+            if ( execInfo.jobId_ == jobId &&
+                 execInfo.taskId_ == taskId &&
+                 execInfo.masterId_ == masterId )
             {
                 table_.erase( it );
                 return true;
@@ -44,27 +47,31 @@ public:
         return false;
     }
 
-    bool Contains( int64_t jobId, int taskId )
+    bool Contains( int64_t jobId, int taskId, const std::string &masterId )
     {
         boost::unique_lock< boost::mutex > lock( mut_ );
         Container::const_iterator it = table_.begin();
         for( ; it != table_.end(); ++it )
         {
             const ExecInfo &execInfo = *it;
-            if ( execInfo.jobId_ == jobId && execInfo.taskId_ == taskId )
+            if ( execInfo.jobId_ == jobId &&
+                 execInfo.taskId_ == taskId &&
+                 execInfo.masterId_ == masterId )
                 return true;
         }
         return false;
     }
 
-    bool Find( int64_t jobId, int taskId, ExecInfo &info )
+    bool Find( int64_t jobId, int taskId, const std::string &masterId, ExecInfo &info )
     {
         boost::unique_lock< boost::mutex > lock( mut_ );
         Container::const_iterator it = table_.begin();
         for( ; it != table_.end(); ++it )
         {
             const ExecInfo &execInfo = *it;
-            if ( execInfo.jobId_ == jobId && execInfo.taskId_ == taskId )
+            if ( execInfo.jobId_ == jobId &&
+                 execInfo.taskId_ == taskId &&
+                 execInfo.masterId_ == masterId )
             {
                 info = execInfo;
                 return true;

@@ -109,7 +109,7 @@ private:
         if ( taskType_ == "exec" )
         {
             std::string script64;
-            parser->ParseSendScript( body, language_, script64, jobId_, tasks_, numTasks_, timeout_ );
+            parser->ParseSendScript( body, language_, script64, masterId_, jobId_, tasks_, numTasks_, timeout_ );
             if ( !common::DecodeBase64( script64, script_ ) )
                 return false;
 
@@ -118,11 +118,11 @@ private:
         }
         if ( taskType_ == "get_result" )
         {
-            return parser->ParseGetJobResult( body, jobId_, taskId_ );
+            return parser->ParseGetJobResult( body, masterId_, jobId_, taskId_ );
         }
         if ( taskType_ == "stop_task" )
         {
-            return parser->ParseStopTask( body, jobId_, taskId_ );
+            return parser->ParseStopTask( body, masterId_, jobId_, taskId_ );
         }
         return false;
     }

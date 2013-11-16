@@ -97,6 +97,8 @@ public:
         language_ = ptree.get<std::string>( "lang" );
         jobId_ = ptree.get<int64_t>( "job_id" );
         taskId_ = ptree.get<int>( "task_id" );
+        masterId_ = ptree.get<std::string>( "master_id" );
+
         numTasks_ = ptree.get<int>( "num_tasks" );
         timeout_ = ptree.get<int>( "timeout" );
     }
@@ -106,6 +108,7 @@ public:
     const std::string &GetScriptLanguage() const { return language_; }
     int64_t GetJobId() const { return jobId_; }
     int GetTaskId() const { return taskId_; }
+    const std::string &GetMasterId() const { return masterId_; }
     int GetNumTasks() const { return numTasks_; }
     int GetTimeout() const { return timeout_; }
 
@@ -115,6 +118,7 @@ private:
     std::string language_;
     int64_t jobId_;
     int taskId_;
+    std::string masterId_;
     int numTasks_;
     int timeout_;
 };
@@ -126,14 +130,17 @@ public:
     {
         jobId_ = ptree.get<int64_t>( "job_id" );
         taskId_ = ptree.get<int>( "task_id" );
+        masterId_ = ptree.get<std::string>( "master_id" );
     }
 
     int64_t GetJobId() const { return jobId_; }
     int GetTaskId() const { return taskId_; }
+    const std::string &GetMasterId() const { return masterId_; }
 
 private:
     int64_t jobId_;
     int taskId_;
+    std::string masterId_;
 };
 
 class ScriptExec
@@ -178,7 +185,7 @@ public:
     {
         PS_LOG( "poll timed out, trying to kill process: " << pid );
 
-        if ( execTable.Delete( job_->GetJobId(), job_->GetTaskId() ) )
+        if ( execTable.Delete( job_->GetJobId(), job_->GetTaskId(), job_->GetMasterId() ) )
         {
             int ret = kill( pid, SIGTERM );
             if ( ret == -1 )
@@ -210,6 +217,7 @@ protected:
             ExecInfo execInfo;
             execInfo.jobId_ = job_->GetJobId();
             execInfo.taskId_ = job_->GetTaskId();
+            execInfo.masterId_ = job_->GetMasterId();
             execInfo.pid_ = pid;
             execTable.Add( execInfo );
 
@@ -218,7 +226,7 @@ protected:
                 DoFifoIO( threadParams.readFifoFD, true, pid );
             }
 
-            execTable.Delete( job_->GetJobId(), job_->GetTaskId() );
+            execTable.Delete( job_->GetJobId(), job_->GetTaskId(), job_->GetMasterId() );
             //PS_LOG( "wait child done " << pid );
         }
         else
@@ -506,8 +514,8 @@ public:
     void StopTask( JobStopTask &job )
     {
         ExecInfo execInfo;
-        if ( execTable.Find( job.GetJobId(), job.GetTaskId(), execInfo ) &&
-             execTable.Delete( job.GetJobId(), job.GetTaskId() ) )
+        if ( execTable.Find( job.GetJobId(), job.GetTaskId(), job.GetMasterId(), execInfo ) &&
+             execTable.Delete( job.GetJobId(), job.GetTaskId(), job.GetMasterId() ) )
         {
             pid_t pid = execInfo.pid_;
 
@@ -538,7 +546,8 @@ public:
         }
         else
         {
-            PS_LOG( "StopTaskAction::StopTask: task not found, jobId=" << job.GetJobId() << ", taskId=" << job.GetTaskId() );
+            PS_LOG( "StopTaskAction::StopTask: task not found, jobId=" << job.GetJobId() <<
+                    ", taskId=" << job.GetTaskId() << ", " << "masterId=" << job.GetMasterId() );
             job.OnError( NODE_TASK_NOT_FOUND );
         }
     }

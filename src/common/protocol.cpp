@@ -145,7 +145,8 @@ bool ProtocolJson::ParseJobCompletionPing( const std::string &msg, int64_t &jobI
 }
 
 bool ProtocolJson::SendScript( std::string &msg, const std::string &scriptLanguage,
-                               const std::string &script, int64_t jobId, const std::set<int> &tasks,
+                               const std::string &script, const std::string &masterId,
+                               int64_t jobId, const std::set<int> &tasks,
                                int numTasks, int timeout )
 {
     std::ostringstream ss;
@@ -154,6 +155,7 @@ bool ProtocolJson::SendScript( std::string &msg, const std::string &scriptLangua
     {
         ptree.put( "lang", scriptLanguage );
         ptree.put( "script", script );
+        ptree.put( "master_id", masterId );
         ptree.put( "job_id", jobId );
         ptree.put( "num_tasks", numTasks );
         ptree.put( "timeout", timeout );
@@ -183,7 +185,8 @@ bool ProtocolJson::SendScript( std::string &msg, const std::string &scriptLangua
 }
 
 bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptLanguage,
-                                    std::string &script, int64_t &jobId, std::set<int> &tasks,
+                                    std::string &script, std::string &masterId,
+                                    int64_t &jobId, std::set<int> &tasks,
                                     int &numTasks, int &timeout )
 {
     std::istringstream ss( msg );
@@ -193,6 +196,7 @@ bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptL
         boost::property_tree::read_json( ss, ptree );
         scriptLanguage = ptree.get<std::string>( "lang" );
         script = ptree.get<std::string>( "script" );
+        masterId = ptree.get<std::string>( "master_id" );
         jobId = ptree.get<int64_t>( "job_id" );
         numTasks = ptree.get<int>( "num_tasks" );
         timeout = ptree.get<int>( "timeout" );
@@ -212,12 +216,13 @@ bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptL
     return true;
 }
 
-bool ProtocolJson::GetJobResult( std::string &msg, int64_t jobId, int taskId )
+bool ProtocolJson::GetJobResult( std::string &msg, const std::string &masterId, int64_t jobId, int taskId )
 {
     std::ostringstream ss;
     boost::property_tree::ptree ptree;
     try
     {
+        ptree.put( "master_id", masterId );
         ptree.put( "job_id", jobId );
         ptree.put( "task_id", taskId );
         boost::property_tree::write_json( ss, ptree, false );
@@ -233,7 +238,7 @@ bool ProtocolJson::GetJobResult( std::string &msg, int64_t jobId, int taskId )
     return true;
 }
 
-bool ProtocolJson::ParseGetJobResult( const std::string &msg, int64_t &jobId, int &taskId )
+bool ProtocolJson::ParseGetJobResult( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId )
 {
     std::istringstream ss( msg );
 
@@ -241,6 +246,7 @@ bool ProtocolJson::ParseGetJobResult( const std::string &msg, int64_t &jobId, in
     try
     {
         boost::property_tree::read_json( ss, ptree );
+        masterId = ptree.get<std::string>( "master_id" );
         jobId = ptree.get<int64_t>( "job_id" );
         taskId = ptree.get<int>( "task_id" );
     }
@@ -292,13 +298,15 @@ bool ProtocolJson::ParseJobResult( const std::string &msg, int &errCode )
     return true;
 }
 
-bool ProtocolJson::SendCommand( std::string &msg, const std::string &command,
+bool ProtocolJson::SendCommand( std::string &msg, const std::string &masterId, const std::string &command,
                                 const std::list< std::pair< std::string, std::string > > &params )
 {
     std::ostringstream ss;
     boost::property_tree::ptree ptree;
     try
     {
+        ptree.put( "master_id", masterId );
+
         std::list< std::pair< std::string, std::string > >::const_iterator it = params.begin();
         for( ; it != params.end(); ++it )
         {
@@ -356,7 +364,7 @@ bool ProtocolJson::ParseSendCommandResult( const std::string &msg, int &errCode 
     return true;
 }
 
-bool ProtocolJson::ParseStopTask( const std::string &msg, int64_t &jobId, int &taskId )
+bool ProtocolJson::ParseStopTask( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId )
 {
     std::istringstream ss( msg );
 
@@ -364,6 +372,7 @@ bool ProtocolJson::ParseStopTask( const std::string &msg, int64_t &jobId, int &t
     try
     {
         boost::property_tree::read_json( ss, ptree );
+        masterId = ptree.get<std::string>( "master_id" );
         jobId = ptree.get<int64_t>( "job_id" );
         taskId = ptree.get<int>( "task_id" );
     }

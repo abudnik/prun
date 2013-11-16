@@ -2,6 +2,7 @@
 #include <boost/scoped_ptr.hpp>
 #include "command_sender.h"
 #include "worker_manager.h"
+#include "job_manager.h"
 #include "common/log.h"
 #include "common/protocol.h"
 #include "defines.h"
@@ -239,7 +240,10 @@ bool RpcBoost::HandleResponse()
 void RpcBoost::MakeRequest()
 {
     common::ProtocolJson protocol;
-    protocol.SendCommand( request_, command_->GetCommand(), command_->GetAllParams() );
+
+    const std::string &masterId = JobManager::Instance().GetMasterId();
+
+    protocol.SendCommand( request_, masterId, command_->GetCommand(), command_->GetAllParams() );
 }
 
 } // namespace master

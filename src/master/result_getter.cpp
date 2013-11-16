@@ -2,6 +2,7 @@
 #include <boost/scoped_ptr.hpp>
 #include "result_getter.h"
 #include "worker_manager.h"
+#include "job_manager.h"
 #include "scheduler.h"
 #include "common/log.h"
 #include "common/protocol.h"
@@ -237,7 +238,10 @@ bool GetterBoost::HandleResponse()
 void GetterBoost::MakeRequest()
 {
     common::ProtocolJson protocol;
-    protocol.GetJobResult( request_, workerTask_.GetJobId(), workerTask_.GetTaskId() );
+
+    const std::string &masterId = JobManager::Instance().GetMasterId();
+
+    protocol.GetJobResult( request_, masterId, workerTask_.GetJobId(), workerTask_.GetTaskId() );
 }
 
 } // namespace master

@@ -1,6 +1,7 @@
 #include <boost/bind.hpp>
 #include "job_sender.h"
 #include "scheduler.h"
+#include "job_manager.h"
 #include "common/log.h"
 #include "common/protocol.h"
 #include "defines.h"
@@ -162,8 +163,11 @@ void SenderBoost::MakeRequest()
     WorkerJob::Tasks tasks;
     workerJob_.GetTasks( workerJob_.GetJobId(), tasks );
 
+    const std::string &masterId = JobManager::Instance().GetMasterId();
+
     common::ProtocolJson protocol;
-    protocol.SendScript( request_, job_->GetScriptLanguage(), job_->GetScript(),
+    protocol.SendScript( request_, job_->GetScriptLanguage(),
+                         job_->GetScript(), masterId,
                          workerJob_.GetJobId(), tasks,
                          job_->GetNumPlannedExec(), job_->GetTaskTimeout() );
 }

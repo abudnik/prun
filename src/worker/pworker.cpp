@@ -274,6 +274,7 @@ class ExecuteTask : public Action
         descr.jobId = job->GetJobId();
         descr.taskId = taskId;
         descr.masterIP = job->GetMasterIP();
+        descr.masterId = job->GetMasterId();
         stat.errCode = job->GetErrorCode();
         JobCompletionTable::Instance().Set( descr, stat );
     }
@@ -310,6 +311,7 @@ public:
         ExecInfo execInfo;
         execInfo.jobId_ = job->GetJobId();
         execInfo.taskId_ = taskId;
+        execInfo.masterId_ = job->GetMasterId();
         execInfo.callback_ = boost::bind( &PrExecConnection::Cancel, prExecConnection );
         execTable.Add( execInfo );
 
@@ -330,6 +332,7 @@ public:
         ptree.put( "lang", job->GetScriptLanguage() );
         ptree.put( "job_id", job->GetJobId() );
         ptree.put( "task_id", taskId );
+        ptree.put( "master_id", job->GetMasterId() );
         ptree.put( "num_tasks", job->GetNumTasks() );
         ptree.put( "timeout", job->GetTimeout() );
 
@@ -340,7 +343,7 @@ public:
         int errCode = prExecConnection->Send( ss2.str() );
         job->OnError( errCode );
 
-        execTable.Delete( job->GetJobId(), taskId );
+        execTable.Delete( job->GetJobId(), taskId, job->GetMasterId() );
 
         commDescrPool->FreeCommDescr();
 
@@ -353,7 +356,7 @@ class StopTask : public Action
 {
     virtual void Execute( const boost::shared_ptr< Job > &job )
     {
-        if ( !execTable.Contains( job->GetJobId(), job->GetTaskId() ) )
+        if ( !execTable.Contains( job->GetJobId(), job->GetTaskId(), job->GetMasterId() ) )
         {
             job->OnError( NODE_TASK_NOT_FOUND );
             return;
@@ -369,6 +372,7 @@ class StopTask : public Action
         ptree.put( "task", "stop_task" );
         ptree.put( "job_id", job->GetJobId() );
         ptree.put( "task_id", job->GetTaskId() );
+        ptree.put( "master_id", job->GetMasterId() );
 
         boost::property_tree::write_json( ss, ptree, false );
 

@@ -106,6 +106,8 @@ public:
     {
         common::logger::InitLogger( isDaemon_, "Master" );
 
+        //PS_LOG( "master_id= " << masterId_ );
+
         common::Config &cfg = common::Config::Instance();
         cfg.ParseConfig( exeDir_.c_str(), "master.cfg" );
 

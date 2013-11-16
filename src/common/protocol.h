@@ -22,23 +22,27 @@ public:
 
     // script sending & results parsing
     virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
-                             const std::string &script, int64_t jobId, const std::set<int> &tasks,
+                             const std::string &script, const std::string &masterId,
+                             int64_t jobId, const std::set<int> &tasks,
                              int numTasks, int timeout ) = 0;
+
     virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
-                                  std::string &script, int64_t &jobId, std::set<int> &tasks,
+                                  std::string &script, std::string &masterId,
+                                  int64_t &jobId, std::set<int> &tasks,
                                   int &numTasks, int &timeout ) = 0;
-    virtual bool GetJobResult( std::string &msg, int64_t jobId, int taskId ) = 0;
-    virtual bool ParseGetJobResult( const std::string &msg, int64_t &jobId, int &taskId ) = 0;
+
+    virtual bool GetJobResult( std::string &msg, const std::string &masterId, int64_t jobId, int taskId ) = 0;
+    virtual bool ParseGetJobResult( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId ) = 0;
     virtual bool SendJobResult( std::string &msg, int errCode ) = 0;
     virtual bool ParseJobResult( const std::string &msg, int &errCode ) = 0;
     
     // commands section
-    virtual bool SendCommand( std::string &msg, const std::string &command,
+    virtual bool SendCommand( std::string &msg, const std::string &masterId, const std::string &command,
                               const std::list< std::pair< std::string, std::string > > &params ) = 0;
     virtual bool SendCommandResult( std::string &msg, int errCode ) = 0;
     virtual bool ParseSendCommandResult( const std::string &msg, int &errCode ) = 0;
 
-    virtual bool ParseStopTask( const std::string &msg, int64_t &jobId, int &taskId ) = 0;
+    virtual bool ParseStopTask( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId ) = 0;
 
     // internals
     virtual bool ParseMsgType( const std::string &msg, std::string &type ) = 0;
@@ -68,29 +72,31 @@ public:
     virtual bool ParseJobCompletionPing( const std::string &msg, int64_t &jobId, int &taskId );
 
     virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
-                             const std::string &script, int64_t jobId, const std::set<int> &tasks,
+                             const std::string &script, const std::string &masterId,
+                             int64_t jobId, const std::set<int> &tasks,
                              int numTasks, int timeout );
 
     virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
-                                  std::string &script, int64_t &jobId, std::set<int> &tasks,
+                                  std::string &script, std::string &masterId,
+                                  int64_t &jobId, std::set<int> &tasks,
                                   int &numTasks, int &timeout );
 
-    virtual bool GetJobResult( std::string &msg, int64_t jobId, int taskId );
+    virtual bool GetJobResult( std::string &msg, const std::string &masterId, int64_t jobId, int taskId );
 
-    virtual bool ParseGetJobResult( const std::string &msg, int64_t &jobId, int &taskId );
+    virtual bool ParseGetJobResult( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId );
 
     virtual bool SendJobResult( std::string &msg, int errCode );
 
     virtual bool ParseJobResult( const std::string &msg, int &errCode );
 
-    virtual bool SendCommand( std::string &msg, const std::string &command,
+    virtual bool SendCommand( std::string &msg, const std::string &masterId, const std::string &command,
                               const std::list< std::pair< std::string, std::string > > &params );
 
     virtual bool SendCommandResult( std::string &msg, int errCode );
 
     virtual bool ParseSendCommandResult( const std::string &msg, int &errCode );
 
-    virtual bool ParseStopTask( const std::string &msg, int64_t &jobId, int &taskId );
+    virtual bool ParseStopTask( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId );
 
     virtual bool ParseMsgType( const std::string &msg, std::string &type );
 
