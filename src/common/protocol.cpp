@@ -1,5 +1,7 @@
 #define BOOST_SPIRIT_THREADSAFE
 
+#include <algorithm>
+#include <cctype> // isspace
 #include <sstream>
 #include <stdint.h> // boost/atomic/atomic.hpp:202:16: error: ‘uintptr_t’ was not declared in this scope
 #include <boost/property_tree/json_parser.hpp>
@@ -44,16 +46,40 @@ bool Protocol::ParseMsg( const std::string &msg, std::string &protocol, int &ver
 
 bool ProtocolJson::NodePing( std::string &msg, const std::string &host )
 {
+    std::ostringstream ss;
+    boost::property_tree::ptree ptree;
+    try
+    {
+        ptree.put( "host", host );
+        boost::property_tree::write_json( ss, ptree, false );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "ProtocolJson::NodePing: " << e.what() );
+        return false;
+    }
     msg = std::string( "{\"type\":\"ping\"}\n" );
-    msg += std::string( "{\"host\":\"" ) + host + "\"}";
+    msg += ss.str();
     AddHeader( msg );
     return true;
 }
 
 bool ProtocolJson::NodeResponsePing( std::string &msg, int numCPU )
 {
+    std::ostringstream ss;
+    boost::property_tree::ptree ptree;
+    try
+    {
+        ptree.put( "num_cpu", numCPU );
+        boost::property_tree::write_json( ss, ptree, false );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "ProtocolJson::NodeResponsePing: " << e.what() );
+        return false;
+    }
     msg = std::string( "{\"type\":\"ping_response\"}\n" );
-    msg += std::string( "{\"num_cpu\":" ) + boost::lexical_cast<std::string>( numCPU ) + "}";
+    msg += ss.str();
     AddHeader( msg );
     return true;
 }
@@ -79,9 +105,21 @@ bool ProtocolJson::ParseResponsePing( const std::string &msg, int &numCPU )
 
 bool ProtocolJson::NodeJobCompletionPing( std::string &msg, int64_t jobId, int taskId )
 {
+    std::ostringstream ss;
+    boost::property_tree::ptree ptree;
+    try
+    {
+        ptree.put( "job_id", jobId );
+        ptree.put( "task_id", taskId );
+        boost::property_tree::write_json( ss, ptree, false );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "ProtocolJson::NodeJobCompletionPing: " << e.what() );
+        return false;
+    }
     msg = std::string( "{\"type\":\"job_completion\"}\n" );
-    msg += std::string( "{\"job_id\":" ) + boost::lexical_cast<std::string>( jobId ) + ","
-        "\"task_id\":" + boost::lexical_cast<std::string>( taskId ) + "}";
+    msg += ss.str();
     AddHeader( msg );
     return true;
 }
@@ -110,22 +148,35 @@ bool ProtocolJson::SendScript( std::string &msg, const std::string &scriptLangua
                                const std::string &script, int64_t jobId, const std::set<int> &tasks,
                                int numTasks, int timeout )
 {
-    msg = std::string( "{\"type\":\"exec\"}\n" );
-    msg += std::string( "{\"lang\":\"" ) + scriptLanguage + "\",\"script\":\"" + script + "\","
-        "\"job_id\":" + boost::lexical_cast<std::string>( jobId ) + ","
-        "\"num_tasks\":" + boost::lexical_cast<std::string>( numTasks ) + ","
-        "\"timeout\":" + boost::lexical_cast<std::string>( timeout ) + ",";
-
-    msg += "\"tasks\":[";
-    std::set<int>::const_iterator it = tasks.begin();
-    for( ; it != tasks.end(); ++it )
+    std::ostringstream ss;
+    boost::property_tree::ptree ptree, child, element;
+    try
     {
-        if ( it != tasks.begin() )
-            msg += ",";
-        int taskId = *it;
-        msg += boost::lexical_cast<std::string>( taskId );
+        ptree.put( "lang", scriptLanguage );
+        ptree.put( "script", script );
+        ptree.put( "job_id", jobId );
+        ptree.put( "num_tasks", numTasks );
+        ptree.put( "timeout", timeout );
+
+        std::set<int>::const_iterator it = tasks.begin();
+        for( ; it != tasks.end(); ++it )
+        {
+            element.put_value( *it );
+            child.push_back( std::make_pair( "", element ) );
+        }
+        ptree.add_child( "tasks", child );
+
+        boost::property_tree::write_json( ss, ptree, false );
     }
-    msg += "]}";
+    catch( std::exception &e )
+    {
+        PS_LOG( "ProtocolJson::SendScript: " << e.what() );
+        return false;
+    }
+    msg = ss.str();
+    // cratch for boost bug with unexepected whitespaces in arrays:  "val": [   <whitespaces> ]
+    msg.erase( std::remove_if( msg.begin(), msg.end(), isspace ), msg.end() );
+    msg = std::string( "{\"type\":\"exec\"}\n" ) + msg;
 
     AddHeader( msg );
     return true;
@@ -136,7 +187,6 @@ bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptL
                                     int &numTasks, int &timeout )
 {
     std::istringstream ss( msg );
-
     boost::property_tree::ptree ptree;
     try
     {
@@ -164,9 +214,21 @@ bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptL
 
 bool ProtocolJson::GetJobResult( std::string &msg, int64_t jobId, int taskId )
 {
+    std::ostringstream ss;
+    boost::property_tree::ptree ptree;
+    try
+    {
+        ptree.put( "job_id", jobId );
+        ptree.put( "task_id", taskId );
+        boost::property_tree::write_json( ss, ptree, false );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "ProtocolJson::GetJobResult: " << e.what() );
+        return false;
+    }
     msg = std::string( "{\"type\":\"get_result\"}\n" );
-    msg += std::string( "{\"job_id\":" ) + boost::lexical_cast<std::string>( jobId ) + ","
-        "\"task_id\":" + boost::lexical_cast<std::string>( taskId ) + "}";
+    msg += ss.str();
     AddHeader( msg );
     return true;
 }
@@ -193,8 +255,20 @@ bool ProtocolJson::ParseGetJobResult( const std::string &msg, int64_t &jobId, in
 
 bool ProtocolJson::SendJobResult( std::string &msg, int errCode )
 {
+    std::ostringstream ss;
+    boost::property_tree::ptree ptree;
+    try
+    {
+        ptree.put( "err_code", errCode );
+        boost::property_tree::write_json( ss, ptree, false );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "ProtocolJson::SendJobResult: " << e.what() );
+        return false;
+    }
     msg = std::string( "{\"type\":\"send_job_result\"}\n" );
-    msg += std::string( "{\"err_code\":" ) + boost::lexical_cast<std::string>( errCode ) + "}";
+    msg += ss.str();
     AddHeader( msg );
     return true;
 }
@@ -221,25 +295,44 @@ bool ProtocolJson::ParseJobResult( const std::string &msg, int &errCode )
 bool ProtocolJson::SendCommand( std::string &msg, const std::string &command,
                                 const std::list< std::pair< std::string, std::string > > &params )
 {
-    msg = std::string( "{\"type\":\"" ) + command + std::string( "\"}\n" );
-    msg += std::string( "{" );
-    std::list< std::pair< std::string, std::string > >::const_iterator it = params.begin();
-    for( ; it != params.end(); ++it )
+    std::ostringstream ss;
+    boost::property_tree::ptree ptree;
+    try
     {
-        if ( it != params.begin() )
-            msg += ",";
-        msg += std::string( "\"" ) + it->first + std::string( "\":" );
-        msg += std::string( "\"" ) + it->second + std::string( "\"" );
+        std::list< std::pair< std::string, std::string > >::const_iterator it = params.begin();
+        for( ; it != params.end(); ++it )
+        {
+            ptree.put( it->first, it->second );
+        }
+        boost::property_tree::write_json( ss, ptree, false );
     }
-    msg += std::string( "}" );
+    catch( std::exception &e )
+    {
+        PS_LOG( "ProtocolJson::SendCommand: " << e.what() );
+        return false;
+    }
+    msg = std::string( "{\"type\":\"" ) + command + std::string( "\"}\n" );
+    msg += ss.str();
     AddHeader( msg );
     return true;
 }
 
 bool ProtocolJson::SendCommandResult( std::string &msg, int errCode )
 {
+    std::ostringstream ss;
+    boost::property_tree::ptree ptree;
+    try
+    {
+        ptree.put( "err_code", errCode );
+        boost::property_tree::write_json( ss, ptree, false );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "ProtocolJson::SendCommandResult: " << e.what() );
+        return false;
+    }
     msg = std::string( "{\"type\":\"send_command_result\"}\n" );
-    msg += std::string( "{\"err_code\":" ) + boost::lexical_cast<std::string>( errCode ) + "}";
+    msg += ss.str();
     AddHeader( msg );
     return true;
 }
