@@ -83,13 +83,19 @@ public:
     void Clear()
     {
         boost::unique_lock< boost::mutex > lock( mut_ );
-        Container::iterator it = table_.begin();
-        for( ; it != table_.end(); ++it )
+        Container table( table_ );
+        lock.unlock();
+
+        // run registered callbacks
+        Container::iterator it = table.begin();
+        for( ; it != table.end(); ++it )
         {
             const ExecInfo &execInfo = *it;
             if ( execInfo.callback_ )
                 execInfo.callback_();
         }
+
+        lock.lock();
         table_.clear();
     }
 

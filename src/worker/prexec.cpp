@@ -126,6 +126,12 @@ private:
 class JobStopTask : public Job
 {
 public:
+    JobStopTask() {}
+
+    JobStopTask( int64_t jobId, int taskId, const std::string &masterId )
+    : jobId_( jobId ), taskId_( taskId ), masterId_( masterId )
+    {}
+
     void ParseRequest( boost::property_tree::ptree &ptree )
     {
         jobId_ = ptree.get<int64_t>( "job_id" );
@@ -141,6 +147,64 @@ private:
     int64_t jobId_;
     int taskId_;
     std::string masterId_;
+};
+
+class StopTaskAction
+{
+public:
+    void StopTask( JobStopTask &job )
+    {
+        ExecInfo execInfo;
+        if ( execTable.Find( job.GetJobId(), job.GetTaskId(), job.GetMasterId(), execInfo ) &&
+             execTable.Delete( job.GetJobId(), job.GetTaskId(), job.GetMasterId() ) )
+        {
+            pid_t pid = execInfo.pid_;
+
+            int fifo = FindFifo( pid );
+            if ( fifo != -1 )
+            {
+                int errCode = NODE_JOB_TIMEOUT;
+                int ret = write( fifo, &errCode, sizeof( errCode ) );
+                if ( ret == -1 )
+                    PS_LOG( "StopTaskAction::StopTask: write fifo failed, err=" << strerror(errno) );
+            }
+            else
+            {
+                PS_LOG( "StopTaskAction::StopTask: fifo not found for pid=" << pid );
+            }
+
+            int ret = kill( pid, SIGTERM );
+            if ( ret == -1 )
+            {
+                PS_LOG( "StopTaskAction::StopTask: process killing failed: pid=" << pid << ", err=" << strerror(errno) );
+                job.OnError( NODE_FATAL );
+            }
+            else
+            {
+                PS_LOG( "StopTaskAction::StopTask: task stopped, pid=" << pid <<
+                        ", jobId=" << job.GetJobId() << ", taskId=" << job.GetTaskId() );
+            }
+        }
+        else
+        {
+            PS_LOG( "StopTaskAction::StopTask: task not found, jobId=" << job.GetJobId() <<
+                    ", taskId=" << job.GetTaskId() << ", " << "masterId=" << job.GetMasterId() );
+            job.OnError( NODE_TASK_NOT_FOUND );
+        }
+    }
+
+private:
+    int FindFifo( pid_t pid )
+    {
+        ThreadInfo::const_iterator it = threadInfo.begin();
+        for( ; it != threadInfo.end(); ++it )
+        {
+            const ThreadParams &threadParams = it->second;
+            if ( threadParams.pid == pid )
+                return threadParams.readFifoFD;
+        }
+        return -1;
+    }
 };
 
 class ScriptExec
@@ -199,6 +263,13 @@ public:
         }
     }
 
+    static void Cancel( const ExecInfo &execInfo )
+    {
+        JobStopTask job( execInfo.jobId_, execInfo.taskId_, execInfo.masterId_ );
+        StopTaskAction action;
+        action.StopTask( job );
+    }
+
 protected:
     virtual bool InitLanguageEnv() = 0;
 
@@ -219,6 +290,7 @@ protected:
             execInfo.taskId_ = job_->GetTaskId();
             execInfo.masterId_ = job_->GetMasterId();
             execInfo.pid_ = pid;
+            execInfo.callback_ = boost::bind( &ScriptExec::Cancel, execInfo );
             execTable.Add( execInfo );
 
             if ( DoFifoIO( threadParams.writeFifoFD, false, pid ) )
@@ -508,63 +580,6 @@ public:
     }
 };
 
-class StopTaskAction
-{
-public:
-    void StopTask( JobStopTask &job )
-    {
-        ExecInfo execInfo;
-        if ( execTable.Find( job.GetJobId(), job.GetTaskId(), job.GetMasterId(), execInfo ) &&
-             execTable.Delete( job.GetJobId(), job.GetTaskId(), job.GetMasterId() ) )
-        {
-            pid_t pid = execInfo.pid_;
-
-            int fifo = FindFifo( pid );
-            if ( fifo != -1 )
-            {
-                int errCode = NODE_JOB_TIMEOUT;
-                int ret = write( fifo, &errCode, sizeof( errCode ) );
-                if ( ret == -1 )
-                    PS_LOG( "StopTaskAction::StopTask: write fifo failed, err=" << strerror(errno) );
-            }
-            else
-            {
-                PS_LOG( "StopTaskAction::StopTask: fifo not found for pid=" << pid );
-            }
-
-            int ret = kill( pid, SIGTERM );
-            if ( ret == -1 )
-            {
-                PS_LOG( "StopTaskAction::StopTask: process killing failed: pid=" << pid << ", err=" << strerror(errno) );
-                job.OnError( NODE_FATAL );
-            }
-            else
-            {
-                PS_LOG( "StopTaskAction::StopTask: task stopped, pid=" << pid <<
-                        ", jobId=" << job.GetJobId() << ", taskId=" << job.GetTaskId() );
-            }
-        }
-        else
-        {
-            PS_LOG( "StopTaskAction::StopTask: task not found, jobId=" << job.GetJobId() <<
-                    ", taskId=" << job.GetTaskId() << ", " << "masterId=" << job.GetMasterId() );
-            job.OnError( NODE_TASK_NOT_FOUND );
-        }
-    }
-
-private:
-    int FindFifo( pid_t pid )
-    {
-        ThreadInfo::const_iterator it = threadInfo.begin();
-        for( ; it != threadInfo.end(); ++it )
-        {
-            const ThreadParams &threadParams = it->second;
-            if ( threadParams.pid == pid )
-                return threadParams.readFifoFD;
-        }
-        return -1;
-    }
-};
 
 class Session
 {
@@ -1142,6 +1157,8 @@ int main( int argc, char* argv[], char **envp )
                 break;
             PS_LOG( "main(): sigwait failed: " << strerror(errno) );
         }
+
+        worker::execTable.Clear();
 
         io_service.stop();
         worker_threads.join_all();
