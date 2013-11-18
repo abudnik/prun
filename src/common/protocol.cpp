@@ -145,7 +145,8 @@ bool ProtocolJson::ParseJobCompletionPing( const std::string &msg, int64_t &jobI
 }
 
 bool ProtocolJson::SendScript( std::string &msg, const std::string &scriptLanguage,
-                               const std::string &script, const std::string &masterId,
+                               const std::string &script, const std::string &filePath,
+                               const std::string &masterId,
                                int64_t jobId, const std::set<int> &tasks,
                                int numTasks, int timeout )
 {
@@ -155,6 +156,7 @@ bool ProtocolJson::SendScript( std::string &msg, const std::string &scriptLangua
     {
         ptree.put( "lang", scriptLanguage );
         ptree.put( "script", script );
+        ptree.put( "file_path", filePath );
         ptree.put( "master_id", masterId );
         ptree.put( "job_id", jobId );
         ptree.put( "num_tasks", numTasks );
@@ -185,7 +187,8 @@ bool ProtocolJson::SendScript( std::string &msg, const std::string &scriptLangua
 }
 
 bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptLanguage,
-                                    std::string &script, std::string &masterId,
+                                    std::string &script, std::string &filePath,
+                                    std::string &masterId,
                                     int64_t &jobId, std::set<int> &tasks,
                                     int &numTasks, int &timeout )
 {
@@ -196,6 +199,7 @@ bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptL
         boost::property_tree::read_json( ss, ptree );
         scriptLanguage = ptree.get<std::string>( "lang" );
         script = ptree.get<std::string>( "script" );
+        filePath = ptree.get<std::string>( "file_path" );
         masterId = ptree.get<std::string>( "master_id" );
         jobId = ptree.get<int64_t>( "job_id" );
         numTasks = ptree.get<int>( "num_tasks" );

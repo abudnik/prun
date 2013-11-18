@@ -43,8 +43,8 @@ class Job
 {
 public:
     Job( const std::string &script, const std::string &scriptLanguage,
-         int priority, int maxFailedNodes, int numExec, int maxCPU,
-         int timeout, int queueTimeout, int taskTimeout,
+         int priority, int maxFailedNodes, int numExec,
+         int maxCPU,  int timeout, int queueTimeout, int taskTimeout,
          bool noReschedule )
     : script_( script ), scriptLanguage_( scriptLanguage ),
      priority_( priority ), numDepends_( 0 ), maxFailedNodes_( maxFailedNodes ),
@@ -70,6 +70,7 @@ public:
     const std::string &GetScriptLanguage() const { return scriptLanguage_; }
     unsigned int GetScriptLength() const { return scriptLength_; }
 
+    const std::string &GetFilePath() const { return filePath_; }
     int GetPriority() const { return priority_; }
     int GetNumDepends() const { return numDepends_; }
     int GetNumPlannedExec() const { return numPlannedExec_; }
@@ -83,6 +84,7 @@ public:
     int64_t GetJobId() const { return id_; }
     int64_t GetGroupId() const { return groupId_; }
 
+    void SetFilePath( const std::string &filePath ) { filePath_ = filePath; }
     void SetNumPlannedExec( int val ) { numPlannedExec_ = val; }
     void SetNumDepends( int val ) { numDepends_ = val; }
     void SetGroupId( int64_t val ) { groupId_ = val; }
@@ -108,6 +110,7 @@ private:
     std::string script_;
     std::string scriptLanguage_;
     unsigned int scriptLength_;
+    std::string filePath_;
 
     int priority_;
     int numDepends_;

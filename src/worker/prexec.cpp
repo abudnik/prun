@@ -95,6 +95,7 @@ public:
         commId_ = ptree.get<int>( "id" );
         scriptLength_ = ptree.get<unsigned int>( "len" );
         language_ = ptree.get<std::string>( "lang" );
+        filePath_ = ptree.get<std::string>( "path" );
         jobId_ = ptree.get<int64_t>( "job_id" );
         taskId_ = ptree.get<int>( "task_id" );
         masterId_ = ptree.get<std::string>( "master_id" );
@@ -106,6 +107,7 @@ public:
     int GetCommId() const { return commId_; }
     unsigned int GetScriptLength() const { return scriptLength_; }
     const std::string &GetScriptLanguage() const { return language_; }
+    const std::string &GetFilePath() const { return filePath_; }
     int64_t GetJobId() const { return jobId_; }
     int GetTaskId() const { return taskId_; }
     const std::string &GetMasterId() const { return masterId_; }
@@ -116,6 +118,7 @@ private:
     int commId_;
     unsigned int scriptLength_;
     std::string language_;
+    std::string filePath_;
     int64_t jobId_;
     int taskId_;
     std::string masterId_;
@@ -657,7 +660,7 @@ protected:
 
 class SessionBoost : public Session, public boost::enable_shared_from_this< SessionBoost >
 {
-    typedef boost::array< char, 1024 > BufferType;
+    typedef boost::array< char, 2048 > BufferType;
 
 public:
     SessionBoost( boost::asio::io_service &io_service )

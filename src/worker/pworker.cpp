@@ -88,7 +88,7 @@ class NoAction : public Action
 
 class PrExecConnection : public boost::enable_shared_from_this< PrExecConnection >
 {
-    typedef boost::array< char, 1024 > BufferType;
+    typedef boost::array< char, 2048 > BufferType;
 
 public:
     typedef boost::shared_ptr< PrExecConnection > connection_ptr;
@@ -316,11 +316,14 @@ public:
         execTable.Add( execInfo );
 
         // write script into shared memory
-        const std::string &script = job->GetScript();
         CommDescr &commDescr = commDescrPool->GetCommDescr();
-        memcpy( commDescr.shmemAddr, script.c_str(), script.size() );
-        char *shmemRequestEnd = commDescr.shmemAddr + script.size();
-        *shmemRequestEnd = '\0';
+        const std::string &script = job->GetScript();
+        if ( script.size() )
+        {
+            memcpy( commDescr.shmemAddr, script.c_str(), script.size() );
+            char *shmemRequestEnd = commDescr.shmemAddr + script.size();
+            *shmemRequestEnd = '\0';
+        }
 
         // prepare json command
         boost::property_tree::ptree ptree;
@@ -330,6 +333,7 @@ public:
         ptree.put( "id", commDescr.shmemBlockId );
         ptree.put( "len", script.size() );
         ptree.put( "lang", job->GetScriptLanguage() );
+        ptree.put( "path", job->GetFilePath() );
         ptree.put( "job_id", job->GetJobId() );
         ptree.put( "task_id", taskId );
         ptree.put( "master_id", job->GetMasterId() );

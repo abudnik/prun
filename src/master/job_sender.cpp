@@ -167,8 +167,8 @@ void SenderBoost::MakeRequest()
 
     common::ProtocolJson protocol;
     protocol.SendScript( request_, job_->GetScriptLanguage(),
-                         job_->GetScript(), masterId,
-                         workerJob_.GetJobId(), tasks,
+                         job_->GetScript(), job_->GetFilePath(),
+                         masterId, workerJob_.GetJobId(), tasks,
                          job_->GetNumPlannedExec(), job_->GetTaskTimeout() );
 }
 

@@ -93,6 +93,7 @@ public:
     unsigned int GetScriptLength() const { return scriptLength_; }
     const std::string &GetScriptLanguage() const { return language_; }
     const std::string &GetScript() const { return script_; }
+    const std::string &GetFilePath() const { return filePath_; }
     int64_t GetJobId() const { return jobId_; }
     int GetTaskId() const { return taskId_; }
     const Tasks &GetTasks() const { return tasks_; }
@@ -109,7 +110,8 @@ private:
         if ( taskType_ == "exec" )
         {
             std::string script64;
-            parser->ParseSendScript( body, language_, script64, masterId_, jobId_, tasks_, numTasks_, timeout_ );
+            parser->ParseSendScript( body, language_, script64, filePath_,
+                                     masterId_, jobId_, tasks_, numTasks_, timeout_ );
             if ( !common::DecodeBase64( script64, script_ ) )
                 return false;
 
@@ -131,6 +133,7 @@ private:
     unsigned int scriptLength_;
     std::string language_;
     std::string script_;
+    std::string filePath_;
     int64_t jobId_;
     Tasks tasks_;
     int taskId_;

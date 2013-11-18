@@ -215,8 +215,10 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
             return NULL;
         }
 
+        bool sendScript = ptree.get<bool>( "send_script" );
+
         std::string script;
-        if ( !ReadScript( fileName, script ) )
+        if ( sendScript && !ReadScript( fileName, script ) )
             return NULL;
 
         std::string language = ptree.get<std::string>( "language" );
@@ -237,6 +239,9 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
                             numExec, maxCPU,
                             timeout, queueTimeout, taskTimeout,
                             noReschedule );
+
+        if ( !sendScript )
+            job->SetFilePath( fileName );
 
         if ( ptree.count( "hosts" ) > 0 )
         {
