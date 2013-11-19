@@ -278,6 +278,8 @@ protected:
 
     virtual pid_t DoFork()
     {
+        // flush fifo before fork, because after forking completion status of a
+        // forked process may be lost
         FlushFifo();
 
         pid_t pid = fork();
@@ -296,9 +298,16 @@ protected:
             execInfo.callback_ = boost::bind( &ScriptExec::Cancel, execInfo );
             execTable.Add( execInfo );
 
-            if ( DoFifoIO( threadParams.writeFifoFD, false, pid ) )
+            bool succeded = WriteScript( threadParams.writeFifoFD );
+            if ( succeded )
             {
-                DoFifoIO( threadParams.readFifoFD, true, pid );
+                succeded = ReadCompletionStatus( threadParams.readFifoFD );
+            }
+
+            if ( !succeded)
+            {
+                if ( job_->GetError() == NODE_JOB_TIMEOUT )
+                    KillExec( pid );
             }
 
             execTable.Delete( job_->GetJobId(), job_->GetTaskId(), job_->GetMasterId() );
@@ -326,79 +335,95 @@ protected:
         return pid;
     }
 
-    bool DoFifoIO( int fifo, bool doRead, pid_t pid )
+    bool WriteScript( int fifo )
     {
-        if ( fifo != -1 )
+        pollfd pfd[1];
+        pfd[0].fd = fifo;
+        pfd[0].events = POLLOUT;
+
+        int timeout = job_->GetTimeout();
+        if ( timeout > 0 )
+            timeout *= 1000;
+
+        int errCode = NODE_FATAL;
+        int ret = poll( pfd, 1, timeout );
+        if ( ret > 0 )
         {
-            pollfd pfd[1];
-            pfd[0].fd = fifo;
-            pfd[0].events = doRead ? POLLIN : POLLOUT;
+            size_t offset = job_->GetCommId() * SHMEM_BLOCK_SIZE;
+            char *shmemAddr = (char*)worker::mappedRegion->get_address() + offset;
 
-            int timeout = job_->GetTimeout();
-            if ( timeout > 0 )
-                timeout *= 1000;
-
-            int errCode = NODE_FATAL;
-            int ret = poll( pfd, 1, timeout );
-            if ( ret > 0 )
+            offset = 0;
+            unsigned int bytesToWrite = job_->GetScriptLength();
+            while( bytesToWrite )
             {
-                if ( doRead )
+                ret = write( fifo, shmemAddr + offset, bytesToWrite );
+                if ( ret > 0 )
                 {
-                    ret = read( fifo, &errCode, sizeof( errCode ) );
-                    if ( ret > 0 )
-                    {
-                        job_->OnError( errCode );
-                        return true;
-                    }
-                    else
-                    {
-                        PS_LOG( "ScriptExec::DoFifoIO: read fifo failed: " << strerror(errno) );
-                    }
+                    offset += ret;
+                    bytesToWrite -= ret;
                 }
                 else
                 {
-                    size_t offset = job_->GetCommId() * SHMEM_BLOCK_SIZE;
-                    char *shmemAddr = (char*)worker::mappedRegion->get_address() + offset;
-
-                    offset = 0;
-                    unsigned int bytesToWrite = job_->GetScriptLength();
-                    while( bytesToWrite )
-                    {
-                        ret = write( fifo, shmemAddr + offset, bytesToWrite );
-                        if ( ret > 0 )
-                        {
-                            offset += ret;
-                            bytesToWrite -= ret;
-                        }
-                        else
-                        {
-                            if ( errno == EAGAIN )
-                                continue;
-                            PS_LOG( "ScriptExec::DoFifoIO: write fifo failed: " << strerror(errno) );
-                            break;
-                        }
-                    }
-                    return !bytesToWrite;
+                    if ( errno == EAGAIN )
+                        continue;
+                    PS_LOG( "ScriptExec::WriteScript: write failed: " << strerror(errno) );
+                    break;
                 }
             }
-            else
-            if ( ret == 0 )
-            {
-                errCode = NODE_JOB_TIMEOUT;
-                KillExec( pid );
-            }
-            else
-            {
-                errCode = NODE_FATAL;
-                PS_LOG( "ScriptExec::DoFifoIO: poll failed: " << strerror(errno) );
-            }
-            job_->OnError( errCode );
+            return !bytesToWrite;
+        }
+        else
+        if ( ret == 0 )
+        {
+            errCode = NODE_JOB_TIMEOUT;
         }
         else
         {
-            PS_LOG( "ScriptExec::DoFifoIO: pipe not opened" );
-            job_->OnError( NODE_FATAL );
+            errCode = NODE_FATAL;
+            PS_LOG( "ScriptExec::WriteScript: poll failed: " << strerror(errno) );
         }
+
+        job_->OnError( errCode );
+        return false;
+    }
+
+    bool ReadCompletionStatus( int fifo )
+    {
+        pollfd pfd[1];
+        pfd[0].fd = fifo;
+        pfd[0].events = POLLIN;
+
+        int timeout = job_->GetTimeout();
+        if ( timeout > 0 )
+            timeout *= 1000;
+
+        int errCode = NODE_FATAL;
+        int ret = poll( pfd, 1, timeout );
+        if ( ret > 0 )
+        {
+            ret = read( fifo, &errCode, sizeof( errCode ) );
+            if ( ret > 0 )
+            {
+                job_->OnError( errCode );
+                return true;
+            }
+            else
+            {
+                PS_LOG( "ScriptExec::ReadCompletionStatus: read fifo failed: " << strerror(errno) );
+            }
+        }
+        else
+        if ( ret == 0 )
+        {
+            errCode = NODE_JOB_TIMEOUT;
+        }
+        else
+        {
+            errCode = NODE_FATAL;
+            PS_LOG( "ScriptExec::ReadCompletionStatus: poll failed: " << strerror(errno) );
+        }
+
+        job_->OnError( errCode );
         return false;
     }
 
