@@ -250,14 +250,22 @@ class ExecuteTask : public Action
         {
             PS_LOG( "ExecuteTask::Execute: empty tasks for jobId=" << job->GetJobId() );
             job->OnError( NODE_FATAL );
+            SaveCompletionResults( job );
+            return;
+        }
+
+        if ( !ExpandFilePath( job ) )
+        {
+            job->OnError( NODE_SCRIPT_FILE_NOT_FOUND );
+            SaveCompletionResults( job );
             return;
         }
 
         boost::asio::io_service *io_service = commDescrPool->GetIoService();
         Job::Tasks::const_iterator it = tasks.begin();
 
-        int firstTaskId = *it;
-        for( ++it; it != tasks.end(); ++it )
+        int firstTaskId = *it++;
+        for( ; it != tasks.end(); ++it )
         {
             io_service->post( boost::bind( &ExecuteTask::DoSend,
                                            boost::shared_ptr< ExecuteTask >( new ExecuteTask ),
@@ -277,6 +285,24 @@ class ExecuteTask : public Action
         descr.masterId = job->GetMasterId();
         stat.errCode = job->GetErrorCode();
         JobCompletionTable::Instance().Set( descr, stat );
+    }
+
+    void SaveCompletionResults( const boost::shared_ptr< Job > &job ) const
+    {
+        JobDescriptor descr;
+        JobCompletionStat stat;
+        descr.jobId = job->GetJobId();
+        descr.masterIP = job->GetMasterIP();
+        descr.masterId = job->GetMasterId();
+        stat.errCode = job->GetErrorCode();
+
+        const Job::Tasks &tasks = job->GetTasks();
+        Job::Tasks::const_iterator it = tasks.begin();
+        for( ; it != tasks.end(); ++it )
+        {
+            descr.taskId = *it;
+            JobCompletionTable::Instance().Set( descr, stat );
+        }
     }
 
     void NodeJobCompletionPing( const boost::shared_ptr< Job > &job, int taskId )
@@ -300,6 +326,23 @@ class ExecuteTask : public Action
         {
             PS_LOG( "ExecuteTask::NodeJobCompletionPing: send_to failed: " << e.what() << ", host : " << master_endpoint );
         }
+    }
+
+    bool ExpandFilePath( const boost::shared_ptr< Job > &job )
+    {
+        const std::string filePath = job->GetFilePath();
+        if ( filePath.size() == 0 )
+            return true;
+
+        std::string fullPath = exeDir + '/' + filePath;
+        bool fileExists = boost::filesystem::exists( fullPath );
+        if ( fileExists )
+        {
+            job->SetFilePath( fullPath );
+            return true;
+        }
+        PS_LOG( "ExecuteTask::ExpandFilePath: file not exists '" << fullPath << "'" );
+        return false;
     }
 
 public:

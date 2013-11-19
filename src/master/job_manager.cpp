@@ -194,12 +194,11 @@ bool JobManager::ReadScript( const std::string &fileName, std::string &script ) 
         return false;
     }
 
-    std::string data, line;
-    while( std::getline( file, line ) )
-    {
-        boost::trim_right( line );
-        data += line + '\n';
-    }
+    std::string data;
+    file.seekg( 0, std::ios::end );
+    data.resize( file.tellg() );
+    file.seekg( 0, std::ios::beg );
+    file.read( &data[0], data.size() );
 
     return common::EncodeBase64( data.c_str(), data.size(), script );
 }

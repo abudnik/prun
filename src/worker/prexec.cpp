@@ -24,6 +24,7 @@ the License.
 
 #include <iostream>
 #include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -103,6 +104,8 @@ public:
         numTasks_ = ptree.get<int>( "num_tasks" );
         timeout_ = ptree.get<int>( "timeout" );
     }
+
+    void SetScriptLength( unsigned int len ) { scriptLength_ = len; }
 
     int GetCommId() const { return commId_; }
     unsigned int GetScriptLength() const { return scriptLength_; }
@@ -326,6 +329,20 @@ protected:
 #ifdef HAVE_SYS_PRCTL_H
             prctl( PR_SET_PDEATHSIG, SIGHUP );
 #endif
+
+            const std::string &scriptPath = job_->GetFilePath();
+            if ( scriptPath.size() > 0 )
+            {
+                boost::filesystem::path p( scriptPath );
+                boost::filesystem::path dir = p.parent_path();
+                int ret = chdir( dir.string().c_str() );
+                if ( ret < 0 )
+                {
+                    PS_LOG( "ScriptExec::DoFork: chdir failed: " << strerror(errno) );
+                }
+
+                job_->SetScriptLength( boost::filesystem::file_size( p ) );
+            }
         }
         else
         {
@@ -337,6 +354,37 @@ protected:
 
     bool WriteScript( int fifo )
     {
+        std::string scriptData;
+        const char *scriptAddr = NULL;
+        unsigned int bytesToWrite = 0;
+
+        const std::string &filePath = job_->GetFilePath();
+        if ( filePath.size() > 0 )
+        {
+            // read script from file
+            std::ifstream file( filePath.c_str() );
+            if ( file.is_open() )
+            {
+                file.seekg( 0, std::ios::end );
+                scriptData.resize( file.tellg() );
+                file.seekg( 0, std::ios::beg );
+                file.read( &scriptData[0], scriptData.size() );
+            }
+            else
+            {
+                PS_LOG( "ScriptExec::WriteScript: couldn't open " << filePath );
+            }
+            scriptAddr = scriptData.c_str();
+            bytesToWrite = scriptData.size();
+        }
+        else
+        {
+            // read script from shared memory
+            size_t offset = job_->GetCommId() * SHMEM_BLOCK_SIZE;
+            scriptAddr = (const char*)worker::mappedRegion->get_address() + offset;
+            bytesToWrite = job_->GetScriptLength();
+        }
+
         pollfd pfd[1];
         pfd[0].fd = fifo;
         pfd[0].events = POLLOUT;
@@ -349,14 +397,10 @@ protected:
         int ret = poll( pfd, 1, timeout );
         if ( ret > 0 )
         {
-            size_t offset = job_->GetCommId() * SHMEM_BLOCK_SIZE;
-            char *shmemAddr = (char*)worker::mappedRegion->get_address() + offset;
-
-            offset = 0;
-            unsigned int bytesToWrite = job_->GetScriptLength();
+            size_t offset = 0;
             while( bytesToWrite )
             {
-                ret = write( fifo, shmemAddr + offset, bytesToWrite );
+                ret = write( fifo, scriptAddr + offset, bytesToWrite );
                 if ( ret > 0 )
                 {
                     offset += ret;
@@ -432,24 +476,21 @@ private:
     {
         ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
         int fifo = threadParams.readFifoFD;
-        if ( fifo != -1 )
-        {
-            pollfd pfd[1];
-            pfd[0].fd = fifo;
-            pfd[0].events = POLLIN;
 
-            while( 1 )
+        pollfd pfd[1];
+        pfd[0].fd = fifo;
+        pfd[0].events = POLLIN;
+        while( 1 )
+        {
+            int ret = poll( pfd, 1, 0 );
+            if ( ret > 0 )
             {
-                int ret = poll( pfd, 1, 0 );
+                char buf[64];
+                ret = read( fifo, buf, sizeof( buf ) );
                 if ( ret > 0 )
-                {
-                    char buf[64];
-                    ret = read( fifo, buf, sizeof( buf ) );
-                    if ( ret > 0 )
-                        continue;
-                }
-                break;
+                    continue;
             }
+            break;
         }
     }
 

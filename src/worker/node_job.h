@@ -89,6 +89,7 @@ public:
 
     void SetMasterIP( const std::string &ip ) { masterIP_ = ip; }
     void SetMasterId( const std::string &id ) { masterId_ = id; }
+    void SetFilePath( const std::string &path ) { filePath_ = path; }
 
     unsigned int GetScriptLength() const { return scriptLength_; }
     const std::string &GetScriptLanguage() const { return language_; }
