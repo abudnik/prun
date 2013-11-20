@@ -488,13 +488,13 @@ int Scheduler::GetNumPlannedExec( const Job *job ) const
         return job->GetNumExec();
 
     int totalCPU = WorkerManager::Instance().GetTotalCPU();
-    int maxCPU = job->GetMaxCPU();
+    int maxClusterCPU = job->GetMaxClusterCPU();
     int numExec = 1; // init just to suppress compiler warning
 
-    if ( maxCPU <= 0 )
+    if ( maxClusterCPU <= 0 )
         numExec = totalCPU;
     else
-        numExec = std::min( maxCPU, totalCPU );
+        numExec = std::min( maxClusterCPU, totalCPU );
 
     if ( numExec < 1 )
         numExec = 1;
