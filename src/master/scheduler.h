@@ -59,7 +59,7 @@ public:
 private:
     void PlanJobExecution();
     bool RescheduleJob( const WorkerJob &workerJob );
-    bool GetJobForWorker( const Worker *worker, WorkerJob &plannedJob, Job **job, int numCPU );
+    bool GetJobForWorker( const Worker *worker, WorkerJob &plannedJob, Job **job, int numFreeCPU );
 
     void OnRemoveJob( int64_t jobId );
     void StopWorkers( int64_t jobId );

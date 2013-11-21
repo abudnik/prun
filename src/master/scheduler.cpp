@@ -151,7 +151,7 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
     return found;
 }
 
-bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &plannedJob, Job **job, int numCPU )
+bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &plannedJob, Job **job, int numFreeCPU )
 {
     int64_t jobId;
     bool foundReschedJob = false;
@@ -162,7 +162,7 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &plannedJob, Jo
         TaskList::iterator it = needReschedule_.begin();
         for( ; it != needReschedule_.end(); )
         {
-            if ( plannedJob.GetTotalNumTasks() >= numCPU )
+            if ( plannedJob.GetTotalNumTasks() >= numFreeCPU )
                 break;
 
             const WorkerTask &workerTask = *it;
@@ -207,6 +207,8 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &plannedJob, Jo
     {
         const Job *j = *it;
 
+        // plannedJob tasks must belong to the only one job,
+        // so jobId must be the same
         if ( foundReschedJob && jobId != j->GetJobId() )
             continue;
 
@@ -230,7 +232,7 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &plannedJob, Jo
             std::set< int >::iterator it_task = tasks.begin();
             for( ; it_task != tasks.end();  )
             {
-                if ( plannedJob.GetTotalNumTasks() >= numCPU ||
+                if ( plannedJob.GetTotalNumTasks() >= numFreeCPU ||
                      !CanAddTaskToWorker( worker->GetJob(), plannedJob, j->GetJobId(), j ) )
                     break;
 
@@ -263,13 +265,13 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **
     for( ; it != workerPriority_.End(); ++it )
     {
         NodeState &nodeState = *(*it);
-        int freeCPU = nodeState.GetNumFreeCPU();
-        if ( freeCPU <= 0 )
+        int numFreeCPU = nodeState.GetNumFreeCPU();
+        if ( numFreeCPU <= 0 )
             continue;
 
         Worker *w = nodeState.GetWorker();
 
-        if ( GetJobForWorker( w, workerJob, job, freeCPU ) )
+        if ( GetJobForWorker( w, workerJob, job, numFreeCPU ) )
         {
             w->GetJob() += workerJob;
             hostIP = w->GetIP();
@@ -307,7 +309,7 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
 
             failedWorkers_.Add( workerJob.GetJobId(), hostIP );
 
-            // job need to be rescheduled to any other node
+            // worker job should be rescheduled to any other node
             RescheduleJob( w->GetJob() );
 
             NodeState &nodeState = nodeState_[ hostIP ];
@@ -334,8 +336,8 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
         WorkerJob &workerJob = w->GetJob();
         if ( !workerJob.DeleteTask( workerTask.GetJobId(), workerTask.GetTaskId() ) )
         {
-            // task already processed
-            // it can be when a few threads simultaneously gets success errCode from the same task
+            // task already processed.
+            // it might be possible if a few threads simultaneously gets success errCode from the same task
             // or after timeout
             return;
         }
@@ -364,7 +366,7 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
         failedWorkers_.Add( workerTask.GetJobId(), hostIP );
 
         const WorkerJob &workerJob = w->GetJob();
-        // job need to be rescheduled to any other node
+        // worker job should be rescheduled to any other node
         RescheduleJob( workerJob );
 
         NodeState &nodeState = nodeState_[ hostIP ];
