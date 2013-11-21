@@ -228,6 +228,7 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
         int maxFailedNodes = ptree.get<int>( "max_failed_nodes" );
         int numExec = ptree.get<int>( "num_execution" );
         int maxClusterCPU = ptree.get<int>( "max_cluster_cpu" );
+        int maxCPU = ptree.get<int>( "max_cpu" );
         bool noReschedule = ptree.get<bool>( "no_reschedule" );
 
         if ( taskTimeout < 0 )
@@ -235,7 +236,7 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
 
         Job *job = new Job( script, language,
                             priority, maxFailedNodes,
-                            numExec, maxClusterCPU,
+                            numExec, maxClusterCPU, maxCPU,
                             timeout, queueTimeout, taskTimeout,
                             noReschedule );
 

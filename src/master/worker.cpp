@@ -110,18 +110,13 @@ int WorkerJob::GetTotalNumTasks() const
 
 int WorkerJob::GetNumTasks( int64_t jobId ) const
 {
-    int num = 0;
-    JobIdToTasks::const_iterator it = jobs_.begin();
-    for( ; it != jobs_.end(); ++it )
+    JobIdToTasks::const_iterator it = jobs_.find( jobId );
+    if ( it != jobs_.end() )
     {
-        if ( it->first == jobId )
-        {
-            const Tasks &tasks = it->second;
-            num = (int)tasks.size();
-            break;
-        }
+        const Tasks &tasks = it->second;
+        return (int)tasks.size();
     }
-    return num;
+    return 0;
 }
 
 WorkerJob &WorkerJob::operator += ( const WorkerJob &workerJob )

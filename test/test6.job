@@ -9,5 +9,6 @@
     "max_failed_nodes" : 10,
     "num_execution" : -1,
     "max_cluster_cpu" : 1,
+    "max_cpu" : 1,
     "no_reschedule" : false
 }

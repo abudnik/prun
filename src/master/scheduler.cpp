@@ -151,7 +151,7 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
     return found;
 }
 
-bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, Job **job, int numCPU )
+bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &plannedJob, Job **job, int numCPU )
 {
     int64_t jobId;
     bool foundReschedJob = false;
@@ -162,16 +162,23 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, Job
         TaskList::iterator it = needReschedule_.begin();
         for( ; it != needReschedule_.end(); )
         {
-            if ( workerJob.GetTotalNumTasks() >= numCPU )
+            if ( plannedJob.GetTotalNumTasks() >= numCPU )
                 break;
 
             const WorkerTask &workerTask = *it;
+
+            *job = jobs_.FindJobByJobId( workerTask.GetJobId() );
+            if ( !*job || !CanAddTaskToWorker( worker->GetJob(), plannedJob, workerTask.GetJobId(), *job ) )
+            {
+                ++it;
+                continue;
+            }
 
             if ( foundReschedJob )
             {
                 if ( workerTask.GetJobId() == jobId )
                 {
-                    workerJob.AddTask( jobId, workerTask.GetTaskId() );
+                    plannedJob.AddTask( jobId, workerTask.GetTaskId() );
                     needReschedule_.erase( it++ );
                     continue;
                 }
@@ -181,14 +188,13 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, Job
                 jobId = workerTask.GetJobId();
                 if ( !failedWorkers_.IsWorkerFailedJob( worker->GetIP(), jobId ) )
                 {
-                    *job = jobs_.FindJobByJobId( workerJob.GetJobId() );
-                    if ( !*job || !(*job)->IsHostAvailable( worker->GetIP() ) )
+                    if ( (*job)->IsHostAvailable( worker->GetIP() ) )
+                    {
+                        foundReschedJob = true;
+                        plannedJob.AddTask( jobId, workerTask.GetTaskId() );
+                        needReschedule_.erase( it++ );
                         continue;
-
-                    foundReschedJob = true;
-                    workerJob.AddTask( jobId, workerTask.GetTaskId() );
-                    needReschedule_.erase( it++ );
-                    continue;
+                    }
                 }
             }
             ++it;
@@ -207,6 +213,9 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, Job
         if ( failedWorkers_.IsWorkerFailedJob( worker->GetIP(), j->GetJobId() ) )
             continue;
 
+        if ( !CanAddTaskToWorker( worker->GetJob(), plannedJob, j->GetJobId(), j ) )
+            continue;
+
         JobIdToTasks::iterator it = tasksToSend_.find( j->GetJobId() );
         if ( it == tasksToSend_.end() )
             continue;
@@ -221,10 +230,12 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, Job
             std::set< int >::iterator it_task = tasks.begin();
             for( ; it_task != tasks.end();  )
             {
-                if ( workerJob.GetTotalNumTasks() >= numCPU )
+                if ( plannedJob.GetTotalNumTasks() >= numCPU ||
+                     !CanAddTaskToWorker( worker->GetJob(), plannedJob, j->GetJobId(), j ) )
                     break;
+
                 int taskId = *it_task;
-                workerJob.AddTask( j->GetJobId(), taskId );
+                plannedJob.AddTask( j->GetJobId(), taskId );
 
                 tasks.erase( it_task++ );
                 if ( tasks.empty() )
@@ -237,7 +248,7 @@ bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &workerJob, Job
         }
     }
 
-    return workerJob.GetTotalNumTasks() > 0;
+    return plannedJob.GetTotalNumTasks() > 0;
 }
 
 bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **job )
@@ -480,6 +491,17 @@ bool Scheduler::CanTakeNewJob() const
     }
 
     return false;
+}
+
+bool Scheduler::CanAddTaskToWorker( const WorkerJob &workerJob, const WorkerJob &workerPlannedJob,
+                                    int64_t jobId, const Job *job ) const
+{
+    int maxCPU = job->GetMaxCPU();
+    if ( maxCPU < 0 )
+        return true;
+
+    int numTasks = workerJob.GetNumTasks( jobId ) + workerPlannedJob.GetNumTasks( jobId );
+    return numTasks < maxCPU;
 }
 
 int Scheduler::GetNumPlannedExec( const Job *job ) const

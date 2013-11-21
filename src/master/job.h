@@ -44,11 +44,12 @@ class Job
 public:
     Job( const std::string &script, const std::string &scriptLanguage,
          int priority, int maxFailedNodes, int numExec,
-         int maxClusterCPU,  int timeout, int queueTimeout, int taskTimeout,
+         int maxClusterCPU, int maxCPU,
+         int timeout, int queueTimeout, int taskTimeout,
          bool noReschedule )
     : script_( script ), scriptLanguage_( scriptLanguage ),
      priority_( priority ), numDepends_( 0 ), maxFailedNodes_( maxFailedNodes ),
-     numExec_( numExec ), maxClusterCPU_( maxClusterCPU ),
+     numExec_( numExec ), maxClusterCPU_( maxClusterCPU ), maxCPU_( maxCPU ),
      timeout_( timeout ), queueTimeout_( queueTimeout ), taskTimeout_( taskTimeout ),
      flags_( 0 ), groupId_( -1 )
     {
@@ -77,6 +78,7 @@ public:
     int GetMaxFailedNodes() const { return maxFailedNodes_; }
     int GetNumExec() const { return numExec_; }
     int GetMaxClusterCPU() const { return maxClusterCPU_; }
+    int GetMaxCPU() const { return maxCPU_; }
     int GetTimeout() const { return timeout_; }
     int GetQueueTimeout() const { return queueTimeout_; }
     int GetTaskTimeout() const { return taskTimeout_; }
@@ -118,6 +120,7 @@ private:
     int maxFailedNodes_;
     int numExec_;
     int maxClusterCPU_;
+    int maxCPU_;
     int timeout_, queueTimeout_, taskTimeout_;
     int flags_;
     int64_t id_;

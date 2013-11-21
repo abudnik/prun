@@ -59,12 +59,14 @@ public:
 private:
     void PlanJobExecution();
     bool RescheduleJob( const WorkerJob &workerJob );
-    bool GetJobForWorker( const Worker *worker, WorkerJob &workerJob, Job **job, int numCPU );
+    bool GetJobForWorker( const Worker *worker, WorkerJob &plannedJob, Job **job, int numCPU );
 
     void OnRemoveJob( int64_t jobId );
     void StopWorkers( int64_t jobId );
 
     bool CanTakeNewJob() const;
+    bool CanAddTaskToWorker( const WorkerJob &workerJob, const WorkerJob &workerPlannedJob,
+                             int64_t jobId, const Job *job ) const;
 
     int GetNumPlannedExec( const Job *job ) const;
 
