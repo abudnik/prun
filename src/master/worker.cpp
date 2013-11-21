@@ -96,6 +96,11 @@ int64_t WorkerJob::GetJobId() const
     return it->first;
 }
 
+int WorkerJob::GetNumJobs() const
+{
+    return jobs_.size();
+}
+
 int WorkerJob::GetTotalNumTasks() const
 {
     int num = 0;

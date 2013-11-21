@@ -14,7 +14,8 @@ namespace master {
 
 enum JobFlag
 {
-    JOB_FLAG_NO_RESCHEDULE = 1
+    JOB_FLAG_NO_RESCHEDULE = 1,
+    JOB_FLAG_EXCLUSIVE = 2
 };
 
 typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::bidirectionalS > JobGraph;
@@ -46,7 +47,7 @@ public:
          int priority, int maxFailedNodes, int numExec,
          int maxClusterCPU, int maxCPU,
          int timeout, int queueTimeout, int taskTimeout,
-         bool noReschedule )
+         bool exclusive, bool noReschedule )
     : script_( script ), scriptLanguage_( scriptLanguage ),
      priority_( priority ), numDepends_( 0 ), maxFailedNodes_( maxFailedNodes ),
      numExec_( numExec ), maxClusterCPU_( maxClusterCPU ), maxCPU_( maxCPU ),
@@ -55,6 +56,8 @@ public:
     {
         if ( noReschedule )
             flags_ |= JOB_FLAG_NO_RESCHEDULE;
+        if ( exclusive )
+            flags_ |= JOB_FLAG_EXCLUSIVE;
 
         static int64_t numJobs;
         scriptLength_ = script_.size();
@@ -83,6 +86,7 @@ public:
     int GetQueueTimeout() const { return queueTimeout_; }
     int GetTaskTimeout() const { return taskTimeout_; }
     bool IsNoReschedule() const { return flags_ & JOB_FLAG_NO_RESCHEDULE; }
+    bool IsExclusive() const { return flags_ & JOB_FLAG_EXCLUSIVE; }
     int64_t GetJobId() const { return id_; }
     int64_t GetGroupId() const { return groupId_; }
 

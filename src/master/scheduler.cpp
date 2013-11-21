@@ -498,6 +498,18 @@ bool Scheduler::CanTakeNewJob() const
 bool Scheduler::CanAddTaskToWorker( const WorkerJob &workerJob, const WorkerJob &workerPlannedJob,
                                     int64_t jobId, const Job *job ) const
 {
+    // job exclusive case
+    if ( job->IsExclusive() )
+    {
+        if ( workerJob.GetNumJobs() > 1 )
+            return false;
+
+        int64_t id = workerJob.GetJobId();
+        if ( id != -1 && id != jobId )
+            return false;
+    }
+
+    // max cpu host limit case
     int maxCPU = job->GetMaxCPU();
     if ( maxCPU < 0 )
         return true;

@@ -59,6 +59,8 @@ public:
 
     int64_t GetJobId() const;
 
+    int GetNumJobs() const;
+
     int GetTotalNumTasks() const;
 
     int GetNumTasks( int64_t jobId ) const;

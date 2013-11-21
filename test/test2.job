@@ -10,6 +10,7 @@
     "num_execution" : -1,
     "max_cluster_cpu" : 1,
     "max_cpu" : 1,
+    "exclusive" : false,
     "no_reschedule" : false,
     "hosts" : ["localhost"]
 }
