@@ -44,6 +44,8 @@ public:
 
     void StopJob( int64_t jobId );
     void StopJobGroup( int64_t groupId );
+    void StopAllJobs();
+    void StopPreviousJobs();
 
     void GetJobInfo( std::string &info, int64_t jobId );
     void GetStatistics( std::string &stat );

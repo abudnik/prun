@@ -40,6 +40,20 @@ public:
                          std::string &result );
 };
 
+class AdminCommand_StopAll : public common::JsonRpcHandler
+{
+public:
+    virtual int Execute( const boost::property_tree::ptree &params,
+                         std::string &result );
+};
+
+class AdminCommand_StopPrevious : public common::JsonRpcHandler
+{
+public:
+    virtual int Execute( const boost::property_tree::ptree &params,
+                         std::string &result );
+};
+
 class AdminCommand_Info : public common::JsonRpcHandler
 {
 public:

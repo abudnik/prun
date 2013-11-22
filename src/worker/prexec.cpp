@@ -155,6 +155,20 @@ private:
     std::string masterId_;
 };
 
+class JobStopPreviousJobs : public Job
+{
+public:
+    void ParseRequest( boost::property_tree::ptree &ptree )
+    {
+        masterId_ = ptree.get<std::string>( "master_id" );
+    }
+
+    const std::string &GetMasterId() const { return masterId_; }
+
+private:
+    std::string masterId_;
+};
+
 class StopTaskAction
 {
 public:
@@ -210,6 +224,27 @@ private:
                 return threadParams.readFifoFD;
         }
         return -1;
+    }
+};
+
+class StopPreviousJobsAction
+{
+public:
+    void StopJobs( JobStopPreviousJobs &job )
+    {
+        std::list< ExecInfo > table;
+        execTable.Get( table );
+        std::list< ExecInfo >::const_iterator it = table.begin();
+        for( ; it != table.end(); ++it )
+        {
+            const ExecInfo &execInfo = *it;
+            if ( execInfo.masterId_ != job.GetMasterId() )
+            {
+                JobStopTask job( execInfo.jobId_, execInfo.taskId_, execInfo.masterId_ );
+                StopTaskAction action;
+                action.StopTask( job );
+            }
+        }
     }
 };
 
@@ -677,6 +712,15 @@ protected:
             job.ParseRequest( ptree );
             StopTaskAction action;
             action.StopTask( job );
+            errCode_ = job.GetError();
+        }
+        else
+        if ( task == "stop_prev" )
+        {
+            JobStopPreviousJobs job;
+            job.ParseRequest( ptree );
+            StopPreviousJobsAction action;
+            action.StopJobs( job );
             errCode_ = job.GetError();
         }
         else

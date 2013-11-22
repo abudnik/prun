@@ -431,6 +431,36 @@ void Scheduler::StopJobGroup( int64_t groupId )
     }
 }
 
+void Scheduler::StopAllJobs()
+{
+    ScheduledJobs::JobList jobs;
+    {
+        boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+        jobs = jobs_.GetJobList();
+    }
+    ScheduledJobs::JobList::const_iterator it = jobs.begin();
+    for( ; it != jobs.end(); ++it )
+    {
+        const Job *job = *it;
+        StopJob( job->GetJobId() );
+    }
+}
+
+void Scheduler::StopPreviousJobs()
+{
+    boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+    IPToNodeState::const_iterator it = nodeState_.begin();
+    for( ; it != nodeState_.end(); ++it )
+    {
+        const NodeState &nodeState = it->second;
+        const Worker *worker = nodeState.GetWorker();
+
+        Command *stopCommand = new StopPreviousJobsCommand();
+        CommandPtr commandPtr( stopCommand );
+        WorkerManager::Instance().AddCommand( commandPtr, worker->GetIP() );
+    }
+}
+
 void Scheduler::OnRemoveJob( int64_t jobId )
 {
     failedWorkers_.Delete( jobId );

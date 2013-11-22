@@ -45,6 +45,7 @@ public:
     virtual bool ParseSendCommandResult( const std::string &msg, int &errCode ) = 0;
 
     virtual bool ParseStopTask( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId ) = 0;
+    virtual bool ParseStopPreviousJobs( const std::string &msg, std::string &masterId ) = 0;
 
     // internals
     virtual bool ParseMsgType( const std::string &msg, std::string &type ) = 0;
@@ -101,6 +102,8 @@ public:
     virtual bool ParseSendCommandResult( const std::string &msg, int &errCode );
 
     virtual bool ParseStopTask( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId );
+
+    virtual bool ParseStopPreviousJobs( const std::string &msg, std::string &masterId );
 
     virtual bool ParseMsgType( const std::string &msg, std::string &type );
 

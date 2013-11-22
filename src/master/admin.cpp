@@ -177,6 +177,37 @@ int AdminCommand_StopGroup::Execute( const boost::property_tree::ptree &params,
     return 0;
 }
 
+int AdminCommand_StopAll::Execute( const boost::property_tree::ptree &params,
+                                   std::string &result )
+{
+    try
+    {
+        JobManager::Instance().DeleteAllJobs();
+        Scheduler::Instance().StopAllJobs();
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_StopAll::Execute: " << e.what() );
+        return JSON_RPC_INTERNAL_ERROR;
+    }
+    return 0;
+}
+
+int AdminCommand_StopPrevious::Execute( const boost::property_tree::ptree &params,
+                                        std::string &result )
+{
+    try
+    {
+        Scheduler::Instance().StopPreviousJobs();
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_StopPrevious::Execute: " << e.what() );
+        return JSON_RPC_INTERNAL_ERROR;
+    }
+    return 0;
+}
+
 int AdminCommand_Info::Execute( const boost::property_tree::ptree &params,
                                 std::string &result )
 {
@@ -226,6 +257,8 @@ void AdminSession::InitializeRpcHandlers()
     rpc.RegisterHandler( "run",        new AdminCommand_Run );
     rpc.RegisterHandler( "stop",       new AdminCommand_Stop );
     rpc.RegisterHandler( "stop_group", new AdminCommand_StopGroup );
+    rpc.RegisterHandler( "stop_all",   new AdminCommand_StopAll );
+    rpc.RegisterHandler( "stop_prev",  new AdminCommand_StopPrevious );
     rpc.RegisterHandler( "info",       new AdminCommand_Info );
     rpc.RegisterHandler( "stat",       new AdminCommand_Stat );
 }

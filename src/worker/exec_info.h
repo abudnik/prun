@@ -47,6 +47,17 @@ public:
         return false;
     }
 
+    template< typename ArgContainer >
+    void Get( ArgContainer &table )
+    {
+        boost::unique_lock< boost::mutex > lock( mut_ );
+        Container::iterator it = table_.begin();
+        for( ; it != table_.end(); ++it )
+        {
+            table.push_back( *it );
+        }
+    }
+
     bool Contains( int64_t jobId, int taskId, const std::string &masterId )
     {
         boost::unique_lock< boost::mutex > lock( mut_ );

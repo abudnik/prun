@@ -28,6 +28,28 @@ private:
     const static int REPEAT_DELAY = 60; // 60 sec
 };
 
+class StopPreviousJobsCommand : public Command
+{
+public:
+    StopPreviousJobsCommand()
+    : Command( "stop_prev" )
+    {}
+
+private:
+    virtual void OnCompletion( int errCode, const std::string &hostIP )
+    {
+        PS_LOG( "Stopping previous jobs on worker " << hostIP << ", errCode=" << errCode );
+    }
+
+    virtual int GetRepeatDelay() const
+    {
+        return REPEAT_DELAY;
+    }
+
+private:
+    const static int REPEAT_DELAY = 60; // 60 sec
+};
+
 } // namespace master
 
 #endif

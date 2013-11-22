@@ -432,6 +432,31 @@ class StopTask : public Action
     }
 };
 
+class StopPreviousJobs : public Action
+{
+    virtual void Execute( const boost::shared_ptr< Job > &job )
+    {
+        commDescrPool->AllocCommDescr();
+        PrExecConnection::connection_ptr prExecConnection( new PrExecConnection() );
+
+        // prepare json command
+        boost::property_tree::ptree ptree;
+        std::ostringstream ss, ss2;
+
+        ptree.put( "task", "stop_prev" );
+        ptree.put( "master_id", job->GetMasterId() );
+
+        boost::property_tree::write_json( ss, ptree, false );
+
+        ss2 << ss.str().size() << '\n' << ss.str();
+
+        int errCode = prExecConnection->Send( ss2.str() );
+        job->OnError( errCode );
+
+        commDescrPool->FreeCommDescr();
+    }
+};
+
 class ActionCreator
 {
 public:
@@ -443,6 +468,8 @@ public:
             return new NoAction();
         if ( taskType == "stop_task" )
             return new StopTask();
+        if ( taskType == "stop_prev" )
+            return new StopPreviousJobs();
         return NULL;
     }
 };

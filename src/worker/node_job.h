@@ -127,6 +127,10 @@ private:
         {
             return parser->ParseStopTask( body, masterId_, jobId_, taskId_ );
         }
+        if ( taskType_ == "stop_prev" )
+        {
+            return parser->ParseStopPreviousJobs( body, masterId_ );
+        }
         return false;
     }
 

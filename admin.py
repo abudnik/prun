@@ -103,6 +103,14 @@ class Command_StopGroup():
             raise e
         return {"method" : "stop_group", "params" : {"group_id" : groupId} }
 
+class Command_StopAll():
+    def Prepare(self, cmd):
+        return {"method" : "stop_all", "params" : []}
+
+class Command_StopPrevious():
+    def Prepare(self, cmd):
+        return {"method" : "stop_prev", "params" : []}
+
 class Command_Info():
     def Prepare(self, cmd):
         try:
@@ -125,12 +133,14 @@ class Command_Test():
 class CommandDispatcher():
     _instance = None
     def __init__(self):
-        self.map_ = {'run'   : Command_Run(),
-                     'stop'  : Command_Stop(),
-                     'stopg' : Command_StopGroup(),
-                     'info'  : Command_Info(),
-                     'stat'  : Command_Stat(),
-                     'test'  : Command_Test()}
+        self.map_ = {'run'     : Command_Run(),
+                     'stop'    : Command_Stop(),
+                     'stopg'   : Command_StopGroup(),
+                     'stopall' : Command_StopAll(),
+                     'stoprev' : Command_StopPrevious(),
+                     'info'    : Command_Info(),
+                     'stat'    : Command_Stat(),
+                     'test'    : Command_Test()}
 
     @classmethod
     def Instance(cls):
@@ -165,9 +175,11 @@ def PrintHelp():
     print( "  run /path/to/job/file -- run job, which described in '.job' or '.meta' file" )
     print( "  stop <job_id>         -- interrupt job execution" )
     print( "  stopg <group_id>      -- interrupt group of jobs execution" )
+    print( "  stopall               -- interrupt all job execution on all hosts" )
+    print( "  stoprev               -- interrupt all job execution from previous master sessions" )
     print( "  info <job_id>         -- show job execution statistics" )
     print( "  stat                  -- show master statistics" )
-    print( "  repeat, r             -- repeat last command" )
+    print( "  repeat, r             -- repeat last entered command" )
     print( "  exit, e               -- quit program" )
 
 def UserPrompt():

@@ -389,6 +389,25 @@ bool ProtocolJson::ParseStopTask( const std::string &msg, std::string &masterId,
     return true;
 }
 
+bool ProtocolJson::ParseStopPreviousJobs( const std::string &msg, std::string &masterId )
+{
+    std::istringstream ss( msg );
+
+    boost::property_tree::ptree ptree;
+    try
+    {
+        boost::property_tree::read_json( ss, ptree );
+        masterId = ptree.get<std::string>( "master_id" );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "ProtocolJson::ParseStopPreviousJobs: " << e.what() );
+        return false;
+    }
+
+    return true;
+}
+
 bool ProtocolJson::ParseMsgType( const std::string &msg, std::string &type )
 {
     std::istringstream ss( msg );
