@@ -7,10 +7,9 @@
 
 namespace master {
 
-void TestSingleJob( const std::string &exeDir )
+void TestSingleJob( const std::string &filePath )
 {
     // read job description from file
-    std::string filePath = exeDir + "/test/test.job";
     std::ifstream file( filePath.c_str() );
     if ( !file.is_open() )
     {
@@ -29,10 +28,9 @@ void TestSingleJob( const std::string &exeDir )
     }
 }
 
-void TestMetaJob( const std::string &exeDir )
+void TestMetaJob( const std::string &filePath )
 {
     // read meta job description from file
-    std::string filePath = exeDir + "/test/test.meta";
     std::ifstream file( filePath.c_str() );
     if ( !file.is_open() )
     {
@@ -51,9 +49,36 @@ void TestMetaJob( const std::string &exeDir )
 
 void RunTests( const std::string &exeDir )
 {
-    for( int i = 0; i < 3; ++i )
+    std::string filePath = exeDir + "/test/test.all";
+    std::ifstream file( filePath.c_str() );
+    if ( !file.is_open() )
     {
-        TestMetaJob( exeDir );
+        PS_LOG( "RunTests: couldn't open " << filePath );
+        return;
+    }
+    int i = 0;
+    std::string line;
+    while( getline( file, line ) )
+    {
+        size_t found = line.rfind( '.' );
+        if ( found == std::string::npos )
+        {
+            PS_LOG( "RunTests: couldn't extract job file extension, line=" << i++ );
+            continue;
+        }
+        std::string ext = line.substr( found + 1 );
+
+        filePath = exeDir + "/test/" + line;
+
+        if ( ext == "job" )
+            TestSingleJob( filePath );
+        else
+        if ( ext == "meta" )
+            TestMetaJob( filePath );
+        else
+            PS_LOG( "RunTests: unknown file extension, line=" << i );
+
+        ++i;
     }
 }
 
