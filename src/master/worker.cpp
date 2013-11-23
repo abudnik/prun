@@ -172,10 +172,19 @@ Worker *WorkerList::GetWorker( const char *host ) const
     return NULL;
 }
 
-void WorkerList::SetWorkerIP( Worker *worker, const std::string &ip )
+bool WorkerList::SetWorkerIP( Worker *worker, const std::string &ip )
 {
-    worker->SetIP( ip );
-    ipToWorker_[ip] = worker;
+    WorkerContainer::const_iterator it = workers_.begin();
+    for( ; it != workers_.end(); ++it )
+    {
+        if ( worker == *it )
+        {
+            worker->SetIP( ip );
+            ipToWorker_[ip] = worker;
+            return true;
+        }
+    }
+    return false;
 }
 
 Worker *WorkerList::GetWorkerByIP( const std::string &ip ) const

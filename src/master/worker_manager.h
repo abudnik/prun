@@ -13,19 +13,14 @@ namespace master {
 
 class WorkerManager : public common::Observable< true >
 {
+    typedef std::map< std::string, WorkerList > GrpNameToWorkerList;
+
 public:
     enum ObserverEvent { eTaskCompletion, eCommand };
 
 public:
-    template< class InputIterator >
-    void Initialize( InputIterator first, InputIterator last )
-    {
-        InputIterator it = first;
-        for( ; it != last; ++it )
-        {
-            workers_.AddWorker( new Worker( (const std::string &)( *it ) ) );
-        }
-    }
+    void AddWorkerGroup( const std::string &groupName, std::list< std::string > &hosts );
+    void AddWorkerHost( const std::string &groupName, const std::string &host );
 
     void CheckDropedPingResponses();
 
@@ -41,9 +36,24 @@ public:
     void AddCommand( CommandPtr &command, const std::string &hostIP );
     bool GetCommand( CommandPtr &command, std::string &hostIP );
 
-    WorkerList::WorkerContainer &GetWorkers() { return workers_.GetWorkers(); }
-    int GetTotalWorkers() const { return workers_.GetTotalWorkers(); }
-    int GetTotalCPU() const { return workers_.GetTotalCPU(); }
+    template< typename Container >
+    void GetWorkers( Container &workers ) const
+    {
+        GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
+        for( ; it != workerGroups_.end(); ++it )
+        {
+            const WorkerList &workerList = it->second;
+            const WorkerList::WorkerContainer &w = workerList.GetWorkers();
+            WorkerList::WorkerContainer::const_iterator w_it = w.begin();
+            for( ; w_it != w.end(); ++w_it )
+            {
+                workers.push_back( *w_it );
+            }
+        }
+    }
+
+    int GetTotalWorkers() const;
+    int GetTotalCPU() const;
 
     static WorkerManager &Instance()
     {
@@ -54,7 +64,7 @@ public:
     void Shutdown();
 
 private:
-    WorkerList workers_;
+    GrpNameToWorkerList workerGroups_;
     typedef std::pair< WorkerTask, std::string > PairTypeAW;
     std::queue< PairTypeAW > achievedWorkers_;
     boost::mutex workersMut_;

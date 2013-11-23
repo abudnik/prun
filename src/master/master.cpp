@@ -56,12 +56,25 @@ namespace {
 void InitWorkerManager( const std::string &exeDir )
 {
     string hostsPath = exeDir + '/' + master::HOSTS_FILE_NAME;
-    list< string > hosts;
 
-    if ( master::ReadHosts( hostsPath.c_str(), hosts ) )
+    std::ifstream file( hostsPath.c_str() );
+    if ( !file.is_open() )
     {
-        master::WorkerManager &mgr = master::WorkerManager::Instance();
-        mgr.Initialize( hosts.begin(), hosts.end() );
+        PS_LOG( "InitWorkerManager: couldn't open " << hostsPath );
+        return;
+    }
+
+    master::WorkerManager &mgr = master::WorkerManager::Instance();
+    std::string line;
+    list< string > hosts;
+    while( getline( file, line ) )
+    {
+        hostsPath = exeDir + '/' + line;
+        hosts.clear();
+        if ( master::ReadHosts( hostsPath.c_str(), hosts ) )
+        {
+            mgr.AddWorkerGroup( line, hosts );
+        }
     }
 }
 

@@ -15,8 +15,9 @@ void Pinger::Stop()
 
 void Pinger::PingWorkers()
 {
-    WorkerList::WorkerContainer &workers = WorkerManager::Instance().GetWorkers();
-    WorkerList::WorkerContainer::iterator it = workers.begin();
+    std::vector< Worker * > workers;
+    WorkerManager::Instance().GetWorkers( workers );
+    std::vector< Worker * >::iterator it = workers.begin();
     for( ; it != workers.end(); ++it )
     {
         PingWorker( *it );

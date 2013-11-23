@@ -6,32 +6,56 @@
 
 namespace master {
 
+void WorkerManager::AddWorkerGroup( const std::string &groupName, std::list< std::string > &hosts )
+{
+    if ( hosts.empty() )
+        return;
+    WorkerList &workerList = workerGroups_[ groupName ];
+    std::list< std::string >::const_iterator it = hosts.begin();
+    for( ; it != hosts.end(); ++it )
+    {
+        workerList.AddWorker( new Worker( (const std::string &)( *it ) ) );
+    }
+}
+
+void WorkerManager::AddWorkerHost( const std::string &groupName, const std::string &host )
+{
+    WorkerList &workerList = workerGroups_[ groupName ];
+    workerList.AddWorker( new Worker( host ) );
+}
+
 void WorkerManager::CheckDropedPingResponses()
 {
     std::vector< Worker * > changedWorkers;
 
-    WorkerList::WorkerContainer &workers = workers_.GetWorkers();
-    WorkerList::WorkerContainer::const_iterator it = workers.begin();
-    for( ; it != workers.end(); ++it )
+    GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
+    for( ; it != workerGroups_.end(); ++it )
     {
-        Worker *worker = *it;
-        WorkerState state = worker->GetState();
-        if ( !worker->GetNumPingResponse() )
+        const WorkerList &workerList = it->second;
+
+        const WorkerList::WorkerContainer &workers = workerList.GetWorkers();
+        WorkerList::WorkerContainer::const_iterator it = workers.begin();
+        for( ; it != workers.end(); ++it )
         {
-            if ( state == WORKER_STATE_READY )
+            Worker *worker = *it;
+            WorkerState state = worker->GetState();
+            if ( !worker->GetNumPingResponse() )
             {
-                worker->SetState( WORKER_STATE_NOT_AVAIL );
-                changedWorkers.push_back( worker );
-                PS_LOG( "WorkerManager::CheckDropedPingResponses: node not available, ip= " << worker->GetIP() );
+                if ( state == WORKER_STATE_READY )
+                {
+                    worker->SetState( WORKER_STATE_NOT_AVAIL );
+                    changedWorkers.push_back( worker );
+                    PS_LOG( "WorkerManager::CheckDropedPingResponses: node not available, ip= " << worker->GetIP() );
+                }
+                if ( state == WORKER_STATE_EXEC )
+                {
+                    worker->SetState( WORKER_STATE_NOT_AVAIL );
+                    changedWorkers.push_back( worker );
+                    PS_LOG( "WorkerManager::CheckDropedPingResponses: node job isn't available, ip= " << worker->GetIP() );
+                }
             }
-            if ( state == WORKER_STATE_EXEC )
-            {
-                worker->SetState( WORKER_STATE_NOT_AVAIL );
-                changedWorkers.push_back( worker );
-                PS_LOG( "WorkerManager::CheckDropedPingResponses: node job isn't available, ip= " << worker->GetIP() );
-            }
+            worker->SetNumPingResponse( 0 );
         }
-        worker->SetNumPingResponse( 0 );
     }
 
     if ( !changedWorkers.empty() )
@@ -127,17 +151,60 @@ bool WorkerManager::GetCommand( CommandPtr &command, std::string &hostIP )
 
 void WorkerManager::SetWorkerIP( Worker *worker, const std::string &ip )
 {
-    workers_.SetWorkerIP( worker, ip );
+    GrpNameToWorkerList::iterator it = workerGroups_.begin();
+    for( ; it != workerGroups_.end(); ++it )
+    {
+        WorkerList &workerList = it->second;
+        workerList.SetWorkerIP( worker, ip );
+    }
 }
 
 Worker *WorkerManager::GetWorkerByIP( const std::string &ip ) const
 {
-    return workers_.GetWorkerByIP( ip );
+    GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
+    for( ; it != workerGroups_.end(); ++it )
+    {
+        const WorkerList &workerList = it->second;
+        Worker *worker = workerList.GetWorkerByIP( ip );
+        if ( worker )
+            return worker;
+
+    }
+    return NULL;
+}
+
+int WorkerManager::GetTotalWorkers() const
+{
+    int total = 0;
+    GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
+    for( ; it != workerGroups_.end(); ++it )
+    {
+        const WorkerList &workerList = it->second;
+        total += workerList.GetTotalWorkers();
+    }
+    return total;
+}
+
+int WorkerManager::GetTotalCPU() const
+{
+    int total = 0;
+    GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
+    for( ; it != workerGroups_.end(); ++it )
+    {
+        const WorkerList &workerList = it->second;
+        total += workerList.GetTotalCPU();
+    }
+    return total;
 }
 
 void WorkerManager::Shutdown()
 {
-    workers_.Clear();
+    GrpNameToWorkerList::iterator it = workerGroups_.begin();
+    for( ; it != workerGroups_.end(); ++it )
+    {
+        WorkerList &workerList = it->second;
+        workerList.Clear();
+    }
 }
 
 bool ReadHosts( const char *filePath, std::list< std::string > &hosts )

@@ -128,7 +128,7 @@ public:
 
     Worker *GetWorker( const char *host ) const;
 
-    void SetWorkerIP( Worker *worker, const std::string &ip );
+    bool SetWorkerIP( Worker *worker, const std::string &ip );
     Worker *GetWorkerByIP( const std::string &ip ) const;
 
     template< class Container >
@@ -145,7 +145,7 @@ public:
         }
     }
 
-    WorkerContainer &GetWorkers() { return workers_; }
+    const WorkerContainer &GetWorkers() const { return workers_; }
 
     int GetTotalWorkers() const;
     int GetTotalCPU() const;
