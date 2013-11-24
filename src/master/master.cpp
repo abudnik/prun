@@ -66,7 +66,7 @@ void InitWorkerManager( const std::string &exeDir )
 
     master::WorkerManager &mgr = master::WorkerManager::Instance();
     std::string line;
-    list< string > hosts;
+    list< std::string > hosts;
     while( getline( file, line ) )
     {
         hostsPath = exeDir + '/' + line;

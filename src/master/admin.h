@@ -54,6 +54,34 @@ public:
                          std::string &result );
 };
 
+class AdminCommand_AddHosts : public common::JsonRpcHandler
+{
+public:
+    virtual int Execute( const boost::property_tree::ptree &params,
+                         std::string &result );
+};
+
+class AdminCommand_DeleteHosts : public common::JsonRpcHandler
+{
+public:
+    virtual int Execute( const boost::property_tree::ptree &params,
+                         std::string &result );
+};
+
+class AdminCommand_AddGroup : public common::JsonRpcHandler
+{
+public:
+    virtual int Execute( const boost::property_tree::ptree &params,
+                         std::string &result );
+};
+
+class AdminCommand_DeleteGroup : public common::JsonRpcHandler
+{
+public:
+    virtual int Execute( const boost::property_tree::ptree &params,
+                         std::string &result );
+};
+
 class AdminCommand_Info : public common::JsonRpcHandler
 {
 public:

@@ -2,10 +2,13 @@
 
 #include <sstream>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/foreach.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include "admin.h"
 #include "job_manager.h"
+#include "worker_manager.h"
 #include "scheduler.h"
 
 namespace master {
@@ -208,6 +211,99 @@ int AdminCommand_StopPrevious::Execute( const boost::property_tree::ptree &param
     return 0;
 }
 
+int AdminCommand_AddHosts::Execute( const boost::property_tree::ptree &params,
+                                    std::string &result )
+{
+    try
+    {
+        WorkerManager &mgr = WorkerManager::Instance();
+        int i = 0;
+        std::string groupName, host;
+        BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
+                       params.get_child( "hosts" ) )
+        {
+            if ( i++ % 2 > 0 )
+            {
+                host = v.second.get_value< std::string >();
+                mgr.AddWorkerHost( groupName, host );
+            }
+            else
+                groupName = v.second.get_value< std::string >();
+        }
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_AddHosts::Execute: " << e.what() );
+        return JSON_RPC_INTERNAL_ERROR;
+    }
+    return 0;
+}
+
+int AdminCommand_DeleteHosts::Execute( const boost::property_tree::ptree &params,
+                                       std::string &result )
+{
+    try
+    {
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_DeleteHosts::Execute: " << e.what() );
+        return JSON_RPC_INTERNAL_ERROR;
+    }
+    return 0;
+}
+
+int AdminCommand_AddGroup::Execute( const boost::property_tree::ptree &params,
+                                    std::string &result )
+{
+    std::string filePath, fileName;
+    try
+    {
+        filePath = params.get<std::string>( "file" );
+
+        boost::filesystem::path p( filePath );
+        boost::filesystem::path fileName = p.filename().string();
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_AddGroup::Execute: " << e.what() );
+        return JSON_RPC_INVALID_PARAMS;
+    }
+
+    try
+    {
+        std::list< std::string > hosts;
+        if ( master::ReadHosts( filePath.c_str(), hosts ) )
+        {
+            WorkerManager::Instance().AddWorkerGroup( fileName, hosts );
+        }
+        else
+        {
+            return JSON_RPC_INTERNAL_ERROR;
+        }
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_AddGroup::Execute: " << e.what() );
+        return JSON_RPC_INTERNAL_ERROR;
+    }
+    return 0;
+}
+
+int AdminCommand_DeleteGroup::Execute( const boost::property_tree::ptree &params,
+                                       std::string &result )
+{
+    try
+    {
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_DeleteGroup::Execute: " << e.what() );
+        return JSON_RPC_INTERNAL_ERROR;
+    }
+    return 0;
+}
+
 int AdminCommand_Info::Execute( const boost::property_tree::ptree &params,
                                 std::string &result )
 {
@@ -254,13 +350,17 @@ int AdminCommand_Stat::Execute( const boost::property_tree::ptree &params,
 void AdminSession::InitializeRpcHandlers()
 {
     common::JsonRpc &rpc = common::JsonRpc::Instance();
-    rpc.RegisterHandler( "run",        new AdminCommand_Run );
-    rpc.RegisterHandler( "stop",       new AdminCommand_Stop );
-    rpc.RegisterHandler( "stop_group", new AdminCommand_StopGroup );
-    rpc.RegisterHandler( "stop_all",   new AdminCommand_StopAll );
-    rpc.RegisterHandler( "stop_prev",  new AdminCommand_StopPrevious );
-    rpc.RegisterHandler( "info",       new AdminCommand_Info );
-    rpc.RegisterHandler( "stat",       new AdminCommand_Stat );
+    rpc.RegisterHandler( "run",          new AdminCommand_Run );
+    rpc.RegisterHandler( "stop",         new AdminCommand_Stop );
+    rpc.RegisterHandler( "stop_group",   new AdminCommand_StopGroup );
+    rpc.RegisterHandler( "stop_all",     new AdminCommand_StopAll );
+    rpc.RegisterHandler( "stop_prev",    new AdminCommand_StopPrevious );
+    rpc.RegisterHandler( "add_hosts",    new AdminCommand_AddHosts );
+    rpc.RegisterHandler( "delete_hosts", new AdminCommand_DeleteHosts );
+    rpc.RegisterHandler( "add_group",    new AdminCommand_AddGroup );
+    rpc.RegisterHandler( "delete_group", new AdminCommand_DeleteGroup );
+    rpc.RegisterHandler( "info",         new AdminCommand_Info );
+    rpc.RegisterHandler( "stat",         new AdminCommand_Stat );
 }
 
 void AdminSession::Start()

@@ -6,6 +6,7 @@ from threading import Thread
 
 MASTER_HOST = 'localhost'
 MASTER_PORT = 5557
+ADMIN_VERSION = '0.1'
 
 def Exit(msg):
     print( msg )
@@ -111,6 +112,44 @@ class Command_StopPrevious():
     def Prepare(self, cmd):
         return {"method" : "stop_prev", "params" : []}
 
+class Command_AddHosts():
+    def Prepare(self, cmd):
+        try:
+            hosts = cmd.split()[1:]
+            if len( hosts ) % 2 > 0:
+                raise Exception( "Odd number of args" )
+        except Exception as e:
+            print( "invalid <host, group> arguments" )
+            raise e
+        return {"method" : "add_hosts", "params" : {"hosts" : hosts} }
+
+class Command_DeleteHosts():
+    def Prepare(self, cmd):
+        try:
+            hosts = cmd.split()[1:]
+        except Exception as e:
+            print( "invalid host argument" )
+            raise e
+        return {"method" : "delete_hosts", "params" : {"hosts" : hosts} }
+
+class Command_AddHostGroup():
+    def Prepare(self, cmd):
+        try:
+            path = cmd.split()[1]
+        except Exception as e:
+            print( "no file path given" )
+            raise e
+        return {"method" : "add_group", "params" : {"file" : path} }
+
+class Command_DeleteHostGroup():
+    def Prepare(self, cmd):
+        try:
+            group = cmd.split()[1]
+        except Exception as e:
+            print( "invalid groupName argument" )
+            raise e
+        return {"method" : "delete_group", "params" : {"group" : group} }
+
 class Command_Info():
     def Prepare(self, cmd):
         try:
@@ -138,6 +177,10 @@ class CommandDispatcher():
                      'stopg'   : Command_StopGroup(),
                      'stopall' : Command_StopAll(),
                      'stoprev' : Command_StopPrevious(),
+                     'add'     : Command_AddHosts(),
+                     'delete'  : Command_DeleteHosts(),
+                     'addg'    : Command_AddHostGroup(),
+                     'deleteg' : Command_DeleteHostGroup(),
                      'info'    : Command_Info(),
                      'stat'    : Command_Stat(),
                      'test'    : Command_Test()}
@@ -167,23 +210,28 @@ class Master():
                 self.connection.Send( msg )
             except Exception as e:
                 print( "error: couldn't execute command" )
+                print( e )
         else:
             print( "unknown command: " + cmd )
 
 def PrintHelp():
     print( "Commands:" )
-    print( "  run /path/to/job/file -- run job, which described in '.job' or '.meta' file" )
-    print( "  stop <job_id>         -- interrupt job execution" )
-    print( "  stopg <group_id>      -- interrupt group of jobs execution" )
-    print( "  stopall               -- interrupt all job execution on all hosts" )
-    print( "  stoprev               -- interrupt all job execution from previous master sessions" )
-    print( "  info <job_id>         -- show job execution statistics" )
-    print( "  stat                  -- show master statistics" )
-    print( "  repeat, r             -- repeat last entered command" )
-    print( "  exit, e               -- quit program" )
+    print( "  run /path/to/job/file          -- run job, which described in '.job' or '.meta' file" )
+    print( "  stop <job_id>                  -- interrupt job execution" )
+    print( "  stopg <group_id>               -- interrupt group of jobs execution" )
+    print( "  stopall                        -- interrupt all job execution on all hosts" )
+    print( "  stoprev                        -- interrupt all job execution from previous master sessions" )
+    print( "  add [<hostname> <groupname>]*  -- add host(s) with given hostname and hosts group name" )
+    print( "  delete <hostname>              -- delete host(s)" )
+    print( "  addg /path/to/host/group/file  -- add group of hosts, which described in a file" )
+    print( "  deleteg <groupname>            -- delete group of hosts" )
+    print( "  info <job_id>                  -- show job execution statistics" )
+    print( "  stat                           -- show master statistics" )
+    print( "  repeat, r                      -- repeat last entered command" )
+    print( "  exit, e                        -- quit program" )
 
 def UserPrompt():
-    print( "master admin v0.1" )
+    print( "master admin v" + ADMIN_VERSION )
     print( "print `help` for more information" )
 
 def ParseOpt( argv ):
