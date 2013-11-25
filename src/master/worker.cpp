@@ -145,34 +145,44 @@ void WorkerJob::Reset()
 
 void WorkerList::AddWorker( Worker *worker )
 {
-    workers_.push_back( worker );
+    workers_.push_back( WorkerPtr( worker ) );
 }
 
-void WorkerList::Clear( bool doDelete )
+void WorkerList::DeleteWorker( const std::string &host )
 {
-    if ( doDelete )
+    WorkerContainer::iterator it = workers_.begin();
+    for( ; it != workers_.end(); )
     {
-        WorkerContainer::iterator it = workers_.begin();
-        for( ; it != workers_.end(); ++it )
+        WorkerPtr &w = *it;
+        if ( w->GetHost() == host )
         {
-            delete *it;
+            workers_.erase( it++ );
         }
+        else
+            ++it;
     }
+}
+
+void WorkerList::Clear()
+{
     workers_.clear();
 }
 
-Worker *WorkerList::GetWorker( const char *host ) const
+bool WorkerList::GetWorker( const char *host, WorkerPtr &worker )
 {
-    WorkerContainer::const_iterator it = workers_.begin();
+    WorkerContainer::iterator it = workers_.begin();
     for( ; it != workers_.end(); ++it )
     {
         if ( (*it)->GetHost() == host )
-            return *it;
+        {
+            worker = *it;
+            return true;
+        }
     }
-    return NULL;
+    return false;
 }
 
-bool WorkerList::SetWorkerIP( Worker *worker, const std::string &ip )
+bool WorkerList::SetWorkerIP( WorkerPtr &worker, const std::string &ip )
 {
     WorkerContainer::const_iterator it = workers_.begin();
     for( ; it != workers_.end(); ++it )
@@ -187,12 +197,15 @@ bool WorkerList::SetWorkerIP( Worker *worker, const std::string &ip )
     return false;
 }
 
-Worker *WorkerList::GetWorkerByIP( const std::string &ip ) const
+bool WorkerList::GetWorkerByIP( const std::string &ip, WorkerPtr &worker )
 {
-    IPToWorker::const_iterator it = ipToWorker_.find( ip );
+    IPToWorker::iterator it = ipToWorker_.find( ip );
     if ( it != ipToWorker_.end() )
-        return it->second;
-    return NULL;
+    {
+        worker = it->second;
+        return true;
+    }
+    return false;
 }
 
 int WorkerList::GetTotalWorkers() const

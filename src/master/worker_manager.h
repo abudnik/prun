@@ -22,6 +22,9 @@ public:
     void AddWorkerGroup( const std::string &groupName, std::list< std::string > &hosts );
     void AddWorkerHost( const std::string &groupName, const std::string &host );
 
+    void DeleteWorkerGroup( const std::string &groupName );
+    void DeleteWorkerHost( const std::string &host );
+
     void CheckDropedPingResponses();
 
     void OnNodePingResponse( const std::string &hostIP, int numCPU );
@@ -30,8 +33,8 @@ public:
 
     bool GetAchievedTask( WorkerTask &worker, std::string &hostIP );
 
-    void SetWorkerIP( Worker *worker, const std::string &ip );
-    Worker *GetWorkerByIP( const std::string &ip ) const;
+    void SetWorkerIP( WorkerPtr &worker, const std::string &ip );
+    bool GetWorkerByIP( const std::string &ip, WorkerPtr &worker ) const;
 
     void AddCommand( CommandPtr &command, const std::string &hostIP );
     bool GetCommand( CommandPtr &command, std::string &hostIP );
@@ -39,6 +42,8 @@ public:
     template< typename Container >
     void GetWorkers( Container &workers ) const
     {
+        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+
         GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
         for( ; it != workerGroups_.end(); ++it )
         {
@@ -65,9 +70,12 @@ public:
 
 private:
     GrpNameToWorkerList workerGroups_;
+    mutable boost::mutex workersMut_;
+
     typedef std::pair< WorkerTask, std::string > PairTypeAW;
     std::queue< PairTypeAW > achievedWorkers_;
-    boost::mutex workersMut_;
+    boost::mutex achievedMut_;
+
     typedef std::pair< CommandPtr, std::string > PairTypeC;
     std::queue< PairTypeC > commands_;
     boost::mutex commandsMut_;

@@ -6,6 +6,7 @@
 #include <set>
 #include <string>
 #include <stdint.h> // int64_t
+#include <boost/shared_ptr.hpp>
 
 namespace master {
 
@@ -114,22 +115,25 @@ private:
     int numPingResponse_;
 };
 
-typedef std::map< std::string, Worker * > IPToWorker;
+typedef boost::shared_ptr< Worker > WorkerPtr;
+typedef std::map< std::string, WorkerPtr > IPToWorker;
 
 class WorkerList
 {
 public:
-    typedef std::vector< Worker* > WorkerContainer;
+    typedef std::vector< WorkerPtr > WorkerContainer;
 
 public:
     void AddWorker( Worker *worker );
 
-    void Clear( bool doDelete = true );
+    void DeleteWorker( const std::string &host );
 
-    Worker *GetWorker( const char *host ) const;
+    void Clear();
 
-    bool SetWorkerIP( Worker *worker, const std::string &ip );
-    Worker *GetWorkerByIP( const std::string &ip ) const;
+    bool GetWorker( const char *host, WorkerPtr &worker );
+
+    bool SetWorkerIP( WorkerPtr &worker, const std::string &ip );
+    bool GetWorkerByIP( const std::string &ip, WorkerPtr &worker );
 
     template< class Container >
     void GetWorkerList( Container &workers, int stateMask ) const
@@ -145,6 +149,7 @@ public:
         }
     }
 
+    WorkerContainer &GetWorkers() { return workers_; }
     const WorkerContainer &GetWorkers() const { return workers_; }
 
     int GetTotalWorkers() const;

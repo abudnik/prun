@@ -35,11 +35,11 @@ public:
 
 protected:
     void PingWorkers();
-    virtual void PingWorker( Worker *worker ) = 0;
+    virtual void PingWorker( WorkerPtr &worker ) = 0;
 
     void CheckDropedPingResponses();
 
-    void OnWorkerIPResolve( Worker *worker, const std::string &ip );
+    void OnWorkerIPResolve( WorkerPtr &worker, const std::string &ip );
 
 protected:
     bool stopped_;
@@ -77,7 +77,7 @@ public:
     virtual void StartPing();
 
 private:
-    virtual void PingWorker( Worker *worker );
+    virtual void PingWorker( WorkerPtr &worker );
 
 private:
     boost::asio::io_service &io_service_;

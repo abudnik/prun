@@ -9,8 +9,7 @@ class NodeState
 {
 public:
     NodeState()
-    : numBusyCPU_( 0 ),
-     worker_( NULL )
+    : numBusyCPU_( 0 )
     {}
 
     void Reset()
@@ -23,12 +22,12 @@ public:
 
     int GetNumBusyCPU() const { return numBusyCPU_; }
     int GetNumFreeCPU() const { return worker_->GetNumCPU() - numBusyCPU_; }
-    void SetWorker( Worker *w ) { worker_ = w; }
-    Worker *GetWorker() const { return worker_; }
+    void SetWorker( WorkerPtr &w ) { worker_ = w; }
+    WorkerPtr &GetWorker() { return worker_; }
 
 private:
     int numBusyCPU_;
-    Worker *worker_;
+    WorkerPtr worker_;
 
 };
 

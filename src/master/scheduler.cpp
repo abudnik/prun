@@ -14,7 +14,7 @@ Scheduler::Scheduler()
     jobs_.SetOnRemoveCallback( this, &Scheduler::OnRemoveJob );
 }
 
-void Scheduler::OnHostAppearance( Worker *worker )
+void Scheduler::OnHostAppearance( WorkerPtr &worker )
 {
     {
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
@@ -23,14 +23,14 @@ void Scheduler::OnHostAppearance( Worker *worker )
     NotifyAll();
 }
 
-void Scheduler::OnChangedWorkerState( const std::vector< Worker * > &workers )
+void Scheduler::OnChangedWorkerState( const std::vector< WorkerPtr > &workers )
 {
     boost::mutex::scoped_lock scoped_lock( workersMut_ );
 
-    std::vector< Worker * >::const_iterator it = workers.begin();
+    std::vector< WorkerPtr >::const_iterator it = workers.begin();
     for( ; it != workers.end(); ++it )
     {
-        Worker *worker = *it;
+        WorkerPtr &worker = *it;
         WorkerState state = worker->GetState();
 
         if ( state == WORKER_STATE_NOT_AVAIL )

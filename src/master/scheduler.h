@@ -27,9 +27,9 @@ private:
     Scheduler();
 
 public:
-    void OnHostAppearance( Worker *worker );
+    void OnHostAppearance( WorkerPtr &worker );
 
-    void OnChangedWorkerState( const std::vector< Worker * > &workers );
+    void OnChangedWorkerState( const std::vector< WorkerPtr > &workers );
 
     void OnNewJob();
 

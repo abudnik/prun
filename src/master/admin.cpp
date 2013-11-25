@@ -244,6 +244,14 @@ int AdminCommand_DeleteHosts::Execute( const boost::property_tree::ptree &params
 {
     try
     {
+        WorkerManager &mgr = WorkerManager::Instance();
+        std::string host;
+        BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
+                       params.get_child( "hosts" ) )
+        {
+            host = v.second.get_value< std::string >();
+            mgr.DeleteWorkerHost( host );
+        }
     }
     catch( std::exception &e )
     {
@@ -262,7 +270,7 @@ int AdminCommand_AddGroup::Execute( const boost::property_tree::ptree &params,
         filePath = params.get<std::string>( "file" );
 
         boost::filesystem::path p( filePath );
-        boost::filesystem::path fileName = p.filename().string();
+        fileName = p.filename().string();
     }
     catch( std::exception &e )
     {
@@ -293,8 +301,11 @@ int AdminCommand_AddGroup::Execute( const boost::property_tree::ptree &params,
 int AdminCommand_DeleteGroup::Execute( const boost::property_tree::ptree &params,
                                        std::string &result )
 {
+    std::string group;
     try
     {
+        group = params.get<std::string>( "group" );
+        WorkerManager::Instance().DeleteWorkerGroup( group );
     }
     catch( std::exception &e )
     {

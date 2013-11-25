@@ -15,9 +15,9 @@ void Pinger::Stop()
 
 void Pinger::PingWorkers()
 {
-    std::vector< Worker * > workers;
+    std::vector< WorkerPtr > workers;
     WorkerManager::Instance().GetWorkers( workers );
-    std::vector< Worker * >::iterator it = workers.begin();
+    std::vector< WorkerPtr >::iterator it = workers.begin();
     for( ; it != workers.end(); ++it )
     {
         PingWorker( *it );
@@ -44,7 +44,7 @@ void Pinger::CheckDropedPingResponses()
     numPings_ = 0;
 }
 
-void Pinger::OnWorkerIPResolve( Worker *worker, const std::string &ip )
+void Pinger::OnWorkerIPResolve( WorkerPtr &worker, const std::string &ip )
 {
     WorkerManager::Instance().SetWorkerIP( worker, ip );
 }
@@ -54,7 +54,7 @@ void PingerBoost::StartPing()
     io_service_.post( boost::bind( &Pinger::Run, this ) );
 }
 
-void PingerBoost::PingWorker( Worker *worker )
+void PingerBoost::PingWorker( WorkerPtr &worker )
 {
     EndpointMap::iterator it = endpoints_.find( worker->GetHost() );
     if ( it == endpoints_.end() )

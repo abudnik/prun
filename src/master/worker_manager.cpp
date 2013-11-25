@@ -10,6 +10,9 @@ void WorkerManager::AddWorkerGroup( const std::string &groupName, std::list< std
 {
     if ( hosts.empty() )
         return;
+
+    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+
     WorkerList &workerList = workerGroups_[ groupName ];
     std::list< std::string >::const_iterator it = hosts.begin();
     for( ; it != hosts.end(); ++it )
@@ -20,13 +23,42 @@ void WorkerManager::AddWorkerGroup( const std::string &groupName, std::list< std
 
 void WorkerManager::AddWorkerHost( const std::string &groupName, const std::string &host )
 {
+    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+
     WorkerList &workerList = workerGroups_[ groupName ];
     workerList.AddWorker( new Worker( host ) );
 }
 
+void WorkerManager::DeleteWorkerGroup( const std::string &groupName )
+{
+    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+
+    GrpNameToWorkerList::iterator it = workerGroups_.find( groupName );
+    if ( it != workerGroups_.end() )
+    {
+        WorkerList &workerList = it->second;
+        workerList.Clear();
+        workerGroups_.erase( it );
+    }
+}
+
+void WorkerManager::DeleteWorkerHost( const std::string &host )
+{
+    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+
+    GrpNameToWorkerList::iterator it = workerGroups_.begin();
+    for( ; it != workerGroups_.end(); ++it )
+    {
+        WorkerList &workerList = it->second;
+        workerList.DeleteWorker( host );
+    }
+}
+
 void WorkerManager::CheckDropedPingResponses()
 {
-    std::vector< Worker * > changedWorkers;
+    std::vector< WorkerPtr > changedWorkers;
+
+    boost::mutex::scoped_lock scoped_lock( workersMut_ );
 
     GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
     for( ; it != workerGroups_.end(); ++it )
@@ -37,7 +69,7 @@ void WorkerManager::CheckDropedPingResponses()
         WorkerList::WorkerContainer::const_iterator it = workers.begin();
         for( ; it != workers.end(); ++it )
         {
-            Worker *worker = *it;
+            const WorkerPtr &worker = *it;
             WorkerState state = worker->GetState();
             if ( !worker->GetNumPingResponse() )
             {
@@ -58,6 +90,8 @@ void WorkerManager::CheckDropedPingResponses()
         }
     }
 
+    scoped_lock.unlock();
+
     if ( !changedWorkers.empty() )
     {
         Scheduler::Instance().OnChangedWorkerState( changedWorkers );
@@ -66,7 +100,7 @@ void WorkerManager::CheckDropedPingResponses()
 
 void WorkerManager::OnNodePingResponse( const std::string &hostIP, int numCPU )
 {
-    Worker *worker = GetWorkerByIP( hostIP );
+    WorkerPtr &worker = GetWorkerByIP( hostIP );
     if ( worker )
     {
         bool stateChanged = false;
@@ -98,7 +132,7 @@ void WorkerManager::OnNodeTaskCompletion( const std::string &hostIP, int64_t job
     PairTypeAW worker( WorkerTask( jobId, taskId ), hostIP );
 
     {
-        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+        boost::mutex::scoped_lock scoped_lock( achievedMut_ );
         achievedWorkers_.push( worker );
     }
     NotifyAll( eTaskCompletion );
@@ -109,7 +143,7 @@ bool WorkerManager::GetAchievedTask( WorkerTask &worker, std::string &hostIP )
     if ( achievedWorkers_.empty() )
         return false;
 
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+    boost::mutex::scoped_lock scoped_lock( achievedMut_ );
     if ( achievedWorkers_.empty() )
         return false;
 
@@ -149,8 +183,10 @@ bool WorkerManager::GetCommand( CommandPtr &command, std::string &hostIP )
     return true;
 }
 
-void WorkerManager::SetWorkerIP( Worker *worker, const std::string &ip )
+void WorkerManager::SetWorkerIP( WorkerPtr &worker, const std::string &ip )
 {
+    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+
     GrpNameToWorkerList::iterator it = workerGroups_.begin();
     for( ; it != workerGroups_.end(); ++it )
     {
@@ -159,23 +195,27 @@ void WorkerManager::SetWorkerIP( Worker *worker, const std::string &ip )
     }
 }
 
-Worker *WorkerManager::GetWorkerByIP( const std::string &ip ) const
+bool WorkerManager::GetWorkerByIP( const std::string &ip, WorkerPtr &worker ) const
 {
+    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+
     GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
     for( ; it != workerGroups_.end(); ++it )
     {
-        const WorkerList &workerList = it->second;
-        Worker *worker = workerList.GetWorkerByIP( ip );
-        if ( worker )
-            return worker;
+        WorkerList &workerList = it->second;
+        if ( workerList.GetWorkerByIP( ip, worker ) )
+            return true;
 
     }
-    return NULL;
+    return false;
 }
 
 int WorkerManager::GetTotalWorkers() const
 {
     int total = 0;
+
+    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+
     GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
     for( ; it != workerGroups_.end(); ++it )
     {
@@ -188,6 +228,9 @@ int WorkerManager::GetTotalWorkers() const
 int WorkerManager::GetTotalCPU() const
 {
     int total = 0;
+
+    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+
     GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
     for( ; it != workerGroups_.end(); ++it )
     {
@@ -199,6 +242,8 @@ int WorkerManager::GetTotalCPU() const
 
 void WorkerManager::Shutdown()
 {
+    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+
     GrpNameToWorkerList::iterator it = workerGroups_.begin();
     for( ; it != workerGroups_.end(); ++it )
     {
