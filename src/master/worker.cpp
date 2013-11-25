@@ -156,6 +156,7 @@ void WorkerList::DeleteWorker( const std::string &host )
         WorkerPtr &w = *it;
         if ( w->GetHost() == host )
         {
+            w->SetState( WORKER_STATE_DISABLED );
             workers_.erase( it++ );
         }
         else
@@ -165,6 +166,13 @@ void WorkerList::DeleteWorker( const std::string &host )
 
 void WorkerList::Clear()
 {
+    WorkerContainer::iterator it = workers_.begin();
+    for( ; it != workers_.end(); )
+    {
+        WorkerPtr &w = *it;
+        w->SetState( WORKER_STATE_DISABLED );
+    }
+
     workers_.clear();
 }
 
@@ -197,9 +205,9 @@ bool WorkerList::SetWorkerIP( WorkerPtr &worker, const std::string &ip )
     return false;
 }
 
-bool WorkerList::GetWorkerByIP( const std::string &ip, WorkerPtr &worker )
+bool WorkerList::GetWorkerByIP( const std::string &ip, WorkerPtr &worker ) const
 {
-    IPToWorker::iterator it = ipToWorker_.find( ip );
+    IPToWorker::const_iterator it = ipToWorker_.find( ip );
     if ( it != ipToWorker_.end() )
     {
         worker = it->second;

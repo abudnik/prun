@@ -29,7 +29,7 @@ private:
 public:
     void OnHostAppearance( WorkerPtr &worker );
 
-    void OnChangedWorkerState( const std::vector< WorkerPtr > &workers );
+    void OnChangedWorkerState( std::vector< WorkerPtr > &workers );
 
     void OnNewJob();
 
@@ -61,7 +61,7 @@ public:
 private:
     void PlanJobExecution();
     bool RescheduleJob( const WorkerJob &workerJob );
-    bool GetJobForWorker( const Worker *worker, WorkerJob &plannedJob, Job **job, int numFreeCPU );
+    bool GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob, Job **job, int numFreeCPU );
 
     void OnRemoveJob( int64_t jobId );
     void StopWorkers( int64_t jobId );

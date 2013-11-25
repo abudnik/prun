@@ -23,11 +23,11 @@ void Scheduler::OnHostAppearance( WorkerPtr &worker )
     NotifyAll();
 }
 
-void Scheduler::OnChangedWorkerState( const std::vector< WorkerPtr > &workers )
+void Scheduler::OnChangedWorkerState( std::vector< WorkerPtr > &workers )
 {
     boost::mutex::scoped_lock scoped_lock( workersMut_ );
 
-    std::vector< WorkerPtr >::const_iterator it = workers.begin();
+    std::vector< WorkerPtr >::iterator it = workers.begin();
     for( ; it != workers.end(); ++it )
     {
         WorkerPtr &worker = *it;
@@ -151,7 +151,7 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
     return found;
 }
 
-bool Scheduler::GetJobForWorker( const Worker *worker, WorkerJob &plannedJob, Job **job, int numFreeCPU )
+bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob, Job **job, int numFreeCPU )
 {
     int64_t jobId;
     bool foundReschedJob = false;
@@ -269,7 +269,7 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **
         if ( numFreeCPU <= 0 )
             continue;
 
-        Worker *w = nodeState.GetWorker();
+        WorkerPtr &w = nodeState.GetWorker();
 
         if ( GetJobForWorker( w, workerJob, job, numFreeCPU ) )
         {
@@ -295,7 +295,9 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
     if ( !success )
     {
         {
-            Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
+            WorkerPtr w;
+            if ( !WorkerManager::Instance().GetWorkerByIP( hostIP, w ) )
+                return;
 
             PS_LOG( "Scheduler::OnTaskSendCompletion: job sending failed."
                     " jobId=" << workerJob.GetJobId() << ", ip=" << hostIP );
@@ -326,7 +328,10 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
 
     if ( !errCode )
     {
-        Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
+        WorkerPtr w;
+        if ( !WorkerManager::Instance().GetWorkerByIP( hostIP, w ) )
+            return;
+
         boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
         boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
 
@@ -352,7 +357,10 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
         if ( errCode == NODE_JOB_COMPLETION_NOT_FOUND )
             return;
 
-        Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
+        WorkerPtr w;
+        if ( !WorkerManager::Instance().GetWorkerByIP( hostIP, w ) )
+            return;
+
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
         {
             boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
@@ -379,7 +387,9 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
 
 void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &hostIP )
 {
-    const Worker *w = WorkerManager::Instance().GetWorkerByIP( hostIP );
+    WorkerPtr w;
+    if ( !WorkerManager::Instance().GetWorkerByIP( hostIP, w ) )
+        return;
     const WorkerJob &workerJob = w->GetJob();
 
     if ( workerJob.HasTask( workerTask.GetJobId(), workerTask.GetTaskId() ) )
@@ -453,7 +463,7 @@ void Scheduler::StopPreviousJobs()
     for( ; it != nodeState_.end(); ++it )
     {
         const NodeState &nodeState = it->second;
-        const Worker *worker = nodeState.GetWorker();
+        const WorkerPtr &worker = nodeState.GetWorker();
 
         Command *stopCommand = new StopPreviousJobsCommand();
         CommandPtr commandPtr( stopCommand );
@@ -473,7 +483,7 @@ void Scheduler::StopWorkers( int64_t jobId )
         for( ; it != nodeState_.end(); ++it )
         {
             NodeState &nodeState = it->second;
-            Worker *worker = nodeState.GetWorker();
+            WorkerPtr &worker = nodeState.GetWorker();
             WorkerJob &workerJob = worker->GetJob();
 
             if ( workerJob.HasJob( jobId ) )

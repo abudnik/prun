@@ -15,7 +15,8 @@ enum WorkerState
     WORKER_STATE_NOT_AVAIL = 1,
     WORKER_STATE_READY     = 2,
     WORKER_STATE_EXEC      = 4,
-    WORKER_STATE_FAILED    = 8
+    WORKER_STATE_FAILED    = 8,
+    WORKER_STATE_DISABLED  = 16
 };
 
 class WorkerTask
@@ -133,7 +134,7 @@ public:
     bool GetWorker( const char *host, WorkerPtr &worker );
 
     bool SetWorkerIP( WorkerPtr &worker, const std::string &ip );
-    bool GetWorkerByIP( const std::string &ip, WorkerPtr &worker );
+    bool GetWorkerByIP( const std::string &ip, WorkerPtr &worker ) const;
 
     template< class Container >
     void GetWorkerList( Container &workers, int stateMask ) const

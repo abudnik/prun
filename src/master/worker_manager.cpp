@@ -100,8 +100,8 @@ void WorkerManager::CheckDropedPingResponses()
 
 void WorkerManager::OnNodePingResponse( const std::string &hostIP, int numCPU )
 {
-    WorkerPtr &worker = GetWorkerByIP( hostIP );
-    if ( worker )
+    WorkerPtr worker;
+    if ( GetWorkerByIP( hostIP, worker ) )
     {
         bool stateChanged = false;
         worker->IncNumPingResponse();
@@ -202,7 +202,7 @@ bool WorkerManager::GetWorkerByIP( const std::string &ip, WorkerPtr &worker ) co
     GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
     for( ; it != workerGroups_.end(); ++it )
     {
-        WorkerList &workerList = it->second;
+        const WorkerList &workerList = it->second;
         if ( workerList.GetWorkerByIP( ip, worker ) )
             return true;
 
