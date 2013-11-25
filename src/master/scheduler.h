@@ -28,6 +28,7 @@ private:
 
 public:
     void OnHostAppearance( WorkerPtr &worker );
+    void DeleteWorker( const std::string &hostIP );
 
     void OnChangedWorkerState( std::vector< WorkerPtr > &workers );
 

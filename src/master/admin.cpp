@@ -245,12 +245,14 @@ int AdminCommand_DeleteHosts::Execute( const boost::property_tree::ptree &params
     try
     {
         WorkerManager &mgr = WorkerManager::Instance();
+        Scheduler &scheduler = Scheduler::Instance();
         std::string host;
         BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
                        params.get_child( "hosts" ) )
         {
             host = v.second.get_value< std::string >();
             mgr.DeleteWorkerHost( host );
+            scheduler.DeleteWorker( host );
         }
     }
     catch( std::exception &e )
@@ -305,7 +307,26 @@ int AdminCommand_DeleteGroup::Execute( const boost::property_tree::ptree &params
     try
     {
         group = params.get<std::string>( "group" );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_DeleteGroup::Execute: " << e.what() );
+        return JSON_RPC_INVALID_PARAMS;
+    }
+
+    try
+    {
+        std::vector< WorkerPtr > workers;
+        WorkerManager::Instance().GetWorkers( workers, group );
         WorkerManager::Instance().DeleteWorkerGroup( group );
+
+        Scheduler &scheduler = Scheduler::Instance();
+        std::vector< WorkerPtr >::const_iterator it = workers.begin();
+        for( ; it != workers.end(); ++it )
+        {
+            const WorkerPtr &w = *it;
+            scheduler.DeleteWorker( w->GetHost() );
+        }
     }
     catch( std::exception &e )
     {

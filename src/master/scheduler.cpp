@@ -23,6 +23,34 @@ void Scheduler::OnHostAppearance( WorkerPtr &worker )
     NotifyAll();
 }
 
+void Scheduler::DeleteWorker( const std::string &hostIP )
+{
+    {
+        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+
+        IPToNodeState::iterator it = nodeState_.begin();
+        for( ; it != nodeState_.end(); )
+        {
+            const NodeState &nodeState = it->second;
+            const WorkerPtr &worker = nodeState.GetWorker();
+
+            if ( worker->GetHost() != hostIP )
+            {
+                ++it;
+                continue;
+            }
+
+            const WorkerJob workerJob = worker->GetJob();
+
+            nodeState_.erase( it++ );
+
+            // worker job should be rescheduled to any other node
+            RescheduleJob( workerJob );
+        }
+    }
+    NotifyAll();
+}
+
 void Scheduler::OnChangedWorkerState( std::vector< WorkerPtr > &workers )
 {
     boost::mutex::scoped_lock scoped_lock( workersMut_ );

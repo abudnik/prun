@@ -57,6 +57,24 @@ public:
         }
     }
 
+    template< typename Container >
+    void GetWorkers( Container &workers, const std::string &groupName ) const
+    {
+        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+
+        GrpNameToWorkerList::const_iterator it = workerGroups_.find( groupName );
+        if ( it != workerGroups_.end() )
+        {
+            const WorkerList &workerList = it->second;
+            const WorkerList::WorkerContainer &w = workerList.GetWorkers();
+            WorkerList::WorkerContainer::const_iterator w_it = w.begin();
+            for( ; w_it != w.end(); ++w_it )
+            {
+                workers.push_back( *w_it );
+            }
+        }
+    }
+
     int GetTotalWorkers() const;
     int GetTotalCPU() const;
 

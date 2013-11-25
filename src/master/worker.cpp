@@ -167,7 +167,7 @@ void WorkerList::DeleteWorker( const std::string &host )
 void WorkerList::Clear()
 {
     WorkerContainer::iterator it = workers_.begin();
-    for( ; it != workers_.end(); )
+    for( ; it != workers_.end(); ++it )
     {
         WorkerPtr &w = *it;
         w->SetState( WORKER_STATE_DISABLED );
