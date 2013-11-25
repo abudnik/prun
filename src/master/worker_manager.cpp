@@ -17,7 +17,7 @@ void WorkerManager::AddWorkerGroup( const std::string &groupName, std::list< std
     std::list< std::string >::const_iterator it = hosts.begin();
     for( ; it != hosts.end(); ++it )
     {
-        workerList.AddWorker( new Worker( (const std::string &)( *it ) ) );
+        workerList.AddWorker( new Worker( *it ) );
     }
 }
 
