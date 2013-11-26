@@ -224,11 +224,11 @@ int AdminCommand_AddHosts::Execute( const boost::property_tree::ptree &params,
         {
             if ( i++ % 2 > 0 )
             {
-                host = v.second.get_value< std::string >();
+                groupName = v.second.get_value< std::string >();
                 mgr.AddWorkerHost( groupName, host );
             }
             else
-                groupName = v.second.get_value< std::string >();
+                host = v.second.get_value< std::string >();
         }
     }
     catch( std::exception &e )

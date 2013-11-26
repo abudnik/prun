@@ -157,6 +157,8 @@ void WorkerList::DeleteWorker( const std::string &host )
         if ( w->GetHost() == host )
         {
             w->SetState( WORKER_STATE_DISABLED );
+
+            ipToWorker_.erase( w->GetIP() );
             it = workers_.erase( it );
         }
         else
@@ -174,6 +176,7 @@ void WorkerList::Clear()
     }
 
     workers_.clear();
+    ipToWorker_.clear();
 }
 
 bool WorkerList::GetWorker( const char *host, WorkerPtr &worker )

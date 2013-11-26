@@ -74,7 +74,10 @@ void PingerBoost::PingWorker( WorkerPtr &worker )
         std::pair< EndpointMap::iterator, bool > p = endpoints_.insert(
             std::make_pair( worker->GetHost(), *iterator ) );
         it = p.first;
+    }
 
+    if ( worker->GetIP().empty() )
+    {
         OnWorkerIPResolve( worker, it->second.address().to_string() );
     }
 
