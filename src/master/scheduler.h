@@ -28,7 +28,7 @@ private:
 
 public:
     void OnHostAppearance( WorkerPtr &worker );
-    void DeleteWorker( const std::string &hostIP );
+    void DeleteWorker( const std::string &host );
 
     void OnChangedWorkerState( std::vector< WorkerPtr > &workers );
 
@@ -66,6 +66,7 @@ private:
 
     void OnRemoveJob( int64_t jobId );
     void StopWorkers( int64_t jobId );
+    void StopWorker( const std::string &hostIP ) const;
 
     bool CanTakeNewJob() const;
     bool CanAddTaskToWorker( const WorkerJob &workerJob, const WorkerJob &workerPlannedJob,

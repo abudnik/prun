@@ -17,13 +17,14 @@ Scheduler::Scheduler()
 void Scheduler::OnHostAppearance( WorkerPtr &worker )
 {
     {
+        PS_LOG( "OHA: "<<worker->GetIP() );
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
         nodeState_[ worker->GetIP() ].SetWorker( worker );
     }
     NotifyAll();
 }
 
-void Scheduler::DeleteWorker( const std::string &hostIP )
+void Scheduler::DeleteWorker( const std::string &host )
 {
     {
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
@@ -34,7 +35,7 @@ void Scheduler::DeleteWorker( const std::string &hostIP )
             const NodeState &nodeState = it->second;
             const WorkerPtr &worker = nodeState.GetWorker();
 
-            if ( worker->GetHost() != hostIP )
+            if ( worker->GetHost() != host )
             {
                 ++it;
                 continue;
@@ -42,7 +43,11 @@ void Scheduler::DeleteWorker( const std::string &hostIP )
 
             const WorkerJob workerJob = worker->GetJob();
 
+            StopWorker( worker->GetIP() );
+
             nodeState_.erase( it++ );
+
+            PS_LOG( "DW: "<<worker->GetHost() );
 
             // worker job should be rescheduled to any other node
             RescheduleJob( workerJob );
@@ -285,6 +290,8 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **
 {
     boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
 
+    PS_LOG( "GTtS: " << nodeState_.size() );
+
     workerPriority_.Sort( nodeState_.begin(), nodeState_.end(), nodeState_.size()/*, CompareByCPU()*/ );
 
     boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
@@ -337,12 +344,16 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
                     return;
             }
 
+            IPToNodeState::iterator it = nodeState_.find( hostIP );
+            if ( it == nodeState_.end() )
+                return;
+
             failedWorkers_.Add( workerJob.GetJobId(), hostIP );
 
             // worker job should be rescheduled to any other node
             RescheduleJob( w->GetJob() );
 
-            NodeState &nodeState = nodeState_[ hostIP ];
+            NodeState &nodeState = it->second;
             nodeState.FreeCPU( workerJob.GetTotalNumTasks() );
             w->ResetJob();
         }
@@ -375,7 +386,11 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
             return;
         }
 
-        NodeState &nodeState = nodeState_[ hostIP ];
+        IPToNodeState::iterator it = nodeState_.find( hostIP );
+        if ( it == nodeState_.end() )
+            return;
+
+        NodeState &nodeState = it->second;
         nodeState.FreeCPU( 1 );
 
         jobs_.DecrementJobExecution( workerTask.GetJobId(), 1 );
@@ -396,6 +411,10 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
                 return;
         }
 
+        IPToNodeState::iterator it = nodeState_.find( hostIP );
+        if ( it == nodeState_.end() )
+            return;
+
         PS_LOG( "Scheduler::OnTaskCompletion: errCode=" << errCode <<
                 ", jobId=" << workerTask.GetJobId() << ", ip=" << hostIP );
 
@@ -405,7 +424,7 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
         // worker job should be rescheduled to any other node
         RescheduleJob( workerJob );
 
-        NodeState &nodeState = nodeState_[ hostIP ];
+        NodeState &nodeState = it->second;
         nodeState.FreeCPU( workerJob.GetTotalNumTasks() );
         w->ResetJob();
     }
@@ -547,6 +566,29 @@ void Scheduler::StopWorkers( int64_t jobId )
             }
             ++it;
         }
+    }
+}
+
+void Scheduler::StopWorker( const std::string &hostIP ) const
+{
+    IPToNodeState::const_iterator it = nodeState_.find( hostIP );
+    if ( it == nodeState_.end() )
+        return;
+
+    const NodeState &nodeState = it->second;
+    const WorkerPtr &worker = nodeState.GetWorker();
+    const WorkerJob &workerJob = worker->GetJob();
+
+    std::vector< WorkerTask > tasks;
+    workerJob.GetTasks( tasks );
+    std::vector< WorkerTask >::const_iterator it_task = tasks.begin();
+    for( ; it_task != tasks.end(); ++it_task )
+    {
+        StopTaskCommand *stopCommand = new StopTaskCommand();
+        stopCommand->SetParam( "job_id", it_task->GetJobId() );
+        stopCommand->SetParam( "task_id", it_task->GetTaskId() );
+        CommandPtr commandPtr( stopCommand );
+        WorkerManager::Instance().AddCommand( commandPtr, worker->GetIP() );
     }
 }
 

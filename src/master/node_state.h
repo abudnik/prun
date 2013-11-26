@@ -21,7 +21,7 @@ public:
     void FreeCPU( int numCPU ) { numBusyCPU_ -= numCPU; }
 
     int GetNumBusyCPU() const { return numBusyCPU_; }
-    int GetNumFreeCPU() const { return worker_->GetNumCPU() - numBusyCPU_; }
+    int GetNumFreeCPU() const { return worker_ ? worker_->GetNumCPU() - numBusyCPU_ : 0; }
     void SetWorker( WorkerPtr &w ) { worker_ = w; }
     WorkerPtr &GetWorker() { return worker_; }
     const WorkerPtr &GetWorker() const { return worker_; }
