@@ -44,6 +44,8 @@ void Scheduler::DeleteWorker( const std::string &host )
 
             StopWorker( worker->GetIP() );
 
+            failedWorkers_.Add( workerJob, worker->GetIP() );
+
             nodeState_.erase( it++ );
 
             // worker job should be rescheduled to any other node
