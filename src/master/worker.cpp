@@ -157,7 +157,7 @@ void WorkerList::DeleteWorker( const std::string &host )
         if ( w->GetHost() == host )
         {
             w->SetState( WORKER_STATE_DISABLED );
-            workers_.erase( it++ );
+            it = workers_.erase( it );
         }
         else
             ++it;
