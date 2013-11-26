@@ -17,7 +17,6 @@ Scheduler::Scheduler()
 void Scheduler::OnHostAppearance( WorkerPtr &worker )
 {
     {
-        PS_LOG( "OHA: "<<worker->GetIP() );
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
         nodeState_[ worker->GetIP() ].SetWorker( worker );
     }
@@ -46,8 +45,6 @@ void Scheduler::DeleteWorker( const std::string &host )
             StopWorker( worker->GetIP() );
 
             nodeState_.erase( it++ );
-
-            PS_LOG( "DW: "<<worker->GetHost() );
 
             // worker job should be rescheduled to any other node
             RescheduleJob( workerJob );
@@ -289,8 +286,6 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
 bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **job )
 {
     boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
-
-    PS_LOG( "GTtS: " << nodeState_.size() );
 
     workerPriority_.Sort( nodeState_.begin(), nodeState_.end(), nodeState_.size()/*, CompareByCPU()*/ );
 
