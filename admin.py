@@ -80,11 +80,16 @@ class ResultGetter(Thread):
 class Command_Run():
     def Prepare(self, cmd):
         try:
-            path = cmd.split()[1]
+            params = cmd.split()[1:]
+            path = params[0]
+            if len( params ) > 1:
+                alias = params[1]
+            else:
+                alias = ''
         except Exception as e:
             print( "no file path given" )
             raise e
-        return {"method" : "run", "params" : {"file" : path} }
+        return {"method" : "run", "params" : {"file" : path, "alias" : alias} }
 
 class Command_Stop():
     def Prepare(self, cmd):
@@ -163,6 +168,14 @@ class Command_Stat():
     def Prepare(self, cmd):
         return {"method" : "stat", "params" : []}
 
+class Command_Jobs():
+    def Prepare(self, cmd):
+        return {"method" : "jobs", "params" : []}
+
+class Command_Ls():
+    def Prepare(self, cmd):
+        return {"method" : "ls", "params" : []}
+
 class Command_Test():
     def Prepare(self, cmd):
         msg = '{"method":"run","params":{"file":"/home/budnik/dev/prun/test/test.job"}}'
@@ -183,6 +196,8 @@ class CommandDispatcher():
                      'deleteg' : Command_DeleteHostGroup(),
                      'info'    : Command_Info(),
                      'stat'    : Command_Stat(),
+                     'jobs'    : Command_Jobs(),
+                     'ls'      : Command_Ls(),
                      'test'    : Command_Test()}
 
     @classmethod
@@ -216,19 +231,21 @@ class Master():
 
 def PrintHelp():
     print( "Commands:" )
-    print( "  run /path/to/job/file          -- run job, which described in '.job' or '.meta' file" )
-    print( "  stop <job_id>                  -- interrupt job execution" )
-    print( "  stopg <group_id>               -- interrupt group of jobs execution" )
-    print( "  stopall                        -- interrupt all job execution on all hosts" )
-    print( "  stoprev                        -- interrupt all job execution from previous master sessions" )
-    print( "  add [<hostname> <groupname>]*  -- add host(s) with given hostname and hosts group name" )
-    print( "  delete <hostname>              -- delete host(s)" )
-    print( "  addg /path/to/host/group/file  -- add group of hosts, which described in a file" )
-    print( "  deleteg <groupname>            -- delete group of hosts" )
-    print( "  info <job_id>                  -- show job execution statistics" )
-    print( "  stat                           -- show master statistics" )
-    print( "  repeat, r                      -- repeat last entered command" )
-    print( "  exit, e                        -- quit program" )
+    print( "  run /path/to/file [<job_alias>] -- run job, which described in '.job' or '.meta' file" )
+    print( "  stop <job_id>                   -- interrupt job execution" )
+    print( "  stopg <group_id>                -- interrupt group of jobs execution" )
+    print( "  stopall                         -- interrupt all job execution on all hosts" )
+    print( "  stoprev                         -- interrupt all job execution from previous master sessions" )
+    print( "  add [<hostname> <groupname>]*   -- add host(s) with given hostname and hosts group name" )
+    print( "  delete <hostname>               -- delete host(s)" )
+    print( "  addg /path/to/file              -- add group of hosts, which described in a file" )
+    print( "  deleteg <groupname>             -- delete group of hosts" )
+    print( "  info <job_id>                   -- show job execution statistics" )
+    print( "  stat                            -- show master statistics" )
+    print( "  jobs                            -- show queued jobs info" )
+    print( "  ls                              -- show workers info" )
+    print( "  repeat, r                       -- repeat last entered command" )
+    print( "  exit, e                         -- quit program" )
 
 def UserPrompt():
     print( "master admin v" + ADMIN_VERSION )

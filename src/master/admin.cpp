@@ -16,10 +16,15 @@ namespace master {
 int AdminCommand_Run::Execute( const boost::property_tree::ptree &params,
                                std::string &result )
 {
-    std::string filePath;
+    std::string filePath, jobAlias;
     try
     {
         filePath = params.get<std::string>( "file" );
+
+        if ( params.count( "alias" ) > 0 )
+        {
+            jobAlias = params.get<std::string>( "alias" );
+        }
     }
     catch( std::exception &e )
     {
@@ -46,7 +51,7 @@ int AdminCommand_Run::Execute( const boost::property_tree::ptree &params,
         std::string ext = filePath.substr( found + 1 );
 
         if ( ext == "job" )
-            return RunJob( file, result );
+            return RunJob( file, jobAlias, result );
         else
         if ( ext == "meta" )
             return RunMetaJob( file, result );
@@ -61,7 +66,7 @@ int AdminCommand_Run::Execute( const boost::property_tree::ptree &params,
     return 0;
 }
 
-int AdminCommand_Run::RunJob( std::ifstream &file, std::string &result ) const
+int AdminCommand_Run::RunJob( std::ifstream &file, const std::string &jobAlias, std::string &result ) const
 {
     try
     {
@@ -72,6 +77,7 @@ int AdminCommand_Run::RunJob( std::ifstream &file, std::string &result ) const
         Job *job = JobManager::Instance().CreateJob( jobDescr );
         if ( job )
         {
+            job->SetAlias( jobAlias );
             PrintJobInfo( job, result );
             // job->SetCallback( session, &common::JsonRpcCaller::RpcCall );
             // add job to job queue
@@ -378,6 +384,35 @@ int AdminCommand_Stat::Execute( const boost::property_tree::ptree &params,
     return 0;
 }
 
+int AdminCommand_Jobs::Execute( const boost::property_tree::ptree &params,
+                                std::string &result )
+{
+    try
+    {
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_Jobs::Execute: " << e.what() );
+        return JSON_RPC_INTERNAL_ERROR;
+    }
+    return 0;
+}
+
+int AdminCommand_Ls::Execute( const boost::property_tree::ptree &params,
+                              std::string &result )
+{
+    try
+    {
+        Scheduler::Instance().GetWorkersStatistics( result );
+    }
+    catch( std::exception &e )
+    {
+        PS_LOG( "AdminCommand_Ls::Execute: " << e.what() );
+        return JSON_RPC_INTERNAL_ERROR;
+    }
+    return 0;
+}
+
 
 void AdminSession::InitializeRpcHandlers()
 {
@@ -393,6 +428,8 @@ void AdminSession::InitializeRpcHandlers()
     rpc.RegisterHandler( "delete_group", new AdminCommand_DeleteGroup );
     rpc.RegisterHandler( "info",         new AdminCommand_Info );
     rpc.RegisterHandler( "stat",         new AdminCommand_Stat );
+    rpc.RegisterHandler( "jobs",         new AdminCommand_Jobs );
+    rpc.RegisterHandler( "ls",           new AdminCommand_Ls );
 }
 
 void AdminSession::Start()

@@ -50,6 +50,7 @@ public:
 
     void GetJobInfo( std::string &info, int64_t jobId );
     void GetStatistics( std::string &stat );
+    void GetWorkersStatistics( std::string &stat );
 
     static Scheduler &Instance()
     {

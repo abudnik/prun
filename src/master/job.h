@@ -75,6 +75,7 @@ public:
     unsigned int GetScriptLength() const { return scriptLength_; }
 
     const std::string &GetFilePath() const { return filePath_; }
+    const std::string &GetAlias() const { return alias_; }
     int GetPriority() const { return priority_; }
     int GetNumDepends() const { return numDepends_; }
     int GetNumPlannedExec() const { return numPlannedExec_; }
@@ -91,6 +92,7 @@ public:
     int64_t GetGroupId() const { return groupId_; }
 
     void SetFilePath( const std::string &filePath ) { filePath_ = filePath; }
+    void SetAlias( const std::string &alias ) { alias_ = alias; }
     void SetNumPlannedExec( int val ) { numPlannedExec_ = val; }
     void SetNumDepends( int val ) { numDepends_ = val; }
     void SetGroupId( int64_t val ) { groupId_ = val; }
@@ -120,6 +122,7 @@ private:
     std::string scriptLanguage_;
     unsigned int scriptLength_;
     std::string filePath_;
+    std::string alias_;
 
     int priority_;
     int numDepends_;

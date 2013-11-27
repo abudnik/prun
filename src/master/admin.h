@@ -21,7 +21,7 @@ public:
                          std::string &result );
 
 private:
-    int RunJob( std::ifstream &file, std::string &result ) const;
+    int RunJob( std::ifstream &file, const std::string &jobAlias, std::string &result ) const;
     int RunMetaJob( std::ifstream &file, std::string &result ) const;
     void PrintJobInfo( const Job *job, std::string &result ) const;
 };
@@ -90,6 +90,20 @@ public:
 };
 
 class AdminCommand_Stat : public common::JsonRpcHandler
+{
+public:
+    virtual int Execute( const boost::property_tree::ptree &params,
+                         std::string &result );
+};
+
+class AdminCommand_Jobs : public common::JsonRpcHandler
+{
+public:
+    virtual int Execute( const boost::property_tree::ptree &params,
+                         std::string &result );
+};
+
+class AdminCommand_Ls : public common::JsonRpcHandler
 {
 public:
     virtual int Execute( const boost::property_tree::ptree &params,
