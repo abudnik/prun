@@ -16,6 +16,23 @@ struct CompareByCPU
     }
 };
 
+struct CompareByCPUandMemory
+{
+    bool operator() ( const NodeState *a, const NodeState *b ) const
+    {
+        if ( a->GetNumFreeCPU() < b->GetNumFreeCPU() )
+            return true;
+
+        if ( a->GetNumFreeCPU() == b->GetNumFreeCPU() )
+        {
+            const WorkerPtr &wa = a->GetWorker();
+            const WorkerPtr &wb = b->GetWorker();
+            return wa && wb && ( wa->GetMemorySize() < wb->GetMemorySize() );
+        }
+        return false;
+    }
+};
+
 class WorkerPriority
 {
 private:

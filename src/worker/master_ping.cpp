@@ -27,10 +27,11 @@ void MasterPingBoost::HandleRead( const boost::system::error_code& error, size_t
         //PS_LOG( request );
 
         ComputerInfo &compInfo = ComputerInfo::Instance();
-        const int numThread = compInfo.GetNumCPU();
+        const int numCPU = compInfo.GetNumCPU();
+        const int64_t memSizeMb = compInfo.GetPhysicalMemory() >> 10; // divide by 1024
 
         std::string msg;
-        protocol_->NodeResponsePing( msg, numThread );
+        protocol_->NodeResponsePing( msg, numCPU, memSizeMb );
 
         udp::endpoint master_endpoint( remote_endpoint_.address(), DEFAULT_MASTER_UDP_PORT );
 

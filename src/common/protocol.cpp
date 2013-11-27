@@ -64,13 +64,14 @@ bool ProtocolJson::NodePing( std::string &msg, const std::string &host )
     return true;
 }
 
-bool ProtocolJson::NodeResponsePing( std::string &msg, int numCPU )
+bool ProtocolJson::NodeResponsePing( std::string &msg, int numCPU, int64_t memSizeMb )
 {
     std::ostringstream ss;
     boost::property_tree::ptree ptree;
     try
     {
         ptree.put( "num_cpu", numCPU );
+        ptree.put( "mem_size", memSizeMb );
         boost::property_tree::write_json( ss, ptree, false );
     }
     catch( std::exception &e )
@@ -84,7 +85,7 @@ bool ProtocolJson::NodeResponsePing( std::string &msg, int numCPU )
     return true;
 }
 
-bool ProtocolJson::ParseResponsePing( const std::string &msg, int &numCPU )
+bool ProtocolJson::ParseResponsePing( const std::string &msg, int &numCPU, int64_t &memSizeMb )
 {
     std::istringstream ss( msg );
 
@@ -93,6 +94,7 @@ bool ProtocolJson::ParseResponsePing( const std::string &msg, int &numCPU )
     {
         boost::property_tree::read_json( ss, ptree );
         numCPU = ptree.get<int>( "num_cpu" );
+        memSizeMb = ptree.get<int64_t>( "mem_size" );
     }
     catch( std::exception &e )
     {

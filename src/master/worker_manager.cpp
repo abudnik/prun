@@ -98,7 +98,7 @@ void WorkerManager::CheckDropedPingResponses()
     }
 }
 
-void WorkerManager::OnNodePingResponse( const std::string &hostIP, int numCPU )
+void WorkerManager::OnNodePingResponse( const std::string &hostIP, int numCPU, int64_t memSizeMb )
 {
     WorkerPtr worker;
     if ( GetWorkerByIP( hostIP, worker ) )
@@ -115,6 +115,7 @@ void WorkerManager::OnNodePingResponse( const std::string &hostIP, int numCPU )
         if ( stateChanged )
         {
             worker->SetNumCPU( numCPU );
+            worker->SetMemorySize( memSizeMb );
             Scheduler::Instance().OnHostAppearance( worker );
         }
     }

@@ -93,6 +93,7 @@ public:
     void SetHost( const std::string &host ) { host_ = host; }
     void SetIP( const std::string &ip ) { ip_ = ip; }
     void SetNumCPU( int numCPU ) { numCPU_ = numCPU; }
+    void SetMemorySize( int64_t memSizeMb ) { memSizeMb_ = memSizeMb; }
     void SetState( WorkerState state ) { state_ = state; }
     void SetJob( const WorkerJob &job ) { job_ = job; }
     void ResetJob() { job_.Reset(); }
@@ -102,6 +103,7 @@ public:
     const std::string &GetHost() const { return host_; }
     const std::string &GetIP() const { return ip_; }
     int GetNumCPU() const { return numCPU_; }
+    int64_t GetMemorySize() const { return memSizeMb_; }
     WorkerState GetState() const { return state_; }
     const WorkerJob &GetJob() const { return job_; }
     WorkerJob &GetJob() { return job_; }
@@ -113,6 +115,7 @@ private:
     WorkerState state_;
     WorkerJob job_;
     int numCPU_;
+    int64_t memSizeMb_;
     int numPingResponse_;
 };
 

@@ -41,9 +41,10 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
     if ( type == "ping_response" )
     {
         int numCPU;
-        if ( parser->ParseResponsePing( body, numCPU ) )
+        int64_t memSizeMb;
+        if ( parser->ParseResponsePing( body, numCPU, memSizeMb ) )
         {
-            WorkerManager::Instance().OnNodePingResponse( nodeIP, numCPU );
+            WorkerManager::Instance().OnNodePingResponse( nodeIP, numCPU, memSizeMb );
         }
         else
         {

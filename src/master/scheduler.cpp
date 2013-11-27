@@ -289,7 +289,7 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **
 {
     boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
 
-    workerPriority_.Sort( nodeState_.begin(), nodeState_.end(), nodeState_.size()/*, CompareByCPU()*/ );
+    workerPriority_.Sort( nodeState_.begin(), nodeState_.end(), nodeState_.size(), CompareByCPUandMemory() );
 
     boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
 
