@@ -768,6 +768,9 @@ void Scheduler::GetWorkersStatistics( std::string &stat )
         if ( !worker )
             continue;
 
+        if ( it != nodeState_.begin() )
+            ss << "----------------" << std::endl;
+
         ss << "host = '" << worker->GetHost() << "', ip = " << worker->GetIP() << std::endl;
 
         if ( !worker->GetGroup().empty() )
