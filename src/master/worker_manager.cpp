@@ -27,7 +27,7 @@ void WorkerManager::AddWorkerHost( const std::string &groupName, const std::stri
     workerHosts_.insert( host );
 
     WorkerList &workerList = workerGroups_[ groupName ];
-    workerList.AddWorker( new Worker( host ) );
+    workerList.AddWorker( new Worker( host, groupName ) );
 }
 
 void WorkerManager::DeleteWorkerGroup( const std::string &groupName )

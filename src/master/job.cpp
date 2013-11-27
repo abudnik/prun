@@ -18,18 +18,22 @@ void JobGroup::OnJobCompletion( const JobVertex &vertex )
     }
 }
 
-bool Job::IsHostAvailable( const std::string &hostIP ) const
+bool Job::IsHostPermitted( const std::string &host ) const
 {
     if ( !hosts_.size() )
         return true;
 
-    std::set< std::string >::const_iterator it = hosts_.begin();
-    for( ; it != hosts_.end(); ++it )
-    {
-        if ( *it == hostIP )
-            return true;
-    }
-    return false;
+    std::set< std::string >::const_iterator it = hosts_.find( host );
+    return it != hosts_.end();
+}
+
+bool Job::IsGroupPermitted( const std::string &group ) const
+{
+    if ( !groups_.size() )
+        return true;
+
+    std::set< std::string >::const_iterator it = groups_.find( group );
+    return it != groups_.end();
 }
 
 void JobQueue::PushJob( Job *job, int64_t groupId )

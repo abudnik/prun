@@ -97,8 +97,11 @@ public:
     void SetJobVertex( const JobVertex &vertex ) { graphVertex_ = vertex; }
     void SetJobGroup( boost::shared_ptr< JobGroup > &jobGroup ) { jobGroup_ = jobGroup; }
 
-    void AddHost( const std::string &hostIP ) { hosts_.insert( hostIP ); }
-    bool IsHostAvailable( const std::string &hostIP ) const;
+    void AddHost( const std::string &host ) { hosts_.insert( host ); }
+    bool IsHostPermitted( const std::string &host ) const;
+
+    void AddGroup( const std::string &group ) { groups_.insert( group ); }
+    bool IsGroupPermitted( const std::string &group ) const;
 
     template< typename T, typename U >
     void SetCallback( T *obj, void (U::*f)( const std::string &method, const boost::property_tree::ptree &params ) )
@@ -131,6 +134,7 @@ private:
     int64_t groupId_;
 
     std::set< std::string > hosts_;
+    std::set< std::string > groups_;
 
     JobVertex graphVertex_;
     boost::shared_ptr< JobGroup > jobGroup_;

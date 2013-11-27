@@ -254,6 +254,11 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
             ReadHosts( job, ptree );
         }
 
+        if ( ptree.count( "groups" ) > 0 )
+        {
+            ReadGroups( job, ptree );
+        }
+
         return job;
     }
     catch( std::exception &e )
@@ -265,29 +270,19 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
 
 void JobManager::ReadHosts( Job *job, const boost::property_tree::ptree &ptree ) const
 {
-    using boost::asio::ip::udp;
-    udp::resolver resolver( io_service_ );
-
-    common::Config &cfg = common::Config::Instance();
-    bool ipv6 = cfg.Get<bool>( "ipv6" );
-
     BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
                    ptree.get_child( "hosts" ) )
     {
-        std::string host = v.second.get_value< std::string >();
-        udp::resolver::query query( ipv6 ? udp::v6() : udp::v4(), host, "" );
+        job->AddHost( v.second.get_value< std::string >() );
+    }
+}
 
-        boost::system::error_code error;
-        udp::resolver::iterator iter = resolver.resolve( query, error ), end;
-        if ( error || iter == end )
-        {
-            PS_LOG( "JobManager::ReadHosts: address not resolved '" << host << "'" );
-            continue;
-        }
-
-        udp::endpoint dest = *iter;
-        std::string ip = dest.address().to_string();
-        job->AddHost( ip );
+void JobManager::ReadGroups( Job *job, const boost::property_tree::ptree &ptree ) const
+{
+    BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
+                   ptree.get_child( "groups" ) )
+    {
+        job->AddGroup( v.second.get_value< std::string >() );
     }
 }
 

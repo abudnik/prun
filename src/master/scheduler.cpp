@@ -220,7 +220,8 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
                 jobId = workerTask.GetJobId();
                 if ( !failedWorkers_.IsWorkerFailedJob( worker->GetIP(), jobId ) )
                 {
-                    if ( (*job)->IsHostAvailable( worker->GetIP() ) )
+                    if ( (*job)->IsHostPermitted( worker->GetHost() ) &&
+                         (*job)->IsGroupPermitted( worker->GetGroup() ) )
                     {
                         foundReschedJob = true;
                         plannedJob.AddTask( jobId, workerTask.GetTaskId() );
@@ -258,7 +259,8 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
         if ( !tasks.empty() )
         {
             *job = const_cast<Job *>( j );
-            if ( !j->IsHostAvailable( worker->GetIP() ) )
+            if ( !j->IsHostPermitted( worker->GetHost() ) ||
+                 !j->IsGroupPermitted( worker->GetGroup() ) )
                 continue;
 
             std::set< int >::iterator it_task = tasks.begin();

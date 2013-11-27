@@ -12,5 +12,6 @@
     "max_cpu" : 1,
     "exclusive" : false,
     "no_reschedule" : false,
-    "hosts" : ["localhost"]
+    "hosts" : ["localhost"],
+    "groups" : ["hosts_group1", "groupx"]
 }

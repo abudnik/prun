@@ -2,7 +2,6 @@
 #define __JOB_MANAGER_H
 
 #include <boost/property_tree/ptree.hpp>
-#include <boost/asio.hpp> // for host name ip resolving
 #include "job.h"
 
 
@@ -54,6 +53,7 @@ private:
     bool ReadScript( const std::string &fileName, std::string &script ) const;
     Job *CreateJob( const boost::property_tree::ptree &ptree ) const;
     void ReadHosts( Job *job, const boost::property_tree::ptree &ptree ) const;
+    void ReadGroups( Job *job, const boost::property_tree::ptree &ptree ) const;
 
     bool PrepareJobGraph( std::istringstream &ss,
                           std::map< std::string, int > &jobFileToIndex,
@@ -65,7 +65,6 @@ private:
     std::string exeDir_;
     std::string masterId_;
     static int64_t numJobGroups_;
-    mutable boost::asio::io_service io_service_;
 };
 
 } // namespace master

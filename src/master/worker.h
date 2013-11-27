@@ -79,8 +79,8 @@ private:
 class Worker
 {
 public:
-    Worker( const std::string &host )
-    : host_( host ),
+    Worker( const std::string &host, const std::string &group )
+    : host_( host ), group_( group ),
      state_( WORKER_STATE_NOT_AVAIL ),
      numCPU_( 1 ), numPingResponse_( 0 )
     {}
@@ -91,6 +91,7 @@ public:
     {}
 
     void SetHost( const std::string &host ) { host_ = host; }
+    void SetGroup( const std::string &group ) { group_ = group; }
     void SetIP( const std::string &ip ) { ip_ = ip; }
     void SetNumCPU( int numCPU ) { numCPU_ = numCPU; }
     void SetMemorySize( int64_t memSizeMb ) { memSizeMb_ = memSizeMb; }
@@ -101,6 +102,7 @@ public:
     void IncNumPingResponse() { ++numPingResponse_; }
 
     const std::string &GetHost() const { return host_; }
+    const std::string &GetGroup() const { return group_; }
     const std::string &GetIP() const { return ip_; }
     int GetNumCPU() const { return numCPU_; }
     int64_t GetMemorySize() const { return memSizeMb_; }
@@ -110,7 +112,7 @@ public:
     int GetNumPingResponse() const { return numPingResponse_; }
 
 private:
-    std::string host_;
+    std::string host_, group_;
     std::string ip_;
     WorkerState state_;
     WorkerJob job_;
