@@ -88,6 +88,7 @@ public:
 
 private:
     GrpNameToWorkerList workerGroups_;
+    std::set< std::string > workerHosts_;
     mutable boost::mutex workersMut_;
 
     typedef std::pair< WorkerTask, std::string > PairTypeAW;

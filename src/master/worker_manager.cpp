@@ -8,22 +8,23 @@ namespace master {
 
 void WorkerManager::AddWorkerGroup( const std::string &groupName, std::list< std::string > &hosts )
 {
-    if ( hosts.empty() )
-        return;
-
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
-
-    WorkerList &workerList = workerGroups_[ groupName ];
     std::list< std::string >::const_iterator it = hosts.begin();
     for( ; it != hosts.end(); ++it )
     {
-        workerList.AddWorker( new Worker( *it ) );
+        AddWorkerHost( groupName, *it );
     }
 }
 
 void WorkerManager::AddWorkerHost( const std::string &groupName, const std::string &host )
 {
     boost::mutex::scoped_lock scoped_lock( workersMut_ );
+
+    if ( workerHosts_.find( host ) != workerHosts_.end() )
+    {
+        PS_LOG( "WorkerManager::AddWorkerHost: host already exists '" << host << "'" );
+        return;
+    }
+    workerHosts_.insert( host );
 
     WorkerList &workerList = workerGroups_[ groupName ];
     workerList.AddWorker( new Worker( host ) );
@@ -37,6 +38,14 @@ void WorkerManager::DeleteWorkerGroup( const std::string &groupName )
     if ( it != workerGroups_.end() )
     {
         WorkerList &workerList = it->second;
+        const WorkerList::WorkerContainer &workers = workerList.GetWorkers();
+        WorkerList::WorkerContainer::const_iterator it_w = workers.begin();
+        for( ; it_w != workers.end(); ++it_w )
+        {
+            const std::string &host = (*it_w)->GetHost();
+            workerHosts_.erase( host );
+        }
+
         workerList.Clear();
         workerGroups_.erase( it );
     }
@@ -52,6 +61,8 @@ void WorkerManager::DeleteWorkerHost( const std::string &host )
         WorkerList &workerList = it->second;
         workerList.DeleteWorker( host );
     }
+
+    workerHosts_.erase( host );
 }
 
 void WorkerManager::CheckDropedPingResponses()
