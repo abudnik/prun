@@ -2,11 +2,13 @@ import sys
 import socket
 import json
 import getopt
+import time
 from threading import Thread
 
 MASTER_HOST = 'localhost'
 MASTER_PORT = 5557
 ADMIN_VERSION = '0.1'
+COMMAND = ''
 
 def Exit(msg):
     print( msg )
@@ -176,11 +178,14 @@ class Command_Ls():
     def Prepare(self, cmd):
         return {"method" : "ls", "params" : []}
 
-class Command_Test():
-    def Prepare(self, cmd):
-        msg = '{"method":"run","params":{"file":"/home/budnik/dev/prun/test/test.job"}}'
-        return msg
-
+class Command_Sleep():
+    def Execute(self, cmd):
+        try:
+            s = int( cmd.split()[1] )
+            time.sleep( s )
+        except Exception as e:
+            print( "invalid sleep time argument" )
+            raise e
 
 class CommandDispatcher():
     _instance = None
@@ -197,8 +202,7 @@ class CommandDispatcher():
                      'info'    : Command_Info(),
                      'stat'    : Command_Stat(),
                      'jobs'    : Command_Jobs(),
-                     'ls'      : Command_Ls(),
-                     'test'    : Command_Test()}
+                     'ls'      : Command_Ls()}
 
     @classmethod
     def Instance(cls):
@@ -253,23 +257,36 @@ def UserPrompt():
 
 def ParseOpt( argv ):
     global MASTER_HOST
+    global COMMAND
     try:
-        opts, args = getopt.getopt( argv, '' )
+        opts, args = getopt.getopt( argv, "c:", ["command="] )
+        for opt in opts:
+            if opt[0] in ("-c", "--command"):
+                COMMAND = opt[1]
+                print( COMMAND )
         for arg in args:
             MASTER_HOST = arg
             break
     except getopt.GetoptError:
-        print( 'usage: admin.py [host]' )
+        print( 'usage: admin.py [-c|--command <command>] [<master_host>]' )
         sys.exit( 1 )
 
-def Main(argv):
-    ParseOpt( argv )
-    UserPrompt()
-    con = Connection()
-    master = Master( con )
-    resultGetter = ResultGetter( con )
-    resultGetter.start()
+def ExecCommand( master, cmd ):
+    try:
+        commands = cmd.split( ';' )
+        for c in commands:
+            c = c.strip()
+            if len( c ) > 0:
+                commandName = c.split( None, 1 )[0]
+                if commandName == 'sleep':
+                    print( c )
+                    Command_Sleep().Execute( c )
+                else:
+                    master.DoCommand( c )
+    except Exception as e:
+        print( e )
 
+def UserInput( master ):
     try:
         lastCmd = None
         while True:
@@ -292,6 +309,19 @@ def Main(argv):
             lastCmd = line
     except Exception as e:
         print( e )
+
+def Main(argv):
+    ParseOpt( argv )
+    UserPrompt()
+    con = Connection()
+    master = Master( con )
+    resultGetter = ResultGetter( con )
+    resultGetter.start()
+
+    if len( COMMAND ) > 0:
+        ExecCommand( master, COMMAND )
+    else:
+        UserInput( master )
 
     con.Close()
     resultGetter.join()
