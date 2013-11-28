@@ -38,36 +38,21 @@ class Connection():
         except Exception as e:
             Exit( "couldn't send command to master" )
 
+        msg = self.Receive()
+        self.OnResponse( msg )
+        sys.stdout.write( '> ' )
+        sys.stdout.flush()
+
     def Receive(self):
         try:
             data = self.socket.recv( 32 * 1024 )
             return data
         except Exception as e:
-            pass
-
-    def Close(self):
-        try:
-            self.socket.shutdown(socket.SHUT_RDWR)
-            self.socket.close()
-        except Exception as e:
-            pass
-
-class ResultGetter(Thread):
-    def __init__( self, connection ):
-        Thread.__init__(self)
-        self.connection = connection
-    
-    def run(self):
-        while True:
-            msg = self.connection.Receive()
-            if msg is None or len(msg) == 0:
-                break
-
-            self.OnResponse( msg )
-            sys.stdout.write( '> ' )
-            sys.stdout.flush()
+            print( e )
 
     def OnResponse(self, msg):
+        if msg is None or len(msg) == 0:
+            return
         try:
             msg = msg.decode( "utf-8" )
             rpc = json.JSONDecoder().decode( msg )
@@ -76,6 +61,13 @@ class ResultGetter(Thread):
                 print( rpc['result'] )
             elif 'error' in rpc:
                 print( rpc['error'] )
+        except Exception as e:
+            print( e )
+
+    def Close(self):
+        try:
+            self.socket.shutdown(socket.SHUT_RDWR)
+            self.socket.close()
         except Exception as e:
             print( e )
 
@@ -315,8 +307,6 @@ def Main(argv):
     UserPrompt()
     con = Connection()
     master = Master( con )
-    resultGetter = ResultGetter( con )
-    resultGetter.start()
 
     if len( COMMAND ) > 0:
         ExecCommand( master, COMMAND )
@@ -324,7 +314,6 @@ def Main(argv):
         UserInput( master )
 
     con.Close()
-    resultGetter.join()
 
 if __name__ == "__main__":
    Main(sys.argv[1:])
