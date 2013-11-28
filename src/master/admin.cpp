@@ -389,6 +389,7 @@ int AdminCommand_Jobs::Execute( const boost::property_tree::ptree &params,
 {
     try
     {
+        Scheduler::Instance().GetAllJobInfo( result );
     }
     catch( std::exception &e )
     {

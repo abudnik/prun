@@ -49,6 +49,7 @@ public:
     void StopPreviousJobs();
 
     void GetJobInfo( std::string &info, int64_t jobId );
+    void GetAllJobInfo( std::string &info );
     void GetStatistics( std::string &stat );
     void GetWorkersStatistics( std::string &stat );
 
@@ -76,6 +77,7 @@ private:
     int GetNumPlannedExec( const Job *job ) const;
 
     // stats
+    void PrintJobInfo( std::string &info, int64_t jobId );
     int GetNumBusyWorkers() const;
     int GetNumFreeWorkers() const;
     int GetNumBusyCPU() const;

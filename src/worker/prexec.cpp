@@ -103,6 +103,8 @@ public:
 
         numTasks_ = ptree.get<int>( "num_tasks" );
         timeout_ = ptree.get<int>( "timeout" );
+
+        fromFile_ = !scriptLength_;
     }
 
     void SetScriptLength( unsigned int len ) { scriptLength_ = len; }
@@ -116,6 +118,7 @@ public:
     const std::string &GetMasterId() const { return masterId_; }
     int GetNumTasks() const { return numTasks_; }
     int GetTimeout() const { return timeout_; }
+    bool IsFromFile() const { return fromFile_; }
 
 private:
     int commId_;
@@ -127,6 +130,7 @@ private:
     std::string masterId_;
     int numTasks_;
     int timeout_;
+    bool fromFile_;
 };
 
 class JobStopTask : public Job
@@ -365,9 +369,9 @@ protected:
             prctl( PR_SET_PDEATHSIG, SIGHUP );
 #endif
 
-            const std::string &scriptPath = job_->GetFilePath();
-            if ( scriptPath.size() > 0 )
+            if ( job_->IsFromFile() )
             {
+                const std::string &scriptPath = job_->GetFilePath();
                 boost::filesystem::path p( scriptPath );
                 boost::filesystem::path dir = p.parent_path();
                 int ret = chdir( dir.string().c_str() );
@@ -393,10 +397,10 @@ protected:
         const char *scriptAddr = NULL;
         unsigned int bytesToWrite = 0;
 
-        const std::string &filePath = job_->GetFilePath();
-        if ( filePath.size() > 0 )
+        if ( job_->IsFromFile() )
         {
             // read script from file
+            const std::string &filePath = job_->GetFilePath();
             std::ifstream file( filePath.c_str() );
             if ( file.is_open() )
             {

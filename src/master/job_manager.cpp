@@ -246,8 +246,7 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
                             timeout, queueTimeout, taskTimeout,
                             exclusive, noReschedule );
 
-        if ( !sendScript )
-            job->SetFilePath( fileName );
+        job->SetFilePath( fileName );
 
         if ( ptree.count( "hosts" ) > 0 )
         {

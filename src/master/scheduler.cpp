@@ -651,15 +651,13 @@ void Scheduler::Shutdown()
     jobs_.Clear();
 }
 
-void Scheduler::GetJobInfo( std::string &info, int64_t jobId )
+void Scheduler::PrintJobInfo( std::string &info, int64_t jobId )
 {
     std::ostringstream ss;
-    boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
-    boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
 
     Job *job = jobs_.FindJobByJobId( jobId );
     if ( !job )
-    {
+     {
         ss << "job isn't executing now, jobId = " << jobId;
         info = ss.str();
         return;
@@ -716,6 +714,31 @@ void Scheduler::GetJobInfo( std::string &info, int64_t jobId )
 
     ss << "================";
     info = ss.str();
+}
+
+void Scheduler::GetJobInfo( std::string &info, int64_t jobId )
+{
+    boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+    boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+
+    PrintJobInfo( info, jobId );
+}
+
+void Scheduler::GetAllJobInfo( std::string &info )
+{
+    boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+    boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+
+    const ScheduledJobs::JobList &jobs = jobs_.GetJobList();
+
+    ScheduledJobs::JobList::const_iterator it = jobs.begin();
+    for( ; it != jobs.end(); ++it )
+    {
+        const Job *job = *it;
+        std::string jobInfo;
+        PrintJobInfo( jobInfo, job->GetJobId() );
+        info += jobInfo + '\n';
+    }
 }
 
 void Scheduler::GetStatistics( std::string &stat )

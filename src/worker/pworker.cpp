@@ -330,9 +330,10 @@ class ExecuteTask : public Action
 
     bool ExpandFilePath( const boost::shared_ptr< Job > &job )
     {
-        const std::string filePath = job->GetFilePath();
-        if ( filePath.size() == 0 )
+        if ( job->GetScriptLength() > 0 )
             return true;
+
+        const std::string &filePath = job->GetFilePath();
 
         std::string fullPath = exeDir + '/' + filePath;
         bool fileExists = boost::filesystem::exists( fullPath );
