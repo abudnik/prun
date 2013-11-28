@@ -833,6 +833,10 @@ int Scheduler::GetNumBusyWorkers() const
     for( ; it != nodeState_.end(); ++it )
     {
         const NodeState &nodeState = it->second;
+        const WorkerPtr &worker = nodeState.GetWorker();
+        if ( !worker || !worker->IsAvailable() )
+            continue;
+
         if ( nodeState.GetNumBusyCPU() > 0 )
             ++num;
     }
@@ -846,6 +850,10 @@ int Scheduler::GetNumFreeWorkers() const
     for( ; it != nodeState_.end(); ++it )
     {
         const NodeState &nodeState = it->second;
+        const WorkerPtr &worker = nodeState.GetWorker();
+        if ( !worker || !worker->IsAvailable() )
+            continue;
+
         if ( nodeState.GetNumBusyCPU() <= 0 )
             ++num;
     }
@@ -859,6 +867,10 @@ int Scheduler::GetNumBusyCPU() const
     for( ; it != nodeState_.end(); ++it )
     {
         const NodeState &nodeState = it->second;
+        const WorkerPtr &worker = nodeState.GetWorker();
+        if ( !worker || !worker->IsAvailable() )
+            continue;
+
         num += nodeState.GetNumBusyCPU();
     }
     return num;

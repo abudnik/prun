@@ -82,12 +82,12 @@ public:
     Worker( const std::string &host, const std::string &group )
     : host_( host ), group_( group ),
      state_( WORKER_STATE_NOT_AVAIL ),
-     numCPU_( 1 ), numPingResponse_( 0 )
+     numCPU_( 0 ), numPingResponse_( 0 )
     {}
 
     Worker()
     : state_( WORKER_STATE_NOT_AVAIL ),
-     numCPU_( 1 ), numPingResponse_( 0 )
+     numCPU_( 0 ), numPingResponse_( 0 )
     {}
 
     void SetHost( const std::string &host ) { host_ = host; }
@@ -110,6 +110,10 @@ public:
     const WorkerJob &GetJob() const { return job_; }
     WorkerJob &GetJob() { return job_; }
     int GetNumPingResponse() const { return numPingResponse_; }
+
+    bool IsAvailable() const
+    { return state_ != WORKER_STATE_NOT_AVAIL &&
+             state_ != WORKER_STATE_DISABLED; }
 
 private:
     std::string host_, group_;

@@ -225,7 +225,11 @@ int WorkerList::GetTotalWorkers() const
     WorkerContainer::const_iterator it = workers_.begin();
     for( ; it != workers_.end(); ++it )
     {
-        ++num;
+        const WorkerPtr &worker = *it;
+        if ( worker->IsAvailable() )
+        {
+            ++num;
+        }
     }
     return num;
 }
@@ -236,7 +240,11 @@ int WorkerList::GetTotalCPU() const
     WorkerContainer::const_iterator it = workers_.begin();
     for( ; it != workers_.end(); ++it )
     {
-        num += (*it)->GetNumCPU();
+        const WorkerPtr &worker = *it;
+        if ( worker->IsAvailable() )
+        {
+            num += worker->GetNumCPU();
+        }
     }
     return num;
 }
