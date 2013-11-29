@@ -35,9 +35,9 @@ public:
 
     virtual bool GetJobResult( std::string &msg, const std::string &masterId, int64_t jobId, int taskId ) = 0;
     virtual bool ParseGetJobResult( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId ) = 0;
-    virtual bool SendJobResult( std::string &msg, int errCode ) = 0;
-    virtual bool ParseJobResult( const std::string &msg, int &errCode ) = 0;
-    
+    virtual bool SendJobResult( std::string &msg, int errCode, int64_t execTime ) = 0;
+    virtual bool ParseJobResult( const std::string &msg, int &errCode, int64_t &execTime ) = 0;
+
     // commands section
     virtual bool SendCommand( std::string &msg, const std::string &masterId, const std::string &command,
                               const std::list< std::pair< std::string, std::string > > &params ) = 0;
@@ -90,9 +90,9 @@ public:
 
     virtual bool ParseGetJobResult( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId );
 
-    virtual bool SendJobResult( std::string &msg, int errCode );
+    virtual bool SendJobResult( std::string &msg, int errCode, int64_t execTime );
 
-    virtual bool ParseJobResult( const std::string &msg, int &errCode );
+    virtual bool ParseJobResult( const std::string &msg, int &errCode, int64_t &execTime );
 
     virtual bool SendCommand( std::string &msg, const std::string &masterId, const std::string &command,
                               const std::list< std::pair< std::string, std::string > > &params );

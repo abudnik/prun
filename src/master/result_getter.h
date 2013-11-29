@@ -26,7 +26,7 @@ public:
 
     void Run();
 
-    virtual void OnGetTaskResult( bool success, int errCode, const WorkerTask &workerTask, const std::string &hostIP );
+    virtual void OnGetTaskResult( bool success, int errCode, int64_t execTime, const WorkerTask &workerTask, const std::string &hostIP );
 
 private:
     virtual void NotifyObserver( int event );
@@ -99,7 +99,7 @@ public:
 private:
     virtual void GetTaskResult( const WorkerTask &workerTask, const std::string &hostIP );
 
-    virtual void OnGetTaskResult( bool success, int errCode, const WorkerTask &workerTask, const std::string &hostIP );
+    virtual void OnGetTaskResult( bool success, int errCode, int64_t execTime, const WorkerTask &workerTask, const std::string &hostIP );
 
 private:
     boost::asio::io_service &io_service_;

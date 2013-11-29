@@ -265,13 +265,14 @@ bool ProtocolJson::ParseGetJobResult( const std::string &msg, std::string &maste
     return true;
 }
 
-bool ProtocolJson::SendJobResult( std::string &msg, int errCode )
+bool ProtocolJson::SendJobResult( std::string &msg, int errCode, int64_t execTime )
 {
     std::ostringstream ss;
     boost::property_tree::ptree ptree;
     try
     {
         ptree.put( "err_code", errCode );
+        ptree.put( "elapsed", execTime );
         boost::property_tree::write_json( ss, ptree, false );
     }
     catch( std::exception &e )
@@ -285,7 +286,7 @@ bool ProtocolJson::SendJobResult( std::string &msg, int errCode )
     return true;
 }
 
-bool ProtocolJson::ParseJobResult( const std::string &msg, int &errCode )
+bool ProtocolJson::ParseJobResult( const std::string &msg, int &errCode, int64_t &execTime )
 {
     std::istringstream ss( msg );
 
@@ -294,6 +295,7 @@ bool ProtocolJson::ParseJobResult( const std::string &msg, int &errCode )
     {
         boost::property_tree::read_json( ss, ptree );
         errCode = ptree.get<int>( "err_code" );
+        execTime = ptree.get<int64_t>( "elapsed" );
     }
     catch( std::exception &e )
     {

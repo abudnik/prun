@@ -11,6 +11,7 @@ namespace worker {
 struct JobCompletionStat
 {
     int errCode;
+    int64_t execTime;
 };
 
 struct JobDescriptor

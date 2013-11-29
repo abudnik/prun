@@ -108,6 +108,7 @@ public:
     }
 
     void SetScriptLength( unsigned int len ) { scriptLength_ = len; }
+    void SetExecTime( int64_t time ) { execTime_ = time; }
 
     int GetCommId() const { return commId_; }
     unsigned int GetScriptLength() const { return scriptLength_; }
@@ -119,6 +120,7 @@ public:
     int GetNumTasks() const { return numTasks_; }
     int GetTimeout() const { return timeout_; }
     bool IsFromFile() const { return fromFile_; }
+    int64_t GetExecTime() const { return execTime_; }
 
 private:
     int commId_;
@@ -131,6 +133,7 @@ private:
     int numTasks_;
     int timeout_;
     bool fromFile_;
+    int64_t execTime_;
 };
 
 class JobStopTask : public Job
@@ -324,6 +327,9 @@ protected:
         // forked process may be lost
         FlushFifo();
 
+        struct timeval tvStart, tvEnd;
+        gettimeofday( &tvStart, NULL );
+
         pid_t pid = fork();
 
         if ( pid > 0 )
@@ -345,6 +351,11 @@ protected:
             {
                 succeded = ReadCompletionStatus( threadParams.readFifoFD );
             }
+
+            gettimeofday( &tvEnd, NULL );
+            int64_t elapsed = (int64_t)( tvEnd.tv_sec - tvStart.tv_sec ) * 1000 +
+                                       ( tvEnd.tv_usec - tvStart.tv_usec ) / 1000;
+            job_->SetExecTime( elapsed );
 
             if ( !succeded)
             {
@@ -740,6 +751,7 @@ protected:
         boost::property_tree::ptree ptree;
 
         ptree.put( "err", errCode_ );
+        ptree.put( "elapsed", execTime_ );
 
         boost::property_tree::write_json( ss, ptree, false );
         size_t responseLength = ss.str().size();
@@ -759,6 +771,7 @@ private:
         {
             scriptExec->Execute( &job );
             errCode_ = job.GetError();
+            execTime_ = job.GetExecTime();
         }
         else
         {
@@ -770,6 +783,7 @@ private:
 
 protected:
     int errCode_;
+    int64_t execTime_;
 };
 
 class SessionBoost : public Session, public boost::enable_shared_from_this< SessionBoost >

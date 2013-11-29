@@ -360,10 +360,8 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
     }
 }
 
-void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, const std::string &hostIP )
+void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTask &workerTask, const std::string &hostIP )
 {
-    PS_LOG( "Scheduler::OnTaskCompletion " << errCode );
-
     if ( !errCode )
     {
         WorkerPtr w;
@@ -388,6 +386,10 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
         IPToNodeState::iterator it = nodeState_.find( hostIP );
         if ( it == nodeState_.end() )
             return;
+
+        PS_LOG( "Scheduler::OnTaskCompletion: jobId=" << workerTask.GetJobId() <<
+                ", taskId=" << workerTask.GetTaskId() << ", execTime=" << execTime <<
+                ", ip=" << hostIP );
 
         NodeState &nodeState = it->second;
         nodeState.FreeCPU( 1 );
@@ -415,7 +417,8 @@ void Scheduler::OnTaskCompletion( int errCode, const WorkerTask &workerTask, con
             return;
 
         PS_LOG( "Scheduler::OnTaskCompletion: errCode=" << errCode <<
-                ", jobId=" << workerTask.GetJobId() << ", ip=" << hostIP );
+                ", jobId=" << workerTask.GetJobId() <<
+                ", taskId=" << workerTask.GetTaskId() << ", ip=" << hostIP );
 
         failedWorkers_.Add( workerTask.GetJobId(), hostIP );
 
@@ -449,7 +452,7 @@ void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &
         CommandPtr commandPtr( stopCommand );
         WorkerManager::Instance().AddCommand( commandPtr, hostIP );
 
-        OnTaskCompletion( NODE_JOB_TIMEOUT, workerTask, hostIP );
+        OnTaskCompletion( NODE_JOB_TIMEOUT, 0, workerTask, hostIP );
     }
 }
 

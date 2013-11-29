@@ -52,11 +52,11 @@ void ResultGetter::NotifyObserver( int event )
     awakeCond_.notify_all();
 }
 
-void ResultGetter::OnGetTaskResult( bool success, int errCode, const WorkerTask &workerTask, const std::string &hostIP )
+void ResultGetter::OnGetTaskResult( bool success, int errCode, int64_t execTime, const WorkerTask &workerTask, const std::string &hostIP )
 {
     if ( !success ) // retrieving of job result from message failed
         errCode = -1;
-    Scheduler::Instance().OnTaskCompletion( errCode, workerTask, hostIP );
+    Scheduler::Instance().OnTaskCompletion( errCode, execTime, workerTask, hostIP );
 }
 
 void ResultGetterBoost::Start()
@@ -74,10 +74,10 @@ void ResultGetterBoost::GetTaskResult( const WorkerTask &workerTask, const std::
     getter->GetTaskResult();
 }
 
-void ResultGetterBoost::OnGetTaskResult( bool success, int errCode, const WorkerTask &workerTask, const std::string &hostIP )
+void ResultGetterBoost::OnGetTaskResult( bool success, int errCode, int64_t execTime, const WorkerTask &workerTask, const std::string &hostIP )
 {
     getJobsSem_.Notify();
-    ResultGetter::OnGetTaskResult( success, errCode, workerTask, hostIP );
+    ResultGetter::OnGetTaskResult( success, errCode, execTime, workerTask, hostIP );
 }
 
 void GetterBoost::GetTaskResult()
@@ -113,7 +113,7 @@ void GetterBoost::HandleConnect( const boost::system::error_code &error )
     else
     {
         PS_LOG( "GetterBoost::HandleConnect error=" << error.message() );
-        getter_->OnGetTaskResult( false, 0, workerTask_, hostIP_ );
+        getter_->OnGetTaskResult( false, 0, 0, workerTask_, hostIP_ );
     }
 }
 
@@ -122,7 +122,7 @@ void GetterBoost::HandleWrite( const boost::system::error_code &error, size_t by
     if ( error )
     {
         PS_LOG( "GetterBoost::HandleWrite error=" << error.message() );
-        getter_->OnGetTaskResult( false, 0, workerTask_, hostIP_ );
+        getter_->OnGetTaskResult( false, 0, 0, workerTask_, hostIP_ );
     }
 }
 
@@ -176,14 +176,14 @@ void GetterBoost::HandleRead( const boost::system::error_code& error, size_t byt
         {
             if ( !HandleResponse() )
             {
-                getter_->OnGetTaskResult( false, 0, workerTask_, hostIP_ );
+                getter_->OnGetTaskResult( false, 0, 0, workerTask_, hostIP_ );
             }
         }
     }
     else
     {
         PS_LOG( "GetterBoost::HandleRead error=" << error.message() );
-        getter_->OnGetTaskResult( false, 0, workerTask_, hostIP_ );
+        getter_->OnGetTaskResult( false, 0, 0, workerTask_, hostIP_ );
     }
 }
 
@@ -221,9 +221,10 @@ bool GetterBoost::HandleResponse()
     if ( type == "send_job_result" )
     {
         int errCode;
-        if ( parser->ParseJobResult( body, errCode ) )
+        int64_t execTime;
+        if ( parser->ParseJobResult( body, errCode, execTime ) )
         {
-            getter_->OnGetTaskResult( true, errCode, workerTask_, hostIP_ );
+            getter_->OnGetTaskResult( true, errCode, execTime, workerTask_, hostIP_ );
             return true;
         }
     }

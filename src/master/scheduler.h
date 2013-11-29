@@ -38,7 +38,7 @@ public:
 
     void OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job );
 
-    void OnTaskCompletion( int errCode, const WorkerTask &workerTask, const std::string &hostIP );
+    void OnTaskCompletion( int errCode, int64_t execTime, const WorkerTask &workerTask, const std::string &hostIP );
 
     void OnTaskTimeout( const WorkerTask &workerTask, const std::string &hostIP );
     void OnJobTimeout( int64_t jobId );

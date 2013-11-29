@@ -97,9 +97,26 @@ public:
     PrExecConnection()
     : response_( true )
     {
+        commDescrPool->AllocCommDescr();
         CommDescr &commDescr = commDescrPool->GetCommDescr();
         socket_ = commDescr.socket.get();
         memset( buffer_.c_array(), 0, buffer_.size() );
+    }
+
+    ~PrExecConnection()
+    {
+        try
+        {
+            commDescrPool->FreeCommDescr();
+        }
+        catch( std::exception &e )
+        {
+            PS_LOG( "~PrExecConnection: " << e.what() );
+        }
+        catch( ... )
+        {
+            PS_LOG( "~PrExecConnection: unknow exception occured" );
+        }
     }
 
     int Send( const std::string &message )
@@ -149,6 +166,8 @@ public:
         errCode_ = NODE_FATAL;
         NotifyResponseCondVar();
     }
+
+    const boost::property_tree::ptree &GetResponsePtree() const { return responsePtree_; }
 
 private:
     void HandleWrite( const boost::system::error_code& error, size_t bytes_transferred )
@@ -218,9 +237,8 @@ private:
     {
         std::istringstream ss( response_.GetString() );
 
-        boost::property_tree::ptree ptree;
-        boost::property_tree::read_json( ss, ptree );
-        errCode_ = ptree.get<int>( "err" );
+        boost::property_tree::read_json( ss, responsePtree_ );
+        errCode_ = responsePtree_.get<int>( "err" );
     }
 
     void NotifyResponseCondVar()
@@ -233,6 +251,7 @@ private:
 private:
     tcp::socket *socket_;
     BufferType buffer_;
+    boost::property_tree::ptree responsePtree_;
     common::Request< BufferType > response_;
     bool completed_;
     boost::condition_variable responseCond_;
@@ -275,7 +294,7 @@ class ExecuteTask : public Action
         DoSend( job, firstTaskId );
     }
 
-    void SaveCompletionResults( const boost::shared_ptr< Job > &job, int taskId ) const
+    void SaveCompletionResults( const boost::shared_ptr< Job > &job, int taskId, int64_t execTime ) const
     {
         JobDescriptor descr;
         JobCompletionStat stat;
@@ -284,6 +303,7 @@ class ExecuteTask : public Action
         descr.masterIP = job->GetMasterIP();
         descr.masterId = job->GetMasterId();
         stat.errCode = job->GetErrorCode();
+        stat.execTime = execTime;
         JobCompletionTable::Instance().Set( descr, stat );
     }
 
@@ -349,7 +369,6 @@ class ExecuteTask : public Action
 public:
     void DoSend( const boost::shared_ptr< Job > &job, int taskId )
     {
-        commDescrPool->AllocCommDescr();
         PrExecConnection::connection_ptr prExecConnection( new PrExecConnection() );
 
         ExecInfo execInfo;
@@ -391,11 +410,14 @@ public:
         int errCode = prExecConnection->Send( ss2.str() );
         job->OnError( errCode );
 
+        // save completion results and ping master
         execTable.Delete( job->GetJobId(), taskId, job->GetMasterId() );
+        const boost::property_tree::ptree &responsePtree = prExecConnection->GetResponsePtree();
+        int64_t execTime = responsePtree.get< int64_t >( "elapsed" );
+        prExecConnection.reset();
 
-        commDescrPool->FreeCommDescr();
+        SaveCompletionResults( job, taskId, execTime );
 
-        SaveCompletionResults( job, taskId );
         NodeJobCompletionPing( job, taskId );
     }
 };
@@ -410,7 +432,6 @@ class StopTask : public Action
             return;
         }
 
-        commDescrPool->AllocCommDescr();
         PrExecConnection::connection_ptr prExecConnection( new PrExecConnection() );
 
         // prepare json command
@@ -428,8 +449,6 @@ class StopTask : public Action
 
         int errCode = prExecConnection->Send( ss2.str() );
         job->OnError( errCode );
-
-        commDescrPool->FreeCommDescr();
     }
 };
 
@@ -437,7 +456,6 @@ class StopPreviousJobs : public Action
 {
     virtual void Execute( const boost::shared_ptr< Job > &job )
     {
-        commDescrPool->AllocCommDescr();
         PrExecConnection::connection_ptr prExecConnection( new PrExecConnection() );
 
         // prepare json command
@@ -453,8 +471,6 @@ class StopPreviousJobs : public Action
 
         int errCode = prExecConnection->Send( ss2.str() );
         job->OnError( errCode );
-
-        commDescrPool->FreeCommDescr();
     }
 };
 
