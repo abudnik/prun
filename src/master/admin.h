@@ -117,8 +117,7 @@ class AdminSession : public boost::enable_shared_from_this< AdminSession >
 
 public:
     AdminSession( boost::asio::io_service &io_service )
-    : socket_( io_service ),
-     io_service_( io_service )
+    : socket_( io_service )
     {}
 
     ~AdminSession()
@@ -144,7 +143,6 @@ private:
     BufferType buffer_;
     std::string request_, response_;
     std::string remoteIP_;
-    boost::asio::io_service &io_service_;
 };
 
 class AdminConnection
