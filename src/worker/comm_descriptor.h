@@ -4,6 +4,7 @@
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/interprocess/sync/interprocess_semaphore.hpp>
 #include "common/log.h"
 #include "common/helper.h"
 #include "common/config.h"
@@ -101,28 +102,24 @@ public:
 
     bool AllocCommDescr()
     {
-        while( 1 )
+        boost::unique_lock< boost::mutex > lock( commDescrMut_ );
+
+        sem_->Wait();
+
+        if ( !bWorking_ )
+            return false;
+
+        for( size_t i = 0; i < commDescr_.size(); ++i )
         {
-            sem_->Wait();
+            if ( !commDescr_[i].used )
             {
-                boost::unique_lock< boost::mutex > lock( commDescrMut_ );
-
-                if ( !bWorking_ )
-                    break;
-
-                for( size_t i = 0; i < commDescr_.size(); ++i )
-                {
-                    if ( !commDescr_[i].used )
-                    {
-                        commDescr_[i].used = true;
-                        ThreadComm &threadComm = commParams_[ boost::this_thread::get_id() ];
-                        threadComm.connectId = i;
-                        return true;
-                    }
-                }
+                commDescr_[i].used = true;
+                ThreadComm &threadComm = commParams_[ boost::this_thread::get_id() ];
+                threadComm.connectId = i;
+                return true;
             }
-            PS_LOG( "AllocCommDescr: available communication descriptor not found" );
         }
+        PS_LOG( "AllocCommDescr: available communication descriptor not found" );
         return false;
     }
 
