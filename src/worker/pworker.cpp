@@ -413,7 +413,15 @@ public:
         // save completion results and ping master
         execTable.Delete( job->GetJobId(), taskId, job->GetMasterId() );
         const boost::property_tree::ptree &responsePtree = prExecConnection->GetResponsePtree();
-        int64_t execTime = responsePtree.get< int64_t >( "elapsed" );
+        int64_t execTime = 0;
+        try
+        {
+            execTime = responsePtree.get< int64_t >( "elapsed" );
+        }
+        catch( std::exception &e )
+        {
+            PS_LOG( "ExecuteTask::DoSend: " << e.what() );
+        }
         prExecConnection.reset();
 
         SaveCompletionResults( job, taskId, execTime );
