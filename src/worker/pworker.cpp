@@ -1080,6 +1080,8 @@ int main( int argc, char* argv[], char **envp )
 
         worker::execTable.Clear();
 
+        worker::commDescrPool->Shutdown();
+
         worker_threads.join_all();
     }
     catch( std::exception &e )
