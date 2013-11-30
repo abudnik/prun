@@ -97,17 +97,24 @@ public:
     PrExecConnection()
     : response_( true )
     {
-        commDescrPool->AllocCommDescr();
-        CommDescr &commDescr = commDescrPool->GetCommDescr();
-        socket_ = commDescr.socket.get();
-        memset( buffer_.c_array(), 0, buffer_.size() );
+        if ( commDescrPool->AllocCommDescr() )
+        {
+            CommDescr &commDescr = commDescrPool->GetCommDescr();
+            socket_ = commDescr.socket.get();
+            memset( buffer_.c_array(), 0, buffer_.size() );
+        }
+        else
+        {
+            socket_ = NULL;
+        }
     }
 
     ~PrExecConnection()
     {
         try
         {
-            commDescrPool->FreeCommDescr();
+            if ( socket_ )
+                commDescrPool->FreeCommDescr();
         }
         catch( std::exception &e )
         {
@@ -121,6 +128,12 @@ public:
 
     int Send( const std::string &message )
     {
+        if ( !socket_ )
+        {
+            PS_LOG( "PrExecConnection::Send: socket is not available" );
+            return NODE_FATAL;
+        }
+
         errCode_ = 0;
 
         completed_ = false;

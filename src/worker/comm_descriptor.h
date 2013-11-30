@@ -52,7 +52,7 @@ class CommDescrPool
 public:
     CommDescrPool( int numJobThreads, boost::asio::io_service *io_service, char *shmemAddr )
     : sem_( new common::Semaphore( numJobThreads ) ),
-     io_service_( io_service )
+     io_service_( io_service ), bWorking_( true )
     {
         for( int i = 0; i < numJobThreads; ++i )
         {
@@ -99,13 +99,17 @@ public:
         return commDescr_[ threadComm.connectId ];
     }
 
-    void AllocCommDescr()
+    bool AllocCommDescr()
     {
         while( 1 )
         {
             sem_->Wait();
             {
                 boost::unique_lock< boost::mutex > lock( commDescrMut_ );
+
+                if ( !bWorking_ )
+                    break;
+
                 for( size_t i = 0; i < commDescr_.size(); ++i )
                 {
                     if ( !commDescr_[i].used )
@@ -113,12 +117,13 @@ public:
                         commDescr_[i].used = true;
                         ThreadComm &threadComm = commParams_[ boost::this_thread::get_id() ];
                         threadComm.connectId = i;
-                        return;
+                        return true;
                     }
                 }
             }
             PS_LOG( "AllocCommDescr: available communication descriptor not found" );
         }
+        return false;
     }
 
     void FreeCommDescr()
@@ -130,6 +135,15 @@ public:
             threadComm.connectId = -1;
         }
         sem_->Notify();
+    }
+
+    void Shutdown()
+    {
+        {
+            boost::unique_lock< boost::mutex > lock( commDescrMut_ );
+            bWorking_ = false;
+        }
+        sem_->Reset();
     }
 
     boost::asio::io_service *GetIoService() const { return io_service_; }
@@ -148,6 +162,8 @@ private:
     CommParams commParams_;
     boost::scoped_ptr< common::Semaphore > sem_;
     boost::asio::io_service *io_service_;
+
+    bool bWorking_;
 };
 
 } // namespace worker

@@ -35,7 +35,7 @@ class Semaphore
 {
 public:
     Semaphore( unsigned int v )
-    : count_( v )
+    : count_( v ), initCount_( v )
     {}
 
     void Notify()
@@ -53,10 +53,17 @@ public:
         --count_;
     }
 
+    void Reset()
+    {
+        boost::mutex::scoped_lock lock( mutex_ );
+        count_ = initCount_;
+        condition_.notify_all();
+    }
+
 private:
     boost::mutex mutex_;
     boost::condition_variable condition_;
-    unsigned int count_;
+    unsigned int count_, initCount_;
 };
 
 class SyncTimer
