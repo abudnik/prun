@@ -52,7 +52,7 @@ public:
     GetterBoost( boost::asio::io_service &io_service,
                  ResultGetter *getter, const WorkerTask &workerTask,
                  const std::string &hostIP )
-    : io_service_( io_service ), socket_( io_service ),
+    : socket_( io_service ),
      response_( false ), firstRead_( true ),
      getter_( getter ), workerTask_( workerTask ),
      hostIP_( hostIP )
@@ -74,7 +74,6 @@ private:
     bool HandleResponse();
 
 private:
-    boost::asio::io_service &io_service_;
     tcp::socket socket_;
     BufferType buffer_;
     common::Request< BufferType > response_;

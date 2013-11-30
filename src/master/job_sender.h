@@ -52,7 +52,7 @@ public:
     SenderBoost( boost::asio::io_service &io_service, int sendBufferSize,
                  JobSender *sender, const WorkerJob &workerJob,
                  const std::string &hostIP, const Job *job )
-    : io_service_( io_service ), socket_( io_service ),
+    : socket_( io_service ),
      sender_( sender ), workerJob_( workerJob ),
      hostIP_( hostIP ), job_( job )
     {}
@@ -69,7 +69,6 @@ private:
     void HandleRead( const boost::system::error_code &error, size_t bytes_transferred );
 
 private:
-    boost::asio::io_service &io_service_;
     tcp::socket socket_;
     std::string request_;
     char response_;

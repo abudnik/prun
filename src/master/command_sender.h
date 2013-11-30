@@ -54,7 +54,7 @@ public:
     RpcBoost( boost::asio::io_service &io_service,
                  CommandSender *sender, CommandPtr &command,
                  const std::string &hostIP )
-    : io_service_( io_service ), socket_( io_service ),
+    : socket_( io_service ),
      response_( false ), firstRead_( true ),
      sender_( sender ), command_( command ),
      hostIP_( hostIP )
@@ -76,7 +76,6 @@ private:
     bool HandleResponse();
 
 private:
-    boost::asio::io_service &io_service_;
     tcp::socket socket_;
     BufferType buffer_;
     common::Request< BufferType > response_;

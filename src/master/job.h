@@ -26,7 +26,7 @@ class Job;
 class JobGroup
 {
 public:
-    typedef typename boost::property_map< JobGraph, boost::vertex_index_t >::type PropertyMap;
+    typedef boost::property_map< JobGraph, boost::vertex_index_t >::type PropertyMap;
 
 public:
     void OnJobCompletion( const JobVertex &vertex );
