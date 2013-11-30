@@ -766,15 +766,7 @@ void SigHandler( int s )
     if ( s == SIGCHLD )
     {
         int status;
-        pid_t pid = waitpid( worker::prexecPid, &status, WNOHANG );
-        // if ( pid != worker::prexecPid )
-        // {
-        //  PS_LOG( "SigHandler: waitpid() failed, pid= " << worker::prexecPid << ", err= " << strerror(errno) );
-        // }
-        // else
-        // {
-        //  PS_LOG( "PrExec proccess stopped (" << status << ")" );
-        // }
+        waitpid( -1, &status, WNOHANG );
     }
 }
 
