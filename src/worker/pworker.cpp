@@ -704,7 +704,7 @@ private:
         session_ptr session( new BoostSession( io_service_ ) );
         acceptor_.async_accept( session->GetSocket(),
                                 boost::bind( &ConnectionAcceptor::HandleAccept, this,
-                                            session, boost::asio::placeholders::error ) );
+                                             session, boost::asio::placeholders::error ) );
     }
 
     void HandleAccept( session_ptr session, const boost::system::error_code &error )

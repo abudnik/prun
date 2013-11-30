@@ -911,10 +911,10 @@ protected:
         GetResponse( response_ );
 
         boost::asio::async_write( socket_,
-                                boost::asio::buffer( response_ ),
-                                boost::bind( &SessionBoost::HandleWrite, shared_from_this(),
-                                             boost::asio::placeholders::error,
-                                             boost::asio::placeholders::bytes_transferred ) );
+                                  boost::asio::buffer( response_ ),
+                                  boost::bind( &SessionBoost::HandleWrite, shared_from_this(),
+                                               boost::asio::placeholders::error,
+                                               boost::asio::placeholders::bytes_transferred ) );
     }
 
     void HandleWrite( const boost::system::error_code& error, size_t bytes_transferred )
