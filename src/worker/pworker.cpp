@@ -95,19 +95,9 @@ public:
 
 public:
     PrExecConnection()
-    : response_( true )
-    {
-        if ( commDescrPool->AllocCommDescr() )
-        {
-            CommDescr &commDescr = commDescrPool->GetCommDescr();
-            socket_ = commDescr.socket.get();
-            memset( buffer_.c_array(), 0, buffer_.size() );
-        }
-        else
-        {
-            socket_ = NULL;
-        }
-    }
+    : socket_( NULL ),
+     response_( true )
+    {}
 
     ~PrExecConnection()
     {
@@ -124,6 +114,22 @@ public:
         {
             PS_LOG( "~PrExecConnection: unknow exception occured" );
         }
+    }
+
+    bool Init()
+    {
+        if ( commDescrPool->AllocCommDescr() )
+        {
+            CommDescr &commDescr = commDescrPool->GetCommDescr();
+            socket_ = commDescr.socket.get();
+            memset( buffer_.c_array(), 0, buffer_.size() );
+            return true;
+        }
+        else
+        {
+            PS_LOG( "PrExecConnection::Init: AllocCommDescr failed" );
+        }
+        return false;
     }
 
     int Send( const std::string &message )
@@ -383,6 +389,8 @@ public:
     void DoSend( const boost::shared_ptr< Job > &job, int taskId )
     {
         PrExecConnection::connection_ptr prExecConnection( new PrExecConnection() );
+        if ( !prExecConnection->Init() )
+            return;
 
         ExecInfo execInfo;
         execInfo.jobId_ = job->GetJobId();
@@ -454,6 +462,8 @@ class StopTask : public Action
         }
 
         PrExecConnection::connection_ptr prExecConnection( new PrExecConnection() );
+        if ( !prExecConnection->Init() )
+            return;
 
         // prepare json command
         boost::property_tree::ptree ptree;
@@ -478,6 +488,8 @@ class StopPreviousJobs : public Action
     virtual void Execute( const boost::shared_ptr< Job > &job )
     {
         PrExecConnection::connection_ptr prExecConnection( new PrExecConnection() );
+        if ( !prExecConnection->Init() )
+            return;
 
         // prepare json command
         boost::property_tree::ptree ptree;
