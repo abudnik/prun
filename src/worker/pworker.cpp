@@ -995,7 +995,7 @@ int main( int argc, char* argv[], char **envp )
 
         boost::scoped_ptr< worker::CommDescrPool > commDescrPool(
             new worker::CommDescrPool( worker::numJobThreads, &io_service,
-                                              (char*)worker::mappedRegion->get_address() ) );
+                                       (char*)worker::mappedRegion->get_address() ) );
         worker::commDescrPool = commDescrPool.get();
 
         worker::taskSem = new common::Semaphore( worker::numJobThreads );

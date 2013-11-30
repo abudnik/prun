@@ -92,12 +92,6 @@ public:
         }
     }
 
-    void AddCommDescr( const CommDescr &descr )
-    {
-        boost::unique_lock< boost::mutex > lock( commDescrMut_ );
-        commDescr_.push_back( descr );
-    }
-
     CommDescr &GetCommDescr()
     {
         boost::unique_lock< boost::mutex > lock( commDescrMut_ );
@@ -107,19 +101,24 @@ public:
 
     void AllocCommDescr()
     {
-        sem_->Wait();
-        boost::unique_lock< boost::mutex > lock( commDescrMut_ );
-        for( size_t i = 0; i < commDescr_.size(); ++i )
+        while( 1 )
         {
-            if ( !commDescr_[i].used )
+            sem_->Wait();
             {
-                commDescr_[i].used = true;
-                ThreadComm &threadComm = commParams_[ boost::this_thread::get_id() ];
-                threadComm.connectId = i;
-                return;
+                boost::unique_lock< boost::mutex > lock( commDescrMut_ );
+                for( size_t i = 0; i < commDescr_.size(); ++i )
+                {
+                    if ( !commDescr_[i].used )
+                    {
+                        commDescr_[i].used = true;
+                        ThreadComm &threadComm = commParams_[ boost::this_thread::get_id() ];
+                        threadComm.connectId = i;
+                        return;
+                    }
+                }
             }
+            PS_LOG( "AllocCommDescr: available communication descriptor not found" );
         }
-        PS_LOG( "AllocCommDescr: available communication descriptor not found" );
     }
 
     void FreeCommDescr()
@@ -134,6 +133,13 @@ public:
     }
 
     boost::asio::io_service *GetIoService() const { return io_service_; }
+
+private:
+    void AddCommDescr( const CommDescr &descr )
+    {
+        boost::unique_lock< boost::mutex > lock( commDescrMut_ );
+        commDescr_.push_back( descr );
+    }
 
 private:
     std::vector< CommDescr > commDescr_;

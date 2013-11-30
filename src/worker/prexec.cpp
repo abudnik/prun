@@ -73,6 +73,32 @@ ThreadInfo threadInfo;
 
 ExecTable execTable;
 
+struct ChildProcesses
+{
+    void Add( pid_t pid )
+    {
+        boost::unique_lock< boost::mutex > lock( mut_ );
+        pids_.insert( pid );
+    }
+
+    bool Delete( pid_t pid )
+    {
+        boost::unique_lock< boost::mutex > lock( mut_ );
+        std::set< pid_t >::iterator it = pids_.find( pid );
+        if ( it != pids_.end() )
+        {
+            pids_.erase( it );
+            return true;
+        }
+        return false;
+    }
+
+private:
+    std::set< pid_t > pids_;
+    boost::mutex mut_;
+};
+ChildProcesses childProcesses;
+
 
 class Job
 {
@@ -187,29 +213,36 @@ public:
         {
             pid_t pid = execInfo.pid_;
 
-            int fifo = FindFifo( pid );
-            if ( fifo != -1 )
+            if ( !childProcesses.Delete( pid ) )
             {
-                int errCode = NODE_JOB_TIMEOUT;
-                int ret = write( fifo, &errCode, sizeof( errCode ) );
-                if ( ret == -1 )
-                    PS_LOG( "StopTaskAction::StopTask: write fifo failed, err=" << strerror(errno) );
-            }
-            else
-            {
-                PS_LOG( "StopTaskAction::StopTask: fifo not found for pid=" << pid );
+                PS_LOG( "StopTaskAction::StopTask: child process already terminated" );
+                job.OnError( NODE_TASK_NOT_FOUND );
+                return;
             }
 
             int ret = kill( pid, SIGTERM );
-            if ( ret == -1 )
+            if ( ret != -1 )
             {
-                PS_LOG( "StopTaskAction::StopTask: process killing failed: pid=" << pid << ", err=" << strerror(errno) );
-                job.OnError( NODE_FATAL );
+                int fifo = FindFifo( pid );
+                if ( fifo != -1 )
+                {
+                    int errCode = NODE_JOB_TIMEOUT;
+                    int ret = write( fifo, &errCode, sizeof( errCode ) );
+                    if ( ret == -1 )
+                        PS_LOG( "StopTaskAction::StopTask: write fifo failed, err=" << strerror(errno) );
+                }
+                else
+                {
+                    PS_LOG( "StopTaskAction::StopTask: fifo not found for pid=" << pid );
+                }
+
+                PS_LOG( "StopTaskAction::StopTask: task stopped, pid=" << pid <<
+                        ", jobId=" << job.GetJobId() << ", taskId=" << job.GetTaskId() );
             }
             else
             {
-                PS_LOG( "StopTaskAction::StopTask: task stopped, pid=" << pid <<
-                        ", jobId=" << job.GetJobId() << ", taskId=" << job.GetTaskId() );
+                PS_LOG( "StopTaskAction::StopTask: process killing failed: pid=" << pid << ", err=" << strerror(errno) );
+                job.OnError( NODE_FATAL );
             }
         }
         else
@@ -297,7 +330,8 @@ public:
     {
         PS_LOG( "poll timed out, trying to kill process: " << pid );
 
-        if ( execTable.Delete( job_->GetJobId(), job_->GetTaskId(), job_->GetMasterId() ) )
+        if ( execTable.Delete( job_->GetJobId(), job_->GetTaskId(), job_->GetMasterId() ) &&
+             childProcesses.Delete( pid ) )
         {
             int ret = kill( pid, SIGTERM );
             if ( ret == -1 )
@@ -334,7 +368,7 @@ protected:
 
         if ( pid > 0 )
         {
-            //PS_LOG( "wait child " << pid );
+            childProcesses.Add( pid );
             ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
             threadParams.pid = pid;
 
@@ -364,7 +398,6 @@ protected:
             }
 
             execTable.Delete( job_->GetJobId(), job_->GetTaskId(), job_->GetMasterId() );
-            //PS_LOG( "wait child done " << pid );
         }
         else
         if ( pid == 0 )
@@ -971,7 +1004,9 @@ void SigHandler( int s )
         {
             int status;
             pid_t pid = waitpid( -1, &status, WNOHANG );
-            if ( pid <= 0 )
+            if ( pid > 0 )
+                worker::childProcesses.Delete( pid );
+            else
                 break;
         }
     }
