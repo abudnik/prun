@@ -99,23 +99,6 @@ public:
      response_( true )
     {}
 
-    ~PrExecConnection()
-    {
-        try
-        {
-            if ( socket_ )
-                commDescrPool->FreeCommDescr();
-        }
-        catch( std::exception &e )
-        {
-            PS_LOG( "~PrExecConnection: " << e.what() );
-        }
-        catch( ... )
-        {
-            PS_LOG( "~PrExecConnection: unknow exception occured" );
-        }
-    }
-
     bool Init()
     {
         if ( commDescrPool->AllocCommDescr() )
@@ -130,6 +113,12 @@ public:
             PS_LOG( "PrExecConnection::Init: AllocCommDescr failed" );
         }
         return false;
+    }
+
+    void Release()
+    {
+        if ( socket_ )
+            commDescrPool->FreeCommDescr();
     }
 
     int Send( const std::string &message )
@@ -431,6 +420,8 @@ public:
         int errCode = prExecConnection->Send( ss2.str() );
         job->OnError( errCode );
 
+        prExecConnection->Release();
+
         // save completion results and ping master
         execTable.Delete( job->GetJobId(), taskId, job->GetMasterId() );
         const boost::property_tree::ptree &responsePtree = prExecConnection->GetResponsePtree();
@@ -443,7 +434,6 @@ public:
         {
             PS_LOG( "ExecuteTask::DoSend: " << e.what() );
         }
-        prExecConnection.reset();
 
         SaveCompletionResults( job, taskId, execTime );
 
@@ -480,6 +470,8 @@ class StopTask : public Action
 
         int errCode = prExecConnection->Send( ss2.str() );
         job->OnError( errCode );
+
+        prExecConnection->Release();
     }
 };
 
@@ -504,6 +496,8 @@ class StopPreviousJobs : public Action
 
         int errCode = prExecConnection->Send( ss2.str() );
         job->OnError( errCode );
+
+        prExecConnection->Release();
     }
 };
 

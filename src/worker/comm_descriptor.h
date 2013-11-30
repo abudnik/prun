@@ -53,7 +53,7 @@ class CommDescrPool
 public:
     CommDescrPool( int numJobThreads, boost::asio::io_service *io_service, char *shmemAddr )
     : sem_( new common::Semaphore( numJobThreads ) ),
-     io_service_( io_service ), bWorking_( true )
+     io_service_( io_service )
     {
         for( int i = 0; i < numJobThreads; ++i )
         {
@@ -102,12 +102,9 @@ public:
 
     bool AllocCommDescr()
     {
-        boost::unique_lock< boost::mutex > lock( commDescrMut_ );
-
         sem_->Wait();
 
-        if ( !bWorking_ )
-            return false;
+        boost::unique_lock< boost::mutex > lock( commDescrMut_ );
 
         for( size_t i = 0; i < commDescr_.size(); ++i )
         {
@@ -136,10 +133,6 @@ public:
 
     void Shutdown()
     {
-        {
-            boost::unique_lock< boost::mutex > lock( commDescrMut_ );
-            bWorking_ = false;
-        }
         sem_->Reset();
     }
 
@@ -159,8 +152,6 @@ private:
     CommParams commParams_;
     boost::scoped_ptr< common::Semaphore > sem_;
     boost::asio::io_service *io_service_;
-
-    bool bWorking_;
 };
 
 } // namespace worker
