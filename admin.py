@@ -3,7 +3,6 @@ import socket
 import json
 import getopt
 import time
-from threading import Thread
 
 MASTER_HOST = 'localhost'
 MASTER_PORT = 5557

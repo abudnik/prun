@@ -79,7 +79,6 @@ int AdminCommand_Run::RunJob( std::ifstream &file, const std::string &jobAlias, 
         {
             job->SetAlias( jobAlias );
             PrintJobInfo( job, result );
-            // job->SetCallback( session, &common::JsonRpcCaller::RpcCall );
             // add job to job queue
             JobManager::Instance().PushJob( job );
         }
