@@ -1,0 +1,15 @@
+{
+    "script" : "test/example/hello.py",
+    "language" : "python",
+    "send_script" : true,
+    "priority" : 8,
+    "job_timeout" : 120,
+    "queue_timeout" : -1,
+    "task_timeout" : 120,
+    "max_failed_nodes" : 10,
+    "num_execution" : -1,
+    "max_cluster_cpu" : 1,
+    "max_cpu" : 1,
+    "exclusive" : false,
+    "no_reschedule" : false
+}
