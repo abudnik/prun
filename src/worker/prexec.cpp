@@ -518,7 +518,7 @@ protected:
     {
         pollfd pfd[1];
         pfd[0].fd = fifo;
-        pfd[0].events = POLLIN;
+        pfd[0].events = POLLIN | POLLERR;
 
         int timeout = job_->GetTimeout();
         if ( timeout > 0 )
@@ -1340,11 +1340,12 @@ int main( int argc, char* argv[], char **envp )
             PS_LOG( "main(): sigwait failed: " << strerror(errno) );
         }
 
-        CleanupThreads();
+        io_service.stop();
 
         worker::execTable.Clear();
 
-        io_service.stop();
+        CleanupThreads();
+
         worker_threads.join_all();
     }
     catch( std::exception &e )
