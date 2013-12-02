@@ -133,6 +133,10 @@ public:
 
     void Shutdown()
     {
+        {
+            boost::unique_lock< boost::mutex > lock( commDescrMut_ );
+            commDescr_.clear();
+        }
         sem_->Reset();
     }
 

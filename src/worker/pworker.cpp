@@ -1089,11 +1089,11 @@ int main( int argc, char* argv[], char **envp )
         work.reset();
         io_service.stop();
 
-        worker::taskSem->Notify();
-
         worker::connectionTable.Clear();
 
         worker::commDescrPool->Shutdown();
+
+        worker::taskSem->Notify();
 
         worker_threads.join_all();
     }
