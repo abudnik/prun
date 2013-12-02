@@ -22,9 +22,13 @@ try {
     var fifo = fs.openSync(readFifo, "r");
 
     var buffer = new Buffer(scriptLen);
-    fs.readSync(fifo, buffer, 0, scriptLen, null);
+    var bytesReaded = 0;
+    while( bytesReaded < scriptLen ) {
+        var num = fs.readSync(fifo, buffer, bytesReaded, scriptLen - bytesReaded, null);
+        bytesReaded += num;
+    }
 
-    var data = buffer.toString("utf8", 0, buffer.length);
+    var data = buffer.toString("utf8", 0, bytesReaded);
 
     var inject = "var taskId=" + taskId + ";\n";
     inject += "var numTasks=" + numTasks + ";\n";
