@@ -1116,12 +1116,8 @@ void Impersonate()
     }
 }
 
-void AtExit()
+void CleanupThreads()
 {
-    if ( worker::isFork )
-        return;
-
-    // cleanup threads
     worker::ThreadInfo::iterator it;
     for( it = worker::threadInfo.begin();
          it != worker::threadInfo.end();
@@ -1130,17 +1126,37 @@ void AtExit()
         worker::ThreadParams &threadParams = it->second;
 
         if ( threadParams.readFifoFD != -1 )
+        {
             close( threadParams.readFifoFD );
+            threadParams.readFifoFD = -1;
+        }
 
         if ( !threadParams.readFifo.empty() )
+        {
             unlink( threadParams.readFifo.c_str() );
+            threadParams.readFifo.clear();
+        }
 
         if ( threadParams.writeFifoFD != -1 )
+        {
             close( threadParams.writeFifoFD );
+            threadParams.writeFifoFD = -1;
+        }
 
         if ( !threadParams.writeFifo.empty() )
+        {
             unlink( threadParams.writeFifo.c_str() );
+            threadParams.writeFifo.clear();
+        }
     }
+}
+
+void AtExit()
+{
+    if ( worker::isFork )
+        return;
+
+    CleanupThreads();
 
     delete worker::mappedRegion;
     worker::mappedRegion = NULL;
@@ -1323,6 +1339,8 @@ int main( int argc, char* argv[], char **envp )
                 break;
             PS_LOG( "main(): sigwait failed: " << strerror(errno) );
         }
+
+        CleanupThreads();
 
         worker::execTable.Clear();
 
