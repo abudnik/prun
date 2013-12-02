@@ -72,6 +72,7 @@ common::Semaphore *taskSem;
 CommDescrPool *commDescrPool;
 
 ExecTable execTable;
+ExecConnectionTable connectionTable;
 
 
 class Action
@@ -106,6 +107,10 @@ public:
             CommDescr &commDescr = commDescrPool->GetCommDescr();
             socket_ = commDescr.socket.get();
             memset( buffer_.c_array(), 0, buffer_.size() );
+
+            ExecConnection execConnection;
+            execConnection.callback_ = boost::bind( &PrExecConnection::Cancel, shared_from_this() );
+            connectionTable.Add( execConnection );
             return true;
         }
         else
@@ -118,7 +123,10 @@ public:
     void Release()
     {
         if ( socket_ )
+        {
+            connectionTable.Delete();
             commDescrPool->FreeCommDescr();
+        }
     }
 
     int Send( const std::string &message )
@@ -136,9 +144,9 @@ public:
         try
         {
             socket_->async_read_some( boost::asio::buffer( buffer_ ),
-                                     boost::bind( &PrExecConnection::FirstRead, shared_from_this(),
-                                                  boost::asio::placeholders::error,
-                                                  boost::asio::placeholders::bytes_transferred ) );
+                                      boost::bind( &PrExecConnection::FirstRead, shared_from_this(),
+                                                   boost::asio::placeholders::error,
+                                                   boost::asio::placeholders::bytes_transferred ) );
 
             boost::asio::async_write( *socket_,
                                       boost::asio::buffer( message ),
@@ -385,7 +393,6 @@ public:
         execInfo.jobId_ = job->GetJobId();
         execInfo.taskId_ = taskId;
         execInfo.masterId_ = job->GetMasterId();
-        execInfo.callback_ = boost::bind( &PrExecConnection::Cancel, prExecConnection );
         execTable.Add( execInfo );
 
         // write script into shared memory
@@ -1084,7 +1091,7 @@ int main( int argc, char* argv[], char **envp )
 
         worker::taskSem->Notify();
 
-        worker::execTable.Clear();
+        worker::connectionTable.Clear();
 
         worker::commDescrPool->Shutdown();
 
