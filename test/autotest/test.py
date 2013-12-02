@@ -42,6 +42,19 @@ def RunTests():
     cmd = 'python admin.py -c "' + task + '"'
     os.system( cmd )
 
+def AddExistingUser():
+    task = ''
+    for i in range(0, 100):
+        task += 'add localhost groupx;'
+    cmd = 'python admin.py -c "' + task + '"'
+    os.system( cmd )
+
+def StopAll():
+    cmd = 'python admin.py -c "stopall"'
+    os.system( cmd )
+
 RunTests()
+AddExistingUser()
+StopAll()
 
 print( 'done' )
