@@ -13,7 +13,9 @@ try:
     numTasks = int(sys.argv[5])
 
     fifo = os.open( readFifo, os.O_RDONLY )
-    s = os.read( fifo, scriptLen )
+    s = ''
+    while len(s) < scriptLen:
+        s += os.read( fifo, scriptLen )
 
     exec( s, {"taskId":taskId, "numTasks":numTasks} )
 except Exception as e:
