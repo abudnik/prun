@@ -8,7 +8,10 @@ begin
   numTasks = ARGV[4]
 
   fifo = File.open(readFifo, 'r')
-  buffer = fifo.read( scriptLen )
+  buffer = ''
+  while buffer.length < scriptLen do
+      buffer += fifo.read( scriptLen )
+  end
 
   inject = "taskId=" + taskId + "\n"
   inject += "numTasks=" + numTasks + "\n"

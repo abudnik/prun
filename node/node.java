@@ -33,8 +33,17 @@ public class node {
 
             FileInputStream fifo = new FileInputStream( readFifo );
 			byte[] bytes = new byte[ (int)scriptLen ];
-            fifo.read( bytes );
-            String s = new String( bytes, "UTF-8" );
+            String s = new String();
+            long bytesReaded = 0;
+            while( bytesReaded < scriptLen )
+            {
+                int num = fifo.read( bytes );
+                if ( num == -1 )
+                    break;
+
+                s = s.concat( new String( bytes, 0, num, "UTF-8" ) );
+                bytesReaded += num;
+            }
 
             String className = "Main";
 
