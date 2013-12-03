@@ -574,8 +574,7 @@ public:
 public:
     BoostSession( boost::asio::io_service &io_service )
     : socket_( io_service ),
-     request_( false ),
-     io_service_( io_service )
+     request_( false )
     {}
 
     virtual ~BoostSession()
@@ -691,7 +690,6 @@ protected:
     common::Request< BufferType > request_;
     char readStatus_;
     std::string response_;
-    boost::asio::io_service &io_service_;
 };
 
 
