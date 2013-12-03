@@ -28,12 +28,12 @@ public:
 
     void Run();
 
-    virtual void OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job );
+    virtual void OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const JobPtr &job );
 
 private:
     virtual void NotifyObserver( int event );
 
-    virtual void SendJob( const WorkerJob &workerJob, const std::string &hostIP, const Job *job ) = 0;
+    virtual void SendJob( const WorkerJob &workerJob, const std::string &hostIP, JobPtr &job ) = 0;
 
 private:
     bool stopped_;
@@ -51,7 +51,7 @@ public:
 public:
     SenderBoost( boost::asio::io_service &io_service, int sendBufferSize,
                  JobSender *sender, const WorkerJob &workerJob,
-                 const std::string &hostIP, const Job *job )
+                 const std::string &hostIP, JobPtr &job )
     : socket_( io_service ),
      sender_( sender ), workerJob_( workerJob ),
      hostIP_( hostIP ), job_( job )
@@ -75,7 +75,7 @@ private:
     JobSender *sender_;
     WorkerJob workerJob_;
     std::string hostIP_;
-    const Job *job_;
+    JobPtr job_;
 };
 
 class JobSenderBoost : public JobSender
@@ -93,9 +93,9 @@ public:
     virtual void Start();
 
 private:
-    virtual void SendJob( const WorkerJob &workerJob, const std::string &hostIP, const Job *job );
+    virtual void SendJob( const WorkerJob &workerJob, const std::string &hostIP, JobPtr &job );
 
-    virtual void OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job );
+    virtual void OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const JobPtr &job );
 
 private:
     boost::asio::io_service &io_service_;

@@ -46,8 +46,9 @@ void JobQueue::PushJob( Job *job, int64_t groupId )
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     job->SetGroupId( groupId );
-    jobs_.push_back( job );
-    idToJob_[ job->GetJobId() ] = job;
+    JobPtr j( job );
+    jobs_.push_back( j );
+    idToJob_[ job->GetJobId() ] = j;
     ++numJobs_;
 }
 
@@ -59,19 +60,23 @@ void JobQueue::PushJobs( std::list< Job * > &jobs, int64_t groupId )
     {
         Job *job = *it;
         job->SetGroupId( groupId );
-        jobs_.push_back( job );
-        idToJob_[ job->GetJobId() ] = job;
+        JobPtr j( job );
+        jobs_.push_back( j );
+        idToJob_[ job->GetJobId() ] = j;
         ++numJobs_;
     }
 }
 
-Job *JobQueue::GetJobById( int64_t jobId )
+bool JobQueue::GetJobById( int64_t jobId, JobPtr &job )
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     IdToJob::const_iterator it = idToJob_.find( jobId );
     if ( it != idToJob_.end() )
-        return it->second;
-    return NULL;
+    {
+        job = it->second;
+        return true;
+    }
+    return false;
 }
 
 bool JobQueue::DeleteJob( int64_t jobId )
@@ -88,7 +93,7 @@ bool JobQueue::DeleteJob( int64_t jobId )
     JobList::iterator it = jobs_.begin();
     for( ; it != jobs_.end(); ++it )
     {
-        Job *job = *it;
+        JobPtr &job = *it;
         std::ostringstream ss;
         ss << "================" << std::endl <<
             "Job deleted from job queue, jobId = " << job->GetJobId() << std::endl <<
@@ -103,7 +108,6 @@ bool JobQueue::DeleteJob( int64_t jobId )
 
         job->RunCallback( "on_job_deletion", params );
         job->ReleaseJobGroup();
-        delete job;
 
         jobs_.erase( it );
         --numJobs_;
@@ -114,14 +118,14 @@ bool JobQueue::DeleteJob( int64_t jobId )
 
 bool JobQueue::DeleteJobGroup( int64_t groupId )
 {
-    std::list< Job * > jobs;
+    JobList jobs;
     bool deleted = false;
     {
         boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-        JobList::const_iterator it = jobs_.begin();
+        JobList::iterator it = jobs_.begin();
         for( ; it != jobs_.end(); ++it )
         {
-            Job *job = *it;
+            JobPtr &job = *it;
             if ( job->GetGroupId() == groupId )
                 jobs.push_back( job );
         }
@@ -130,7 +134,7 @@ bool JobQueue::DeleteJobGroup( int64_t groupId )
     JobList::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
-        const Job *job = *it;
+        const JobPtr &job = *it;
         if ( job->GetGroupId() == groupId )
             deleted = DeleteJob( job->GetJobId() );
     }
@@ -138,7 +142,7 @@ bool JobQueue::DeleteJobGroup( int64_t groupId )
     return deleted;
 }
 
-Job *JobQueue::PopJob()
+bool JobQueue::PopJob( JobPtr &job )
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     if ( numJobs_ )
@@ -146,50 +150,35 @@ Job *JobQueue::PopJob()
         JobList jobs;
         Sort( jobs );
 
-        JobList::const_iterator it = jobs.begin();
+        JobList::iterator it = jobs.begin();
         for( ; it != jobs.end(); ++it )
         {
-            Job *job = *it;
-            if ( job->GetNumDepends() > 0 )
+            JobPtr &j = *it;
+            if ( j->GetNumDepends() > 0 )
                 continue;
 
             JobList::iterator i = jobs_.begin();
             for( ; i != jobs_.end(); ++i )
             {
-                if ( job == *i )
+                if ( j == *i )
                 {
                     jobs_.erase( i );
                     break;
                 }
             }
 
-            idToJob_.erase( job->GetJobId() );
+            idToJob_.erase( j->GetJobId() );
             --numJobs_;
-            return job;
+            job = j;
+            return true;
         }
     }
-    return NULL;
+    return false;
 }
 
-Job *JobQueue::GetTopJob()
+void JobQueue::Clear()
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-    if ( numJobs_ )
-        return jobs_.front();
-    return NULL;
-}
-
-void JobQueue::Clear( bool doDelete )
-{
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-    if ( doDelete )
-    {
-        JobList::iterator it = jobs_.begin();
-        for( ; it != jobs_.end(); ++it )
-        {
-            delete *it;
-        }
-    }
     jobs_.clear();
     idToJob_.clear();
     numJobs_ = 0;
@@ -197,7 +186,7 @@ void JobQueue::Clear( bool doDelete )
 
 struct JobComparatorPriority
 {
-    bool operator() ( const Job *a, const Job *b ) const
+    bool operator() ( const JobPtr &a, const JobPtr &b ) const
     {
         if ( a->GetPriority() < b->GetPriority() )
             return true;
@@ -212,10 +201,10 @@ struct JobComparatorPriority
 
 void JobQueue::Sort( JobList &jobs )
 {
-    JobList::const_iterator it = jobs_.begin();
+    JobList::iterator it = jobs_.begin();
     for( ; it != jobs_.end(); ++it )
     {
-        Job *job = *it;
+        JobPtr &job = *it;
         if ( job->GetNumDepends() == 0 )
         {
             jobs.push_back( job );

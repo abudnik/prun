@@ -112,8 +112,8 @@ void Scheduler::OnNewJob()
 
 void Scheduler::PlanJobExecution()
 {
-    Job *job = JobManager::Instance().PopJob();
-    if ( !job )
+    JobPtr job;
+    if ( !JobManager::Instance().PopJob( job ) )
         return;
 
     int numExec = GetNumPlannedExec( job );
@@ -148,8 +148,8 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
     for( ; it != jobs.end(); ++it )
     {
         int64_t jobId = *it;
-        const Job *job = jobs_.FindJobByJobId( jobId );
-        if ( job )
+        JobPtr job;
+        if ( jobs_.FindJobByJobId( jobId, job ) )
         {
             size_t failedNodesCnt = failedWorkers_.GetFailedNodesCnt( jobId );
             if ( failedNodesCnt >= (size_t)job->GetMaxFailedNodes() )
@@ -183,7 +183,7 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
     return found;
 }
 
-bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob, Job **job, int numFreeCPU )
+bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob, JobPtr &job, int numFreeCPU )
 {
     int64_t jobId;
     bool foundReschedJob = false;
@@ -199,8 +199,8 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
 
             const WorkerTask &workerTask = *it;
 
-            *job = jobs_.FindJobByJobId( workerTask.GetJobId() );
-            if ( !*job || !CanAddTaskToWorker( worker->GetJob(), plannedJob, workerTask.GetJobId(), *job ) )
+            if ( !jobs_.FindJobByJobId( workerTask.GetJobId(), job ) ||
+                 !CanAddTaskToWorker( worker->GetJob(), plannedJob, workerTask.GetJobId(), job ) )
             {
                 ++it;
                 continue;
@@ -220,8 +220,8 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
                 jobId = workerTask.GetJobId();
                 if ( !failedWorkers_.IsWorkerFailedJob( worker->GetIP(), jobId ) )
                 {
-                    if ( (*job)->IsHostPermitted( worker->GetHost() ) &&
-                         (*job)->IsGroupPermitted( worker->GetGroup() ) )
+                    if ( job->IsHostPermitted( worker->GetHost() ) &&
+                         job->IsGroupPermitted( worker->GetGroup() ) )
                     {
                         foundReschedJob = true;
                         plannedJob.AddTask( jobId, workerTask.GetTaskId() );
@@ -238,7 +238,7 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
     ScheduledJobs::JobList::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
-        const Job *j = *it;
+        const JobPtr &j = *it;
 
         // plannedJob tasks must belong to the only one job,
         // so jobId must be the same
@@ -258,7 +258,7 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
         std::set< int > &tasks = it->second;
         if ( !tasks.empty() )
         {
-            *job = const_cast<Job *>( j );
+            job = const_cast<JobPtr &>( j );
             if ( !j->IsHostPermitted( worker->GetHost() ) ||
                  !j->IsGroupPermitted( worker->GetGroup() ) )
                 continue;
@@ -287,7 +287,7 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
     return plannedJob.GetTotalNumTasks() > 0;
 }
 
-bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **job )
+bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, JobPtr &job )
 {
     boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
 
@@ -324,7 +324,7 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **
     return false;
 }
 
-void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job )
+void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const JobPtr &job )
 {
     if ( !success )
     {
@@ -338,8 +338,9 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
 
             boost::mutex::scoped_lock scoped_lock( workersMut_ );
             {
+                JobPtr j;
                 boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
-                if ( !jobs_.FindJobByJobId( workerJob.GetJobId() ) )
+                if ( !jobs_.FindJobByJobId( workerJob.GetJobId(), j ) )
                     return;
             }
 
@@ -371,8 +372,11 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
         boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
         boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
 
-        if ( !jobs_.FindJobByJobId( workerTask.GetJobId() ) )
-            return;
+        {
+            JobPtr j;
+            if ( !jobs_.FindJobByJobId( workerTask.GetJobId(), j ) )
+                return;
+        }
 
         WorkerJob &workerJob = w->GetJob();
         if ( !workerJob.DeleteTask( workerTask.GetJobId(), workerTask.GetTaskId() ) )
@@ -407,8 +411,9 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
 
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
         {
+            JobPtr j;
             boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
-            if ( !jobs_.FindJobByJobId( workerTask.GetJobId() ) )
+            if ( !jobs_.FindJobByJobId( workerTask.GetJobId(), j ) )
                 return;
         }
 
@@ -462,8 +467,11 @@ void Scheduler::OnJobTimeout( int64_t jobId )
         boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
         boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
 
-        if ( !jobs_.FindJobByJobId( jobId ) )
-            return;
+        {
+            JobPtr j;
+            if ( !jobs_.FindJobByJobId( jobId, j ) )
+                return;
+        }
         StopWorkers( jobId );
         jobs_.RemoveJob( jobId, "timeout" );
     }
@@ -477,15 +485,15 @@ void Scheduler::StopJob( int64_t jobId )
 
 void Scheduler::StopJobGroup( int64_t groupId )
 {
-    std::list< Job * > jobs;
+    std::list< JobPtr > jobs;
     {
         boost::mutex::scoped_lock scoped_lock( jobsMut_ );
         jobs_.GetJobGroup( groupId, jobs );
     }
-    std::list< Job * >::const_iterator it = jobs.begin();
+    std::list< JobPtr >::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
-        const Job *job = *it;
+        const JobPtr &job = *it;
         StopJob( job->GetJobId() );
     }
 }
@@ -500,7 +508,7 @@ void Scheduler::StopAllJobs()
     ScheduledJobs::JobList::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
-        const Job *job = *it;
+        const JobPtr &job = *it;
         StopJob( job->GetJobId() );
     }
 }
@@ -608,7 +616,7 @@ bool Scheduler::CanTakeNewJob() const
 }
 
 bool Scheduler::CanAddTaskToWorker( const WorkerJob &workerJob, const WorkerJob &workerPlannedJob,
-                                    int64_t jobId, const Job *job ) const
+                                    int64_t jobId, const JobPtr &job ) const
 {
     // job exclusive case
     if ( job->IsExclusive() )
@@ -630,7 +638,7 @@ bool Scheduler::CanAddTaskToWorker( const WorkerJob &workerJob, const WorkerJob 
     return numTasks < maxCPU;
 }
 
-int Scheduler::GetNumPlannedExec( const Job *job ) const
+int Scheduler::GetNumPlannedExec( const JobPtr &job ) const
 {
     if ( job->GetNumExec() > 0 )
         return job->GetNumExec();
@@ -658,8 +666,8 @@ void Scheduler::PrintJobInfo( std::string &info, int64_t jobId )
 {
     std::ostringstream ss;
 
-    Job *job = jobs_.FindJobByJobId( jobId );
-    if ( !job )
+    JobPtr job;
+    if ( !jobs_.FindJobByJobId( jobId, job ) )
      {
         ss << "job isn't executing now, jobId = " << jobId;
         info = ss.str();
@@ -737,7 +745,7 @@ void Scheduler::GetAllJobInfo( std::string &info )
     ScheduledJobs::JobList::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
-        const Job *job = *it;
+        const JobPtr &job = *it;
         std::string jobInfo;
         PrintJobInfo( jobInfo, job->GetJobId() );
         info += jobInfo + '\n';
@@ -768,7 +776,7 @@ void Scheduler::GetStatistics( std::string &stat )
     {
         if ( it != jobs.begin() )
             ss << ", ";
-        const Job *job = *it;
+        const JobPtr &job = *it;
         ss << job->GetJobId();
     }
     ss << "}" << std::endl;

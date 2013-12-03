@@ -147,9 +147,9 @@ void JobManager::PushJobs( std::list< Job * > &jobs )
     }
 }
 
-Job *JobManager::GetJobById( int64_t jobId )
+bool JobManager::GetJobById( int64_t jobId, JobPtr &job )
 {
-    return jobs_.GetJobById( jobId );
+    return jobs_.GetJobById( jobId, job );
 }
 
 bool JobManager::DeleteJob( int64_t jobId )
@@ -167,14 +167,9 @@ void JobManager::DeleteAllJobs()
     jobs_.Clear();
 }
 
-Job *JobManager::PopJob()
+bool JobManager::PopJob( JobPtr &job )
 {
-    return jobs_.PopJob();
-}
-
-Job *JobManager::GetTopJob()
-{
-    return jobs_.GetTopJob();
+    return jobs_.PopJob( job );
 }
 
 void JobManager::Initialize( const std::string &masterId, const std::string &exeDir, TimeoutManager *timeoutManager )

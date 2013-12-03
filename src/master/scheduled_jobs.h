@@ -11,10 +11,10 @@ namespace master {
 class ScheduledJobs
 {
 public:
-    typedef std::list< Job * > JobList;
+    typedef std::list< JobPtr > JobList;
 
 public:
-    void Add( Job *job, int numExec )
+    void Add( JobPtr &job, int numExec )
     {
         jobExecutions_[ job->GetJobId() ] = numExec;
         jobs_.push_back( job );
@@ -30,24 +30,27 @@ public:
         }
     }
 
-    Job *FindJobByJobId( int64_t jobId ) const
+    bool FindJobByJobId( int64_t jobId, JobPtr &job )
     {
-        JobList::const_iterator it = jobs_.begin();
+        JobList::iterator it = jobs_.begin();
         for( ; it != jobs_.end(); ++it )
         {
-            Job *job = *it;
-            if ( job->GetJobId() == jobId )
-                return job;
+            JobPtr &j = *it;
+            if ( j->GetJobId() == jobId )
+            {
+                job = j;
+                return true;
+            }
         }
-        return NULL;
+        return false;
     }
 
-    void GetJobGroup( int64_t groupId, std::list< Job * > &jobs ) const
+    void GetJobGroup( int64_t groupId, std::list< JobPtr > &jobs )
     {
-        JobList::const_iterator it = jobs_.begin();
+        JobList::iterator it = jobs_.begin();
         for( ; it != jobs_.end(); ++it )
         {
-            Job *job = *it;
+            JobPtr &job = *it;
             if ( job->GetGroupId() == groupId )
                 jobs.push_back( job );
         }
@@ -81,13 +84,12 @@ public:
         JobList::iterator it = jobs_.begin();
         for( ; it != jobs_.end(); ++it )
         {
-            Job *job = *it;
+            JobPtr &job = *it;
             if ( job->GetJobId() == jobId )
             {
                 RunJobCallback( job, completionStatus );
-                jobs_.erase( it );
                 job->ReleaseJobGroup();
-                delete job;
+                jobs_.erase( it );
                 return;
             }
         }
@@ -97,15 +99,11 @@ public:
 
     void Clear()
     {
-        while( !jobs_.empty() )
-        {
-            delete jobs_.front();
-            jobs_.pop_front();
-        }
+        jobs_.clear();
     }
 
 private:
-    void RunJobCallback( Job *job, const char *completionStatus )
+    void RunJobCallback( JobPtr &job, const char *completionStatus )
     {
         std::ostringstream ss;
         ss << "================" << std::endl <<

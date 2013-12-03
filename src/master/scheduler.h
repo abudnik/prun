@@ -34,9 +34,9 @@ public:
 
     void OnNewJob();
 
-    bool GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, Job **job );
+    bool GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, JobPtr &job );
 
-    void OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job );
+    void OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const JobPtr &job );
 
     void OnTaskCompletion( int errCode, int64_t execTime, const WorkerTask &workerTask, const std::string &hostIP );
 
@@ -64,7 +64,7 @@ public:
 private:
     void PlanJobExecution();
     bool RescheduleJob( const WorkerJob &workerJob );
-    bool GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob, Job **job, int numFreeCPU );
+    bool GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob, JobPtr &job, int numFreeCPU );
 
     void OnRemoveJob( int64_t jobId );
     void StopWorkers( int64_t jobId );
@@ -72,9 +72,9 @@ private:
 
     bool CanTakeNewJob() const;
     bool CanAddTaskToWorker( const WorkerJob &workerJob, const WorkerJob &workerPlannedJob,
-                             int64_t jobId, const Job *job ) const;
+                             int64_t jobId, const JobPtr &job ) const;
 
-    int GetNumPlannedExec( const Job *job ) const;
+    int GetNumPlannedExec( const JobPtr &job ) const;
 
     // stats
     void PrintJobInfo( std::string &info, int64_t jobId );

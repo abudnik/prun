@@ -30,13 +30,12 @@ public:
     void PushJob( Job *job );
     void PushJobs( std::list< Job * > &jobs );
 
-    Job *GetJobById( int64_t jobId );
+    bool GetJobById( int64_t jobId, JobPtr &job );
     bool DeleteJob( int64_t jobId );
     bool DeleteJobGroup( int64_t groupId );
     void DeleteAllJobs();
 
-    Job *PopJob();
-    Job *GetTopJob();
+    bool PopJob( JobPtr &job );
 
     const std::string &GetMasterId() const { return masterId_; }
 

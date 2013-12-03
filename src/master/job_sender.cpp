@@ -12,7 +12,7 @@ void JobSender::Run()
 {
     WorkerJob workerJob;
     std::string hostIP;
-    Job *job;
+    JobPtr job;
 
     Scheduler &scheduler = Scheduler::Instance();
     scheduler.Subscribe( this );
@@ -28,7 +28,7 @@ void JobSender::Run()
             newJobAvailable_ = false;
         }
 
-        getTask = scheduler.GetTaskToSend( workerJob, hostIP, &job );
+        getTask = scheduler.GetTaskToSend( workerJob, hostIP, job );
         if ( getTask )
         {
             PS_LOG( "Get task " << workerJob.GetJobId() );
@@ -52,7 +52,7 @@ void JobSender::NotifyObserver( int event )
     awakeCond_.notify_all();
 }
 
-void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job )
+void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const JobPtr &job )
 {
     PS_LOG("JobSender::OnJobSendCompletion "<<success);
     Scheduler::Instance().OnTaskSendCompletion( success, workerJob, hostIP, job );
@@ -82,7 +82,7 @@ void JobSenderBoost::Start()
     io_service_.post( boost::bind( &JobSender::Run, this ) );
 }
 
-void JobSenderBoost::SendJob( const WorkerJob &workerJob, const std::string &hostIP, const Job *job )
+void JobSenderBoost::SendJob( const WorkerJob &workerJob, const std::string &hostIP, JobPtr &job )
 {   
     sendJobsSem_.Wait();
 
@@ -92,7 +92,7 @@ void JobSenderBoost::SendJob( const WorkerJob &workerJob, const std::string &hos
     sender->Send();
 }
 
-void JobSenderBoost::OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const Job *job )
+void JobSenderBoost::OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const JobPtr &job )
 {
     sendJobsSem_.Notify();
     JobSender::OnJobSendCompletion( success, workerJob, hostIP, job );

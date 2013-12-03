@@ -140,10 +140,12 @@ private:
     boost::function< void (const std::string &method, const boost::property_tree::ptree &params) > callback_;
 };
 
+typedef boost::shared_ptr< Job > JobPtr;
+
 class JobQueue
 {
-    typedef std::map< int64_t, Job * > IdToJob;
-    typedef std::list< Job * > JobList;
+    typedef std::map< int64_t, JobPtr > IdToJob;
+    typedef std::list< JobPtr > JobList;
 
 public:
     JobQueue() : numJobs_( 0 ) {}
@@ -151,14 +153,13 @@ public:
     void PushJob( Job *job, int64_t groupId );
     void PushJobs( std::list< Job * > &jobs, int64_t groupId );
 
-    Job *PopJob();
-    Job *GetTopJob();
+    bool PopJob( JobPtr &job );
 
-    Job *GetJobById( int64_t jobId );
+    bool GetJobById( int64_t jobId, JobPtr &job );
     bool DeleteJob( int64_t jobId );
     bool DeleteJobGroup( int64_t groupId );
 
-    void Clear( bool doDelete = true );
+    void Clear();
 
 private:
     void Sort( JobList &jobs );
