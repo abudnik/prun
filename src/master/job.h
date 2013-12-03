@@ -64,11 +64,7 @@ public:
         id_ = numJobs++;
     }
 
-    ~Job()
-    {
-        if ( jobGroup_ )
-            jobGroup_->OnJobCompletion( graphVertex_ );
-    }
+    void ReleaseJobGroup();
 
     const std::string &GetScript() const { return script_; }
     const std::string &GetScriptLanguage() const { return scriptLanguage_; }

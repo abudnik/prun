@@ -86,6 +86,7 @@ public:
             {
                 RunJobCallback( job, completionStatus );
                 jobs_.erase( it );
+                job->ReleaseJobGroup();
                 delete job;
                 return;
             }

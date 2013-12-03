@@ -18,6 +18,12 @@ void JobGroup::OnJobCompletion( const JobVertex &vertex )
     }
 }
 
+void Job::ReleaseJobGroup()
+{
+    if ( jobGroup_ )
+        jobGroup_->OnJobCompletion( graphVertex_ );
+}
+
 bool Job::IsHostPermitted( const std::string &host ) const
 {
     if ( !hosts_.size() )
@@ -96,6 +102,7 @@ bool JobQueue::DeleteJob( int64_t jobId )
         params.put( "user_msg", ss.str() );
 
         job->RunCallback( "on_job_deletion", params );
+        job->ReleaseJobGroup();
         delete job;
 
         jobs_.erase( it );
