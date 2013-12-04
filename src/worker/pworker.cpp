@@ -1091,7 +1091,7 @@ int main( int argc, char* argv[], char **envp )
 
         worker::commDescrPool->Shutdown();
 
-        worker::taskSem->Notify();
+        worker::taskSem->Reset();
 
         worker_threads.join_all();
     }
