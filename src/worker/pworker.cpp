@@ -532,6 +532,12 @@ public:
     : job_( new Job )
     {}
 
+    virtual ~Session()
+    {
+        taskSem->Notify();
+        cout << "S: ~Session()" << endl;
+    }
+
 protected:
     template< typename T >
     void HandleRequest( T &request )
@@ -576,12 +582,6 @@ public:
     : socket_( io_service ),
      request_( false )
     {}
-
-    virtual ~BoostSession()
-    {
-        taskSem->Notify();
-        cout << "S: ~Session()" << endl;
-    }
 
     void Start()
     {
