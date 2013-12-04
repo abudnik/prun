@@ -40,7 +40,7 @@ struct CommDescr
         return *this;
     }
 
-    int shmemBlockId;
+    unsigned int shmemBlockId;
     char *shmemAddr;
     boost::shared_ptr< tcp::socket > socket;
     bool used;
@@ -51,11 +51,11 @@ class CommDescrPool
     typedef std::map< boost::thread::id, ThreadComm > CommParams;
 
 public:
-    CommDescrPool( int numJobThreads, boost::asio::io_service *io_service, char *shmemAddr )
+    CommDescrPool( unsigned int numJobThreads, boost::asio::io_service *io_service, char *shmemAddr )
     : sem_( new common::Semaphore( numJobThreads ) ),
      io_service_( io_service )
     {
-        for( int i = 0; i < numJobThreads; ++i )
+        for( unsigned int i = 0; i < numJobThreads; ++i )
         {
             // init shmem block associated with created thread
             CommDescr commDescr;
