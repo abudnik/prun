@@ -72,7 +72,6 @@ common::Semaphore *taskSem;
 CommDescrPool *commDescrPool;
 
 ExecTable execTable;
-ExecConnectionTable connectionTable;
 
 
 class Action
@@ -107,10 +106,6 @@ public:
             CommDescr &commDescr = commDescrPool->GetCommDescr();
             socket_ = commDescr.socket.get();
             memset( buffer_.c_array(), 0, buffer_.size() );
-
-            ExecConnection execConnection;
-            execConnection.callback_ = boost::bind( &PrExecConnection::Cancel, shared_from_this() );
-            connectionTable.Add( execConnection );
             return true;
         }
         else
@@ -124,7 +119,6 @@ public:
     {
         if ( socket_ )
         {
-            connectionTable.Delete();
             commDescrPool->FreeCommDescr();
         }
     }
@@ -139,32 +133,40 @@ public:
 
         errCode_ = 0;
 
-        completed_ = false;
-
         try
         {
-            socket_->async_read_some( boost::asio::buffer( buffer_ ),
-                                      boost::bind( &PrExecConnection::FirstRead, shared_from_this(),
-                                                   boost::asio::placeholders::error,
-                                                   boost::asio::placeholders::bytes_transferred ) );
-
             boost::asio::async_write( *socket_,
                                       boost::asio::buffer( message ),
                                       boost::bind( &PrExecConnection::HandleWrite, shared_from_this(),
                                                    boost::asio::placeholders::error,
                                                    boost::asio::placeholders::bytes_transferred ) );
 
-            boost::unique_lock< boost::mutex > lock( responseMut_ );
-            while( !completed_ )
+            boost::system::error_code error;
+            bool firstRead = true;
+            while( true )
             {
-                const boost::system_time timeout = boost::get_system_time() + boost::posix_time::milliseconds( RESPONSE_TIMEOUT );
-                if ( responseCond_.timed_wait( lock, timeout ) )
+                size_t bytes_transferred = socket_->read_some( boost::asio::buffer( buffer_ ), error );
+                if ( !bytes_transferred )
                 {
+                    PS_LOG( "PrExecConnection::Send: read_some failed, error=" << error.message() );
+                    errCode_ = NODE_FATAL;
                     break;
                 }
-                else
+
+                if ( firstRead )
                 {
-                    PS_LOG( "PrExecConnection::Send(): waiting task completion" );
+                    int ret = response_.OnFirstRead( buffer_, bytes_transferred );
+                    firstRead = ( ret == 0 );
+                }
+                if ( !firstRead )
+                {
+                    response_.OnRead( buffer_, bytes_transferred );
+
+                    if ( response_.IsReadCompleted() )
+                    {
+                        HandleResponse();
+                        break;
+                    }
                 }
             }
         }
@@ -175,12 +177,6 @@ public:
         }
 
         return errCode_;
-    }
-
-    void Cancel()
-    {
-        errCode_ = NODE_FATAL;
-        NotifyResponseCondVar();
     }
 
     const boost::property_tree::ptree &GetResponsePtree() const { return responsePtree_; }
@@ -194,61 +190,6 @@ private:
         }
     }
 
-    void FirstRead( const boost::system::error_code& error, size_t bytes_transferred )
-    {
-        if ( error )
-        {
-            PS_LOG( "PrExecConnection::HandleRead error=" << error.message() );
-        }
-        else
-        {
-            int ret = response_.OnFirstRead( buffer_, bytes_transferred );
-            if ( ret == 0 )
-            {
-                socket_->async_read_some( boost::asio::buffer( buffer_ ),
-                                          boost::bind( &PrExecConnection::FirstRead, shared_from_this(),
-                                                       boost::asio::placeholders::error,
-                                                       boost::asio::placeholders::bytes_transferred ) );
-                return;
-            }
-            if ( ret < 0 )
-            {
-                errCode_ = NODE_FATAL;
-                NotifyResponseCondVar();
-                return;
-            }
-        }
-
-        HandleRead( error, bytes_transferred );
-    }
-
-    void HandleRead( const boost::system::error_code& error, size_t bytes_transferred )
-    {
-        if ( !error )
-        {
-            response_.OnRead( buffer_, bytes_transferred );
-
-            if ( !response_.IsReadCompleted() )
-            {
-                socket_->async_read_some( boost::asio::buffer( buffer_ ),
-                                          boost::bind( &PrExecConnection::HandleRead, shared_from_this(),
-                                                       boost::asio::placeholders::error,
-                                                       boost::asio::placeholders::bytes_transferred ) );
-            }
-            else
-            {
-                HandleResponse();
-                NotifyResponseCondVar();
-            }
-        }
-        else
-        {
-            PS_LOG( "PrExecConnection::HandleRead error=" << error.message() );
-            errCode_ = NODE_FATAL;
-            NotifyResponseCondVar();
-        }
-    }
-
     void HandleResponse()
     {
         std::istringstream ss( response_.GetString() );
@@ -257,21 +198,11 @@ private:
         errCode_ = responsePtree_.get<int>( "err" );
     }
 
-    void NotifyResponseCondVar()
-    {
-        completed_ = true;
-        boost::unique_lock< boost::mutex > lock( responseMut_ );
-        responseCond_.notify_one();
-    }
-
 private:
     tcp::socket *socket_;
     BufferType buffer_;
     boost::property_tree::ptree responsePtree_;
     common::Request< BufferType > response_;
-    bool completed_;
-    boost::condition_variable responseCond_;
-    boost::mutex responseMut_;
     int errCode_;
     const static int RESPONSE_TIMEOUT = 60 * 1000; // 60 sec
 };
@@ -1086,8 +1017,6 @@ int main( int argc, char* argv[], char **envp )
 
         work.reset();
         io_service.stop();
-
-        worker::connectionTable.Clear();
 
         worker::commDescrPool->Shutdown();
 

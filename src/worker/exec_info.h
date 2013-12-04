@@ -115,52 +115,6 @@ private:
     boost::mutex mut_;
 };
 
-struct ExecConnection
-{
-    boost::function< void () > callback_;
-};
-
-class ExecConnectionTable
-{
-    typedef std::map< boost::thread::id, ExecConnection > Container;
-
-public:
-    void Add( const ExecConnection &execConnection )
-    {
-        boost::unique_lock< boost::mutex > lock( mut_ );
-        table_[ boost::this_thread::get_id() ] = execConnection;
-    }
-
-    void Delete()
-    {
-        boost::unique_lock< boost::mutex > lock( mut_ );
-        table_.erase( boost::this_thread::get_id() );
-    }
-
-    void Clear()
-    {
-        boost::unique_lock< boost::mutex > lock( mut_ );
-        Container table( table_ );
-        lock.unlock();
-
-        // run registered callbacks
-        Container::iterator it = table.begin();
-        for( ; it != table.end(); ++it )
-        {
-            const ExecConnection &execConnection = it->second;
-            if ( execConnection.callback_ )
-                execConnection.callback_();
-        }
-
-        lock.lock();
-        table_.clear();
-    }
-
-private:
-    Container table_;
-    boost::mutex mut_;
-};
-
 } // namespace worker
 
 #endif

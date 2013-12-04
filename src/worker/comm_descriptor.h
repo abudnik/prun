@@ -135,6 +135,14 @@ public:
     {
         {
             boost::unique_lock< boost::mutex > lock( commDescrMut_ );
+            std::vector< CommDescr >::iterator it = commDescr_.begin();
+            for( ; it != commDescr_.end(); ++it )
+            {
+                CommDescr &descr = *it;
+                boost::system::error_code error;
+                descr.socket->shutdown( tcp::socket::shutdown_both, error );
+                descr.socket->close( error );
+            }
             commDescr_.clear();
         }
         sem_->Reset();
