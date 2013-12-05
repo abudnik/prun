@@ -1,8 +1,10 @@
 import os
+import time
+import random
 
 path = '/home/budnik/prun/'
 
-def RunTests():
+def RunManyJobs():
     # run many simple jobs
     jobPath = path + 'test/autotest/simple_one_cpu.job'
     task = ''
@@ -42,6 +44,15 @@ def RunTests():
     cmd = 'python admin.py -c "' + task + '"'
     os.system( cmd )
 
+def RunHeavyJobs():
+    # run many heavy jobs
+    jobPath = path + 'test/autotest/heavy.job'
+    task = ''
+    for i in range(0, 10):
+        task += 'run ' + jobPath + ';'
+    cmd = 'python admin.py -c "' + task + '"'
+    os.system( cmd )
+
 def AddExistingUser():
     task = ''
     for i in range(0, 100):
@@ -53,8 +64,77 @@ def StopAll():
     cmd = 'python admin.py -c "stopall"'
     os.system( cmd )
 
-RunTests()
+def DeleteGroup():
+    task = 'deleteg groupx; deleteg hosts_group1'
+    cmd = 'python admin.py -c "' + task + '"'
+    os.system( cmd )
+
+def AddGroup():
+    task = 'addg ' + path + 'hosts_group1'
+    cmd = 'python admin.py -c "' + task + '"'
+    os.system( cmd )
+
+def JobInfo(jobId):
+    task = 'info ' + str(jobId)
+    cmd = 'python admin.py -c "' + task + '"'
+    os.system( cmd )
+
+def JobInfo(jobId):
+    task = 'info ' + str(jobId)
+    cmd = 'python admin.py -c "' + task + '"'
+    os.system( cmd )
+
+def StopJob(jobId):
+    task = 'stop ' + str(jobId)
+    cmd = 'python admin.py -c "' + task + '"'
+    os.system( cmd )
+
+def Stat():
+    task = 'stat; jobs; ls;'
+    cmd = 'python admin.py -c "' + task + '"'
+    os.system( cmd )
+
+
+# check job stopping
+RunManyJobs()
 AddExistingUser()
 StopAll()
+
+for i in range(0, 10):
+    RunManyJobs()
+    StopAll()
+time.sleep(2)
+StopAll()
+
+for i in range(0, 5):
+    RunHeavyJobs()
+    time.sleep(1)
+    StopAll()
+
+# check group removal
+for i in range(0, 5):
+    RunManyJobs()
+    time.sleep(1)
+    DeleteGroup()
+    time.sleep(1)
+    AddGroup()
+    StopAll()
+
+# check job info statistics and certain job stopping
+RunManyJobs()
+
+for i in range(0, 100):
+    jobId = random.randrange(0, 1000)
+    JobInfo( jobId )
+    jobId = random.randrange(0, 1000)
+    StopJob( jobId )
+
+StopAll()
+
+# check statistics
+RunManyJobs()
+
+for i in range(0, 1000):
+    Stat()
 
 print( 'done' )
