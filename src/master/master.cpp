@@ -167,11 +167,10 @@ public:
         }
 
         // start job sender thread
-        int sendBufferSize = cfg.Get<int>( "send_buffer_size" );
         int maxSimultSendingJobs = cfg.Get<int>( "max_simult_sending_jobs" );
         jobSender_.reset(
             new master::JobSenderBoost( io_service_senders_, timeoutManager_.get(),
-                                        sendBufferSize, maxSimultSendingJobs )
+                                        maxSimultSendingJobs )
         );
         jobSender_->Start();
 

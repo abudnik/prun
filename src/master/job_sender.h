@@ -49,7 +49,7 @@ public:
     typedef boost::shared_ptr< SenderBoost > sender_ptr;
 
 public:
-    SenderBoost( boost::asio::io_service &io_service, int sendBufferSize,
+    SenderBoost( boost::asio::io_service &io_service,
                  JobSender *sender, const WorkerJob &workerJob,
                  const std::string &hostIP, JobPtr &job )
     : socket_( io_service ),
@@ -83,10 +83,9 @@ class JobSenderBoost : public JobSender
 public:
     JobSenderBoost( boost::asio::io_service &io_service,
                     TimeoutManager *timeoutManager,
-                    int sendBufferSize, int maxSimultSendingJobs )
+                    int maxSimultSendingJobs )
     : JobSender( timeoutManager ),
      io_service_( io_service ),
-     sendBufferSize_( sendBufferSize ),
      sendJobsSem_( maxSimultSendingJobs )
     {}
 
@@ -99,7 +98,6 @@ private:
 
 private:
     boost::asio::io_service &io_service_;
-    int sendBufferSize_;
     common::Semaphore sendJobsSem_;
 };
 

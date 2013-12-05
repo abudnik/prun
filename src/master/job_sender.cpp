@@ -87,7 +87,7 @@ void JobSenderBoost::SendJob( const WorkerJob &workerJob, const std::string &hos
     sendJobsSem_.Wait();
 
     SenderBoost::sender_ptr sender(
-        new SenderBoost( io_service_, sendBufferSize_, this, workerJob, hostIP, job )
+        new SenderBoost( io_service_, this, workerJob, hostIP, job )
     );
     sender->Send();
 }
