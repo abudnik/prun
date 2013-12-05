@@ -518,7 +518,7 @@ protected:
     {
         pollfd pfd[1];
         pfd[0].fd = fifo;
-        pfd[0].events = POLLIN | POLLERR;
+        pfd[0].events = POLLIN;
 
         int timeout = job_->GetTimeout();
         if ( timeout > 0 )
