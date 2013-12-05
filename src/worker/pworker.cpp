@@ -204,7 +204,6 @@ private:
     boost::property_tree::ptree responsePtree_;
     common::Request< BufferType > response_;
     int errCode_;
-    const static int RESPONSE_TIMEOUT = 60 * 1000; // 60 sec
 };
 
 class ExecuteTask : public Action
