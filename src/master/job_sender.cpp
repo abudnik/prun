@@ -82,6 +82,13 @@ void JobSenderBoost::Start()
     io_service_.post( boost::bind( &JobSender::Run, this ) );
 }
 
+void JobSenderBoost::Stop()
+{
+    JobSender::Stop();
+
+    sendJobsSem_.Reset();
+}
+
 void JobSenderBoost::SendJob( const WorkerJob &workerJob, const std::string &hostIP, JobPtr &job )
 {   
     sendJobsSem_.Wait();

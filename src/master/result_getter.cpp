@@ -64,6 +64,13 @@ void ResultGetterBoost::Start()
     io_service_.post( boost::bind( &ResultGetter::Run, this ) );
 }
 
+void ResultGetterBoost::Stop()
+{
+    ResultGetter::Stop();
+    
+    getJobsSem_.Reset();
+}
+
 void ResultGetterBoost::GetTaskResult( const WorkerTask &workerTask, const std::string &hostIP )
 {   
     getJobsSem_.Wait();

@@ -220,18 +220,18 @@ public:
 
     void Shutdown()
     {
-        timeoutManager_->Stop();
-        pinger_->Stop();
-        jobSender_->Stop();
-        resultGetter_->Stop();
-        commandSender_->Stop();
-
         // stop io services
         io_service_admin_.stop();
         io_service_command_send_.stop();
         io_service_getters_.stop();
         io_service_senders_.stop();
         io_service_ping_.stop();
+
+        timeoutManager_->Stop();
+        pinger_->Stop();
+        jobSender_->Stop();
+        resultGetter_->Stop();
+        commandSender_->Stop();
 
         // stop thread pool
         worker_threads_.join_all();

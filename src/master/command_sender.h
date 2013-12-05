@@ -24,7 +24,7 @@ public:
 
     virtual void Start() = 0;
 
-    void Stop();
+    virtual void Stop();
 
     void Run();
 
@@ -98,6 +98,8 @@ public:
     {}
 
     virtual void Start();
+
+    virtual void Stop();
 
 private:
     virtual void SendCommand( CommandPtr &command, const std::string &hostIP );

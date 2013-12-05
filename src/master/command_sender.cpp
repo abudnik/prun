@@ -66,6 +66,13 @@ void CommandSenderBoost::Start()
     io_service_.post( boost::bind( &CommandSender::Run, this ) );
 }
 
+void CommandSenderBoost::Stop()
+{
+    CommandSender::Stop();
+
+    cmdSenderSem_.Reset();
+}
+
 void CommandSenderBoost::SendCommand( CommandPtr &command, const std::string &hostIP )
 {   
     cmdSenderSem_.Wait();
