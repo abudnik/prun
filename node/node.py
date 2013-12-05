@@ -17,7 +17,7 @@ try:
     while len(bytes) < scriptLen:
         bytes += os.read( fifo, scriptLen )
 
-    s = str( bytes, "utf-8" )
+    s = bytes.decode( "utf-8" )
 
     exec( s, {"taskId":taskId, "numTasks":numTasks} )
 except Exception as e:
