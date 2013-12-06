@@ -391,10 +391,9 @@ protected:
                                        ( tvEnd.tv_usec - tvStart.tv_usec ) / 1000;
             job_->SetExecTime( elapsed );
 
-            if ( !succeded)
+            if ( !succeded )
             {
-                if ( job_->GetError() == NODE_JOB_TIMEOUT )
-                    KillExec( pid );
+                KillExec( pid );
             }
 
             execTable.Delete( job_->GetJobId(), job_->GetTaskId(), job_->GetMasterId() );
