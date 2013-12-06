@@ -77,7 +77,7 @@ void Scheduler::OnChangedWorkerState( std::vector< WorkerPtr > &workers )
                 const WorkerJob workerJob = worker->GetJob();
 
                 PLOG( "Scheduler::OnChangedWorkerState: worker isn't available, while executing job"
-                        "; nodeIP=" << worker->GetIP() << ", numTasks=" << workerJob.GetTotalNumTasks() );
+                      "; nodeIP=" << worker->GetIP() << ", numTasks=" << workerJob.GetTotalNumTasks() );
 
                 failedWorkers_.Add( workerJob, worker->GetIP() );
                 nodeState.Reset();
@@ -93,7 +93,7 @@ void Scheduler::OnChangedWorkerState( std::vector< WorkerPtr > &workers )
             else
             {
                 PLOG( "Scheduler::OnChangedWorkerState: sheduler doesn't know about worker"
-                        " with ip = " << worker->GetIP() );
+                      " with ip = " << worker->GetIP() );
             }
         }
 
@@ -334,7 +334,7 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
                 return;
 
             PLOG( "Scheduler::OnTaskSendCompletion: job sending failed."
-                    " jobId=" << workerJob.GetJobId() << ", ip=" << hostIP );
+                  " jobId=" << workerJob.GetJobId() << ", ip=" << hostIP );
 
             boost::mutex::scoped_lock scoped_lock( workersMut_ );
             {
@@ -392,8 +392,8 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
             return;
 
         PLOG( "Scheduler::OnTaskCompletion: jobId=" << workerTask.GetJobId() <<
-                ", taskId=" << workerTask.GetTaskId() << ", execTime=" << execTime <<
-                ", ip=" << hostIP );
+              ", taskId=" << workerTask.GetTaskId() << ", execTime=" << execTime <<
+              ", ip=" << hostIP );
 
         NodeState &nodeState = it->second;
         nodeState.FreeCPU( 1 );
@@ -422,8 +422,8 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
             return;
 
         PLOG( "Scheduler::OnTaskCompletion: errCode=" << errCode <<
-                ", jobId=" << workerTask.GetJobId() <<
-                ", taskId=" << workerTask.GetTaskId() << ", ip=" << hostIP );
+              ", jobId=" << workerTask.GetJobId() <<
+              ", taskId=" << workerTask.GetTaskId() << ", ip=" << hostIP );
 
         failedWorkers_.Add( workerTask.GetJobId(), hostIP );
 

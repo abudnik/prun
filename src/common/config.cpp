@@ -21,7 +21,7 @@ bool Config::ParseConfig( const char *cfgPath, const char *cfgName )
     std::ifstream file( configPath_.c_str() );
     if ( !file.is_open() )
     {
-        PLOG( "Config::ParseConfig: couldn't open " << configPath_ );
+        PLOG_ERR( "Config::ParseConfig: couldn't open " << configPath_ );
         return false;
     }
     try
@@ -30,7 +30,7 @@ bool Config::ParseConfig( const char *cfgPath, const char *cfgName )
     }
     catch( std::exception &e )
     {
-        PLOG( "Config::ParseConfig: " << e.what() );
+        PLOG_ERR( "Config::ParseConfig: " << e.what() );
         return false;
     }
 

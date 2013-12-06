@@ -168,7 +168,7 @@ public:
         }
         catch( std::exception &e )
         {
-            PLOG( "AdminConnection: " << e.what() );
+            PLOG_ERR( "AdminConnection: " << e.what() );
         }
 
         StartAccept();

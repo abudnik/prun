@@ -26,7 +26,7 @@ int JsonRpc::HandleRequest( const std::string &request, std::string &requestId, 
     }
     catch( std::exception &e )
     {
-        PLOG( "JsonRpc::HandleRequest: " << e.what() );
+        PLOG_ERR( "JsonRpc::HandleRequest: " << e.what() );
         return JSON_RPC_PARSER_ERROR;
     }
 
@@ -48,7 +48,7 @@ int JsonRpc::HandleRequest( const std::string &request, std::string &requestId, 
     }
     catch( std::exception &e )
     {
-        PLOG( "JsonRpc::HandleRequest: " << e.what() );
+        PLOG_ERR( "JsonRpc::HandleRequest: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
 
@@ -61,8 +61,8 @@ bool JsonRpc::RegisterHandler( const std::string &method, JsonRpcHandler *handle
     it = cmdToHandler_.find( method );
     if ( it != cmdToHandler_.end() )
     {
-        PLOG( "JsonRpc::RegisterHandler: handler for method '" << method <<
-                "' already exists" );
+        PLOG_ERR( "JsonRpc::RegisterHandler: handler for method '" << method <<
+                  "' already exists" );
         return false;
     }
 

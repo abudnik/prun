@@ -52,7 +52,7 @@ void JobCompletionPingerBoost::PingMaster( const JobDescriptor &descr )
     }
     catch( boost::system::system_error &e )
     {
-        PLOG( "JobCompletionPingerBoost::PingMaster: send_to failed: " << e.what() << ", host : " << descr.masterIP );
+        PLOG_ERR( "JobCompletionPingerBoost::PingMaster: send_to failed: " << e.what() << ", host : " << descr.masterIP );
     }
 }
 

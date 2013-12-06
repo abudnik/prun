@@ -15,7 +15,7 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
     int version;
     if ( !common::Protocol::ParseMsg( msg, protocol, version, header, body ) )
     {
-        PLOG( "PingReceiver::OnNodePing: couldn't parse msg: " << msg );
+        PLOG_ERR( "PingReceiver::OnNodePing: couldn't parse msg: " << msg );
         return;
     }
 
@@ -25,8 +25,8 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
     );
     if ( !parser )
     {
-        PLOG( "PingReceiver::OnNodePing: appropriate parser not found for protocol: "
-                << protocol << " " << version );
+        PLOG_ERR( "PingReceiver::OnNodePing: appropriate parser not found for protocol: "
+                  << protocol << " " << version );
         return;
     }
 
@@ -34,7 +34,7 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
     parser->ParseMsgType( header, type );
     if ( !parser->ParseMsgType( header, type ) )
     {
-        PLOG( "PingReceiver::OnNodePing: couldn't parse msg type: " << header );
+        PLOG_ERR( "PingReceiver::OnNodePing: couldn't parse msg type: " << header );
         return;
     }
 
@@ -48,7 +48,7 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
         }
         else
         {
-            PLOG( "PingReceiver::OnNodePing: couldn't parse msg body: " << body );
+            PLOG_ERR( "PingReceiver::OnNodePing: couldn't parse msg body: " << body );
         }
     }
     if ( type == "job_completion" )
@@ -61,7 +61,7 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
         }
         else
         {
-            PLOG( "PingReceiver::OnNodePing: couldn't parse msg body: " << body );
+            PLOG_ERR( "PingReceiver::OnNodePing: couldn't parse msg body: " << body );
         }
     }
 }
@@ -92,7 +92,7 @@ void PingReceiverBoost::HandleRead( const boost::system::error_code& error, size
     else
     {
         StartReceive();
-        PLOG( "PingReceiverBoost::HandleRead error=" << error );
+        PLOG_ERR( "PingReceiverBoost::HandleRead error=" << error );
     }
 }
 

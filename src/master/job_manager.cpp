@@ -39,7 +39,7 @@ bool JDLJason::ParseJob( const std::string &job_description, boost::property_tre
     }
     catch( boost::property_tree::json_parser::json_parser_error &e )
     {
-        PLOG( "JDLJason::ParseJob read_json failed: " << e.what() );
+        PLOG_ERR( "JDLJason::ParseJob read_json failed: " << e.what() );
         return false;
     }
     return true;
@@ -85,7 +85,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
         std::ifstream file( filePath.c_str() );
         if ( !file.is_open() )
         {
-            PLOG( "CreateMetaJob: couldn't open " << filePath );
+            PLOG_ERR( "CreateMetaJob: couldn't open " << filePath );
             succeeded = false;
             break;
         }
@@ -102,7 +102,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
         }
         else
         {
-            PLOG( "JobManager::CreateMetaJob: CreateJob failed, job=" << *it );
+            PLOG_ERR( "JobManager::CreateMetaJob: CreateJob failed, job=" << *it );
             succeeded = false;
             break;
         }
@@ -190,7 +190,7 @@ bool JobManager::ReadScript( const std::string &fileName, std::string &script ) 
     std::ifstream file( filePath.c_str() );
     if ( !file.is_open() )
     {
-        PLOG( "JobManager::ReadScript: couldn't open " << filePath );
+        PLOG_ERR( "JobManager::ReadScript: couldn't open " << filePath );
         return false;
     }
 
@@ -210,7 +210,7 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
         std::string fileName = ptree.get<std::string>( "script" );
         if ( fileName.empty() )
         {
-            PLOG( "JobManager::CreateJob: empty script file name" );
+            PLOG_ERR( "JobManager::CreateJob: empty script file name" );
             return NULL;
         }
 
@@ -257,7 +257,7 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
     }
     catch( std::exception &e )
     {
-        PLOG( "JobManager::CreateJob exception: " << e.what() );
+        PLOG_ERR( "JobManager::CreateJob exception: " << e.what() );
         return NULL;
     }
 }
@@ -327,7 +327,7 @@ bool JobManager::PrepareJobGraph( std::istringstream &ss,
         depth_first_search( graph, visitor( vis ) );
         if ( has_cycle )
         {
-            PLOG( "JobManager::PrepareJobGraph: job graph has cycle" );
+            PLOG_ERR( "JobManager::PrepareJobGraph: job graph has cycle" );
             return false;
         }
     }

@@ -270,7 +270,7 @@ bool ReadHosts( const char *filePath, std::list< std::string > &hosts )
     std::ifstream file( filePath );
     if ( !file.is_open() )
     {
-        PLOG( "ReadHosts: couldn't open " << filePath );
+        PLOG_ERR( "ReadHosts: couldn't open " << filePath );
         return false;
     }
     try
@@ -285,7 +285,7 @@ bool ReadHosts( const char *filePath, std::list< std::string > &hosts )
                 boost::asio::ip::address::from_string( host.c_str(), error );
                 if ( error )
                 {
-                    PLOG( "invalid host ip: " << host );
+                    PLOG_WRN( "invalid host ip: " << host );
                     continue;
                 }
             }
@@ -295,7 +295,7 @@ bool ReadHosts( const char *filePath, std::list< std::string > &hosts )
     }
     catch( std::exception &e )
     {
-        PLOG( "ReadHosts: failed " << e.what() );
+        PLOG_ERR( "ReadHosts: failed " << e.what() );
         return false;
     }
     PLOG( numHosts << " hosts are readed" );

@@ -37,7 +37,7 @@ bool Protocol::ParseMsg( const std::string &msg, std::string &protocol, int &ver
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::ParseMsg: " << e.what() );
+        PLOG_ERR( "ProtocolJson::ParseMsg: " << e.what() );
         return false;
     }
     return true;
@@ -55,7 +55,7 @@ bool ProtocolJson::NodePing( std::string &msg, const std::string &host )
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::NodePing: " << e.what() );
+        PLOG_ERR( "ProtocolJson::NodePing: " << e.what() );
         return false;
     }
     msg = std::string( "{\"type\":\"ping\"}\n" );
@@ -76,7 +76,7 @@ bool ProtocolJson::NodeResponsePing( std::string &msg, int numCPU, int64_t memSi
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::NodeResponsePing: " << e.what() );
+        PLOG_ERR( "ProtocolJson::NodeResponsePing: " << e.what() );
         return false;
     }
     msg = std::string( "{\"type\":\"ping_response\"}\n" );
@@ -98,7 +98,7 @@ bool ProtocolJson::ParseResponsePing( const std::string &msg, int &numCPU, int64
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::ParseResponsePing: " << e.what() );
+        PLOG_ERR( "ProtocolJson::ParseResponsePing: " << e.what() );
         return false;
     }
 
@@ -117,7 +117,7 @@ bool ProtocolJson::NodeJobCompletionPing( std::string &msg, int64_t jobId, int t
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::NodeJobCompletionPing: " << e.what() );
+        PLOG_ERR( "ProtocolJson::NodeJobCompletionPing: " << e.what() );
         return false;
     }
     msg = std::string( "{\"type\":\"job_completion\"}\n" );
@@ -139,7 +139,7 @@ bool ProtocolJson::ParseJobCompletionPing( const std::string &msg, int64_t &jobI
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::ParseJobCompletionPing: " << e.what() );
+        PLOG_ERR( "ProtocolJson::ParseJobCompletionPing: " << e.what() );
         return false;
     }
 
@@ -176,7 +176,7 @@ bool ProtocolJson::SendScript( std::string &msg, const std::string &scriptLangua
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::SendScript: " << e.what() );
+        PLOG_ERR( "ProtocolJson::SendScript: " << e.what() );
         return false;
     }
     msg = ss.str();
@@ -215,7 +215,7 @@ bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptL
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::ParseSendScript: " << e.what() );
+        PLOG_ERR( "ProtocolJson::ParseSendScript: " << e.what() );
         return false;
     }
 
@@ -235,7 +235,7 @@ bool ProtocolJson::GetJobResult( std::string &msg, const std::string &masterId, 
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::GetJobResult: " << e.what() );
+        PLOG_ERR( "ProtocolJson::GetJobResult: " << e.what() );
         return false;
     }
     msg = std::string( "{\"type\":\"get_result\"}\n" );
@@ -258,7 +258,7 @@ bool ProtocolJson::ParseGetJobResult( const std::string &msg, std::string &maste
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::ParseGetJobResult: " << e.what() );
+        PLOG_ERR( "ProtocolJson::ParseGetJobResult: " << e.what() );
         return false;
     }
 
@@ -277,7 +277,7 @@ bool ProtocolJson::SendJobResult( std::string &msg, int errCode, int64_t execTim
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::SendJobResult: " << e.what() );
+        PLOG_ERR( "ProtocolJson::SendJobResult: " << e.what() );
         return false;
     }
     msg = std::string( "{\"type\":\"send_job_result\"}\n" );
@@ -299,7 +299,7 @@ bool ProtocolJson::ParseJobResult( const std::string &msg, int &errCode, int64_t
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::ParseMsgType: " << e.what() );
+        PLOG_ERR( "ProtocolJson::ParseJobResult: " << e.what() );
         return false;
     }
 
@@ -324,7 +324,7 @@ bool ProtocolJson::SendCommand( std::string &msg, const std::string &masterId, c
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::SendCommand: " << e.what() );
+        PLOG_ERR( "ProtocolJson::SendCommand: " << e.what() );
         return false;
     }
     msg = std::string( "{\"type\":\"" ) + command + std::string( "\"}\n" );
@@ -344,7 +344,7 @@ bool ProtocolJson::SendCommandResult( std::string &msg, int errCode )
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::SendCommandResult: " << e.what() );
+        PLOG_ERR( "ProtocolJson::SendCommandResult: " << e.what() );
         return false;
     }
     msg = std::string( "{\"type\":\"send_command_result\"}\n" );
@@ -365,7 +365,7 @@ bool ProtocolJson::ParseSendCommandResult( const std::string &msg, int &errCode 
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::ParseSendCommandResult: " << e.what() );
+        PLOG_ERR( "ProtocolJson::ParseSendCommandResult: " << e.what() );
         return false;
     }
 
@@ -386,7 +386,7 @@ bool ProtocolJson::ParseStopTask( const std::string &msg, std::string &masterId,
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::ParseStopTask: " << e.what() );
+        PLOG_ERR( "ProtocolJson::ParseStopTask: " << e.what() );
         return false;
     }
 
@@ -405,7 +405,7 @@ bool ProtocolJson::ParseStopPreviousJobs( const std::string &msg, std::string &m
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::ParseStopPreviousJobs: " << e.what() );
+        PLOG_ERR( "ProtocolJson::ParseStopPreviousJobs: " << e.what() );
         return false;
     }
 
@@ -424,7 +424,7 @@ bool ProtocolJson::ParseMsgType( const std::string &msg, std::string &type )
     }
     catch( std::exception &e )
     {
-        PLOG( "ProtocolJson::ParseMsgType: " << e.what() );
+        PLOG_ERR( "ProtocolJson::ParseMsgType: " << e.what() );
         return false;
     }
 

@@ -77,7 +77,7 @@ public:
             tcp::resolver::iterator iterator = resolver.resolve( query, ec ), end;
             if ( ec || iterator == end )
             {
-                PLOG( "CommDescrPool() address not resolved: 'localhost'" );
+                PLOG_ERR( "CommDescrPool() address not resolved: 'localhost'" );
                 exit( 1 );
             }
 
@@ -85,7 +85,7 @@ public:
             commDescr.socket->connect( *iterator, ec );
             if ( ec )
             {
-                PLOG( "CommDescrPool(): socket_.connect() failed " << ec.message() );
+                PLOG_ERR( "CommDescrPool(): socket_.connect() failed " << ec.message() );
                 exit( 1 );
             }
 
@@ -116,7 +116,7 @@ public:
                 return true;
             }
         }
-        PLOG( "AllocCommDescr: available communication descriptor not found" );
+        PLOG_WRN( "AllocCommDescr: available communication descriptor not found" );
         return false;
     }
 

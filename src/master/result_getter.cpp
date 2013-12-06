@@ -119,7 +119,7 @@ void GetterBoost::HandleConnect( const boost::system::error_code &error )
     }
     else
     {
-        PLOG( "GetterBoost::HandleConnect error=" << error.message() );
+        PLOG_WRN( "GetterBoost::HandleConnect error=" << error.message() );
         getter_->OnGetTaskResult( false, 0, 0, workerTask_, hostIP_ );
     }
 }
@@ -128,7 +128,7 @@ void GetterBoost::HandleWrite( const boost::system::error_code &error, size_t by
 {
     if ( error )
     {
-        PLOG( "GetterBoost::HandleWrite error=" << error.message() );
+        PLOG_WRN( "GetterBoost::HandleWrite error=" << error.message() );
         getter_->OnGetTaskResult( false, 0, 0, workerTask_, hostIP_ );
     }
 }
@@ -160,7 +160,7 @@ void GetterBoost::FirstRead( const boost::system::error_code& error, size_t byte
     }
     else
     {
-        PLOG( "GetterBoost::FirstRead error=" << error.message() );
+        PLOG_WRN( "GetterBoost::FirstRead error=" << error.message() );
     }
 
     HandleRead( error, bytes_transferred );
@@ -189,7 +189,7 @@ void GetterBoost::HandleRead( const boost::system::error_code& error, size_t byt
     }
     else
     {
-        PLOG( "GetterBoost::HandleRead error=" << error.message() );
+        PLOG_WRN( "GetterBoost::HandleRead error=" << error.message() );
         getter_->OnGetTaskResult( false, 0, 0, workerTask_, hostIP_ );
     }
 }
@@ -202,7 +202,7 @@ bool GetterBoost::HandleResponse()
     int version;
     if ( !common::Protocol::ParseMsg( msg, protocol, version, header, body ) )
     {
-        PLOG( "GetterBoost::HandleResponse: couldn't parse msg: " << msg );
+        PLOG_ERR( "GetterBoost::HandleResponse: couldn't parse msg: " << msg );
         return false;
     }
 
@@ -212,8 +212,8 @@ bool GetterBoost::HandleResponse()
     );
     if ( !parser )
     {
-        PLOG( "GetterBoost::HandleResponse: appropriate parser not found for protocol: "
-                << protocol << " " << version );
+        PLOG_ERR( "GetterBoost::HandleResponse: appropriate parser not found for protocol: "
+                  << protocol << " " << version );
         return false;
     }
 
@@ -221,7 +221,7 @@ bool GetterBoost::HandleResponse()
     parser->ParseMsgType( header, type );
     if ( !parser->ParseMsgType( header, type ) )
     {
-        PLOG( "GetterBoost::HandleResponse: couldn't parse msg type: " << header );
+        PLOG_ERR( "GetterBoost::HandleResponse: couldn't parse msg type: " << header );
         return false;
     }
 
@@ -237,7 +237,7 @@ bool GetterBoost::HandleResponse()
     }
     else
     {
-        PLOG( "GetterBoost::HandleResponse: unexpected msg type: " << type );
+        PLOG_ERR( "GetterBoost::HandleResponse: unexpected msg type: " << type );
     }
 
     return false;

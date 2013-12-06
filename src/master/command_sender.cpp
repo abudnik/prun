@@ -121,7 +121,7 @@ void RpcBoost::HandleConnect( const boost::system::error_code &error )
     }
     else
     {
-        PLOG( "RpcBoost::HandleConnect error=" << error.message() );
+        PLOG_WRN( "RpcBoost::HandleConnect error=" << error.message() );
         sender_->OnSendCommand( false, 0, command_, hostIP_ );
     }
 }
@@ -130,7 +130,7 @@ void RpcBoost::HandleWrite( const boost::system::error_code &error, size_t bytes
 {
     if ( error )
     {
-        PLOG( "RpcBoost::HandleWrite error=" << error.message() );
+        PLOG_WRN( "RpcBoost::HandleWrite error=" << error.message() );
         sender_->OnSendCommand( false, 0, command_, hostIP_ );
     }
 }
@@ -162,7 +162,7 @@ void RpcBoost::FirstRead( const boost::system::error_code& error, size_t bytes_t
     }
     else
     {
-        PLOG( "RpcBoost::FirstRead error=" << error.message() );
+        PLOG_WRN( "RpcBoost::FirstRead error=" << error.message() );
     }
 
     HandleRead( error, bytes_transferred );
@@ -191,7 +191,7 @@ void RpcBoost::HandleRead( const boost::system::error_code& error, size_t bytes_
     }
     else
     {
-        PLOG( "RpcBoost::HandleRead error=" << error.message() );
+        PLOG_WRN( "RpcBoost::HandleRead error=" << error.message() );
         sender_->OnSendCommand( false, 0, command_, hostIP_ );
     }
 }
@@ -204,7 +204,7 @@ bool RpcBoost::HandleResponse()
     int version;
     if ( !common::Protocol::ParseMsg( msg, protocol, version, header, body ) )
     {
-        PLOG( "RpcBoost::HandleResponse: couldn't parse msg: " << msg );
+        PLOG_ERR( "RpcBoost::HandleResponse: couldn't parse msg: " << msg );
         return false;
     }
 
@@ -214,8 +214,8 @@ bool RpcBoost::HandleResponse()
     );
     if ( !parser )
     {
-        PLOG( "RpcBoost::HandleResponse: appropriate parser not found for protocol: "
-                << protocol << " " << version );
+        PLOG_ERR( "RpcBoost::HandleResponse: appropriate parser not found for protocol: "
+                  << protocol << " " << version );
         return false;
     }
 
@@ -223,7 +223,7 @@ bool RpcBoost::HandleResponse()
     parser->ParseMsgType( header, type );
     if ( !parser->ParseMsgType( header, type ) )
     {
-        PLOG( "RpcBoost::HandleResponse: couldn't parse msg type: " << header );
+        PLOG_ERR( "RpcBoost::HandleResponse: couldn't parse msg type: " << header );
         return false;
     }
 
@@ -238,7 +238,7 @@ bool RpcBoost::HandleResponse()
     }
     else
     {
-        PLOG( "RpcBoost::HandleResponse: unexpected msg type: " << type );
+        PLOG_ERR( "RpcBoost::HandleResponse: unexpected msg type: " << type );
     }
 
     return false;

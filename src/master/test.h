@@ -13,7 +13,7 @@ void TestSingleJob( const std::string &filePath )
     std::ifstream file( filePath.c_str() );
     if ( !file.is_open() )
     {
-        PLOG( "TestSingleJob: couldn't open " << filePath );
+        PLOG_ERR( "TestSingleJob: couldn't open " << filePath );
         return;
     }
     std::string jobDescr, line;
@@ -34,7 +34,7 @@ void TestMetaJob( const std::string &filePath )
     std::ifstream file( filePath.c_str() );
     if ( !file.is_open() )
     {
-        PLOG( "TestMetaJob: couldn't open " << filePath );
+        PLOG_ERR( "TestMetaJob: couldn't open " << filePath );
         return;
     }
     std::string metaDescr, line;
@@ -53,7 +53,7 @@ void RunTests( const std::string &exeDir )
     std::ifstream file( filePath.c_str() );
     if ( !file.is_open() )
     {
-        PLOG( "RunTests: couldn't open " << filePath );
+        PLOG_ERR( "RunTests: couldn't open " << filePath );
         return;
     }
     int i = 0;
@@ -63,7 +63,7 @@ void RunTests( const std::string &exeDir )
         size_t found = line.rfind( '.' );
         if ( found == std::string::npos )
         {
-            PLOG( "RunTests: couldn't extract job file extension, line=" << i++ );
+            PLOG_ERR( "RunTests: couldn't extract job file extension, line=" << i++ );
             continue;
         }
         std::string ext = line.substr( found + 1 );
@@ -76,7 +76,7 @@ void RunTests( const std::string &exeDir )
         if ( ext == "meta" )
             TestMetaJob( filePath );
         else
-            PLOG( "RunTests: unknown file extension, line=" << i );
+            PLOG_ERR( "RunTests: unknown file extension, line=" << i );
 
         ++i;
     }

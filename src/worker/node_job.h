@@ -27,7 +27,7 @@ public:
         int version;
         if ( !common::Protocol::ParseMsg( req, protocol, version, header, body ) )
         {
-            PLOG( "Job::ParseRequest: couldn't parse request: " << req );
+            PLOG_ERR( "Job::ParseRequest: couldn't parse request: " << req );
             return false;
         }
 
@@ -37,8 +37,8 @@ public:
         );
         if ( !parser )
         {
-            PLOG( "Job::ParseRequest: appropriate parser not found for protocol: "
-                    << protocol << " " << version );
+            PLOG_ERR( "Job::ParseRequest: appropriate parser not found for protocol: "
+                      << protocol << " " << version );
             return false;
         }
 
@@ -69,8 +69,8 @@ public:
                 JobCompletionTable::Instance().ErasePending( descr );
 
                 PLOG( "Job::GetResponse: job not found in completion table: "
-                        "jobId=" << GetJobId() << ", taskId=" << GetTaskId() <<
-                        ", masterIP=" << GetMasterIP() << ", masterId=" << GetMasterId() );
+                      "jobId=" << GetJobId() << ", taskId=" << GetTaskId() <<
+                      ", masterIP=" << GetMasterIP() << ", masterId=" << GetMasterId() );
                 protocol.SendJobResult( response, NODE_JOB_COMPLETION_NOT_FOUND, 0 );
             }
         }

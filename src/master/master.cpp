@@ -60,7 +60,7 @@ void InitWorkerManager( const std::string &exeDir )
     std::ifstream file( hostsPath.c_str() );
     if ( !file.is_open() )
     {
-        PLOG( "InitWorkerManager: couldn't open " << hostsPath );
+        PLOG_ERR( "InitWorkerManager: couldn't open " << hostsPath );
         return;
     }
 
@@ -101,7 +101,7 @@ void ThreadFun( boost::asio::io_service *io_service )
     }
     catch( std::exception &e )
     {
-        PLOG( "ThreadFun: " << e.what() );
+        PLOG_ERR( "ThreadFun: " << e.what() );
     }
 }
 
@@ -267,7 +267,7 @@ public:
                 int ret = sigwait( &waitset, &sig );
                 if ( !ret )
                     break;
-                PLOG( "main(): sigwait failed: " << strerror(errno) );
+                PLOG_ERR( "main(): sigwait failed: " << strerror(errno) );
             }
         }
     }
@@ -347,7 +347,7 @@ int main( int argc, char* argv[], char **envp )
     catch( std::exception &e )
     {
         cout << "Exception: " << e.what() << endl;
-        PLOG( "Exception: " << e.what() );
+        PLOG_ERR( "Exception: " << e.what() );
     }
 
     PLOG( "stopped" );

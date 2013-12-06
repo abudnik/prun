@@ -74,7 +74,7 @@ private:
             }
             catch( boost::bad_lexical_cast &e )
             {
-                PLOG( "Reading request length failed: " << e.what() );
+                PLOG_ERR( "Reading request length failed: " << e.what() );
             }
             request_.clear();
             return true;

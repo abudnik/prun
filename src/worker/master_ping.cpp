@@ -41,12 +41,12 @@ void MasterPingBoost::HandleRead( const boost::system::error_code& error, size_t
         }
         catch( boost::system::system_error &e )
         {
-            PLOG( "MasterPingBoost::HandleRead: send_to failed: " << e.what() << ", host : " << remote_endpoint_ );
+            PLOG_ERR( "MasterPingBoost::HandleRead: send_to failed: " << e.what() << ", host : " << remote_endpoint_ );
         }
     }
     else
     {
-        PLOG( "MasterPingBoost::HandleRead error=" << error );
+        PLOG_ERR( "MasterPingBoost::HandleRead error=" << error );
     }
 
     StartReceive();

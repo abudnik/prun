@@ -237,7 +237,7 @@ public:
                 }
 
                 PLOG( "StopTaskAction::StopTask: task stopped, pid=" << pid <<
-                        ", jobId=" << job.GetJobId() << ", taskId=" << job.GetTaskId() );
+                      ", jobId=" << job.GetJobId() << ", taskId=" << job.GetTaskId() );
             }
             else
             {
@@ -248,7 +248,7 @@ public:
         else
         {
             PLOG( "StopTaskAction::StopTask: task not found, jobId=" << job.GetJobId() <<
-                    ", taskId=" << job.GetTaskId() << ", " << "masterId=" << job.GetMasterId() );
+                  ", taskId=" << job.GetTaskId() << ", " << "masterId=" << job.GetMasterId() );
             job.OnError( NODE_TASK_NOT_FOUND );
         }
     }
@@ -321,7 +321,7 @@ public:
                          taskId.c_str(), numTasks.c_str(), NULL );
         if ( ret < 0 )
         {
-            PLOG( "ScriptExec::Execute: execl failed: " << strerror(errno) );
+            PLOG_ERR( "ScriptExec::Execute: execl failed: " << strerror(errno) );
         }
         ::exit( 1 );
     }
@@ -421,7 +421,7 @@ protected:
                 int ret = chdir( dir.string().c_str() );
                 if ( ret < 0 )
                 {
-                    PLOG( "ScriptExec::DoFork: chdir failed: " << strerror(errno) );
+                    PLOG_WRN( "ScriptExec::DoFork: chdir failed: " << strerror(errno) );
                 }
 
                 job_->SetScriptLength( boost::filesystem::file_size( p ) );
@@ -429,7 +429,7 @@ protected:
         }
         else
         {
-            PLOG( "ScriptExec::DoFork: fork() failed " << strerror(errno) );
+            PLOG_ERR( "ScriptExec::DoFork: fork() failed " << strerror(errno) );
         }
 
         return pid;
@@ -455,7 +455,9 @@ protected:
             }
             else
             {
-                PLOG( "ScriptExec::WriteScript: couldn't open " << filePath );
+                PLOG_ERR( "ScriptExec::WriteScript: couldn't open " << filePath );
+                job_->OnError( NODE_SCRIPT_FILE_NOT_FOUND );
+                return false;
             }
             scriptAddr = scriptData.c_str();
             bytesToWrite = scriptData.size();
@@ -493,7 +495,7 @@ protected:
                 {
                     if ( errno == EAGAIN )
                         continue;
-                    PLOG( "ScriptExec::WriteScript: write failed: " << strerror(errno) );
+                    PLOG_WRN( "ScriptExec::WriteScript: write failed: " << strerror(errno) );
                     break;
                 }
             }
@@ -507,7 +509,7 @@ protected:
         else
         {
             errCode = NODE_FATAL;
-            PLOG( "ScriptExec::WriteScript: poll failed: " << strerror(errno) );
+            PLOG_WRN( "ScriptExec::WriteScript: poll failed: " << strerror(errno) );
         }
 
         job_->OnError( errCode );
@@ -536,7 +538,7 @@ protected:
             }
             else
             {
-                PLOG( "ScriptExec::ReadCompletionStatus: read fifo failed: " << strerror(errno) );
+                PLOG_WRN( "ScriptExec::ReadCompletionStatus: read fifo failed: " << strerror(errno) );
             }
         }
         else
@@ -547,7 +549,7 @@ protected:
         else
         {
             errCode = NODE_FATAL;
-            PLOG( "ScriptExec::ReadCompletionStatus: poll failed: " << strerror(errno) );
+            PLOG_WRN( "ScriptExec::ReadCompletionStatus: poll failed: " << strerror(errno) );
         }
 
         job_->OnError( errCode );
@@ -595,7 +597,7 @@ protected:
         }
         catch( std::exception &e )
         {
-            PLOG( "PythonExec::Init: " << e.what() );
+            PLOG_ERR( "PythonExec::Init: " << e.what() );
             return false;
         }
         return true;
@@ -634,7 +636,7 @@ public:
                          taskId.c_str(), numTasks.c_str(), NULL );
         if ( ret < 0 )
         {
-            PLOG( "JavaExec::Execute: execl failed: " << strerror(errno) );
+            PLOG_ERR( "JavaExec::Execute: execl failed: " << strerror(errno) );
         }
         ::exit( 1 );
     }
@@ -649,7 +651,7 @@ protected:
         }
         catch( std::exception &e )
         {
-            PLOG( "JavaExec::Init: " << e.what() );
+            PLOG_ERR( "JavaExec::Init: " << e.what() );
             return false;
         }
         return true;
@@ -668,7 +670,7 @@ protected:
         }
         catch( std::exception &e )
         {
-            PLOG( "ShellExec::Init: " << e.what() );
+            PLOG_ERR( "ShellExec::Init: " << e.what() );
             return false;
         }
         return true;
@@ -687,7 +689,7 @@ protected:
         }
         catch( std::exception &e )
         {
-            PLOG( "RubyExec::Init: " << e.what() );
+            PLOG_ERR( "RubyExec::Init: " << e.what() );
             return false;
         }
         return true;
@@ -706,7 +708,7 @@ protected:
         }
         catch( std::exception &e )
         {
-            PLOG( "JavaScriptExec::Init: " << e.what() );
+            PLOG_ERR( "JavaScriptExec::Init: " << e.what() );
             return false;
         }
         return true;
@@ -773,7 +775,7 @@ protected:
         }
         else
         {
-            PLOG( "Session::HandleRequest: unknow task: " << task );
+            PLOG_WRN( "Session::HandleRequest: unknow task: " << task );
             errCode_ = NODE_FATAL;
         }
     }
@@ -808,8 +810,8 @@ private:
         }
         else
         {
-            PLOG( "Session::HandleRequest: appropriate executor not found for language: "
-                    << job.GetScriptLanguage() );
+            PLOG_WRN( "Session::HandleRequest: appropriate executor not found for language: "
+                      << job.GetScriptLanguage() );
             errCode_ = NODE_LANG_NOT_SUPPORTED;
         }
     }
@@ -826,8 +828,7 @@ class SessionBoost : public Session, public boost::enable_shared_from_this< Sess
 public:
     SessionBoost( boost::asio::io_service &io_service )
     : socket_( io_service ), request_( true )
-    {
-    }
+    {}
 
     virtual ~SessionBoost()
     {
@@ -871,7 +872,7 @@ protected:
         }
         else
         {
-            PLOG( "SessionBoost::FirstRead error=" << error.message() );
+            PLOG_WRN( "SessionBoost::FirstRead error=" << error.message() );
         }
 
         HandleRead( error, bytes_transferred );
@@ -901,7 +902,7 @@ protected:
         }
         else
         {
-            PLOG( "SessionBoost::HandleRead error=" << error.message() );
+            PLOG_WRN( "SessionBoost::HandleRead error=" << error.message() );
             //HandleError( error );
         }
     }
@@ -921,7 +922,7 @@ protected:
     {
         if ( error )
         {
-            PLOG( "SessionBoost::HandleWrite error=" << error.message() );
+            PLOG_ERR( "SessionBoost::HandleWrite error=" << error.message() );
         }
     }
 
@@ -956,7 +957,7 @@ public:
         }
         catch( std::exception &e )
         {
-            PLOG( "ConnectionAcceptor: " << e.what() );
+            PLOG_ERR( "ConnectionAcceptor: " << e.what() );
         }
 
         StartAccept();
@@ -981,7 +982,7 @@ private:
         }
         else
         {
-            PLOG( "HandleAccept: " << error.message() );
+            PLOG_ERR( "HandleAccept: " << error.message() );
         }
     }
 
@@ -1053,7 +1054,7 @@ void SetupPrExecIPC()
     }
     catch( std::exception &e )
     {
-        PLOG( "SetupPrExecIPC failed: " << e.what() );
+        PLOG_ERR( "SetupPrExecIPC failed: " << e.what() );
         exit( 1 );
     }
 }
@@ -1071,7 +1072,7 @@ void SetupLanguageRuntime()
         }
         catch( std::exception &e )
         {
-            PLOG( "SetupLanguageRuntime: get javac path failed: " << e.what() );
+            PLOG_WRN( "SetupLanguageRuntime: get javac path failed: " << e.what() );
         }
         std::string nodePath = worker::exeDir + '/' + worker::NODE_SCRIPT_NAME_JAVA;
         if ( access( javacPath.c_str(), F_OK ) != -1 )
@@ -1079,12 +1080,12 @@ void SetupLanguageRuntime()
             int ret = execl( javacPath.c_str(), "javac", nodePath.c_str(), NULL );
             if ( ret < 0 )
             {
-                PLOG( "SetupLanguageRuntime: execl(javac) failed: " << strerror(errno) );
+                PLOG_WRN( "SetupLanguageRuntime: execl(javac) failed: " << strerror(errno) );
             }
         }
         else
         {
-            PLOG( "SetupLanguageRuntime: file not found: " << javacPath );
+            PLOG_WRN( "SetupLanguageRuntime: file not found: " << javacPath );
         }
         ::exit( 1 );
     }
@@ -1097,7 +1098,7 @@ void SetupLanguageRuntime()
     else
     if ( pid < 0 )
     {
-        PLOG( "SetupLanguageRuntime: fork() failed " << strerror(errno) );
+        PLOG_ERR( "SetupLanguageRuntime: fork() failed " << strerror(errno) );
     }
 }
 
@@ -1108,7 +1109,7 @@ void Impersonate()
         int ret = setuid( worker::uid );
         if ( ret < 0 )
         {
-            PLOG( "impersonate uid=" << worker::uid << " failed : " << strerror(errno) );
+            PLOG_ERR( "impersonate uid=" << worker::uid << " failed : " << strerror(errno) );
             exit( 1 );
         }
 
@@ -1180,19 +1181,19 @@ int CreateFifo( const std::string &fifoName )
         {
             ret = chown( fifoName.c_str(), worker::uid, (gid_t)-1 );
             if ( ret == -1 )
-                PLOG( "CreateFifo: chown failed " << strerror(errno) );
+                PLOG_ERR( "CreateFifo: chown failed " << strerror(errno) );
         }
 
         int fifofd = open( fifoName.c_str(), O_RDWR | O_NONBLOCK );
         if ( fifofd == -1 )
         {
-            PLOG( "open fifo " << fifoName << " failed: " << strerror(errno) );
+            PLOG_ERR( "open fifo " << fifoName << " failed: " << strerror(errno) );
         }
         return fifofd;
     }
     else
     {
-        PLOG( "CreateFifo: mkfifo failed " << strerror(errno) );
+        PLOG_ERR( "CreateFifo: mkfifo failed " << strerror(errno) );
     }
     return -1;
 }
@@ -1237,7 +1238,7 @@ void ThreadFun( boost::asio::io_service *io_service )
     }
     catch( std::exception &e )
     {
-        PLOG( "ThreadFun: " << e.what() );
+        PLOG_ERR( "ThreadFun: " << e.what() );
     }
 }
 
@@ -1337,7 +1338,7 @@ int main( int argc, char* argv[], char **envp )
             int ret = sigwait( &waitset, &sig );
             if ( !ret )
                 break;
-            PLOG( "main(): sigwait failed: " << strerror(errno) );
+            PLOG_ERR( "main(): sigwait failed: " << strerror(errno) );
         }
 
         io_service.stop();
@@ -1351,7 +1352,7 @@ int main( int argc, char* argv[], char **envp )
     catch( std::exception &e )
     {
         cout << "Exception: " << e.what() << endl;
-        PLOG( "Exception: " << e.what() );
+        PLOG_ERR( "Exception: " << e.what() );
     }
 
     PLOG( "stopped" );
