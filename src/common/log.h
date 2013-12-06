@@ -24,11 +24,25 @@ the License.
 
 #include <sstream>
 
-#define PS_LOG( MSG )\
+#define PLOG( MSG )\
 {\
     std::ostringstream os;\
-    os << MSG;\
+    os << MSG << "  (from " << __FILE__ << ":" << __LINE__ << ")"; \
     common::logger::Log( os.str().c_str() ); \
+}
+
+#define PLOG_WRN( MSG )\
+{\
+    std::ostringstream os;\
+    os << MSG << "  (from " << __FILE__ << ":" << __LINE__ << ")"; \
+    common::logger::LogWarning( os.str().c_str() ); \
+}
+
+#define PLOG_ERR( MSG )\
+{\
+    std::ostringstream os;\
+    os << MSG << "  (from " << __FILE__ << ":" << __LINE__ << ")"; \
+    common::logger::LogError( os.str().c_str() ); \
 }
 
 namespace common {
@@ -41,6 +55,10 @@ void InitLogger( bool isDaemon, const char *serviceName );
 void ShutdownLogger();
 
 void Log( const char *msg );
+
+void LogWarning( const char *msg );
+
+void LogError( const char *msg );
 
 } // namespace logger
 

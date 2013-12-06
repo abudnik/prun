@@ -31,7 +31,7 @@ void CommandSender::Run()
         getCommand = workerMgr.GetCommand( command, hostIP );
         if ( getCommand )
         {
-            PS_LOG( "Get command '" << command->GetCommand() << "' : " << hostIP );
+            PLOG( "Get command '" << command->GetCommand() << "' : " << hostIP );
             SendCommand( command, hostIP );
         }
     }
@@ -121,7 +121,7 @@ void RpcBoost::HandleConnect( const boost::system::error_code &error )
     }
     else
     {
-        PS_LOG( "RpcBoost::HandleConnect error=" << error.message() );
+        PLOG( "RpcBoost::HandleConnect error=" << error.message() );
         sender_->OnSendCommand( false, 0, command_, hostIP_ );
     }
 }
@@ -130,7 +130,7 @@ void RpcBoost::HandleWrite( const boost::system::error_code &error, size_t bytes
 {
     if ( error )
     {
-        PS_LOG( "RpcBoost::HandleWrite error=" << error.message() );
+        PLOG( "RpcBoost::HandleWrite error=" << error.message() );
         sender_->OnSendCommand( false, 0, command_, hostIP_ );
     }
 }
@@ -162,7 +162,7 @@ void RpcBoost::FirstRead( const boost::system::error_code& error, size_t bytes_t
     }
     else
     {
-        PS_LOG( "RpcBoost::FirstRead error=" << error.message() );
+        PLOG( "RpcBoost::FirstRead error=" << error.message() );
     }
 
     HandleRead( error, bytes_transferred );
@@ -191,7 +191,7 @@ void RpcBoost::HandleRead( const boost::system::error_code& error, size_t bytes_
     }
     else
     {
-        PS_LOG( "RpcBoost::HandleRead error=" << error.message() );
+        PLOG( "RpcBoost::HandleRead error=" << error.message() );
         sender_->OnSendCommand( false, 0, command_, hostIP_ );
     }
 }
@@ -204,7 +204,7 @@ bool RpcBoost::HandleResponse()
     int version;
     if ( !common::Protocol::ParseMsg( msg, protocol, version, header, body ) )
     {
-        PS_LOG( "RpcBoost::HandleResponse: couldn't parse msg: " << msg );
+        PLOG( "RpcBoost::HandleResponse: couldn't parse msg: " << msg );
         return false;
     }
 
@@ -214,7 +214,7 @@ bool RpcBoost::HandleResponse()
     );
     if ( !parser )
     {
-        PS_LOG( "RpcBoost::HandleResponse: appropriate parser not found for protocol: "
+        PLOG( "RpcBoost::HandleResponse: appropriate parser not found for protocol: "
                 << protocol << " " << version );
         return false;
     }
@@ -223,7 +223,7 @@ bool RpcBoost::HandleResponse()
     parser->ParseMsgType( header, type );
     if ( !parser->ParseMsgType( header, type ) )
     {
-        PS_LOG( "RpcBoost::HandleResponse: couldn't parse msg type: " << header );
+        PLOG( "RpcBoost::HandleResponse: couldn't parse msg type: " << header );
         return false;
     }
 
@@ -238,7 +238,7 @@ bool RpcBoost::HandleResponse()
     }
     else
     {
-        PS_LOG( "RpcBoost::HandleResponse: unexpected msg type: " << type );
+        PLOG( "RpcBoost::HandleResponse: unexpected msg type: " << type );
     }
 
     return false;

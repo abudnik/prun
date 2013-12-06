@@ -21,7 +21,7 @@ void WorkerManager::AddWorkerHost( const std::string &groupName, const std::stri
 
     if ( workerHosts_.find( host ) != workerHosts_.end() )
     {
-        PS_LOG( "WorkerManager::AddWorkerHost: host already exists '" << host << "'" );
+        PLOG( "WorkerManager::AddWorkerHost: host already exists '" << host << "'" );
         return;
     }
     workerHosts_.insert( host );
@@ -88,13 +88,13 @@ void WorkerManager::CheckDropedPingResponses()
                 {
                     worker->SetState( WORKER_STATE_NOT_AVAIL );
                     changedWorkers.push_back( worker );
-                    PS_LOG( "WorkerManager::CheckDropedPingResponses: node not available, ip= " << worker->GetIP() );
+                    PLOG( "WorkerManager::CheckDropedPingResponses: node not available, ip= " << worker->GetIP() );
                 }
                 if ( state == WORKER_STATE_EXEC )
                 {
                     worker->SetState( WORKER_STATE_NOT_AVAIL );
                     changedWorkers.push_back( worker );
-                    PS_LOG( "WorkerManager::CheckDropedPingResponses: node job isn't available, ip= " << worker->GetIP() );
+                    PLOG( "WorkerManager::CheckDropedPingResponses: node job isn't available, ip= " << worker->GetIP() );
                 }
             }
             worker->SetNumPingResponse( 0 );
@@ -120,7 +120,7 @@ void WorkerManager::OnNodePingResponse( const std::string &hostIP, int numCPU, i
         {
             worker->SetState( WORKER_STATE_READY );
             stateChanged = true;
-            PS_LOG( "node available, ip= " << worker->GetIP() );
+            PLOG( "node available, ip= " << worker->GetIP() );
         }
 
         if ( stateChanged )
@@ -132,7 +132,7 @@ void WorkerManager::OnNodePingResponse( const std::string &hostIP, int numCPU, i
     }
     else
     {
-        PS_LOG( "WorkerManager::OnHostPingResponse worker not found, ip= " << hostIP );
+        PLOG( "WorkerManager::OnHostPingResponse worker not found, ip= " << hostIP );
     }
 }
 
@@ -159,7 +159,7 @@ bool WorkerManager::GetAchievedTask( WorkerTask &worker, std::string &hostIP )
     if ( achievedWorkers_.empty() )
         return false;
 
-    PS_LOG( "GetAchievedWorker: num achieved workers=" << achievedWorkers_.size() );
+    PLOG( "GetAchievedWorker: num achieved workers=" << achievedWorkers_.size() );
 
     const PairTypeAW &w = achievedWorkers_.front();
     worker = w.first;
@@ -270,7 +270,7 @@ bool ReadHosts( const char *filePath, std::list< std::string > &hosts )
     std::ifstream file( filePath );
     if ( !file.is_open() )
     {
-        PS_LOG( "ReadHosts: couldn't open " << filePath );
+        PLOG( "ReadHosts: couldn't open " << filePath );
         return false;
     }
     try
@@ -285,7 +285,7 @@ bool ReadHosts( const char *filePath, std::list< std::string > &hosts )
                 boost::asio::ip::address::from_string( host.c_str(), error );
                 if ( error )
                 {
-                    PS_LOG( "invalid host ip: " << host );
+                    PLOG( "invalid host ip: " << host );
                     continue;
                 }
             }
@@ -295,10 +295,10 @@ bool ReadHosts( const char *filePath, std::list< std::string > &hosts )
     }
     catch( std::exception &e )
     {
-        PS_LOG( "ReadHosts: failed " << e.what() );
+        PLOG( "ReadHosts: failed " << e.what() );
         return false;
     }
-    PS_LOG( numHosts << " hosts are readed" );
+    PLOG( numHosts << " hosts are readed" );
     return true;
 }
 

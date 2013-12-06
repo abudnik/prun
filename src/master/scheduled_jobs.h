@@ -94,7 +94,7 @@ public:
             }
         }
 
-        PS_LOG( "ScheduledJobs::RemoveJob: job not found for jobId=" << jobId );
+        PLOG( "ScheduledJobs::RemoveJob: job not found for jobId=" << jobId );
     }
 
     void Clear()
@@ -111,7 +111,7 @@ private:
             "completion status: " << completionStatus << std::endl <<
             "================";
 
-        PS_LOG( ss.str() );
+        PLOG( ss.str() );
 
         boost::property_tree::ptree params;
         params.put( "job_id", job->GetJobId() );

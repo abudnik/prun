@@ -9,13 +9,13 @@ namespace master {
 
 void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg )
 {
-    //PS_LOG( nodeIP << " : " << msg );
+    //PLOG( nodeIP << " : " << msg );
 
     std::string protocol, header, body;
     int version;
     if ( !common::Protocol::ParseMsg( msg, protocol, version, header, body ) )
     {
-        PS_LOG( "PingReceiver::OnNodePing: couldn't parse msg: " << msg );
+        PLOG( "PingReceiver::OnNodePing: couldn't parse msg: " << msg );
         return;
     }
 
@@ -25,7 +25,7 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
     );
     if ( !parser )
     {
-        PS_LOG( "PingReceiver::OnNodePing: appropriate parser not found for protocol: "
+        PLOG( "PingReceiver::OnNodePing: appropriate parser not found for protocol: "
                 << protocol << " " << version );
         return;
     }
@@ -34,7 +34,7 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
     parser->ParseMsgType( header, type );
     if ( !parser->ParseMsgType( header, type ) )
     {
-        PS_LOG( "PingReceiver::OnNodePing: couldn't parse msg type: " << header );
+        PLOG( "PingReceiver::OnNodePing: couldn't parse msg type: " << header );
         return;
     }
 
@@ -48,7 +48,7 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
         }
         else
         {
-            PS_LOG( "PingReceiver::OnNodePing: couldn't parse msg body: " << body );
+            PLOG( "PingReceiver::OnNodePing: couldn't parse msg body: " << body );
         }
     }
     if ( type == "job_completion" )
@@ -61,7 +61,7 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
         }
         else
         {
-            PS_LOG( "PingReceiver::OnNodePing: couldn't parse msg body: " << body );
+            PLOG( "PingReceiver::OnNodePing: couldn't parse msg body: " << body );
         }
     }
 }
@@ -92,7 +92,7 @@ void PingReceiverBoost::HandleRead( const boost::system::error_code& error, size
     else
     {
         StartReceive();
-        PS_LOG( "PingReceiverBoost::HandleRead error=" << error );
+        PLOG( "PingReceiverBoost::HandleRead error=" << error );
     }
 }
 

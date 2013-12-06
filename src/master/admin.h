@@ -123,7 +123,7 @@ public:
     ~AdminSession()
     {
         if ( !remoteIP_.empty() )
-            PS_LOG( "~AdminSession " << remoteIP_ );
+            PLOG( "~AdminSession " << remoteIP_ );
     }
 
     static void InitializeRpcHandlers();
@@ -168,7 +168,7 @@ public:
         }
         catch( std::exception &e )
         {
-            PS_LOG( "AdminConnection: " << e.what() );
+            PLOG( "AdminConnection: " << e.what() );
         }
 
         StartAccept();

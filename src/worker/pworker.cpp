@@ -110,7 +110,7 @@ public:
         }
         else
         {
-            PS_LOG( "PrExecConnection::Init: AllocCommDescr failed" );
+            PLOG( "PrExecConnection::Init: AllocCommDescr failed" );
         }
         return false;
     }
@@ -127,7 +127,7 @@ public:
     {
         if ( !socket_ )
         {
-            PS_LOG( "PrExecConnection::Send: socket is not available" );
+            PLOG( "PrExecConnection::Send: socket is not available" );
             return NODE_FATAL;
         }
 
@@ -148,7 +148,7 @@ public:
                 size_t bytes_transferred = socket_->read_some( boost::asio::buffer( buffer_ ), error );
                 if ( !bytes_transferred )
                 {
-                    PS_LOG( "PrExecConnection::Send: read_some failed, error=" << error.message() );
+                    PLOG( "PrExecConnection::Send: read_some failed, error=" << error.message() );
                     errCode_ = NODE_FATAL;
                     break;
                 }
@@ -172,7 +172,7 @@ public:
         }
         catch( boost::system::system_error &e )
         {
-            PS_LOG( "PrExecConnection::Send() failed: " << e.what() );
+            PLOG( "PrExecConnection::Send() failed: " << e.what() );
             errCode_ = NODE_FATAL;
         }
 
@@ -186,7 +186,7 @@ private:
     {
         if ( error )
         {
-            PS_LOG( "PrExecConnection::HandleWrite error=" << error.message() );
+            PLOG( "PrExecConnection::HandleWrite error=" << error.message() );
         }
     }
 
@@ -213,7 +213,7 @@ class ExecuteTask : public Action
         const Job::Tasks &tasks = job->GetTasks();
         if ( tasks.empty() )
         {
-            PS_LOG( "ExecuteTask::Execute: empty tasks for jobId=" << job->GetJobId() );
+            PLOG( "ExecuteTask::Execute: empty tasks for jobId=" << job->GetJobId() );
             job->OnError( NODE_FATAL );
             SaveCompletionResults( job );
             return;
@@ -290,7 +290,7 @@ class ExecuteTask : public Action
         }
         catch( boost::system::system_error &e )
         {
-            PS_LOG( "ExecuteTask::NodeJobCompletionPing: send_to failed: " << e.what() << ", host : " << master_endpoint );
+            PLOG( "ExecuteTask::NodeJobCompletionPing: send_to failed: " << e.what() << ", host : " << master_endpoint );
         }
     }
 
@@ -308,7 +308,7 @@ class ExecuteTask : public Action
             job->SetFilePath( fullPath );
             return true;
         }
-        PS_LOG( "ExecuteTask::ExpandFilePath: file not exists '" << fullPath << "'" );
+        PLOG( "ExecuteTask::ExpandFilePath: file not exists '" << fullPath << "'" );
         return false;
     }
 
@@ -369,7 +369,7 @@ public:
         }
         catch( std::exception &e )
         {
-            PS_LOG( "ExecuteTask::DoSend: " << e.what() );
+            PLOG( "ExecuteTask::DoSend: " << e.what() );
         }
 
         SaveCompletionResults( job, taskId, execTime );
@@ -483,14 +483,14 @@ protected:
             }
             else
             {
-                PS_LOG( "Session::HandleRequest: appropriate action not found for task type: "
+                PLOG( "Session::HandleRequest: appropriate action not found for task type: "
                         << job_->GetTaskType() );
                 job_->OnError( NODE_FATAL );
             }
         }
         else
         {
-            PS_LOG( request.GetString() );
+            PLOG( request.GetString() );
             job_->OnError( NODE_FATAL );
         }
     }
@@ -551,7 +551,7 @@ private:
         }
         else
         {
-            PS_LOG( "SessionBoost::FirstRead error=" << error.message() );
+            PLOG( "SessionBoost::FirstRead error=" << error.message() );
         }
 
         HandleRead( error, bytes_transferred );
@@ -579,7 +579,7 @@ private:
         }
         else
         {
-            PS_LOG( "SessionBoost::HandleRead error=" << error.message() );
+            PLOG( "SessionBoost::HandleRead error=" << error.message() );
             //HandleError( error );
             OnReadCompletion( false );
         }
@@ -610,7 +610,7 @@ private:
     {
         if ( error )
         {
-            PS_LOG( "SessionBoost::HandleWrite error=" << error.message() );
+            PLOG( "SessionBoost::HandleWrite error=" << error.message() );
         }
     }
 
@@ -646,7 +646,7 @@ public:
         }
         catch( std::exception &e )
         {
-            PS_LOG( "ConnectionAcceptor: " << e.what() );
+            PLOG( "ConnectionAcceptor: " << e.what() );
         }
 
         StartAccept();
@@ -672,7 +672,7 @@ private:
         }
         else
         {
-            PS_LOG( "HandleAccept: " << error.message() );
+            PLOG( "HandleAccept: " << error.message() );
         }
     }
 
@@ -766,7 +766,7 @@ void RunPrExecProcess()
 
     if ( pid < 0 )
     {
-        PS_LOG( "RunPrExecProcess: fork() failed: " << strerror(errno) );
+        PLOG( "RunPrExecProcess: fork() failed: " << strerror(errno) );
         exit( pid );
     }
     else
@@ -785,7 +785,7 @@ void RunPrExecProcess()
 
         if ( ret < 0 )
         {
-            PS_LOG( "RunPrExecProcess: execl failed: " << strerror(errno) );
+            PLOG( "RunPrExecProcess: execl failed: " << strerror(errno) );
             kill( getppid(), SIGTERM );
         }
     }
@@ -821,7 +821,7 @@ void SetupPrExecIPC()
     }
     catch( std::exception &e )
     {
-        PS_LOG( "SetupPrExecIPC failed: " << e.what() );
+        PLOG( "SetupPrExecIPC failed: " << e.what() );
         exit( 1 );
     }
 }
@@ -856,7 +856,7 @@ void ThreadFun( boost::asio::io_service *io_service )
     }
     catch( std::exception &e )
     {
-        PS_LOG( "ThreadFun: " << e.what() );
+        PLOG( "ThreadFun: " << e.what() );
     }
 }
 
@@ -995,7 +995,7 @@ int main( int argc, char* argv[], char **envp )
         }
         else
         {
-            PS_LOG( "started" );
+            PLOG( "started" );
 
             sigset_t waitset;
             int sig;
@@ -1006,7 +1006,7 @@ int main( int argc, char* argv[], char **envp )
                 int ret = sigwait( &waitset, &sig );
                 if ( !ret )
                     break;
-                PS_LOG( "main(): sigwait failed: " << strerror(errno) );
+                PLOG( "main(): sigwait failed: " << strerror(errno) );
             }
         }
 
@@ -1026,10 +1026,10 @@ int main( int argc, char* argv[], char **envp )
     catch( std::exception &e )
     {
         cout << "Exception: " << e.what() << endl;
-        PS_LOG( "Exception: " << e.what() );
+        PLOG( "Exception: " << e.what() );
     }
 
-    PS_LOG( "stopped" );
+    PLOG( "stopped" );
 
     return 0;
 }

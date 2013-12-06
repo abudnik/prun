@@ -60,7 +60,7 @@ void InitWorkerManager( const std::string &exeDir )
     std::ifstream file( hostsPath.c_str() );
     if ( !file.is_open() )
     {
-        PS_LOG( "InitWorkerManager: couldn't open " << hostsPath );
+        PLOG( "InitWorkerManager: couldn't open " << hostsPath );
         return;
     }
 
@@ -101,7 +101,7 @@ void ThreadFun( boost::asio::io_service *io_service )
     }
     catch( std::exception &e )
     {
-        PS_LOG( "ThreadFun: " << e.what() );
+        PLOG( "ThreadFun: " << e.what() );
     }
 }
 
@@ -119,7 +119,7 @@ public:
     {
         common::logger::InitLogger( isDaemon_, "Master" );
 
-        //PS_LOG( "master_id= " << masterId_ );
+        //PLOG( "master_id= " << masterId_ );
 
         common::Config &cfg = common::Config::Instance();
         cfg.ParseConfig( exeDir_.c_str(), "master.cfg" );
@@ -255,7 +255,7 @@ public:
         }
         else
         {
-            PS_LOG( "started" );
+            PLOG( "started" );
 
             sigset_t waitset;
             int sig;
@@ -267,7 +267,7 @@ public:
                 int ret = sigwait( &waitset, &sig );
                 if ( !ret )
                     break;
-                PS_LOG( "main(): sigwait failed: " << strerror(errno) );
+                PLOG( "main(): sigwait failed: " << strerror(errno) );
             }
         }
     }
@@ -347,10 +347,10 @@ int main( int argc, char* argv[], char **envp )
     catch( std::exception &e )
     {
         cout << "Exception: " << e.what() << endl;
-        PS_LOG( "Exception: " << e.what() );
+        PLOG( "Exception: " << e.what() );
     }
 
-    PS_LOG( "stopped" );
+    PLOG( "stopped" );
 
     return 0;
 }

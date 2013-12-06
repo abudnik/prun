@@ -42,7 +42,7 @@ void JobCompletionPingerBoost::PingMaster( const JobDescriptor &descr )
 {
     std::string msg;
     protocol_->NodeJobCompletionPing( msg, descr.jobId, descr.taskId );
-    PS_LOG( msg );
+    PLOG( msg );
 
     boost::asio::ip::address address( boost::asio::ip::address::from_string( descr.masterIP ) );
     udp::endpoint master_endpoint( address, DEFAULT_MASTER_UDP_PORT );
@@ -52,7 +52,7 @@ void JobCompletionPingerBoost::PingMaster( const JobDescriptor &descr )
     }
     catch( boost::system::system_error &e )
     {
-        PS_LOG( "JobCompletionPingerBoost::PingMaster: send_to failed: " << e.what() << ", host : " << descr.masterIP );
+        PLOG( "JobCompletionPingerBoost::PingMaster: send_to failed: " << e.what() << ", host : " << descr.masterIP );
     }
 }
 

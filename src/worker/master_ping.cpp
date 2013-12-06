@@ -24,7 +24,7 @@ void MasterPingBoost::HandleRead( const boost::system::error_code& error, size_t
     if ( !error )
     {
         //std::string request( buffer_.begin(), buffer_.begin() + bytes_transferred );
-        //PS_LOG( request );
+        //PLOG( request );
 
         ComputerInfo &compInfo = ComputerInfo::Instance();
         const int numCPU = compInfo.GetNumCPU();
@@ -41,12 +41,12 @@ void MasterPingBoost::HandleRead( const boost::system::error_code& error, size_t
         }
         catch( boost::system::system_error &e )
         {
-            PS_LOG( "MasterPingBoost::HandleRead: send_to failed: " << e.what() << ", host : " << remote_endpoint_ );
+            PLOG( "MasterPingBoost::HandleRead: send_to failed: " << e.what() << ", host : " << remote_endpoint_ );
         }
     }
     else
     {
-        PS_LOG( "MasterPingBoost::HandleRead error=" << error );
+        PLOG( "MasterPingBoost::HandleRead error=" << error );
     }
 
     StartReceive();

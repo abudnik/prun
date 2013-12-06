@@ -39,7 +39,7 @@ bool JDLJason::ParseJob( const std::string &job_description, boost::property_tre
     }
     catch( boost::property_tree::json_parser::json_parser_error &e )
     {
-        PS_LOG( "JDLJason::ParseJob read_json failed: " << e.what() );
+        PLOG( "JDLJason::ParseJob read_json failed: " << e.what() );
         return false;
     }
     return true;
@@ -85,7 +85,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
         std::ifstream file( filePath.c_str() );
         if ( !file.is_open() )
         {
-            PS_LOG( "CreateMetaJob: couldn't open " << filePath );
+            PLOG( "CreateMetaJob: couldn't open " << filePath );
             succeeded = false;
             break;
         }
@@ -102,7 +102,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
         }
         else
         {
-            PS_LOG( "JobManager::CreateMetaJob: CreateJob failed, job=" << *it );
+            PLOG( "JobManager::CreateMetaJob: CreateJob failed, job=" << *it );
             succeeded = false;
             break;
         }
@@ -125,7 +125,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
 
 void JobManager::PushJob( Job *job )
 {
-    PS_LOG( "push job" );
+    PLOG( "push job" );
     jobs_.PushJob( job, numJobGroups_++ );
 
     Scheduler::Instance().OnNewJob();
@@ -134,7 +134,7 @@ void JobManager::PushJob( Job *job )
 
 void JobManager::PushJobs( std::list< Job * > &jobs )
 {
-    PS_LOG( "push jobs" );
+    PLOG( "push jobs" );
     jobs_.PushJobs( jobs, numJobGroups_++ );
 
     Scheduler::Instance().OnNewJob();
@@ -190,7 +190,7 @@ bool JobManager::ReadScript( const std::string &fileName, std::string &script ) 
     std::ifstream file( filePath.c_str() );
     if ( !file.is_open() )
     {
-        PS_LOG( "JobManager::ReadScript: couldn't open " << filePath );
+        PLOG( "JobManager::ReadScript: couldn't open " << filePath );
         return false;
     }
 
@@ -210,7 +210,7 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
         std::string fileName = ptree.get<std::string>( "script" );
         if ( fileName.empty() )
         {
-            PS_LOG( "JobManager::CreateJob: empty script file name" );
+            PLOG( "JobManager::CreateJob: empty script file name" );
             return NULL;
         }
 
@@ -257,7 +257,7 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
     }
     catch( std::exception &e )
     {
-        PS_LOG( "JobManager::CreateJob exception: " << e.what() );
+        PLOG( "JobManager::CreateJob exception: " << e.what() );
         return NULL;
     }
 }
@@ -327,7 +327,7 @@ bool JobManager::PrepareJobGraph( std::istringstream &ss,
         depth_first_search( graph, visitor( vis ) );
         if ( has_cycle )
         {
-            PS_LOG( "JobManager::PrepareJobGraph: job graph has cycle" );
+            PLOG( "JobManager::PrepareJobGraph: job graph has cycle" );
             return false;
         }
     }

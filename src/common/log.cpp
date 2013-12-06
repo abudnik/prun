@@ -22,6 +22,9 @@ the License.
 
 #include <iostream>
 #include <syslog.h>
+#include <unistd.h>
+#include <cstdio>
+#include <cstring>
 #include "log.h"
 
 
@@ -32,6 +35,7 @@ namespace logger
 
 bool isDaemon = false;
 const char *serviceName = "";
+bool isTerminal = false;
 
 
 void InitLogger( bool isDaemon, const char *serviceName )
@@ -43,6 +47,8 @@ void InitLogger( bool isDaemon, const char *serviceName )
     {
         openlog( serviceName, LOG_CONS, LOG_DAEMON );
     }
+
+    isTerminal = isatty( fileno( stdout ) );
 }
 
 void ShutdownLogger()
@@ -53,6 +59,32 @@ void ShutdownLogger()
     }
 }
 
+void Print( char level, const char *msg )
+{
+    char buf[32];
+    time_t tmNow( time( NULL ) );
+
+    tm tmWhen;
+    memset( &tmWhen, 0, sizeof( tmWhen ) );
+    localtime_r( &tmNow, &tmWhen );
+    snprintf( buf, sizeof(buf), " %02d.%02d %02d:%02d:%02d: ",
+              tmWhen.tm_mday, tmWhen.tm_mon + 1, tmWhen.tm_hour, tmWhen.tm_min, tmWhen.tm_sec );
+
+    if ( isTerminal )
+    {
+        switch( level )
+        {
+            case 'W': std::cout << "\033[33m"; break;
+            case 'E': std::cout << "\033[31m"; break;
+        }
+    }
+
+    std::cout << '<' << level << ' ' << serviceName << buf << msg << std::endl;
+
+    if ( isTerminal )
+        std::cout << "\033[0m";
+}
+
 void Log( const char *msg )
 {
     if ( isDaemon )
@@ -61,7 +93,31 @@ void Log( const char *msg )
     }
     else
     {
-        std::cout << serviceName << ": " <<  msg << std::endl;
+        Print( 'D', msg );
+    }
+}
+
+void LogWarning( const char *msg )
+{
+    if ( isDaemon )
+    {
+        syslog( LOG_WARNING, "%s", msg );
+    }
+    else
+    {
+        Print( 'W', msg );
+    }
+}
+
+void LogError( const char *msg )
+{
+    if ( isDaemon )
+    {
+        syslog( LOG_ERR, "%s", msg );
+    }
+    else
+    {
+        Print( 'E', msg );
     }
 }
 

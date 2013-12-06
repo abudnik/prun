@@ -28,7 +28,7 @@ int AdminCommand_Run::Execute( const boost::property_tree::ptree &params,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_Run::Execute: " << e.what() );
+        PLOG( "AdminCommand_Run::Execute: " << e.what() );
         return JSON_RPC_INVALID_PARAMS;
     }
 
@@ -38,14 +38,14 @@ int AdminCommand_Run::Execute( const boost::property_tree::ptree &params,
         std::ifstream file( filePath.c_str() );
         if ( !file.is_open() )
         {
-            PS_LOG( "AdminCommand_Run::Execute: couldn't open '" << filePath << "'" );
+            PLOG( "AdminCommand_Run::Execute: couldn't open '" << filePath << "'" );
             return JSON_RPC_INTERNAL_ERROR;
         }
 
         size_t found = filePath.rfind( '.' );
         if ( found == std::string::npos )
         {
-            PS_LOG( "AdminCommand_Run::Execute: couldn't extract job file extension '" << filePath << "'" );
+            PLOG( "AdminCommand_Run::Execute: couldn't extract job file extension '" << filePath << "'" );
             return JSON_RPC_INTERNAL_ERROR;
         }
         std::string ext = filePath.substr( found + 1 );
@@ -56,11 +56,11 @@ int AdminCommand_Run::Execute( const boost::property_tree::ptree &params,
         if ( ext == "meta" )
             return RunMetaJob( file, result );
         else
-            PS_LOG( "AdminCommand_Run::Execute: unknown file extension '" << ext << "'" );
+            PLOG( "AdminCommand_Run::Execute: unknown file extension '" << ext << "'" );
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_Run::Execute: " << e.what() );
+        PLOG( "AdminCommand_Run::Execute: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;
@@ -85,7 +85,7 @@ int AdminCommand_Run::RunJob( std::ifstream &file, const std::string &jobAlias, 
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_Run::RunJob: " << e.what() );
+        PLOG( "AdminCommand_Run::RunJob: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;
@@ -116,7 +116,7 @@ int AdminCommand_Run::RunMetaJob( std::ifstream &file, std::string &result ) con
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_Run::RunMetaJob: " << e.what() );
+        PLOG( "AdminCommand_Run::RunMetaJob: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;
@@ -139,7 +139,7 @@ int AdminCommand_Stop::Execute( const boost::property_tree::ptree &params,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_Stop::Execute: " << e.what() );
+        PLOG( "AdminCommand_Stop::Execute: " << e.what() );
         return JSON_RPC_INVALID_PARAMS;
     }
 
@@ -152,7 +152,7 @@ int AdminCommand_Stop::Execute( const boost::property_tree::ptree &params,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_Stop::Execute: " << e.what() );
+        PLOG( "AdminCommand_Stop::Execute: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;
@@ -168,7 +168,7 @@ int AdminCommand_StopGroup::Execute( const boost::property_tree::ptree &params,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_StopGroup::Execute: " << e.what() );
+        PLOG( "AdminCommand_StopGroup::Execute: " << e.what() );
         return JSON_RPC_INVALID_PARAMS;
     }
 
@@ -179,7 +179,7 @@ int AdminCommand_StopGroup::Execute( const boost::property_tree::ptree &params,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_StopGroup::Execute: " << e.what() );
+        PLOG( "AdminCommand_StopGroup::Execute: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;
@@ -195,7 +195,7 @@ int AdminCommand_StopAll::Execute( const boost::property_tree::ptree &params,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_StopAll::Execute: " << e.what() );
+        PLOG( "AdminCommand_StopAll::Execute: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;
@@ -210,7 +210,7 @@ int AdminCommand_StopPrevious::Execute( const boost::property_tree::ptree &param
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_StopPrevious::Execute: " << e.what() );
+        PLOG( "AdminCommand_StopPrevious::Execute: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;
@@ -238,7 +238,7 @@ int AdminCommand_AddHosts::Execute( const boost::property_tree::ptree &params,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_AddHosts::Execute: " << e.what() );
+        PLOG( "AdminCommand_AddHosts::Execute: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;
@@ -262,7 +262,7 @@ int AdminCommand_DeleteHosts::Execute( const boost::property_tree::ptree &params
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_DeleteHosts::Execute: " << e.what() );
+        PLOG( "AdminCommand_DeleteHosts::Execute: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;
@@ -281,7 +281,7 @@ int AdminCommand_AddGroup::Execute( const boost::property_tree::ptree &params,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_AddGroup::Execute: " << e.what() );
+        PLOG( "AdminCommand_AddGroup::Execute: " << e.what() );
         return JSON_RPC_INVALID_PARAMS;
     }
 
@@ -299,7 +299,7 @@ int AdminCommand_AddGroup::Execute( const boost::property_tree::ptree &params,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_AddGroup::Execute: " << e.what() );
+        PLOG( "AdminCommand_AddGroup::Execute: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;
@@ -315,7 +315,7 @@ int AdminCommand_DeleteGroup::Execute( const boost::property_tree::ptree &params
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_DeleteGroup::Execute: " << e.what() );
+        PLOG( "AdminCommand_DeleteGroup::Execute: " << e.what() );
         return JSON_RPC_INVALID_PARAMS;
     }
 
@@ -335,7 +335,7 @@ int AdminCommand_DeleteGroup::Execute( const boost::property_tree::ptree &params
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_DeleteGroup::Execute: " << e.what() );
+        PLOG( "AdminCommand_DeleteGroup::Execute: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;
@@ -351,7 +351,7 @@ int AdminCommand_Info::Execute( const boost::property_tree::ptree &params,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_Info::Execute: " << e.what() );
+        PLOG( "AdminCommand_Info::Execute: " << e.what() );
         return JSON_RPC_INVALID_PARAMS;
     }
 
@@ -361,7 +361,7 @@ int AdminCommand_Info::Execute( const boost::property_tree::ptree &params,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_Info::Execute: " << e.what() );
+        PLOG( "AdminCommand_Info::Execute: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;
@@ -377,7 +377,7 @@ int AdminCommand_Stat::Execute( const boost::property_tree::ptree &params,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_Stat::Execute: " << e.what() );
+        PLOG( "AdminCommand_Stat::Execute: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;
@@ -392,7 +392,7 @@ int AdminCommand_Jobs::Execute( const boost::property_tree::ptree &params,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_Jobs::Execute: " << e.what() );
+        PLOG( "AdminCommand_Jobs::Execute: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;
@@ -407,7 +407,7 @@ int AdminCommand_Ls::Execute( const boost::property_tree::ptree &params,
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminCommand_Ls::Execute: " << e.what() );
+        PLOG( "AdminCommand_Ls::Execute: " << e.what() );
         return JSON_RPC_INTERNAL_ERROR;
     }
     return 0;
@@ -469,7 +469,7 @@ void AdminSession::HandleRead( const boost::system::error_code &error, size_t by
     }
     else
     {
-        PS_LOG( "AdminSession::HandleRead error=" << error.message() );
+        PLOG( "AdminSession::HandleRead error=" << error.message() );
     }
 }
 
@@ -477,13 +477,13 @@ void AdminSession::HandleWrite( const boost::system::error_code& error, size_t b
 {
     if ( error )
     {
-        PS_LOG( "AdminSession::HandleWrite error=" << error.message() );
+        PLOG( "AdminSession::HandleWrite error=" << error.message() );
     }
 }
 
 void AdminSession::HandleRequest()
 {
-    PS_LOG( request_ );
+    PLOG( request_ );
     std::string requestId, result;
     int errCode = common::JsonRpc::Instance().HandleRequest( request_, requestId, result );
 
@@ -519,7 +519,7 @@ void AdminSession::HandleRequest()
     }
     catch( std::exception &e )
     {
-        PS_LOG( "AdminSession::HandleRequest: " << e.what() );
+        PLOG( "AdminSession::HandleRequest: " << e.what() );
     }
 }
 
@@ -536,13 +536,13 @@ void AdminConnection::HandleAccept( session_ptr session, const boost::system::er
 {
     if ( !error )
     {
-        PS_LOG( "admin connection accepted..." );
+        PLOG( "admin connection accepted..." );
         io_service_.post( boost::bind( &AdminSession::Start, session ) );
         StartAccept();
     }
     else
     {
-        PS_LOG( "AdminConnection::HandleAccept: " << error.message() );
+        PLOG( "AdminConnection::HandleAccept: " << error.message() );
     }
 }
 

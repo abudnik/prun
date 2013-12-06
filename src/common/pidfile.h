@@ -23,7 +23,7 @@ public:
         file_lock f_lock( filePath );
         if ( !f_lock.try_lock() )
         {
-            PS_LOG( "can't exclusively lock pid_file=" << filePath_ );
+            PLOG( "can't exclusively lock pid_file=" << filePath_ );
             exit( 1 );
         }
 
@@ -35,7 +35,7 @@ public:
         afterFail_ = fileExists;
         if ( afterFail_ )
         {
-            PS_LOG( "previous process terminated abnormally" );
+            PLOG( "previous process terminated abnormally" );
         }
     }
 
@@ -49,7 +49,7 @@ public:
         }
         catch(...)
         {
-            PS_LOG( "exception in ~Pidfile()" );
+            PLOG( "exception in ~Pidfile()" );
         }
     }
 

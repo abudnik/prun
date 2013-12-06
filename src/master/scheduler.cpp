@@ -76,7 +76,7 @@ void Scheduler::OnChangedWorkerState( std::vector< WorkerPtr > &workers )
 
                 const WorkerJob workerJob = worker->GetJob();
 
-                PS_LOG( "Scheduler::OnChangedWorkerState: worker isn't available, while executing job"
+                PLOG( "Scheduler::OnChangedWorkerState: worker isn't available, while executing job"
                         "; nodeIP=" << worker->GetIP() << ", numTasks=" << workerJob.GetTotalNumTasks() );
 
                 failedWorkers_.Add( workerJob, worker->GetIP() );
@@ -92,14 +92,14 @@ void Scheduler::OnChangedWorkerState( std::vector< WorkerPtr > &workers )
             }
             else
             {
-                PS_LOG( "Scheduler::OnChangedWorkerState: sheduler doesn't know about worker"
+                PLOG( "Scheduler::OnChangedWorkerState: sheduler doesn't know about worker"
                         " with ip = " << worker->GetIP() );
             }
         }
 
         if ( state == WORKER_STATE_FAILED )
         {
-            PS_LOG( "TODO: Scheduler::OnChangedWorkerState" );
+            PLOG( "TODO: Scheduler::OnChangedWorkerState" );
         }
     }
 }
@@ -177,7 +177,7 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
         }
         else
         {
-            PS_LOG( "Scheduler::RescheduleJob: Job for jobId=" << jobId << " not found" );
+            PLOG( "Scheduler::RescheduleJob: Job for jobId=" << jobId << " not found" );
         }
     }
     return found;
@@ -333,7 +333,7 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
             if ( !WorkerManager::Instance().GetWorkerByIP( hostIP, w ) )
                 return;
 
-            PS_LOG( "Scheduler::OnTaskSendCompletion: job sending failed."
+            PLOG( "Scheduler::OnTaskSendCompletion: job sending failed."
                     " jobId=" << workerJob.GetJobId() << ", ip=" << hostIP );
 
             boost::mutex::scoped_lock scoped_lock( workersMut_ );
@@ -391,7 +391,7 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
         if ( it == nodeState_.end() )
             return;
 
-        PS_LOG( "Scheduler::OnTaskCompletion: jobId=" << workerTask.GetJobId() <<
+        PLOG( "Scheduler::OnTaskCompletion: jobId=" << workerTask.GetJobId() <<
                 ", taskId=" << workerTask.GetTaskId() << ", execTime=" << execTime <<
                 ", ip=" << hostIP );
 
@@ -421,7 +421,7 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
         if ( it == nodeState_.end() )
             return;
 
-        PS_LOG( "Scheduler::OnTaskCompletion: errCode=" << errCode <<
+        PLOG( "Scheduler::OnTaskCompletion: errCode=" << errCode <<
                 ", jobId=" << workerTask.GetJobId() <<
                 ", taskId=" << workerTask.GetTaskId() << ", ip=" << hostIP );
 
@@ -448,7 +448,7 @@ void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &
 
     if ( workerJob.HasTask( workerTask.GetJobId(), workerTask.GetTaskId() ) )
     {
-        PS_LOG( "Scheduler::OnTaskTimeout " << workerTask.GetJobId() << ":" << workerTask.GetTaskId() << " " << hostIP );
+        PLOG( "Scheduler::OnTaskTimeout " << workerTask.GetJobId() << ":" << workerTask.GetTaskId() << " " << hostIP );
 
         // send stop command to worker
         StopTaskCommand *stopCommand = new StopTaskCommand();

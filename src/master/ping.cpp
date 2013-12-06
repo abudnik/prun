@@ -67,7 +67,7 @@ void PingerBoost::PingWorker( WorkerPtr &worker )
         udp::resolver::iterator iterator = resolver_.resolve( query, error ), end;
         if ( error || iterator == end )
         {
-            PS_LOG( "PingerBoost::PingWorker address not resolved: " << worker->GetHost() );
+            PLOG( "PingerBoost::PingWorker address not resolved: " << worker->GetHost() );
             return;
         }
 
@@ -85,8 +85,8 @@ void PingerBoost::PingWorker( WorkerPtr &worker )
 
     std::string msg;
     protocol_->NodePing( msg, node_ip );
-    //PS_LOG( msg );
-    //PS_LOG( node_ip );
+    //PLOG( msg );
+    //PLOG( node_ip );
 
     try
     {
@@ -94,7 +94,7 @@ void PingerBoost::PingWorker( WorkerPtr &worker )
     }
     catch( boost::system::system_error &e )
     {
-        PS_LOG( "PingerBoost::PingWorker: send_to failed: " << e.what() << ", host : " << node_ip );
+        PLOG( "PingerBoost::PingWorker: send_to failed: " << e.what() << ", host : " << node_ip );
     }
 }
 

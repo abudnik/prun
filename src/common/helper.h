@@ -98,7 +98,7 @@ bool EncodeBase64( const T *data, std::size_t size, std::string &out )
     }
     catch( std::exception &e )
     {
-        PS_LOG( "EncodeBase64: " << e.what() );
+        PLOG( "EncodeBase64: " << e.what() );
         return false;
     }
     return true;
@@ -133,7 +133,7 @@ bool DecodeBase64( std::string &data, Container &out )
         }
         catch( std::exception &e )
         {
-            PS_LOG( "DecodeBase64: " << e.what() );
+            PLOG( "DecodeBase64: " << e.what() );
             return false;
         }
     }

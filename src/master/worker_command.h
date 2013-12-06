@@ -16,7 +16,7 @@ public:
 private:
     virtual void OnCompletion( int errCode, const std::string &hostIP )
     {
-        PS_LOG( "Stopping task on worker " << hostIP << ", errCode=" << errCode );
+        PLOG( "Stopping task on worker " << hostIP << ", errCode=" << errCode );
     }
 
     virtual int GetRepeatDelay() const
@@ -38,7 +38,7 @@ public:
 private:
     virtual void OnCompletion( int errCode, const std::string &hostIP )
     {
-        PS_LOG( "Stopping previous jobs on worker " << hostIP << ", errCode=" << errCode );
+        PLOG( "Stopping previous jobs on worker " << hostIP << ", errCode=" << errCode );
     }
 
     virtual int GetRepeatDelay() const

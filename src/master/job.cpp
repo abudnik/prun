@@ -100,7 +100,7 @@ bool JobQueue::DeleteJob( int64_t jobId )
             "completion status: failed" << std::endl <<
             "================";
 
-        PS_LOG( ss.str() );
+        PLOG( ss.str() );
 
         boost::property_tree::ptree params;
         params.put( "job_id", job->GetJobId() );
@@ -228,7 +228,7 @@ void JobQueue::PrintJobs( const JobList &jobs ) const
         ss << "(priority=" << (*it)->GetPriority() <<
             ", groupid=" << (*it)->GetGroupId() << ")";
     }
-    PS_LOG( ss.str() );
+    PLOG( ss.str() );
 }
 
 } // namespace master

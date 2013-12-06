@@ -34,7 +34,7 @@ public:
         {
             size_t numFailed = it_failed->second.size();
             failedWorkers_.erase( it_failed );
-            PS_LOG( "FailedWorkers::Delete: jobId=" << jobId << ", num failed workers=" << numFailed );
+            PLOG( "FailedWorkers::Delete: jobId=" << jobId << ", num failed workers=" << numFailed );
             return true;
         }
         return false;

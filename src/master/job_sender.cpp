@@ -31,7 +31,7 @@ void JobSender::Run()
         getTask = scheduler.GetTaskToSend( workerJob, hostIP, job );
         if ( getTask )
         {
-            PS_LOG( "Get task " << workerJob.GetJobId() );
+            PLOG( "Get task " << workerJob.GetJobId() );
             SendJob( workerJob, hostIP, job );
             workerJob.Reset();
         }
@@ -54,7 +54,7 @@ void JobSender::NotifyObserver( int event )
 
 void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const JobPtr &job )
 {
-    PS_LOG("JobSender::OnJobSendCompletion "<<success);
+    PLOG("JobSender::OnJobSendCompletion "<<success);
     Scheduler::Instance().OnTaskSendCompletion( success, workerJob, hostIP, job );
     if ( success )
     {
@@ -137,7 +137,7 @@ void SenderBoost::HandleConnect( const boost::system::error_code &error )
     }
     else
     {
-        PS_LOG( "SenderBoost::HandleConnect error=" << error.message() );
+        PLOG( "SenderBoost::HandleConnect error=" << error.message() );
         sender_->OnJobSendCompletion( false, workerJob_, hostIP_, job_ );
     }
 }
@@ -146,7 +146,7 @@ void SenderBoost::HandleWrite( const boost::system::error_code &error, size_t by
 {
     if ( error )
     {
-        PS_LOG( "SenderBoost::HandleWrite error=" << error.message() );
+        PLOG( "SenderBoost::HandleWrite error=" << error.message() );
         sender_->OnJobSendCompletion( false, workerJob_, hostIP_, job_ );
     }
 }
@@ -160,7 +160,7 @@ void SenderBoost::HandleRead( const boost::system::error_code &error, size_t byt
     }
     else
     {
-        PS_LOG( "SenderBoost::HandleRead error=" << error.message() );
+        PLOG( "SenderBoost::HandleRead error=" << error.message() );
         sender_->OnJobSendCompletion( false, workerJob_, hostIP_, job_ );
     }
 }
