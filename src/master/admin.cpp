@@ -10,6 +10,7 @@
 #include "job_manager.h"
 #include "worker_manager.h"
 #include "scheduler.h"
+#include "common/crutches.h"
 
 namespace master {
 
@@ -268,6 +269,8 @@ int AdminCommand_DeleteHosts::Execute( const boost::property_tree::ptree &params
     return 0;
 }
 
+
+
 int AdminCommand_AddGroup::Execute( const boost::property_tree::ptree &params,
                                     std::string &result )
 {
@@ -277,7 +280,7 @@ int AdminCommand_AddGroup::Execute( const boost::property_tree::ptree &params,
         filePath = params.get<std::string>( "file" );
 
         boost::filesystem::path p( filePath );
-        fileName = p.filename().string();
+        fileName = common::PathToString( p.filename() );
     }
     catch( std::exception &e )
     {
