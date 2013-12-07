@@ -55,7 +55,7 @@ void JobSender::NotifyObserver( int event )
 void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const JobPtr &job )
 {
     PLOG("JobSender::OnJobSendCompletion "<<success);
-    Scheduler::Instance().OnTaskSendCompletion( success, workerJob, hostIP, job );
+    Scheduler::Instance().OnTaskSendCompletion( success, workerJob, hostIP );
     if ( success )
     {
         WorkerJob::Tasks tasks;

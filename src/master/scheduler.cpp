@@ -324,7 +324,7 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, JobPtr
     return false;
 }
 
-void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const JobPtr &job )
+void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP )
 {
     if ( !success )
     {
