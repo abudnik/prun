@@ -26,15 +26,13 @@ the License.
 #include <boost/thread.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
 #include <csignal>
 #include <sys/wait.h>
 #include "common/log.h"
 #include "common/daemon.h"
 #include "common/config.h"
 #include "common/pidfile.h"
+#include "common/uuid.h"
 #include "ping.h"
 #include "node_ping.h"
 #include "job_manager.h"
@@ -112,7 +110,7 @@ public:
     : exeDir_( exeDir ),
      isDaemon_( isDaemon )
     {
-        masterId_ = boost::uuids::random_generator()();
+        masterId_ = common::GenerateUUID();
     }
 
     void Initialize()
@@ -135,8 +133,7 @@ public:
 
         timeoutManager_.reset( new master::TimeoutManager( io_service_timeout_ ) );
 
-        std::string masterId = boost::lexical_cast< std::string >( masterId_ );
-        master::JobManager::Instance().Initialize( masterId, exeDir_, timeoutManager_.get() );
+        master::JobManager::Instance().Initialize( masterId_, exeDir_, timeoutManager_.get() );
 
         master::Scheduler::Instance();
         master::AdminSession::InitializeRpcHandlers();
@@ -275,7 +272,7 @@ public:
 private:
     std::string exeDir_;
     bool isDaemon_;
-    boost::uuids::uuid masterId_;
+    std::string masterId_;
 
     boost::thread_group worker_threads_;
 

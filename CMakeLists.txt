@@ -23,7 +23,7 @@ set(COMMON_DIR ${SRC_DIR}/common)
 CHECK_INCLUDE_FILES ("sys/prctl.h" HAVE_SYS_PRCTL_H)
 CONFIGURE_FILE(${COMMON_DIR}/configure.h.in ${COMMON_DIR}/configure.h)
 
-set(SRC_COMMON_CPP log.cpp daemon.cpp config.cpp protocol.cpp json_rpc.cpp)
+set(SRC_COMMON_CPP log.cpp daemon.cpp config.cpp protocol.cpp json_rpc.cpp uuid.cpp)
 foreach(cpp ${SRC_COMMON_CPP})
   list(APPEND SRC_COMMON ${COMMON_DIR}/${cpp} )
 endforeach(cpp)
