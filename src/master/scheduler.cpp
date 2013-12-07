@@ -446,7 +446,13 @@ void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &
         return;
     const WorkerJob &workerJob = w->GetJob();
 
-    if ( workerJob.HasTask( workerTask.GetJobId(), workerTask.GetTaskId() ) )
+    bool hasTask = false;
+    {
+        boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+        hasTask = workerJob.HasTask( workerTask.GetJobId(), workerTask.GetTaskId() );
+    }
+
+    if ( hasTask )
     {
         PLOG( "Scheduler::OnTaskTimeout " << workerTask.GetJobId() << ":" << workerTask.GetTaskId() << " " << hostIP );
 
