@@ -96,11 +96,6 @@ void Scheduler::OnChangedWorkerState( std::vector< WorkerPtr > &workers )
                       " with ip = " << worker->GetIP() );
             }
         }
-
-        if ( state == WORKER_STATE_FAILED )
-        {
-            PLOG( "TODO: Scheduler::OnChangedWorkerState" );
-        }
     }
 }
 
@@ -304,6 +299,8 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, JobPtr
             continue;
 
         WorkerPtr &w = nodeState.GetWorker();
+        if ( !w->IsAvailable() )
+            continue;
 
         if ( GetJobForWorker( w, workerJob, job, numFreeCPU ) )
         {
