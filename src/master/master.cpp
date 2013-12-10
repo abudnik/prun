@@ -329,7 +329,7 @@ int main( int argc, char* argv[], char **envp )
             ("help", "Print help")
             ("d", "Run as a daemon")
             ("s", "Stop daemon")
-            ("c", "Config file path");
+            ("c", po::value<std::string>(), "Config file path");
         
         po::variables_map vm;
         po::store( po::parse_command_line( argc, argv, descr ), vm );
