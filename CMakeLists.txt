@@ -34,7 +34,7 @@ set(APP_NAME pworker)
 
 set(WORKER_DIR ${SRC_DIR}/worker)
 
-set(SRC_PWORKER_CPP common.cpp master_ping.cpp job_completion_ping.cpp job_completion_table.cpp pworker.cpp)
+set(SRC_PWORKER_CPP common.cpp master_ping.cpp job_completion_ping.cpp job_completion_table.cpp worker.cpp)
 foreach(cpp ${SRC_PWORKER_CPP})
   list(APPEND SRC_PWORKER ${WORKER_DIR}/${cpp} )
 endforeach(cpp)
@@ -44,7 +44,7 @@ target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt )
 
 set(APP_NAME prexec)
 
-set(SRC_PREXEC_CPP common.cpp prexec.cpp)
+set(SRC_PREXEC_CPP common.cpp exec.cpp)
 foreach(cpp ${SRC_PREXEC_CPP})
   list(APPEND SRC_PREXEC ${WORKER_DIR}/${cpp} )
 endforeach(cpp)
@@ -53,7 +53,7 @@ add_executable( ${APP_NAME} ${SRC_PREXEC} )
 target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt )
 
 
-set(APP_NAME master)
+set(APP_NAME pmaster)
 
 set(MASTER_DIR ${SRC_DIR}/master)
 
