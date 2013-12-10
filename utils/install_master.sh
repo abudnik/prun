@@ -36,12 +36,12 @@ fi
 mkdir -p $MASTER_DATA_DIR || die "Could not create master data directory"
 cp -rf "node" $MASTER_DATA_DIR"/node" || die "Could not copy node directory"
 
-#read master executable file
-_MASTER_EXE_DIR="/usr/bin/pmaster"
-read -p "Please select the master executable file name [$_MASTER_EXE_DIR] " MASTER_EXE_DIR
+#read master executable directory
+_MASTER_EXE_DIR="/usr/bin"
+read -p "Please select the master executable directory [$_MASTER_EXE_DIR] " MASTER_EXE_DIR
 if [ !"$MASTER_EXE_DIR" ] ; then
 	MASTER_EXE_DIR=$_MASTER_EXE_DIR
 	echo "Selected default - $MASTER_EXE_DIR"
 fi
-mkdir -p `dirname $MASTER_EXE_DIR` || die "Could not create master executable directory"
+mkdir -p $MASTER_EXE_DIR || die "Could not create master executable directory"
 cp -f "pmaster" $MASTER_EXE_DIR || die "Could not copy executable file"
