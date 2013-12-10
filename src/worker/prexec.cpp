@@ -1295,7 +1295,7 @@ int main( int argc, char* argv[], char **envp )
             worker::exeDir = vm[ "exe_dir" ].as<std::string>();
         }
 
-        common::Config::Instance().ParseConfig( worker::exeDir.c_str() );
+        common::Config::Instance().ParseConfig( worker::exeDir.c_str(), "worker.cfg" );
 
         SetupLanguageRuntime();
 

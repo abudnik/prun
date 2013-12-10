@@ -30,8 +30,6 @@ namespace common {
 
 class Config
 {
-static const char defaultCfgName[];
-
 public:
     template<typename T>
     T Get( const char *key )
@@ -39,7 +37,7 @@ public:
         return ptree_.get<T>( key );
     }
 
-    bool ParseConfig( const char *cfgPath = "", const char *cfgName = defaultCfgName );
+    bool ParseConfig( const char *cfgPath, const char *cfgName );
 
     static Config &Instance()
     {

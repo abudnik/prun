@@ -30,8 +30,6 @@ the License.
 
 using namespace common;
 
-const char Config::defaultCfgName[] = "main.cfg";
-
 
 bool Config::ParseConfig( const char *cfgPath, const char *cfgName )
 {

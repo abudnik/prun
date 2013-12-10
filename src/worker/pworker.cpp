@@ -924,7 +924,7 @@ int main( int argc, char* argv[], char **envp )
 
         common::logger::InitLogger( worker::isDaemon, "pworker" );
 
-        common::Config::Instance().ParseConfig( worker::exeDir.c_str() );
+        common::Config::Instance().ParseConfig( worker::exeDir.c_str(), "worker.cfg" );
 
         string pidfilePath = common::Config::Instance().Get<string>( "pidfile" );
         if ( pidfilePath[0] != '/' )
