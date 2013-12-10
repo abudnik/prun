@@ -106,8 +106,9 @@ void ThreadFun( boost::asio::io_service *io_service )
 class MasterApplication
 {
 public:
-    MasterApplication(  const std::string &exeDir, bool isDaemon )
+    MasterApplication(  const std::string &exeDir, const std::string &cfgDir, bool isDaemon )
     : exeDir_( exeDir ),
+     cfgDir_( cfgDir ),
      isDaemon_( isDaemon )
     {
         masterId_ = common::GenerateUUID();
@@ -120,7 +121,14 @@ public:
         //PLOG( "master_id= " << masterId_ );
 
         common::Config &cfg = common::Config::Instance();
-        cfg.ParseConfig( exeDir_.c_str(), "master.cfg" );
+        if ( cfgDir_.empty() )
+        {
+            cfg.ParseConfig( exeDir_.c_str(), "master.cfg" );
+        }
+        else
+        {
+            cfg.ParseConfig( "", cfgDir_.c_str() );
+        }
 
         unsigned int numHeartbeatThread = 1;
         unsigned int numPingReceiverThread = cfg.Get<unsigned int>( "num_ping_receiver_thread" );
@@ -224,11 +232,20 @@ public:
         io_service_senders_.stop();
         io_service_ping_.stop();
 
-        timeoutManager_->Stop();
-        pinger_->Stop();
-        jobSender_->Stop();
-        resultGetter_->Stop();
-        commandSender_->Stop();
+        if ( timeoutManager_ )
+            timeoutManager_->Stop();
+
+        if ( pinger_ )
+            pinger_->Stop();
+
+        if ( jobSender_ )
+            jobSender_->Stop();
+
+        if ( resultGetter_ )
+            resultGetter_->Stop();
+
+        if ( commandSender_ )
+            commandSender_->Stop();
 
         // stop thread pool
         worker_threads_.join_all();
@@ -271,6 +288,7 @@ public:
 
 private:
     std::string exeDir_;
+    std::string cfgDir_;
     bool isDaemon_;
     std::string masterId_;
 
@@ -300,6 +318,7 @@ int main( int argc, char* argv[], char **envp )
     {
         bool isDaemon = false;
         std::string exeDir = boost::filesystem::system_complete( argv[0] ).branch_path().string();
+        std::string cfgDir;
 
         // parse input command line options
         namespace po = boost::program_options;
@@ -309,7 +328,8 @@ int main( int argc, char* argv[], char **envp )
         descr.add_options()
             ("help", "Print help")
             ("d", "Run as a daemon")
-            ("s", "Stop daemon");
+            ("s", "Stop daemon")
+            ("c", "Config file path");
         
         po::variables_map vm;
         po::store( po::parse_command_line( argc, argv, descr ), vm );
@@ -332,7 +352,12 @@ int main( int argc, char* argv[], char **envp )
             isDaemon = true;
         }
 
-        MasterApplication app( exeDir, isDaemon );
+        if ( vm.count( "c" ) )
+        {
+            cfgDir = vm[ "c" ].as<std::string>();
+        }
+
+        MasterApplication app( exeDir, cfgDir, isDaemon );
         app.Initialize();
 
         master::RunTests( exeDir );

@@ -38,26 +38,39 @@ public:
     Pidfile( const char *filePath )
     : filePath_( filePath )
     {
-        bool fileExists = boost::filesystem::exists( filePath );
-
-        file_.open( filePath );
-
-        file_lock f_lock( filePath );
-        if ( !f_lock.try_lock() )
+        try
         {
-            PLOG_ERR( "can't exclusively lock pid_file=" << filePath_ );
-            exit( 1 );
+            bool fileExists = boost::filesystem::exists( filePath );
+
+            file_.open( filePath );
+            if ( !file_.is_open() )
+            {
+                PLOG_ERR( "can't open pid_file=" << filePath_ );
+                exit( 1 );
+            }
+
+            file_lock f_lock( filePath );
+            if ( !f_lock.try_lock() )
+            {
+                PLOG_ERR( "can't exclusively lock pid_file=" << filePath_ );
+                exit( 1 );
+            }
+
+            f_lock_.swap( f_lock );
+
+            file_ << getpid();
+            file_.flush();
+
+            afterFail_ = fileExists;
+            if ( afterFail_ )
+            {
+                PLOG_WRN( "previous process terminated abnormally" );
+            }
         }
-
-		f_lock_.swap( f_lock );
-
-        file_ << getpid();
-        file_.flush();
-
-        afterFail_ = fileExists;
-        if ( afterFail_ )
+        catch( std::exception &e )
         {
-            PLOG_WRN( "previous process terminated abnormally" );
+            PLOG_ERR( "Pidfile failed: " << e.what() );
+            exit( 1 );
         }
     }
 
