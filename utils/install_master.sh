@@ -17,7 +17,7 @@ fi
 
 #replace pidfile path in config file
 PIDFILE="/var/run/pmaster.pid"
-TMP_CONFIG="temp.cfg"
+TMP_CONFIG=`mktemp`
 
 cp -f "master.cfg" $TMP_CONFIG || die "could not copy 'master.cfg' to $TMP_CONFIG"
 sed -i "s|master.pid|$PIDFILE|g" $TMP_CONFIG
@@ -32,7 +32,6 @@ fi
 #try and create it
 mkdir -p `dirname "$MASTER_CONFIG_FILE"` || die "Could not create master config directory"
 cp -f $TMP_CONFIG $MASTER_CONFIG_FILE || die "Could not copy configuration file"
-rm -f $TMP_CONFIG
 
 #get master data directory
 _MASTER_DATA_DIR="/var/lib/pmaster"
@@ -55,15 +54,10 @@ mkdir -p $MASTER_EXE_DIR || die "Could not create master executable directory"
 cp -f "pmaster" $MASTER_EXE_DIR || die "Could not copy executable file"
 
 #get master executable path
-_MASTER_EXECUTABLE=`which pmaster`
-read -p "Please select master executable path [$_MASTER_EXECUTABLE] " MASTER_EXECUTABLE
+MASTER_EXECUTABLE=`which pmaster`
 if [ ! -f "$MASTER_EXECUTABLE" ] ; then
-	MASTER_EXECUTABLE=$_MASTER_EXECUTABLE
-	
-	if [ ! -f "$MASTER_EXECUTABLE" ] ; then
-		echo "Could not find master executable"
-		exit 1
-	fi
+	echo "Could not find master executable"
+	exit 1
 fi
 
 INIT_TPL_FILE="utils/master_init_script.tpl"
