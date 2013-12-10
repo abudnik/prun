@@ -115,7 +115,7 @@ public:
 
     void Initialize()
     {
-        common::logger::InitLogger( isDaemon_, "Master" );
+        common::logger::InitLogger( isDaemon_, "pmaster" );
 
         //PLOG( "master_id= " << masterId_ );
 
@@ -309,7 +309,7 @@ int main( int argc, char* argv[], char **envp )
         descr.add_options()
             ("help", "Print help")
             ("d", "Run as a daemon")
-            ("stop", "Stop daemon");
+            ("s", "Stop daemon");
         
         po::variables_map vm;
         po::store( po::parse_command_line( argc, argv, descr ), vm );
@@ -321,9 +321,9 @@ int main( int argc, char* argv[], char **envp )
             return 1;
         }
 
-        if ( vm.count( "stop" ) )
+        if ( vm.count( "s" ) )
         {
-            return common::StopDaemon( "master" );
+            return common::StopDaemon( "pmaster" );
         }
 
         if ( vm.count( "d" ) )

@@ -884,7 +884,7 @@ int main( int argc, char* argv[], char **envp )
             ("help", "Print help")
             ("num_thread", po::value<unsigned int>(), "Jobs thread pool size")
             ("d", "Run as a daemon")
-            ("stop", "Stop daemon")
+            ("s", "Stop daemon")
             ("u", po::value<uid_t>(), "Start as a specific non-root user");
         
         po::variables_map vm;
@@ -897,7 +897,7 @@ int main( int argc, char* argv[], char **envp )
             return 1;
         }
 
-        if ( vm.count( "stop" ) )
+        if ( vm.count( "s" ) )
         {
             return common::StopDaemon( "pworker" );
         }
