@@ -1,0 +1,8 @@
+*~
+src/common/configure.h
+CMakeFiles
+Makefile
+*.a
+pmaster
+pworker
+prexec
