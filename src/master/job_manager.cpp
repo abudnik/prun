@@ -208,7 +208,11 @@ void JobManager::Shutdown()
 
 bool JobManager::ReadScript( const std::string &fileName, std::string &script ) const
 {
-    std::string filePath = exeDir_ + '/' + fileName;
+    std::string filePath = fileName;
+    if ( filePath[0] != '/' )
+    {
+        filePath = exeDir_ + '/' + fileName;
+    }
     std::ifstream file( filePath.c_str() );
     if ( !file.is_open() )
     {
