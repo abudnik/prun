@@ -30,8 +30,11 @@ if [ -z "$MASTER_CONFIG_FILE" ] ; then
 	echo "Selected default - $MASTER_CONFIG_FILE"
 fi
 #try and create it
-mkdir -p `dirname "$MASTER_CONFIG_FILE"` || die "Could not create master config directory"
+MASTER_CONFIG_DIR=`dirname "$MASTER_CONFIG_FILE"`
+mkdir -p $MASTER_CONFIG_DIR || die "Could not create master config directory"
 cp -f $TMP_CONFIG $MASTER_CONFIG_FILE || die "Could not copy configuration file"
+cp -f "hosts" $MASTER_CONFIG_DIR"/hosts" || die "Could not copy 'hosts' file"
+cp -f "hosts_group1" $MASTER_CONFIG_DIR"/hosts_group1" || die "Could not copy 'hosts_group' file"
 
 #read master executable directory
 _MASTER_EXE_DIR="/usr/bin"

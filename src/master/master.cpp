@@ -51,9 +51,20 @@ using namespace std;
 
 namespace {
 
-void InitWorkerManager( const std::string &exeDir )
+void InitWorkerManager( const std::string &exeDir, const std::string &cfgPath )
 {
-    string hostsPath = exeDir + '/' + master::HOSTS_FILE_NAME;
+    string hostsDir, hostsPath;
+    if ( cfgPath.empty() )
+    {
+        hostsDir = exeDir;
+    }
+    else
+    {
+        boost::filesystem::path p( cfgPath );
+        boost::filesystem::path dir = p.parent_path();
+        hostsDir = dir.string();
+    }
+    hostsPath = hostsDir + '/' + master::HOSTS_FILE_NAME;
 
     std::ifstream file( hostsPath.c_str() );
     if ( !file.is_open() )
@@ -67,7 +78,7 @@ void InitWorkerManager( const std::string &exeDir )
     list< std::string > hosts;
     while( getline( file, line ) )
     {
-        hostsPath = exeDir + '/' + line;
+        hostsPath = hostsDir + '/' + line;
         hosts.clear();
         if ( master::ReadHosts( hostsPath.c_str(), hosts ) )
         {
@@ -106,9 +117,9 @@ void ThreadFun( boost::asio::io_service *io_service )
 class MasterApplication
 {
 public:
-    MasterApplication(  const std::string &exeDir, const std::string &cfgDir, bool isDaemon )
+    MasterApplication(  const std::string &exeDir, const std::string &cfgPath, bool isDaemon )
     : exeDir_( exeDir ),
-     cfgDir_( cfgDir ),
+     cfgPath_( cfgPath ),
      isDaemon_( isDaemon )
     {
         masterId_ = common::GenerateUUID();
@@ -121,13 +132,13 @@ public:
         //PLOG( "master_id= " << masterId_ );
 
         common::Config &cfg = common::Config::Instance();
-        if ( cfgDir_.empty() )
+        if ( cfgPath_.empty() )
         {
             cfg.ParseConfig( exeDir_.c_str(), "master.cfg" );
         }
         else
         {
-            cfg.ParseConfig( "", cfgDir_.c_str() );
+            cfg.ParseConfig( "", cfgPath_.c_str() );
         }
 
         unsigned int numHeartbeatThread = 1;
@@ -137,7 +148,7 @@ public:
         unsigned int numCommandSendThread = 1 + cfg.Get<unsigned int>( "num_command_send_thread" );
         unsigned int numPingThread = numHeartbeatThread + numPingReceiverThread;
 
-        InitWorkerManager( exeDir_ );
+        InitWorkerManager( exeDir_, cfgPath_ );
 
         timeoutManager_.reset( new master::TimeoutManager( io_service_timeout_ ) );
 
@@ -288,7 +299,7 @@ public:
 
 private:
     std::string exeDir_;
-    std::string cfgDir_;
+    std::string cfgPath_;
     bool isDaemon_;
     std::string masterId_;
 
@@ -318,7 +329,7 @@ int main( int argc, char* argv[], char **envp )
     {
         bool isDaemon = false;
         std::string exeDir = boost::filesystem::system_complete( argv[0] ).branch_path().string();
-        std::string cfgDir;
+        std::string cfgPath;
 
         // parse input command line options
         namespace po = boost::program_options;
@@ -354,10 +365,10 @@ int main( int argc, char* argv[], char **envp )
 
         if ( vm.count( "c" ) )
         {
-            cfgDir = vm[ "c" ].as<std::string>();
+            cfgPath = vm[ "c" ].as<std::string>();
         }
 
-        MasterApplication app( exeDir, cfgDir, isDaemon );
+        MasterApplication app( exeDir, cfgPath, isDaemon );
         app.Initialize();
 
         master::RunTests( exeDir );
