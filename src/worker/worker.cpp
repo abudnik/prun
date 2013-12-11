@@ -62,7 +62,7 @@ uid_t uid;
 unsigned int numJobThreads;
 unsigned int numThread;
 pid_t prexecPid;
-string exeDir;
+string exeDir, cfgDir, resourcesDir;
 
 boost::interprocess::shared_memory_object *sharedMemPool;
 boost::interprocess::mapped_region *mappedRegion;
@@ -781,6 +781,10 @@ void RunPrExecProcess()
                          worker::isDaemon ? "--d" : " ",
                          worker::uid != 0 ? "--u" : " ",
                          worker::uid != 0 ? ( boost::lexical_cast<std::string>( worker::uid ) ).c_str() : " ",
+                         !worker::cfgDir.empty() ? "--c" : " ",
+                         !worker::cfgDir.empty() ? worker::cfgDir.c_str() : " ",
+                         !worker::resourcesDir.empty() ? "--r" : " ",
+                         !worker::resourcesDir.empty() ? worker::resourcesDir.c_str() : " ",
                          NULL );
 
         if ( ret < 0 )
@@ -885,8 +889,10 @@ int main( int argc, char* argv[], char **envp )
             ("num_thread", po::value<unsigned int>(), "Jobs thread pool size")
             ("d", "Run as a daemon")
             ("s", "Stop daemon")
-            ("u", po::value<uid_t>(), "Start as a specific non-root user");
-        
+            ("u", po::value<uid_t>(), "Start as a specific non-root user")
+            ("c", po::value<std::string>(), "Config file path")
+            ("r", po::value<std::string>(), "Path to resources");
+
         po::variables_map vm;
         po::store( po::parse_command_line( argc, argv, descr ), vm );
         po::notify( vm );
@@ -900,6 +906,16 @@ int main( int argc, char* argv[], char **envp )
         if ( vm.count( "s" ) )
         {
             return common::StopDaemon( "pworker" );
+        }
+
+        if ( vm.count( "c" ) )
+        {
+            worker::cfgDir = vm[ "c" ].as<std::string>();
+        }
+
+        if ( vm.count( "r" ) )
+        {
+            worker::resourcesDir = vm[ "r" ].as<std::string>();
         }
 
         if ( vm.count( "u" ) )
@@ -924,7 +940,15 @@ int main( int argc, char* argv[], char **envp )
 
         common::logger::InitLogger( worker::isDaemon, "pworker" );
 
-        common::Config::Instance().ParseConfig( worker::exeDir.c_str(), "worker.cfg" );
+        common::Config &cfg = common::Config::Instance();
+        if ( worker::cfgDir.empty() )
+        {
+            cfg.ParseConfig( worker::exeDir.c_str(), "worker.cfg" );
+        }
+        else
+        {
+            cfg.ParseConfig( "", worker::cfgDir.c_str() );
+        }
 
         string pidfilePath = common::Config::Instance().Get<string>( "pidfile" );
         if ( pidfilePath[0] != '/' )

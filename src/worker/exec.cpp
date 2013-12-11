@@ -56,7 +56,7 @@ bool isDaemon;
 bool isFork;
 uid_t uid;
 unsigned int numThread;
-string exeDir;
+string exeDir, cfgDir, resourcesDir;
 
 boost::interprocess::shared_memory_object *sharedMemPool;
 boost::interprocess::mapped_region *mappedRegion; 
@@ -592,7 +592,8 @@ protected:
         try
         {
             exePath_ = common::Config::Instance().Get<string>( "python" );
-            nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_PY;
+            nodePath_ = resourcesDir.empty() ? exeDir : resourcesDir;
+            nodePath_ += std::string( "/" ) + NODE_SCRIPT_NAME_PY;
         }
         catch( std::exception &e )
         {
@@ -646,7 +647,8 @@ protected:
         try
         {
             exePath_ = common::Config::Instance().Get<string>( "java" );
-            nodePath_ = exeDir + "/node";
+            nodePath_ = resourcesDir.empty() ? exeDir : resourcesDir;
+            nodePath_ += "/node";
         }
         catch( std::exception &e )
         {
@@ -665,7 +667,8 @@ protected:
         try
         {
             exePath_ = common::Config::Instance().Get<string>( "shell" );
-            nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_SHELL;
+            nodePath_ = resourcesDir.empty() ? exeDir : resourcesDir;
+            nodePath_ += std::string( "/" ) + NODE_SCRIPT_NAME_SHELL;
         }
         catch( std::exception &e )
         {
@@ -684,7 +687,8 @@ protected:
         try
         {
             exePath_ = common::Config::Instance().Get<string>( "ruby" );
-            nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_RUBY;
+            nodePath_ = resourcesDir.empty() ? exeDir : resourcesDir;
+            nodePath_ += std::string( "/" ) + NODE_SCRIPT_NAME_RUBY;
         }
         catch( std::exception &e )
         {
@@ -703,7 +707,8 @@ protected:
         try
         {
             exePath_ = common::Config::Instance().Get<string>( "js" );
-            nodePath_ = exeDir + '/' + NODE_SCRIPT_NAME_JS;
+            nodePath_ = resourcesDir.empty() ? exeDir : resourcesDir;
+            nodePath_ += std::string( "/" ) + NODE_SCRIPT_NAME_JS;
         }
         catch( std::exception &e )
         {
@@ -1073,7 +1078,8 @@ void SetupLanguageRuntime()
         {
             PLOG_WRN( "SetupLanguageRuntime: get javac path failed: " << e.what() );
         }
-        std::string nodePath = worker::exeDir + '/' + worker::NODE_SCRIPT_NAME_JAVA;
+        std::string nodePath = worker::resourcesDir.empty() ? worker::exeDir : worker::resourcesDir;
+        nodePath += std::string( "/" ) + worker::NODE_SCRIPT_NAME_JAVA;
         if ( access( javacPath.c_str(), F_OK ) != -1 )
         {
             int ret = execl( javacPath.c_str(), "javac", nodePath.c_str(), NULL );
@@ -1267,7 +1273,8 @@ int main( int argc, char* argv[], char **envp )
             ("exe_dir", po::value<std::string>(), "Executable working directory")
             ("d", "Run as a daemon")
             ("u", po::value<uid_t>(), "Start as a specific non-root user")
-            ("f", "Create process for each request");
+            ("c", po::value<std::string>(), "Config file path")
+            ("r", po::value<std::string>(), "Path to resources");
         
         po::variables_map vm;
         po::store( po::parse_command_line( argc, argv, descr ), vm );
@@ -1295,7 +1302,25 @@ int main( int argc, char* argv[], char **envp )
             worker::exeDir = vm[ "exe_dir" ].as<std::string>();
         }
 
-        common::Config::Instance().ParseConfig( worker::exeDir.c_str(), "worker.cfg" );
+        if ( vm.count( "c" ) )
+        {
+            worker::cfgDir = vm[ "c" ].as<std::string>();
+        }
+
+        if ( vm.count( "r" ) )
+        {
+            worker::resourcesDir = vm[ "r" ].as<std::string>();
+        }
+
+        common::Config &cfg = common::Config::Instance();
+        if ( worker::cfgDir.empty() )
+        {
+            cfg.ParseConfig( worker::exeDir.c_str(), "worker.cfg" );
+        }
+        else
+        {
+            cfg.ParseConfig( "", worker::cfgDir.c_str() );
+        }
 
         SetupLanguageRuntime();
 
