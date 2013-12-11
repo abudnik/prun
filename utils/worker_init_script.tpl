@@ -6,7 +6,7 @@ case "$1" in
                 echo "worker is already running"
         else
                 echo "Starting Worker server..."
-                $EXEC --d --c $CONF --r $RESOURCES --u $UID
+                $EXEC --d --c $CONF --r $RESOURCES --u $WUID
         fi
         ;;
     stop)
