@@ -33,16 +33,6 @@ fi
 mkdir -p `dirname "$MASTER_CONFIG_FILE"` || die "Could not create master config directory"
 cp -f $TMP_CONFIG $MASTER_CONFIG_FILE || die "Could not copy configuration file"
 
-#get master data directory
-_MASTER_DATA_DIR="/var/lib/pmaster"
-read -p "Please select the data directory for this instance [$_MASTER_DATA_DIR] " MASTER_DATA_DIR
-if [ !"$MASTER_DATA_DIR" ] ; then
-	MASTER_DATA_DIR=$_MASTER_DATA_DIR
-	echo "Selected default - $MASTER_DATA_DIR"
-fi
-mkdir -p $MASTER_DATA_DIR || die "Could not create master data directory"
-cp -rf "node" $MASTER_DATA_DIR"/node" || die "Could not copy node directory"
-
 #read master executable directory
 _MASTER_EXE_DIR="/usr/bin"
 read -p "Please select the master executable directory [$_MASTER_EXE_DIR] " MASTER_EXE_DIR
@@ -75,7 +65,7 @@ MASTER_CHKCONFIG_INFO=\
 # chkconfig: - 58 74\n
 # description: pmaster is the prun master daemon.\n
 ### BEGIN INIT INFO\n
-# Provides: prun\n
+# Provides: pmaster\n
 # Required-Start: $network $local_fs $remote_fs\n
 # Required-Stop: $network $local_fs $remote_fs\n
 # Default-Start: 2 3 4 5\n
