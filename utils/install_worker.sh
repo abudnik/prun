@@ -77,7 +77,7 @@ WORKER_INIT_HEADER=\
 "#/bin/sh\n
 #Configurations injected by install_worker below....\n\n
 EXEC=\"$WORKER_EXECUTABLE\"\n
-RESOURCES=\"WORKER_DATA_DIR\"\n
+RESOURCES=\"$WORKER_DATA_DIR\"\n
 UID=$WORKER_UID\n
 CONF=\"$WORKER_CONFIG_FILE\"\n\n
 ###############\n\n"
