@@ -1,7 +1,7 @@
 
 case "$1" in
     start)
-        if [ !`pidof pmaster` ]
+        if pidof pmaster
         then
                 echo "master is already running"
         else
@@ -10,10 +10,8 @@ case "$1" in
         fi
         ;;
     stop)
-        if [ !`pidof pmaster` ]
+        if pidof pmaster
         then
-                echo "master is not running"
-        else
                 echo "Stopping ..."
                 $EXEC --s
                 while [ `pidof pmaster` ]
@@ -22,6 +20,8 @@ case "$1" in
                     sleep 1
                 done
                 echo "Master stopped"
+        else
+                echo "master is not running"
         fi
         ;;
     *)
