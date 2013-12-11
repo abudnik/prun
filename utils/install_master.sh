@@ -25,7 +25,7 @@ sed -i "s|master.pid|$PIDFILE|g" $TMP_CONFIG
 #read master config file
 _MASTER_CONFIG_FILE="/etc/pmaster/master.cfg"
 read -p "Please select the master config file name [$_MASTER_CONFIG_FILE] " MASTER_CONFIG_FILE
-if [ !"$MASTER_CONFIG_FILE" ] ; then
+if [ -z "$MASTER_CONFIG_FILE" ] ; then
 	MASTER_CONFIG_FILE=$_MASTER_CONFIG_FILE
 	echo "Selected default - $MASTER_CONFIG_FILE"
 fi
@@ -36,7 +36,7 @@ cp -f $TMP_CONFIG $MASTER_CONFIG_FILE || die "Could not copy configuration file"
 #read master executable directory
 _MASTER_EXE_DIR="/usr/bin"
 read -p "Please select the master executable directory [$_MASTER_EXE_DIR] " MASTER_EXE_DIR
-if [ !"$MASTER_EXE_DIR" ] ; then
+if [ -z "$MASTER_EXE_DIR" ] ; then
 	MASTER_EXE_DIR=$_MASTER_EXE_DIR
 	echo "Selected default - $MASTER_EXE_DIR"
 fi

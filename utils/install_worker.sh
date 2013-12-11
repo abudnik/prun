@@ -25,7 +25,7 @@ sed -i "s|worker.pid|$PIDFILE|g" $TMP_CONFIG
 #read worker config file
 _WORKER_CONFIG_FILE="/etc/pworker/worker.cfg"
 read -p "Please select the worker config file name [$_WORKER_CONFIG_FILE] " WORKER_CONFIG_FILE
-if [ !"$WORKER_CONFIG_FILE" ] ; then
+if [ -z "$WORKER_CONFIG_FILE" ] ; then
 	WORKER_CONFIG_FILE=$_WORKER_CONFIG_FILE
 	echo "Selected default - $WORKER_CONFIG_FILE"
 fi
@@ -36,7 +36,7 @@ cp -f $TMP_CONFIG $WORKER_CONFIG_FILE || die "Could not copy configuration file"
 #get worker data directory
 _WORKER_DATA_DIR="/var/lib/pworker"
 read -p "Please select the data directory for this instance [$_WORKER_DATA_DIR] " WORKER_DATA_DIR
-if [ !"$WORKER_DATA_DIR" ] ; then
+if [ -z "$WORKER_DATA_DIR" ] ; then
 	WORKER_DATA_DIR=$_WORKER_DATA_DIR
 	echo "Selected default - $WORKER_DATA_DIR"
 fi
@@ -46,7 +46,7 @@ cp -rf "node" $WORKER_DATA_DIR"/node" || die "Could not copy node directory"
 #read worker executable directory
 _WORKER_EXE_DIR="/usr/bin"
 read -p "Please select the worker executable directory [$_WORKER_EXE_DIR] " WORKER_EXE_DIR
-if [ !"$WORKER_EXE_DIR" ] ; then
+if [ -z "$WORKER_EXE_DIR" ] ; then
 	WORKER_EXE_DIR=$_WORKER_EXE_DIR
 	echo "Selected default - $WORKER_EXE_DIR"
 fi
@@ -63,8 +63,8 @@ fi
 
 #get worker uid
 _WORKER_USER=`whoami`
-read -p "Please select the worker user name [$_WORKER_USER] " WORKER_USER
-if [ !"$WORKER_USER" ] ; then
+read -p "Please select the worker user name [$_WORKER_USER]" WORKER_USER
+if [ -z "$WORKER_USER" ] ; then
 	WORKER_USER=$_WORKER_USER
 	echo "Selected default - $WORKER_USER"
 fi
