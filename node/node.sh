@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 command_exists () {
     command -v "$1" >/dev/null 2>&1
@@ -11,6 +11,7 @@ readFifo=$2
 scriptLen=$3
 taskId=$4
 numTasks=$5
+jobId=$6
 
 s=`dd if=$readFifo bs=$scriptLen count=1 2>/dev/null`
 if [ $? -eq 0 ]; then

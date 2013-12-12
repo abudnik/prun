@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
-echo "Hello, Bash!"
-echo "taskId="$taskId", numTasks="$numTasks
+echo "Hello, Shell!"
+echo "taskId="$taskId", numTasks="$numTasks, "jobId="$jobId

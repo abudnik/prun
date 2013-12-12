@@ -59,9 +59,13 @@ public class node {
                 Class aClass = fileManager.getClassLoader( null ).loadClass( className );
                 Object obj = aClass.newInstance();
                 Method method = aClass.getDeclaredMethod( "main", new Class[] { String[].class } );
-                String arglist[] = new String[2];
-                arglist[0] = args[3];
-                arglist[1] = args[4];
+                String arglist[] = new String[3];
+                String taskId = args[3];
+                String numTasks = args[4];
+                String jobId = args[5];
+                arglist[0] = taskId;
+                arglist[1] = numTasks;
+                arglist[2] = jobId;
                 method.invoke( obj, (Object)arglist );
             }
             else {

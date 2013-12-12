@@ -18,6 +18,7 @@ try {
     var scriptLen = parseInt( process.argv[4] );
     var taskId = process.argv[5];
     var numTasks = process.argv[6];
+    var jobId = process.argv[7];
 
     var fifo = fs.openSync(readFifo, "r");
 
@@ -32,6 +33,7 @@ try {
 
     var inject = "var taskId=" + taskId + ";\n";
     inject += "var numTasks=" + numTasks + ";\n";
+    inject += "var jobId=" + jobId + ";\n";
 
     eval(inject+data);
 } catch( e ) {

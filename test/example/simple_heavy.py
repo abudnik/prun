@@ -18,8 +18,8 @@ def main():
         if IsSimple( i ):
             simples.append( i )
 
-    global taskId, numTasks
-    print( "%i : %i" % (taskId, numTasks) )
-    print( 'done' )
+    global taskId, numTasks, jobId
+    print( "taskId=%i numTasks=%i jobId=%s" % (taskId, numTasks, jobId) )
+    print( 'simple_heavy done' )
 
 main()

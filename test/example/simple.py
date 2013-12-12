@@ -22,11 +22,8 @@ def main():
 
     #file.close()
 
-    global taskId, numTasks
-    print( "%i : %i" % (taskId, numTasks) )
-    print( 'done' )
-
-#import psyco
-#psyco.full()
+    global taskId, numTasks, jobId
+    print( "taskId=%i numTasks=%i jobId=%s" % (taskId, numTasks, jobId) )
+    print( 'simple done' )
 
 main()

@@ -6,6 +6,7 @@ begin
   scriptLen = Integer(ARGV[2])
   taskId = ARGV[3]
   numTasks = ARGV[4]
+  jobId = ARGV[5]
 
   fifo = File.open(readFifo, 'r')
   buffer = ''
@@ -15,6 +16,7 @@ begin
 
   inject = "taskId=" + taskId + "\n"
   inject += "numTasks=" + numTasks + "\n"
+  inject += "jobId=" + jobId + "\n"
 
   eval(inject+buffer)
 rescue Exception => e

@@ -11,6 +11,7 @@ try:
     scriptLen = int(sys.argv[3])
     taskId = int(sys.argv[4])
     numTasks = int(sys.argv[5])
+    jobId = sys.argv[6]
 
     fifo = os.open( readFifo, os.O_RDONLY )
     bytes = bytearray()
@@ -19,7 +20,7 @@ try:
 
     s = bytes.decode( "utf-8" )
 
-    exec( s, {"taskId":taskId, "numTasks":numTasks} )
+    exec( s, {"taskId":taskId, "numTasks":numTasks, "jobId":jobId} )
 except Exception as e:
     errCode = NODE_SCRIPT_EXEC_FAILED
     print( e )

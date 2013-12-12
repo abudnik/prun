@@ -311,6 +311,7 @@ public:
 
         string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
         string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
+        string jobId = boost::lexical_cast<std::string>( job->GetJobId() );
 
         const ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 
@@ -318,7 +319,7 @@ public:
                          nodePath_.c_str(),
                          threadParams.readFifo.c_str(), threadParams.writeFifo.c_str(),
                          scriptLength.c_str(),
-                         taskId.c_str(), numTasks.c_str(), NULL );
+                         taskId.c_str(), numTasks.c_str(), jobId.c_str(), NULL );
         if ( ret < 0 )
         {
             PLOG_ERR( "ScriptExec::Execute: execl failed: " << strerror(errno) );
@@ -625,6 +626,7 @@ public:
 
         string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
         string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
+        string jobId = boost::lexical_cast<std::string>( job->GetJobId() );
 
         const ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 
@@ -633,7 +635,7 @@ public:
                          "node",
                          threadParams.readFifo.c_str(), threadParams.writeFifo.c_str(),
                          scriptLength.c_str(),
-                         taskId.c_str(), numTasks.c_str(), NULL );
+                         taskId.c_str(), numTasks.c_str(), jobId.c_str(), NULL );
         if ( ret < 0 )
         {
             PLOG_ERR( "JavaExec::Execute: execl failed: " << strerror(errno) );

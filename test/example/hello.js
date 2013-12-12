@@ -1,2 +1,2 @@
 console.log("Hello, JavaScript!");
-console.log("taskId="+taskId+", numTasks="+numTasks);
+console.log("taskId="+taskId+", numTasks="+numTasks+", jobId="+jobId);
