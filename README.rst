@@ -51,22 +51,22 @@ Building runtime::
 Running
 -------
 
-Running worker in terminal::
+Running Worker in terminal::
 
 > ./pworker
 
-Running worker as a daemon with paths to config file and special node directory::
+Running Worker as a daemon with paths to config file and special node directory::
 
 > ./pworker --d --c /home/user/prun/worker.cfg --r /home/user/prun/node  # start
 > ./pworker --s  # stop daemon
 
 Use 'pworker --help' to display command line options.
 
-Running master in terminal::
+Running Master in terminal::
 
 > ./pmaster
 
-Running master as a daemon with path to config file::
+Running Master as a daemon with path to config file::
 
 > ./pmaster --d --c /home/user/prun/worker.cfg  # start
 > ./pmaster --s  # stop daemon
@@ -75,6 +75,20 @@ Use 'pmaster --help' to display command line options.
 
 Installation
 ------------
+
+If you are installing Prun the proper way for a production system, we have a script
+doing this for Ubuntu and Debian systems (upstart) or SysV-init compatible systems::
+
+> cd ~/prun                # cd to the directory containing prun
+> utils/install_master.sh  # install Master
+> utils/install_worker.sh  # install Worker
+
+The script will ask you a few questions and will setup everything you need
+to run Master/Worker properly as a background daemon that will start again on
+system reboots.
+
+You'll be able to stop and start Master/Worker using the script named
+/etc/init.d/pmaster and /etc/init.d/pworker, accordingly.
 
 Job submitting
 --------------
