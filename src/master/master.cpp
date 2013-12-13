@@ -371,7 +371,9 @@ int main( int argc, char* argv[], char **envp )
         MasterApplication app( exeDir, cfgPath, isDaemon );
         app.Initialize();
 
+#ifdef _DEBUG
         master::RunTests( exeDir );
+#endif
 
         app.Run();
 

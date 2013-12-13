@@ -12,6 +12,7 @@ if (Release)
   set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-long-long -pedantic -pthread -g -O3")
 else()
   set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-long-long -pedantic -pthread -g -O0")
+  add_definitions( -D_DEBUG )
 endif()
 
 set(SRC_DIR src)
