@@ -63,7 +63,7 @@ fi
 
 #get worker uid
 _WORKER_USER=`whoami`
-read -p "Please select the worker user name [$_WORKER_USER]" WORKER_USER
+read -p "Please select user, whose security policy will be used in the job execution process [$_WORKER_USER]" WORKER_USER
 if [ -z "$WORKER_USER" ] ; then
 	WORKER_USER=$_WORKER_USER
 	echo "Selected default - $WORKER_USER"
