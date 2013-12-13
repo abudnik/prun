@@ -95,3 +95,6 @@ Job submitting
 
 License
 -------
+
+The contents of this repository are made available to the public under the terms
+of the Apache License, Version 2.0. For more information see LICENSE.txt
