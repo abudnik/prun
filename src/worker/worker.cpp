@@ -886,7 +886,6 @@ int main( int argc, char* argv[], char **envp )
 
         descr.add_options()
             ("help", "Print help")
-            ("num_thread", po::value<unsigned int>(), "Jobs thread pool size")
             ("d", "Run as a daemon")
             ("s", "Stop daemon")
             ("u", po::value<uid_t>(), "Start as a specific non-root user")
@@ -930,10 +929,6 @@ int main( int argc, char* argv[], char **envp )
             worker::isDaemon = true;
         }
 
-        if ( vm.count( "num_thread" ) )
-        {
-            worker::numJobThreads = vm[ "num_thread" ].as<unsigned int>();
-        }
         // 1. accept thread
         // 2. additional worker thread for async reading results from prexec
         worker::numThread = worker::numJobThreads + 2;
