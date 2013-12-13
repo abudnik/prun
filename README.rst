@@ -51,6 +51,28 @@ Building runtime::
 Running
 -------
 
+Running worker in terminal::
+
+> ./pworker
+
+Running worker as a daemon with paths to config file and special node directory::
+
+> ./pworker --d --c /home/user/prun/worker.cfg --r /home/user/prun/node  # start
+> ./pworker --s  # stop daemon
+
+Use 'pworker --help' to display command line options.
+
+Running master in terminal::
+
+> ./pmaster
+
+Running master as a daemon with path to config file::
+
+> ./pmaster --d --c /home/user/prun/worker.cfg  # start
+> ./pmaster --s  # stop daemon
+
+Use 'pmaster --help' to display command line options.
+
 Installation
 ------------
 
