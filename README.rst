@@ -26,20 +26,20 @@ documentation at doc/README
 Building
 --------
 
-Build requirements:
+Build requirements::
 - cmake 2.6 (or higher)
 - GCC 3.x (or higher) or Clang
 - boost 1.45 (or higher)
 
-Additional requirements:
+Additional requirements::
 - python 2.6/3.x (for command-line admin tool & other purposes)
 
-For running jobs written in Ruby, JavaScript or Java, requirements are as follows:
+For running jobs written in Ruby, JavaScript or Java, requirements are as follows::
 - ruby
 - node.js
 - java 1.6 (or higher)
 
-Building runtime:
+Building runtime::
 > cd ~/prun               # cd to the directory containing prun
 > cmake -DRelease=true .  # skipping Release var disables compiler optimizations
 > make                    # build executables
