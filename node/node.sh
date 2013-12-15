@@ -15,7 +15,7 @@ jobId=$6
 
 s=`dd if=$readFifo bs=$scriptLen count=1 2>/dev/null`
 if [ $? -eq 0 ]; then
-    eval "$s"
+    (eval "$s")
     errCode=$?
 else
     errCode=$NODE_SCRIPT_EXEC_FAILED
