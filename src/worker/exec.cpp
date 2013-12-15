@@ -84,7 +84,7 @@ struct ChildProcesses
     bool Delete( pid_t pid )
     {
         boost::unique_lock< boost::mutex > lock( mut_ );
-        std::set< pid_t >::iterator it = pids_.find( pid );
+        std::multiset< pid_t >::iterator it = pids_.find( pid );
         if ( it != pids_.end() )
         {
             pids_.erase( it );
@@ -94,7 +94,7 @@ struct ChildProcesses
     }
 
 private:
-    std::set< pid_t > pids_;
+    std::multiset< pid_t > pids_;
     boost::mutex mut_;
 };
 ChildProcesses childProcesses;
