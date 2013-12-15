@@ -411,7 +411,7 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
             return;
 
         PLOG( "Scheduler::OnTaskCompletion: jobId=" << workerTask.GetJobId() <<
-              ", taskId=" << workerTask.GetTaskId() << ", execTime=" << execTime <<
+              ", taskId=" << workerTask.GetTaskId() << ", execTime=" << execTime << " ms" <<
               ", ip=" << hostIP );
 
         NodeState &nodeState = it->second;
