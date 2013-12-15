@@ -1,0 +1,15 @@
+{
+    "script" : "test/example/sort_merge.sh",
+    "language" : "shell",
+    "send_script" : true,
+    "priority" : 4,
+    "job_timeout" : 1800,
+    "queue_timeout" : 1800,
+    "task_timeout" : 1800,
+    "max_failed_nodes" : 10,
+    "num_execution" : 1,
+    "max_cluster_cpu" : -1,
+    "max_cpu" : 1,
+    "exclusive" : false,
+    "no_reschedule" : false
+}
