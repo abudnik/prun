@@ -65,7 +65,7 @@ struct ThreadParams
 {
     int writeFifoFD, readFifoFD;
     string writeFifo, readFifo;
-    pid_t pid;
+    ExecInfo execInfo;
 };
 
 typedef std::map< boost::thread::id, ThreadParams > ThreadInfo;
@@ -213,36 +213,37 @@ public:
         {
             pid_t pid = execInfo.pid_;
 
-            if ( !childProcesses.Delete( pid ) )
+            if ( childProcesses.Delete( pid ) )
             {
-                PLOG( "StopTaskAction::StopTask: child process already terminated" );
-                job.OnError( NODE_TASK_NOT_FOUND );
-                return;
-            }
-
-            int ret = kill( pid, SIGTERM );
-            if ( ret != -1 )
-            {
-                int fifo = FindFifo( pid );
-                if ( fifo != -1 )
+                int ret = kill( pid, SIGTERM );
+                if ( ret != -1 )
                 {
-                    int errCode = NODE_JOB_TIMEOUT;
-                    int ret = write( fifo, &errCode, sizeof( errCode ) );
-                    if ( ret == -1 )
-                        PLOG( "StopTaskAction::StopTask: write fifo failed, err=" << strerror(errno) );
+                    PLOG( "StopTaskAction::StopTask: task stopped, pid=" << pid <<
+                          ", jobId=" << job.GetJobId() << ", taskId=" << job.GetTaskId() );
                 }
                 else
                 {
-                    PLOG( "StopTaskAction::StopTask: fifo not found for pid=" << pid );
+                    PLOG( "StopTaskAction::StopTask: process killing failed: pid=" << pid << ", err=" << strerror(errno) );
+                    job.OnError( NODE_FATAL );
                 }
-
-                PLOG( "StopTaskAction::StopTask: task stopped, pid=" << pid <<
-                      ", jobId=" << job.GetJobId() << ", taskId=" << job.GetTaskId() );
             }
             else
             {
-                PLOG( "StopTaskAction::StopTask: process killing failed: pid=" << pid << ", err=" << strerror(errno) );
-                job.OnError( NODE_FATAL );
+                PLOG( "StopTaskAction::StopTask: child process already terminated" );
+                job.OnError( NODE_TASK_NOT_FOUND );
+            }
+
+            int fifo = FindFifo( execInfo );
+            if ( fifo != -1 )
+            {
+                int errCode = NODE_JOB_TIMEOUT;
+                int ret = write( fifo, &errCode, sizeof( errCode ) );
+                if ( ret == -1 )
+                    PLOG( "StopTaskAction::StopTask: write fifo failed, err=" << strerror(errno) );
+            }
+            else
+            {
+                PLOG( "StopTaskAction::StopTask: fifo not found for pid=" << pid );
             }
         }
         else
@@ -254,13 +255,13 @@ public:
     }
 
 private:
-    int FindFifo( pid_t pid )
+    int FindFifo( const ExecInfo &execInfo ) const
     {
         ThreadInfo::const_iterator it = threadInfo.begin();
         for( ; it != threadInfo.end(); ++it )
         {
             const ThreadParams &threadParams = it->second;
-            if ( threadParams.pid == pid )
+            if ( threadParams.execInfo == execInfo )
                 return threadParams.readFifoFD;
         }
         return -1;
@@ -371,13 +372,15 @@ protected:
         {
             childProcesses.Add( pid );
             ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
-            threadParams.pid = pid;
 
             ExecInfo execInfo;
             execInfo.jobId_ = job_->GetJobId();
             execInfo.taskId_ = job_->GetTaskId();
             execInfo.masterId_ = job_->GetMasterId();
             execInfo.pid_ = pid;
+
+            threadParams.execInfo = execInfo; // copy without callback
+
             execInfo.callback_ = boost::bind( &ScriptExec::Cancel, execInfo );
             execTable.Add( execInfo );
 

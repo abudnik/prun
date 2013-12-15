@@ -38,6 +38,14 @@ struct ExecInfo
     std::string masterId_;
     pid_t pid_; // used in pyexec
     boost::function< void () > callback_;
+
+    bool operator == ( const ExecInfo &execInfo ) const
+    {
+        return jobId_ == execInfo.jobId_ &&
+               taskId_ == execInfo.taskId_ &&
+               masterId_ == execInfo.masterId_ &&
+               pid_ == execInfo.pid_;
+    }
 };
 
 class ExecTable
