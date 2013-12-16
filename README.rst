@@ -183,7 +183,14 @@ test/external_sort.meta)::
 
   test/sort_chunk.job test/sort_merge.job
 
+Ok, we are almost done. We are having everything that is needed for sorting
+the big file: running Workers across cluster nodes, one running Master process,
+jobs and job descriptions, shared directory containing the input file
+(data/input.txt). Lets submit job using command-line tool::
 
+> cd ~/prun                        # cd to the directory containing prun
+> python admin.py master_hostname  # run admin tool, connect to host with Master
+> run /home/user/prun/test/external_sort.meta # submit a meta job
 
 License
 -------
