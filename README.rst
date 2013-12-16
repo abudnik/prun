@@ -102,19 +102,19 @@ parts are called chunks. We can submit a job from Master to Workers, which sorts
 chunks. Here's a simple shell script (see test/example/sort_chunk.sh) which does
 it properly::
 
-> echo "Sorting chunk process started"
-> echo "taskId="$taskId", numTasks="$numTasks", jobId="$jobId
->
-> filename="data/input.txt"
-> outFile="data/$taskId"
->
-> fileSize=`stat --printf="%s" $filename`
-> partSize=`expr $fileSize / $numTasks`
->
-> dd if=$filename bs=$partSize skip=$taskId count=1 | sort --buffer-size=$partSize"b" > $outFile
-> errCode=${PIPESTATUS[0]}
->
-> exit $errCode
+echo "Sorting chunk process started"
+echo "taskId="$taskId", numTasks="$numTasks", jobId="$jobId
+
+filename="data/input.txt"
+outFile="data/$taskId"
+
+fileSize=`stat --printf="%s" $filename`
+partSize=`expr $fileSize / $numTasks`
+
+dd if=$filename bs=$partSize skip=$taskId count=1 | sort --buffer-size=$partSize"b" > $outFile
+errCode=${PIPESTATUS[0]}
+
+exit $errCode
 
 
 
