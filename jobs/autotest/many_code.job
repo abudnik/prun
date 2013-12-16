@@ -1,5 +1,5 @@
 {
-    "script" : "test/example/many_code.py",
+    "script" : "example/many_code.py",
     "language" : "python",
     "send_script" : true,
     "priority" : 8,

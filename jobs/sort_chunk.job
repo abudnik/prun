@@ -1,5 +1,5 @@
 {
-    "script" : "test/example/sort_chunk.sh",
+    "script" : "example/sort_chunk.sh",
     "language" : "shell",
     "send_script" : true,
     "priority" : 4,

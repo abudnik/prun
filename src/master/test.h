@@ -44,12 +44,11 @@ void TestMetaJob( const std::string &filePath )
     std::list< master::Job * > jobs;
     master::JobManager::Instance().CreateMetaJob( metaDescr, jobs );
     master::JobManager::Instance().PushJobs( jobs );
-
 }
 
-void RunTests( const std::string &exeDir )
+void RunTests( const std::string &jobsDir )
 {
-    std::string filePath = exeDir + "/test/test.all";
+    std::string filePath = jobsDir + "/test.all";
     std::ifstream file( filePath.c_str() );
     if ( !file.is_open() )
     {
@@ -68,7 +67,7 @@ void RunTests( const std::string &exeDir )
         }
         std::string ext = line.substr( found + 1 );
 
-        filePath = exeDir + "/test/" + line;
+        filePath = jobsDir + '/' + line;
 
         if ( ext == "job" )
             TestSingleJob( filePath );

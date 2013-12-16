@@ -43,6 +43,10 @@ int AdminCommand_Run::Execute( const boost::property_tree::ptree &params,
     try
     {
         filePath = params.get<std::string>( "file" );
+        if ( filePath[0] != '/' )
+        {
+            filePath = JobManager::Instance().GetJobsDir() + '/' + filePath;
+        }
 
         if ( params.count( "alias" ) > 0 )
         {

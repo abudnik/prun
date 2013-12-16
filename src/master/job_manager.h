@@ -60,6 +60,7 @@ public:
     bool PopJob( JobPtr &job );
 
     const std::string &GetMasterId() const { return masterId_; }
+    const std::string &GetJobsDir() const { return jobsDir_; }
 
     static JobManager &Instance()
     {
@@ -71,7 +72,7 @@ public:
     void Shutdown();
 
 private:
-    bool ReadScript( const std::string &fileName, std::string &script ) const;
+    bool ReadScript( const std::string &filePath, std::string &script ) const;
     Job *CreateJob( const boost::property_tree::ptree &ptree ) const;
     void ReadHosts( Job *job, const boost::property_tree::ptree &ptree ) const;
     void ReadGroups( Job *job, const boost::property_tree::ptree &ptree ) const;
@@ -83,7 +84,7 @@ private:
 private:
     JobQueue jobs_;
     TimeoutManager *timeoutManager_;
-    std::string exeDir_;
+    std::string exeDir_, jobsDir_;
     std::string masterId_;
     static int64_t numJobGroups_;
 };

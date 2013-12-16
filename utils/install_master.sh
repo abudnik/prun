@@ -15,12 +15,24 @@ if [ `id -u` != "0" ] ; then
 	exit 1
 fi
 
+#read master jobs directory
+_MASTER_JOBS_DIR="/var/lib/pmaster"
+read -p "Please select the master jobs directory [$_MASTER_JOBS_DIR] " MASTER_JOBS_DIR
+if [ -z "$MASTER_JOBS_DIR" ] ; then
+	MASTER_JOBS_DIR=$_MASTER_JOBS_DIR
+	echo "Selected default - $MASTER_JOBS_DIR"
+fi
+mkdir -p $MASTER_JOBS_DIR || die "Could not create master jobs directory"
+MASTER_JOBS_DIR=$MASTER_JOBS_DIR"/jobs"
+cp -rf "jobs" $MASTER_JOBS_DIR || die "Could not copy jobs directory"
+
 #replace pidfile path in config file
 PIDFILE="/var/run/pmaster.pid"
 TMP_CONFIG=`mktemp`
 
 cp -f "master.cfg" $TMP_CONFIG || die "could not copy 'master.cfg' to $TMP_CONFIG"
 sed -i "s|master.pid|$PIDFILE|g" $TMP_CONFIG
+sed -i "s|\"jobs\"|\"$MASTER_JOBS_DIR\"|g" $TMP_CONFIG
 
 #read master config file
 _MASTER_CONFIG_FILE="/etc/pmaster/master.cfg"
@@ -101,7 +113,6 @@ rm -f $TMP_CONFIG
 echo "Installing service..."
 if [ -z `which chkconfig` ] ; then 
 	#if we're not a chkconfig box assume we're able to use update-rc.d
-    echo "aaa"
 	update-rc.d pmaster defaults && echo "Success!"
 else
 	# we're chkconfig, so lets add to chkconfig and put in runlevel 345

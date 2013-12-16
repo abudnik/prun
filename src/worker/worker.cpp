@@ -301,14 +301,13 @@ class ExecuteTask : public Action
 
         const std::string &filePath = job->GetFilePath();
 
-        std::string fullPath = exeDir + '/' + filePath;
-        bool fileExists = boost::filesystem::exists( fullPath );
+        bool fileExists = boost::filesystem::exists( filePath );
         if ( fileExists )
         {
-            job->SetFilePath( fullPath );
+            job->SetFilePath( filePath );
             return true;
         }
-        PLOG_WRN( "ExecuteTask::ExpandFilePath: file not exists '" << fullPath << "'" );
+        PLOG_WRN( "ExecuteTask::ExpandFilePath: file not exists '" << filePath << "'" );
         return false;
     }
 

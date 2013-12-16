@@ -372,7 +372,8 @@ int main( int argc, char* argv[], char **envp )
         app.Initialize();
 
 #ifdef _DEBUG
-        master::RunTests( exeDir );
+        const std::string &jobsDir = master::JobManager::Instance().GetJobsDir();
+        master::RunTests( jobsDir );
 #endif
 
         app.Run();

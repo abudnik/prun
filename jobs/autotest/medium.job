@@ -1,5 +1,5 @@
 {
-    "script" : "test/example/simple.py",
+    "script" : "example/simple.py",
     "language" : "python",
     "send_script" : true,
     "priority" : 8,

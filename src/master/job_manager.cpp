@@ -103,7 +103,12 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
     for( ; it != jobFiles.end(); ++it )
     {
         // read job description from file
-        std::string filePath = exeDir_ + '/' + *it;
+        std::string filePath = *it;
+        if ( filePath[0] != '/' )
+        {
+            filePath = jobsDir_ + '/' + filePath;
+        }
+
         std::ifstream file( filePath.c_str() );
         if ( !file.is_open() )
         {
@@ -199,6 +204,14 @@ void JobManager::Initialize( const std::string &masterId, const std::string &exe
     masterId_ = masterId;
     exeDir_ = exeDir;
     timeoutManager_ = timeoutManager;
+
+    common::Config &cfg = common::Config::Instance();
+    std::string jobsDir = cfg.Get<std::string>( "jobs_path" );
+    if ( jobsDir.empty() || jobsDir[0] != '/' )
+    {
+        jobsDir = exeDir + '/' + jobsDir;
+    }
+    jobsDir_ = jobsDir;
 }
 
 void JobManager::Shutdown()
@@ -206,13 +219,8 @@ void JobManager::Shutdown()
     jobs_.Clear();
 }
 
-bool JobManager::ReadScript( const std::string &fileName, std::string &script ) const
+bool JobManager::ReadScript( const std::string &filePath, std::string &script ) const
 {
-    std::string filePath = fileName;
-    if ( filePath[0] != '/' )
-    {
-        filePath = exeDir_ + '/' + fileName;
-    }
     std::ifstream file( filePath.c_str() );
     if ( !file.is_open() )
     {
@@ -238,6 +246,10 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
         {
             PLOG_ERR( "JobManager::CreateJob: empty script file name" );
             return NULL;
+        }
+        if ( fileName[0] != '/' )
+        {
+            fileName = jobsDir_ + '/' + fileName;
         }
 
         bool sendScript = ptree.get<bool>( "send_script" );
