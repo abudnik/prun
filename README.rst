@@ -93,6 +93,31 @@ You'll be able to stop and start Master/Worker using the script named
 Job submitting
 --------------
 
+Here's a simple example of external sort application. Let's assume that we have
+network-shared directory named 'data', which is read/write available from any node
+in a cluster. So we need parallelize somehow sorting of a big text file.
+
+It is possible to sort a separate small parts of a file in parallel. This small
+parts are called chunks. We can submit a job from Master to Workers, which sorts
+chunks. Here's a simple shell script (see test/example/sort_chunk.sh) which does
+it properly::
+
+> echo "Sorting chunk process started"
+> echo "taskId="$taskId", numTasks="$numTasks", jobId="$jobId
+>
+> filename="data/input.txt"
+> outFile="data/$taskId"
+>
+> fileSize=`stat --printf="%s" $filename`
+> partSize=`expr $fileSize / $numTasks`
+>
+> dd if=$filename bs=$partSize skip=$taskId count=1 | sort --buffer-size=$partSize"b" > $outFile
+> errCode=${PIPESTATUS[0]}
+>
+> exit $errCode
+
+
+
 License
 -------
 
