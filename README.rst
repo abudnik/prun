@@ -137,10 +137,53 @@ detailed description)::
   }
 
 In a few words this job should be executed 16 times, using only one CPU of a
-Worker node and should be done in within 1800 seconds. It means that if we have
+Worker node and should be done within 1800 seconds. It means that if we have
 16 Worker nodes, each worker node will sort one of sixteen chunks of the input
-big file. Even is we have only one worker, chunk sorting job will be executed
+big file. Even if we have only one worker, chunk sorting job will be executed
 sixteen times.
+
+After sorting chunks, this chunks could be merged together in one big output file.
+Here's a simple shell script (see test/example/sort_merge.sh) which does
+it properly::
+
+  echo "Chunk merging process started"
+  echo "taskId="$taskId", numTasks="$numTasks", jobId="$jobId
+
+  chunks=`ls -d data/*[0-9]`
+  outFile="data/output.txt"
+
+  sort --buffer-size=33% -T "data" -m $chunks > $outFile
+  errCode=$?
+
+  exit $errCode
+
+And merge job description (see test/sort_merge.job)::
+
+  {
+      "script" : "test/example/sort_merge.sh",
+      "language" : "shell",
+      "send_script" : true,
+      "priority" : 4,
+      "job_timeout" : 1800,
+      "queue_timeout" : 1800,
+      "task_timeout" : 1800,
+      "max_failed_nodes" : 10,
+      "num_execution" : 1,
+      "max_cluster_cpu" : -1,
+      "max_cpu" : 1,
+      "exclusive" : false,
+      "no_reschedule" : false
+  }
+
+We want run merging job strictly after completion of all chunk sorting jobs.
+It is possible to describe job dependencies in a directed acyclic graph. Prun
+takes that job dependencies from the .meta file, which is written in tsort
+format (man tsort). Here's a simple job dependency between two jobs (see
+test/external_sort.meta)::
+
+  test/sort_chunk.job test/sort_merge.job
+
+
 
 License
 -------
