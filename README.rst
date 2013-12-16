@@ -116,7 +116,25 @@ it properly::
 
   exit $errCode
 
+For submitting a chunk sorting job, we should describe it in a .job file (see
+test/sort_chunk.job), which is written in JSON format (see doc/README for more
+detailed description)::
 
+  {
+      "script" : "test/example/sort_chunk.sh",
+      "language" : "shell",
+      "send_script" : true,
+      "priority" : 4,
+      "job_timeout" : 1800,
+      "queue_timeout" : 300,
+      "task_timeout" : 300,
+      "max_failed_nodes" : 10,
+      "num_execution" : 16,
+      "max_cluster_cpu" : -1,
+      "max_cpu" : 1,
+      "exclusive" : false,
+      "no_reschedule" : false
+  }
 
 License
 -------
