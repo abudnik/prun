@@ -136,6 +136,12 @@ detailed description)::
       "no_reschedule" : false
   }
 
+In a few words this job should be executed 16 times, using only one CPU of a
+Worker node and should be done in within 1800 seconds. It means that if we have
+16 Worker nodes, each worker node will sort one of sixteen chunks of the input
+big file. Even is we have only one worker, chunk sorting job will be executed
+sixteen times.
+
 License
 -------
 
