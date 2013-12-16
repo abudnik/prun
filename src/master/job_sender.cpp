@@ -123,6 +123,14 @@ void JobSenderBoost::SendJob( const WorkerJob &workerJob, const std::string &hos
 
 void JobSenderBoost::OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const JobPtr &job )
 {
+    {
+        boost::mutex::scoped_lock scoped_lock( completionMut_ );
+        if ( completed_ )
+            return;
+        else
+            completed_ = true;
+    }
+
     sendJobsSem_.Notify();
     JobSender::OnJobSendCompletion( success, workerJob, hostIP, job );
 }

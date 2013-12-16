@@ -108,7 +108,8 @@ public:
                     int maxSimultSendingJobs )
     : JobSender( timeoutManager ),
      io_service_( io_service ),
-     sendJobsSem_( maxSimultSendingJobs )
+     sendJobsSem_( maxSimultSendingJobs ),
+     completed_( false )
     {}
 
     virtual void Start();
@@ -123,6 +124,8 @@ private:
 private:
     boost::asio::io_service &io_service_;
     common::Semaphore sendJobsSem_;
+    bool completed_;
+    boost::mutex completionMut_;
 };
 
 } // namespace master

@@ -112,7 +112,8 @@ public:
     ResultGetterBoost( boost::asio::io_service &io_service,
                        int maxSimultResultGetters )
     : io_service_( io_service ),
-     getJobsSem_( maxSimultResultGetters )
+     getJobsSem_( maxSimultResultGetters ),
+     completed_( false )
     {}
 
     virtual void Start();
@@ -127,6 +128,8 @@ private:
 private:
     boost::asio::io_service &io_service_;
     common::Semaphore getJobsSem_;
+    bool completed_;
+    boost::mutex completionMut_;
 };
 
 } // namespace master

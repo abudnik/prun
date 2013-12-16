@@ -105,6 +105,14 @@ void ResultGetterBoost::GetTaskResult( const WorkerTask &workerTask, const std::
 
 void ResultGetterBoost::OnGetTaskResult( bool success, int errCode, int64_t execTime, const WorkerTask &workerTask, const std::string &hostIP )
 {
+    {
+        boost::mutex::scoped_lock scoped_lock( completionMut_ );
+        if ( completed_ )
+            return;
+        else
+            completed_ = true;
+    }
+
     getJobsSem_.Notify();
     ResultGetter::OnGetTaskResult( success, errCode, execTime, workerTask, hostIP );
 }

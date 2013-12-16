@@ -116,7 +116,8 @@ public:
                         int maxSimultCommandSenders )
     : CommandSender( timeoutManager ),
      io_service_( io_service ),
-     cmdSenderSem_( maxSimultCommandSenders )
+     cmdSenderSem_( maxSimultCommandSenders ),
+     completed_( false )
     {}
 
     virtual void Start();
@@ -131,6 +132,8 @@ private:
 private:
     boost::asio::io_service &io_service_;
     common::Semaphore cmdSenderSem_;
+    bool completed_;
+    boost::mutex completionMut_;
 };
 
 } // namespace master

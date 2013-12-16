@@ -107,6 +107,14 @@ void CommandSenderBoost::SendCommand( CommandPtr &command, const std::string &ho
 
 void CommandSenderBoost::OnSendCommand( bool success, int errCode, CommandPtr &command, const std::string &hostIP )
 {
+    {
+        boost::mutex::scoped_lock scoped_lock( completionMut_ );
+        if ( completed_ )
+            return;
+        else
+            completed_ = true;
+    }
+
     cmdSenderSem_.Notify();
     CommandSender::OnSendCommand( success, errCode, command, hostIP );
 }
