@@ -99,7 +99,7 @@ in a cluster. So we need parallelize somehow sorting of a big text file.
 
 It is possible to sort a separate small parts of a file in parallel. This small
 parts are called chunks. We can submit a job from Master to Workers, which sorts
-chunks. Here's a simple shell script (see test/example/sort_chunk.sh) which does
+chunks. Here's a simple shell script (see jobs/example/sort_chunk.sh) which does
 it properly::
 
   echo "Sorting chunk process started"
@@ -117,11 +117,11 @@ it properly::
   exit $errCode
 
 For submitting a chunk sorting job, we should describe it in a .job file (see
-test/sort_chunk.job), which is written in JSON format (see doc/README for more
+jobs/sort_chunk.job), which is written in JSON format (see doc/README for more
 detailed description)::
 
   {
-      "script" : "test/example/sort_chunk.sh",
+      "script" : "example/sort_chunk.sh",
       "language" : "shell",
       "send_script" : true,
       "priority" : 4,
@@ -143,7 +143,7 @@ big file. Even if we have only one worker, chunk sorting job will be executed
 sixteen times.
 
 After sorting chunks, this chunks could be merged together in one big output file.
-Here's a simple shell script (see test/example/sort_merge.sh) which does
+Here's a simple shell script (see jobs/example/sort_merge.sh) which does
 it properly::
 
   echo "Chunk merging process started"
@@ -157,10 +157,10 @@ it properly::
 
   exit $errCode
 
-And merge job description (see test/sort_merge.job)::
+And merge job description (see jobs/sort_merge.job)::
 
   {
-      "script" : "test/example/sort_merge.sh",
+      "script" : "example/sort_merge.sh",
       "language" : "shell",
       "send_script" : true,
       "priority" : 4,
@@ -179,9 +179,9 @@ We want run merging job strictly after completion of all chunk sorting jobs.
 It is possible to describe job dependencies in a directed acyclic graph. Prun
 takes that job dependencies from the .meta file, which is written in tsort
 format (man tsort). Here's a simple job dependency between two jobs (see
-test/external_sort.meta)::
+jobs/external_sort.meta)::
 
-  test/sort_chunk.job test/sort_merge.job
+  sort_chunk.job sort_merge.job
 
 Ok, we are almost done. We are having everything that is needed for sorting
 the big file: running Workers across cluster nodes, one running Master process,
@@ -190,7 +190,7 @@ jobs and job descriptions, shared directory containing the input file
 
 > cd ~/prun                        # cd to the directory containing prun
 > python admin.py master_hostname  # run admin tool, connect to host with Master
-> run /home/user/prun/test/external_sort.meta # submit a meta job
+> run external_sort.meta           # submit a meta job
 
 License
 -------
