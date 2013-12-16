@@ -563,8 +563,12 @@ private:
     void FlushFifo()
     {
         ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
-        int fifo = threadParams.readFifoFD;
+        FlushFifo( threadParams.readFifoFD );
+        FlushFifo( threadParams.writeFifoFD );
+    }
 
+    void FlushFifo( int fifo )
+    {
         pollfd pfd[1];
         pfd[0].fd = fifo;
         pfd[0].events = POLLIN;
