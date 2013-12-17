@@ -98,8 +98,8 @@ network-shared directory named 'data', which is read/write available from any no
 in a cluster. So we need parallelize somehow sorting of a big text file.
 
 It is possible to sort a separate small parts of a file in parallel. This small
-parts are called chunks. We can submit a job from Master to Workers, which sorts
-chunks. Here's a simple shell script (see jobs/example/sort_chunk.sh) which does
+parts are called chunks. We can submit a job that sorts chunks from Master to
+Workers. Here's a simple shell script (see jobs/example/sort_chunk.sh) that does
 it properly::
 
   echo "Sorting chunk process started"
@@ -117,7 +117,7 @@ it properly::
   exit $errCode
 
 For submitting a chunk sorting job, we should describe it in a .job file (see
-jobs/sort_chunk.job), which is written in JSON format (see doc/README for more
+jobs/sort_chunk.job), that is written in JSON format (see doc/README for more
 detailed description)::
 
   {
