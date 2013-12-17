@@ -59,7 +59,7 @@ namespace worker {
 
 bool isDaemon;
 uid_t uid;
-unsigned int numJobThreads;
+unsigned int numRequestThread;
 unsigned int numThread;
 pid_t prexecPid;
 string exeDir, cfgDir, resourcesDir;
@@ -67,7 +67,7 @@ string exeDir, cfgDir, resourcesDir;
 boost::interprocess::shared_memory_object *sharedMemPool;
 boost::interprocess::mapped_region *mappedRegion;
 
-common::Semaphore *taskSem;
+common::Semaphore *requestSem;
 
 CommDescrPool *commDescrPool;
 
@@ -228,16 +228,12 @@ class ExecuteTask : public Action
 
         boost::asio::io_service *io_service = commDescrPool->GetIoService();
         Job::Tasks::const_iterator it = tasks.begin();
-
-        int firstTaskId = *it++;
         for( ; it != tasks.end(); ++it )
         {
             io_service->post( boost::bind( &ExecuteTask::DoSend,
                                            boost::shared_ptr< ExecuteTask >( new ExecuteTask ),
                                            boost::shared_ptr< Job >( job ), *it ) );
         }
-
-        DoSend( job, firstTaskId );
     }
 
     void SaveCompletionResults( const boost::shared_ptr< Job > &job, int taskId, int64_t execTime ) const
@@ -463,7 +459,7 @@ public:
 
     virtual ~Session()
     {
-        taskSem->Notify();
+        requestSem->Notify();
         cout << "S: ~Session()" << endl;
     }
 
@@ -665,7 +661,7 @@ private:
         if ( !error )
         {
             cout << "connection accepted..." << endl;
-            taskSem->Wait();
+            requestSem->Wait();
             io_service_.post( boost::bind( &BoostSession::Start, session ) );
             StartAccept();
         }
@@ -775,7 +771,7 @@ void RunPrExecProcess()
         exePath += "/prexec";
 
         int ret = execl( exePath.c_str(), "prexec", "--num_thread",
-                         ( boost::lexical_cast<std::string>( worker::numJobThreads ) ).c_str(),
+                         ( boost::lexical_cast<std::string>( worker::numRequestThread ) ).c_str(),
                          "--exe_dir", worker::exeDir.c_str(),
                          worker::isDaemon ? "--d" : " ",
                          worker::uid != 0 ? "--u" : " ",
@@ -817,7 +813,7 @@ void SetupPrExecIPC()
     {
         worker::sharedMemPool = new ipc::shared_memory_object( ipc::create_only, worker::SHMEM_NAME, ipc::read_write );
 
-        size_t shmemSize = worker::numJobThreads * worker::SHMEM_BLOCK_SIZE;
+        size_t shmemSize = worker::numRequestThread * worker::SHMEM_BLOCK_SIZE;
         worker::sharedMemPool->truncate( shmemSize );
 
         worker::mappedRegion = new ipc::mapped_region( *worker::sharedMemPool, ipc::read_write );
@@ -845,8 +841,8 @@ void AtExit()
     delete worker::sharedMemPool;
     worker::sharedMemPool = NULL;
 
-    delete worker::taskSem;
-    worker::taskSem = NULL;
+    delete worker::requestSem;
+    worker::requestSem = NULL;
 
     common::logger::ShutdownLogger();
 }
@@ -872,7 +868,9 @@ int main( int argc, char* argv[], char **envp )
     {
         // initialization
         worker::ComputerInfo &compInfo = worker::ComputerInfo::Instance();
-        worker::numJobThreads = 2 * compInfo.GetNumCPU();
+        unsigned int numExecThread = compInfo.GetNumCPU();
+        worker::numRequestThread = 2 * numExecThread;
+        worker::numThread = worker::numRequestThread + 1; // +1 for accept thread
         worker::isDaemon = false;
         worker::uid = 0;
 
@@ -928,10 +926,6 @@ int main( int argc, char* argv[], char **envp )
             worker::isDaemon = true;
         }
 
-        // 1. accept thread
-        // 2. additional worker thread for async reading results from prexec
-        worker::numThread = worker::numJobThreads + 2;
-
         common::logger::InitLogger( worker::isDaemon, "pworker" );
 
         common::Config &cfg = common::Config::Instance();
@@ -960,17 +954,12 @@ int main( int argc, char* argv[], char **envp )
         SetupPrExecIPC();
         RunPrExecProcess();
 
-        // start accepting client connections
+        // create master request handlers
         boost::asio::io_service io_service;
         boost::scoped_ptr<boost::asio::io_service::work> work(
             new boost::asio::io_service::work( io_service ) );
 
-        boost::scoped_ptr< worker::CommDescrPool > commDescrPool(
-            new worker::CommDescrPool( worker::numJobThreads, &io_service,
-                                       (char*)worker::mappedRegion->get_address() ) );
-        worker::commDescrPool = commDescrPool.get();
-
-        worker::taskSem = new common::Semaphore( worker::numJobThreads );
+        worker::requestSem = new common::Semaphore( worker::numRequestThread );
 
         // create thread pool
         boost::thread_group worker_threads;
@@ -981,8 +970,27 @@ int main( int argc, char* argv[], char **envp )
             );
         }
 
+        // create pool for execute task actions
+        boost::asio::io_service io_service_exec;
+        boost::scoped_ptr<boost::asio::io_service::work> work_exec(
+            new boost::asio::io_service::work( io_service_exec ) );
+
+        boost::scoped_ptr< worker::CommDescrPool > commDescrPool(
+            new worker::CommDescrPool( worker::numRequestThread, &io_service_exec,
+                                       (char*)worker::mappedRegion->get_address() ) );
+        worker::commDescrPool = commDescrPool.get();
+
+        for( unsigned int i = 0; i < numExecThread; ++i )
+        {
+            worker_threads.create_thread(
+                boost::bind( &ThreadFun, &io_service_exec )
+            );
+        }
+
+        // start acceptor
         worker::ConnectionAcceptor acceptor( io_service, worker::DEFAULT_PORT );
 
+        // create master ping handlers
         boost::asio::io_service io_service_ping;
 
         int completionPingTimeout = common::Config::Instance().Get<int>( "completion_ping_timeout" );
@@ -1032,12 +1040,15 @@ int main( int argc, char* argv[], char **envp )
 
         io_service_ping.stop();
 
+        work_exec.reset();
+        io_service_exec.stop();
+
         work.reset();
         io_service.stop();
 
         worker::commDescrPool->Shutdown();
 
-        worker::taskSem->Reset();
+        worker::requestSem->Reset();
 
         worker_threads.join_all();
     }
