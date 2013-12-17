@@ -202,6 +202,25 @@ private:
     std::string masterId_;
 };
 
+void FlushFifo( int fifo )
+{
+    pollfd pfd[1];
+    pfd[0].fd = fifo;
+    pfd[0].events = POLLIN;
+    char buf[1024];
+    while( 1 )
+    {
+        int ret = poll( pfd, 1, 0 );
+        if ( ret > 0 )
+        {
+            ret = read( fifo, buf, sizeof( buf ) );
+            if ( ret > 0 )
+                continue;
+        }
+        break;
+    }
+}
+
 class StopTaskAction
 {
 public:
@@ -233,13 +252,18 @@ public:
                 job.OnError( NODE_TASK_NOT_FOUND );
             }
 
-            int fifo = FindFifo( execInfo );
-            if ( fifo != -1 )
+            int readFifo, writeFifo;
+            if ( FindFifo( execInfo, readFifo, writeFifo ) )
             {
+                // Stop ScriptExec::ReadCompletionStatus read waiting
                 int errCode = NODE_JOB_TIMEOUT;
-                int ret = write( fifo, &errCode, sizeof( errCode ) );
+                int ret = write( readFifo, &errCode, sizeof( errCode ) );
                 if ( ret == -1 )
                     PLOG( "StopTaskAction::StopTask: write fifo failed, err=" << strerror(errno) );
+
+                // ScriptExec::WriteScript may be uncompleted while someone else killing exec task,
+                // so we must emulate fifo reading from the opposite side (what exec task should do)
+                worker::FlushFifo( writeFifo );
             }
             else
             {
@@ -255,16 +279,20 @@ public:
     }
 
 private:
-    int FindFifo( const ExecInfo &execInfo ) const
+    bool FindFifo( const ExecInfo &execInfo, int &readFifo, int &writeFifo ) const
     {
         ThreadInfo::const_iterator it = threadInfo.begin();
         for( ; it != threadInfo.end(); ++it )
         {
             const ThreadParams &threadParams = it->second;
             if ( threadParams.execInfo == execInfo )
-                return threadParams.readFifoFD;
+            {
+                readFifo = threadParams.readFifoFD;
+                writeFifo = threadParams.writeFifoFD;
+                return true;
+            }
         }
-        return -1;
+        return false;
     }
 };
 
@@ -563,27 +591,8 @@ private:
     void FlushFifo()
     {
         ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
-        FlushFifo( threadParams.readFifoFD );
-        FlushFifo( threadParams.writeFifoFD );
-    }
-
-    void FlushFifo( int fifo )
-    {
-        pollfd pfd[1];
-        pfd[0].fd = fifo;
-        pfd[0].events = POLLIN;
-        while( 1 )
-        {
-            int ret = poll( pfd, 1, 0 );
-            if ( ret > 0 )
-            {
-                char buf[64];
-                ret = read( fifo, buf, sizeof( buf ) );
-                if ( ret > 0 )
-                    continue;
-            }
-            break;
-        }
+        worker::FlushFifo( threadParams.readFifoFD );
+        worker::FlushFifo( threadParams.writeFifoFD );
     }
 
 protected:
