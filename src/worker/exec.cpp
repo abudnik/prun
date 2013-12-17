@@ -317,6 +317,15 @@ public:
     }
 };
 
+class StopAllJobsAction
+{
+public:
+    void StopJobs()
+    {
+        execTable.Clear();
+    }
+};
+
 class ScriptExec
 {
 public:
@@ -794,6 +803,13 @@ protected:
             StopPreviousJobsAction action;
             action.StopJobs( job );
             errCode_ = job.GetError();
+        }
+        else
+        if ( task == "stop_all" )
+        {
+            StopAllJobsAction action;
+            action.StopJobs();
+            errCode_ = 0;
         }
         else
         {

@@ -50,6 +50,29 @@ private:
     const static int REPEAT_DELAY = 60; // 60 sec
 };
 
+class StopAllJobsCommand : public Command
+{
+public:
+    StopAllJobsCommand()
+    : Command( "stop_all" )
+    {}
+
+private:
+    virtual void OnCompletion( int errCode, const std::string &hostIP )
+    {
+        PLOG( "Stopping all jobs on worker " << hostIP << ", errCode=" << errCode );
+    }
+
+    virtual int GetRepeatDelay() const
+    {
+        return REPEAT_DELAY;
+    }
+
+private:
+    const static int REPEAT_DELAY = 60; // 60 sec
+};
+
+
 class StopPreviousJobsCommand : public Command
 {
 public:

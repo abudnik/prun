@@ -536,11 +536,26 @@ void Scheduler::StopAllJobs()
         const JobPtr &job = *it;
         StopJob( job->GetJobId() );
     }
+
+    // send stop all command
+    {
+        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+        IPToNodeState::const_iterator it = nodeState_.begin();
+        for( ; it != nodeState_.end(); ++it )
+        {
+            const NodeState &nodeState = it->second;
+            const WorkerPtr &worker = nodeState.GetWorker();
+
+            Command *stopCommand = new StopAllJobsCommand();
+            CommandPtr commandPtr( stopCommand );
+            WorkerManager::Instance().AddCommand( commandPtr, worker->GetIP() );
+        }
+    }
 }
 
 void Scheduler::StopPreviousJobs()
 {
-    boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+    boost::mutex::scoped_lock scoped_lock( workersMut_ );
     IPToNodeState::const_iterator it = nodeState_.begin();
     for( ; it != nodeState_.end(); ++it )
     {

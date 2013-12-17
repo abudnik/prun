@@ -453,6 +453,33 @@ class StopPreviousJobs : public Action
     }
 };
 
+class StopAllJobs : public Action
+{
+    virtual void Execute( const boost::shared_ptr< Job > &job )
+    {
+        pendingTable.Clear();
+
+        PrExecConnection::connection_ptr prExecConnection( new PrExecConnection() );
+        if ( !prExecConnection->Init() )
+            return;
+
+        // prepare json command
+        boost::property_tree::ptree ptree;
+        std::ostringstream ss, ss2;
+
+        ptree.put( "task", "stop_all" );
+
+        boost::property_tree::write_json( ss, ptree, false );
+
+        ss2 << ss.str().size() << '\n' << ss.str();
+
+        int errCode = prExecConnection->Send( ss2.str() );
+        job->OnError( errCode );
+
+        prExecConnection->Release();
+    }
+};
+
 class ActionCreator
 {
 public:
@@ -466,6 +493,8 @@ public:
             return new StopTask();
         if ( taskType == "stop_prev" )
             return new StopPreviousJobs();
+        if ( taskType == "stop_all" )
+            return new StopAllJobs();
         return NULL;
     }
 };
@@ -505,7 +534,7 @@ protected:
         }
         else
         {
-            PLOG( request.GetString() );
+            PLOG_ERR( request.GetString() );
             job_->OnError( NODE_FATAL );
         }
     }

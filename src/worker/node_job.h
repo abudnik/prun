@@ -97,7 +97,7 @@ public:
             }
         }
         else
-        if ( taskType_ == "stop_task" )
+        if ( taskType_ == "stop_task" || taskType_ == "stop_prev" || taskType_ == "stop_all" )
         {
             common::ProtocolJson protocol;
             protocol.SendCommandResult( response, GetErrorCode() );
@@ -152,6 +152,10 @@ private:
         if ( taskType_ == "stop_prev" )
         {
             return parser->ParseStopPreviousJobs( body, masterId_ );
+        }
+        if ( taskType_ == "stop_all" )
+        {
+            return true;
         }
         return false;
     }
