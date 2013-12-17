@@ -105,14 +105,6 @@ void ResultGetterBoost::GetTaskResult( const WorkerTask &workerTask, const std::
 
 void ResultGetterBoost::OnGetTaskResult( bool success, int errCode, int64_t execTime, const WorkerTask &workerTask, const std::string &hostIP )
 {
-    {
-        boost::mutex::scoped_lock scoped_lock( completionMut_ );
-        if ( completed_ )
-            return;
-        else
-            completed_ = true;
-    }
-
     getJobsSem_.Notify();
     ResultGetter::OnGetTaskResult( success, errCode, execTime, workerTask, hostIP );
 }
@@ -150,7 +142,7 @@ void GetterBoost::HandleConnect( const boost::system::error_code &error )
     else
     {
         PLOG_WRN( "GetterBoost::HandleConnect error=" << error.message() );
-        getter_->OnGetTaskResult( false, 0, 0, workerTask_, hostIP_ );
+        OnCompletion( false, 0, 0 );
     }
 }
 
@@ -159,7 +151,7 @@ void GetterBoost::HandleWrite( const boost::system::error_code &error, size_t by
     if ( error )
     {
         PLOG_WRN( "GetterBoost::HandleWrite error=" << error.message() );
-        getter_->OnGetTaskResult( false, 0, 0, workerTask_, hostIP_ );
+        OnCompletion( false, 0, 0 );
     }
 }
 
@@ -213,7 +205,7 @@ void GetterBoost::HandleRead( const boost::system::error_code& error, size_t byt
         {
             if ( !HandleResponse() )
             {
-                getter_->OnGetTaskResult( false, 0, 0, workerTask_, hostIP_ );
+                OnCompletion( false, 0, 0 );
             }
         }
     }
@@ -261,7 +253,7 @@ bool GetterBoost::HandleResponse()
         int64_t execTime;
         if ( parser->ParseJobResult( body, errCode, execTime ) )
         {
-            getter_->OnGetTaskResult( true, errCode, execTime, workerTask_, hostIP_ );
+            OnCompletion( true, errCode, execTime );
             return true;
         }
     }
@@ -271,6 +263,19 @@ bool GetterBoost::HandleResponse()
     }
 
     return false;
+}
+
+void GetterBoost::OnCompletion( bool success, int errCode, int64_t execTime )
+{
+    {
+        boost::mutex::scoped_lock scoped_lock( completionMut_ );
+        if ( completed_ )
+            return;
+        else
+            completed_ = true;
+    }
+
+    getter_->OnGetTaskResult( success, errCode, execTime, workerTask_, hostIP_ );
 }
 
 void GetterBoost::MakeRequest()

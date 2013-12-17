@@ -79,7 +79,7 @@ public:
     : socket_( io_service ),
      response_( false ), firstRead_( true ),
      sender_( sender ), command_( command ),
-     hostIP_( hostIP )
+     hostIP_( hostIP ), completed_( false )
     {}
 
     void SendCommand();
@@ -97,6 +97,8 @@ private:
 
     bool HandleResponse();
 
+    void OnCompletion( bool success, int errCode );
+
 private:
     tcp::socket socket_;
     BufferType buffer_;
@@ -106,6 +108,8 @@ private:
     CommandSender *sender_;
     CommandPtr command_;
     std::string hostIP_;
+    bool completed_;
+    boost::mutex completionMut_;
 };
 
 class CommandSenderBoost : public CommandSender
@@ -116,8 +120,7 @@ public:
                         int maxSimultCommandSenders )
     : CommandSender( timeoutManager ),
      io_service_( io_service ),
-     cmdSenderSem_( maxSimultCommandSenders ),
-     completed_( false )
+     cmdSenderSem_( maxSimultCommandSenders )
     {}
 
     virtual void Start();
@@ -132,8 +135,6 @@ private:
 private:
     boost::asio::io_service &io_service_;
     common::Semaphore cmdSenderSem_;
-    bool completed_;
-    boost::mutex completionMut_;
 };
 
 } // namespace master

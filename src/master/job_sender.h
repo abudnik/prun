@@ -76,7 +76,8 @@ public:
                  const std::string &hostIP, JobPtr &job )
     : socket_( io_service ),
      sender_( sender ), workerJob_( workerJob ),
-     hostIP_( hostIP ), job_( job )
+     hostIP_( hostIP ), job_( job ),
+     completed_( false )
     {}
 
     void Send();
@@ -90,6 +91,8 @@ private:
 
     void HandleRead( const boost::system::error_code &error, size_t bytes_transferred );
 
+    void OnCompletion( bool success );
+
 private:
     tcp::socket socket_;
     std::string request_;
@@ -98,6 +101,8 @@ private:
     WorkerJob workerJob_;
     std::string hostIP_;
     JobPtr job_;
+    bool completed_;
+    boost::mutex completionMut_;
 };
 
 class JobSenderBoost : public JobSender
@@ -108,8 +113,7 @@ public:
                     int maxSimultSendingJobs )
     : JobSender( timeoutManager ),
      io_service_( io_service ),
-     sendJobsSem_( maxSimultSendingJobs ),
-     completed_( false )
+     sendJobsSem_( maxSimultSendingJobs )
     {}
 
     virtual void Start();
@@ -124,8 +128,6 @@ private:
 private:
     boost::asio::io_service &io_service_;
     common::Semaphore sendJobsSem_;
-    bool completed_;
-    boost::mutex completionMut_;
 };
 
 } // namespace master

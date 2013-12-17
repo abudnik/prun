@@ -107,14 +107,6 @@ void CommandSenderBoost::SendCommand( CommandPtr &command, const std::string &ho
 
 void CommandSenderBoost::OnSendCommand( bool success, int errCode, CommandPtr &command, const std::string &hostIP )
 {
-    {
-        boost::mutex::scoped_lock scoped_lock( completionMut_ );
-        if ( completed_ )
-            return;
-        else
-            completed_ = true;
-    }
-
     cmdSenderSem_.Notify();
     CommandSender::OnSendCommand( success, errCode, command, hostIP );
 }
@@ -152,7 +144,7 @@ void RpcBoost::HandleConnect( const boost::system::error_code &error )
     else
     {
         PLOG_WRN( "RpcBoost::HandleConnect error=" << error.message() );
-        sender_->OnSendCommand( false, 0, command_, hostIP_ );
+        OnCompletion( false, 0 );
     }
 }
 
@@ -161,7 +153,7 @@ void RpcBoost::HandleWrite( const boost::system::error_code &error, size_t bytes
     if ( error )
     {
         PLOG_WRN( "RpcBoost::HandleWrite error=" << error.message() );
-        sender_->OnSendCommand( false, 0, command_, hostIP_ );
+        OnCompletion( false, 0 );
     }
 }
 
@@ -215,14 +207,14 @@ void RpcBoost::HandleRead( const boost::system::error_code& error, size_t bytes_
         {
             if ( !HandleResponse() )
             {
-                sender_->OnSendCommand( false, 0, command_, hostIP_ );
+                OnCompletion( false, 0 );
             }
         }
     }
     else
     {
         PLOG_WRN( "RpcBoost::HandleRead error=" << error.message() );
-        sender_->OnSendCommand( false, 0, command_, hostIP_ );
+        OnCompletion( false, 0 );
     }
 }
 
@@ -262,7 +254,7 @@ bool RpcBoost::HandleResponse()
         int errCode;
         if ( parser->ParseSendCommandResult( body, errCode ) )
         {
-            sender_->OnSendCommand( true, errCode, command_, hostIP_ );
+            OnCompletion( true, errCode );
             return true;
         }
     }
@@ -273,6 +265,20 @@ bool RpcBoost::HandleResponse()
 
     return false;
 }
+
+void RpcBoost::OnCompletion( bool success, int errCode )
+{
+    {
+        boost::mutex::scoped_lock scoped_lock( completionMut_ );
+        if ( completed_ )
+            return;
+        else
+            completed_ = true;
+    }
+
+    sender_->OnSendCommand( success, errCode, command_, hostIP_ );
+}
+
 
 void RpcBoost::MakeRequest()
 {

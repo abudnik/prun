@@ -77,7 +77,7 @@ public:
     : socket_( io_service ),
      response_( false ), firstRead_( true ),
      getter_( getter ), workerTask_( workerTask ),
-     hostIP_( hostIP )
+     hostIP_( hostIP ), completed_( false )
     {}
 
     void GetTaskResult();
@@ -95,6 +95,8 @@ private:
 
     bool HandleResponse();
 
+    void OnCompletion( bool success, int errCode, int64_t execTime );
+
 private:
     tcp::socket socket_;
     BufferType buffer_;
@@ -104,6 +106,8 @@ private:
     ResultGetter *getter_;
     WorkerTask workerTask_;
     std::string hostIP_;
+    bool completed_;
+    boost::mutex completionMut_;
 };
 
 class ResultGetterBoost : public ResultGetter
@@ -112,8 +116,7 @@ public:
     ResultGetterBoost( boost::asio::io_service &io_service,
                        int maxSimultResultGetters )
     : io_service_( io_service ),
-     getJobsSem_( maxSimultResultGetters ),
-     completed_( false )
+     getJobsSem_( maxSimultResultGetters )
     {}
 
     virtual void Start();
@@ -128,8 +131,6 @@ private:
 private:
     boost::asio::io_service &io_service_;
     common::Semaphore getJobsSem_;
-    bool completed_;
-    boost::mutex completionMut_;
 };
 
 } // namespace master

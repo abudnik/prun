@@ -123,14 +123,6 @@ void JobSenderBoost::SendJob( const WorkerJob &workerJob, const std::string &hos
 
 void JobSenderBoost::OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const JobPtr &job )
 {
-    {
-        boost::mutex::scoped_lock scoped_lock( completionMut_ );
-        if ( completed_ )
-            return;
-        else
-            completed_ = true;
-    }
-
     sendJobsSem_.Notify();
     JobSender::OnJobSendCompletion( success, workerJob, hostIP, job );
 }
@@ -168,7 +160,7 @@ void SenderBoost::HandleConnect( const boost::system::error_code &error )
     else
     {
         PLOG_WRN( "SenderBoost::HandleConnect error=" << error.message() );
-        sender_->OnJobSendCompletion( false, workerJob_, hostIP_, job_ );
+        OnCompletion( false );
     }
 }
 
@@ -177,7 +169,7 @@ void SenderBoost::HandleWrite( const boost::system::error_code &error, size_t by
     if ( error )
     {
         PLOG_WRN( "SenderBoost::HandleWrite error=" << error.message() );
-        sender_->OnJobSendCompletion( false, workerJob_, hostIP_, job_ );
+        OnCompletion( false );
     }
 }
 
@@ -186,13 +178,26 @@ void SenderBoost::HandleRead( const boost::system::error_code &error, size_t byt
     if ( !error )
     {
         bool success = ( response_ == '1' );
-        sender_->OnJobSendCompletion( success, workerJob_, hostIP_, job_ );
+        OnCompletion( success );
     }
     else
     {
         PLOG_WRN( "SenderBoost::HandleRead error=" << error.message() );
-        sender_->OnJobSendCompletion( false, workerJob_, hostIP_, job_ );
+        OnCompletion( false );
     }
+}
+
+void SenderBoost::OnCompletion( bool success )
+{
+    {
+        boost::mutex::scoped_lock scoped_lock( completionMut_ );
+        if ( completed_ )
+            return;
+        else
+            completed_ = true;
+    }
+
+    sender_->OnJobSendCompletion( success, workerJob_, hostIP_, job_ );
 }
 
 void SenderBoost::MakeRequest()
