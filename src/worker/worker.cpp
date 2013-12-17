@@ -71,7 +71,7 @@ common::Semaphore *requestSem;
 
 CommDescrPool *commDescrPool;
 
-ExecTable execTable;
+ExecTable execTable, pendingTable;
 
 
 class Action
@@ -230,6 +230,12 @@ class ExecuteTask : public Action
         Job::Tasks::const_iterator it = tasks.begin();
         for( ; it != tasks.end(); ++it )
         {
+            ExecInfo execInfo;
+            execInfo.jobId_ = job->GetJobId();
+            execInfo.taskId_ = *it;
+            execInfo.masterId_ = job->GetMasterId();
+            pendingTable.Add( execInfo );
+
             io_service->post( boost::bind( &ExecuteTask::DoSend,
                                            boost::shared_ptr< ExecuteTask >( new ExecuteTask ),
                                            boost::shared_ptr< Job >( job ), *it ) );
@@ -349,7 +355,16 @@ public:
 
         ss2 << ss.str().size() << '\n' << ss.str();
 
-        int errCode = prExecConnection->Send( ss2.str() );
+        int errCode;
+
+        if ( pendingTable.Delete( job->GetJobId(), taskId, job->GetMasterId() ) )
+        {
+            errCode = prExecConnection->Send( ss2.str() );
+        }
+        else
+        {
+            errCode = NODE_JOB_TIMEOUT;
+        }
         job->OnError( errCode );
 
         prExecConnection->Release();
@@ -364,7 +379,7 @@ public:
         }
         catch( std::exception &e )
         {
-            PLOG_WRN( "ExecuteTask::DoSend: " << e.what() );
+            PLOG( "ExecuteTask::DoSend: " << e.what() );
         }
 
         SaveCompletionResults( job, taskId, execTime );
@@ -377,6 +392,11 @@ class StopTask : public Action
 {
     virtual void Execute( const boost::shared_ptr< Job > &job )
     {
+        if ( pendingTable.Delete( job->GetJobId(), job->GetTaskId(), job->GetMasterId() ) )
+        {
+            job->OnError( NODE_JOB_TIMEOUT );
+        }
+
         if ( !execTable.Contains( job->GetJobId(), job->GetTaskId(), job->GetMasterId() ) )
         {
             job->OnError( NODE_TASK_NOT_FOUND );
