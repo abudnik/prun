@@ -20,8 +20,8 @@ the License.
 ===========================================================================
 */
 
-#ifndef __NODE_JOB_H
-#define __NODE_JOB_H
+#ifndef __WORKER_JOB_H
+#define __WORKER_JOB_H
 
 #define BOOST_SPIRIT_THREADSAFE
 
