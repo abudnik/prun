@@ -53,11 +53,8 @@ using boost::asio::ip::tcp;
 
 namespace worker {
 
-bool isDaemon;
 bool isFork;
-uid_t uid;
-unsigned int numThread;
-string exeDir, cfgDir, resourcesDir;
+string exeDir, resourcesDir;
 
 boost::interprocess::shared_memory_object *sharedMemPool;
 boost::interprocess::mapped_region *mappedRegion; 
@@ -74,7 +71,7 @@ ThreadInfo threadInfo;
 
 ExecTable execTable;
 
-struct ChildProcesses
+struct PidContainer
 {
     void Add( pid_t pid )
     {
@@ -98,7 +95,7 @@ private:
     std::multiset< pid_t > pids_;
     boost::mutex mut_;
 };
-ChildProcesses childProcesses;
+PidContainer childProcesses;
 
 
 void FlushFifo( int fifo )
@@ -1040,18 +1037,18 @@ void SetupLanguageRuntime()
     }
 }
 
-void Impersonate()
+void Impersonate( uid_t uid )
 {
-    if ( worker::uid )
+    if ( uid )
     {
-        int ret = setuid( worker::uid );
+        int ret = setuid( uid );
         if ( ret < 0 )
         {
-            PLOG_ERR( "impersonate uid=" << worker::uid << " failed : " << strerror(errno) );
+            PLOG_ERR( "impersonate uid=" << uid << " failed : " << strerror(errno) );
             exit( 1 );
         }
 
-        PLOG( "successfully impersonated, uid=" << worker::uid );
+        PLOG( "successfully impersonated, uid=" << uid );
     }
 }
 
@@ -1105,66 +1102,6 @@ void AtExit()
     kill( getppid(), SIGTERM );
 }
 
-int CreateFifo( const std::string &fifoName )
-{
-    unlink( fifoName.c_str() );
-
-    int ret = mkfifo( fifoName.c_str(), S_IRUSR | S_IWUSR );
-    if ( !ret )
-    {
-        if ( worker::uid )
-        {
-            ret = chown( fifoName.c_str(), worker::uid, (gid_t)-1 );
-            if ( ret == -1 )
-                PLOG_ERR( "CreateFifo: chown failed " << strerror(errno) );
-        }
-
-        int fifofd = open( fifoName.c_str(), O_RDWR | O_NONBLOCK );
-        if ( fifofd == -1 )
-        {
-            PLOG_ERR( "open fifo " << fifoName << " failed: " << strerror(errno) );
-        }
-        return fifofd;
-    }
-    else
-    {
-        PLOG_ERR( "CreateFifo: mkfifo failed " << strerror(errno) );
-    }
-    return -1;
-}
-
-void OnThreadCreate( const boost::thread *thread )
-{
-    static int threadCnt = 0;
-
-    worker::ThreadParams threadParams;
-    threadParams.writeFifoFD = -1;
-    threadParams.readFifoFD = -1;
-
-    std::ostringstream ss;
-    ss << worker::FIFO_NAME << 'w' << threadCnt;
-    threadParams.writeFifo = ss.str();
-
-    threadParams.writeFifoFD = CreateFifo( threadParams.writeFifo );
-    if ( threadParams.writeFifoFD == -1 )
-    {
-        threadParams.writeFifo.clear();
-    }
-
-    std::ostringstream ss2;
-    ss2 << worker::FIFO_NAME << 'r' << threadCnt;
-    threadParams.readFifo = ss2.str();
-
-    threadParams.readFifoFD = CreateFifo( threadParams.readFifo );
-    if ( threadParams.readFifoFD == -1 )
-    {
-        threadParams.readFifo.clear();
-    }
-
-    worker::threadInfo[ thread->get_id() ] = threadParams;
-    ++threadCnt;
-}
-
 void ThreadFun( boost::asio::io_service *io_service )
 {
     try
@@ -1177,6 +1114,160 @@ void ThreadFun( boost::asio::io_service *io_service )
     }
 }
 
+class ExecApplication
+{
+public:
+    ExecApplication( const std::string &cfgDir, bool isDaemon, uid_t uid, unsigned int numThread )
+    : cfgDir_( cfgDir ),
+     isDaemon_( isDaemon ),
+     uid_( uid ),
+     numThread_( numThread )
+    {}
+
+    void Initialize()
+    {
+        common::logger::InitLogger( isDaemon_, "prexec" );
+
+        common::Config &cfg = common::Config::Instance();
+        if ( cfgDir_.empty() )
+        {
+            cfg.ParseConfig( worker::exeDir.c_str(), "worker.cfg" );
+        }
+        else
+        {
+            cfg.ParseConfig( "", cfgDir_.c_str() );
+        }
+
+        SetupLanguageRuntime();
+
+        SetupPrExecIPC();
+        
+        // start accepting connections
+        acceptor_.reset( new worker::ConnectionAcceptor( io_service_, worker::DEFAULT_PREXEC_PORT ) );
+
+        // create thread pool
+
+        for( unsigned int i = 0; i < numThread_; ++i )
+        {
+            boost::thread *thread = worker_threads_.create_thread(
+                boost::bind( &ThreadFun, &io_service_ )
+            );
+            OnThreadCreate( thread );
+        }
+
+        // signal parent process to say that PrExec has been initialized
+        kill( getppid(), SIGUSR1 );
+
+        Impersonate( uid_ );
+    }
+
+    void Shutdown()
+    {
+        io_service_.stop();
+
+        worker::execTable.Clear();
+
+        CleanupThreads();
+
+        worker_threads_.join_all();
+    }
+
+    void Run()
+    {
+        UnblockSighandlerMask();
+
+        if ( isDaemon_ )
+        {
+			PLOG( "started" );
+        }
+
+		sigset_t waitset;
+		int sig;
+		sigemptyset( &waitset );
+		sigaddset( &waitset, SIGTERM );
+        while( 1 )
+        {
+            int ret = sigwait( &waitset, &sig );
+            if ( !ret )
+                break;
+            PLOG_ERR( "main(): sigwait failed: " << strerror(errno) );
+        }
+    }
+
+private:
+    int CreateFifo( const std::string &fifoName )
+    {
+        unlink( fifoName.c_str() );
+
+        int ret = mkfifo( fifoName.c_str(), S_IRUSR | S_IWUSR );
+        if ( !ret )
+        {
+            if ( uid_ )
+            {
+                ret = chown( fifoName.c_str(), uid_, (gid_t)-1 );
+                if ( ret == -1 )
+                    PLOG_ERR( "CreateFifo: chown failed " << strerror(errno) );
+            }
+
+            int fifofd = open( fifoName.c_str(), O_RDWR | O_NONBLOCK );
+            if ( fifofd == -1 )
+            {
+                PLOG_ERR( "open fifo " << fifoName << " failed: " << strerror(errno) );
+            }
+            return fifofd;
+        }
+        else
+        {
+            PLOG_ERR( "CreateFifo: mkfifo failed " << strerror(errno) );
+        }
+        return -1;
+    }
+
+    void OnThreadCreate( const boost::thread *thread )
+    {
+        static int threadCnt = 0;
+
+        worker::ThreadParams threadParams;
+        threadParams.writeFifoFD = -1;
+        threadParams.readFifoFD = -1;
+
+        std::ostringstream ss;
+        ss << worker::FIFO_NAME << 'w' << threadCnt;
+        threadParams.writeFifo = ss.str();
+
+        threadParams.writeFifoFD = CreateFifo( threadParams.writeFifo );
+        if ( threadParams.writeFifoFD == -1 )
+        {
+            threadParams.writeFifo.clear();
+        }
+
+        std::ostringstream ss2;
+        ss2 << worker::FIFO_NAME << 'r' << threadCnt;
+        threadParams.readFifo = ss2.str();
+
+        threadParams.readFifoFD = CreateFifo( threadParams.readFifo );
+        if ( threadParams.readFifoFD == -1 )
+        {
+            threadParams.readFifo.clear();
+        }
+
+        worker::threadInfo[ thread->get_id() ] = threadParams;
+        ++threadCnt;
+    }
+
+private:
+    string cfgDir_;
+    bool isDaemon_;
+    uid_t uid_;
+    unsigned int numThread_;
+
+    boost::thread_group worker_threads_;
+
+    boost::asio::io_service io_service_;
+
+    boost::shared_ptr< worker::ConnectionAcceptor > acceptor_;
+};
+
 } // anonymous namespace
 
 
@@ -1188,10 +1279,12 @@ int main( int argc, char* argv[], char **envp )
 
     try
     {
-        // initialization
-        worker::isDaemon = false;
+        bool isDaemon = false;
+        uid_t uid = 0;
+        unsigned int numThread = 0;
+        std::string cfgDir;
+
         worker::isFork = false;
-        worker::uid = 0;
 
         // parse input command line options
         namespace po = boost::program_options;
@@ -1212,19 +1305,17 @@ int main( int argc, char* argv[], char **envp )
 
         if ( vm.count( "d" ) )
         {
-            worker::isDaemon = true;
+            isDaemon = true;
         }
-
-        common::logger::InitLogger( worker::isDaemon, "prexec" );
 
         if ( vm.count( "u" ) )
         {
-            worker::uid = vm[ "u" ].as<uid_t>();
+            uid = vm[ "u" ].as<uid_t>();
         }
 
         if ( vm.count( "num_thread" ) )
         {
-            worker::numThread = vm[ "num_thread" ].as<unsigned int>();
+            numThread = vm[ "num_thread" ].as<unsigned int>();
         }
 
         if ( vm.count( "exe_dir" ) )
@@ -1234,7 +1325,7 @@ int main( int argc, char* argv[], char **envp )
 
         if ( vm.count( "c" ) )
         {
-            worker::cfgDir = vm[ "c" ].as<std::string>();
+            cfgDir = vm[ "c" ].as<std::string>();
         }
 
         if ( vm.count( "r" ) )
@@ -1242,66 +1333,12 @@ int main( int argc, char* argv[], char **envp )
             worker::resourcesDir = vm[ "r" ].as<std::string>();
         }
 
-        common::Config &cfg = common::Config::Instance();
-        if ( worker::cfgDir.empty() )
-        {
-            cfg.ParseConfig( worker::exeDir.c_str(), "worker.cfg" );
-        }
-        else
-        {
-            cfg.ParseConfig( "", worker::cfgDir.c_str() );
-        }
+        ExecApplication app( cfgDir, isDaemon, uid, numThread );
+        app.Initialize();
 
-        SetupLanguageRuntime();
+        app.Run();
 
-        SetupPrExecIPC();
-        
-        // start accepting connections
-        boost::asio::io_service io_service;
-
-        worker::ConnectionAcceptor acceptor( io_service, worker::DEFAULT_PREXEC_PORT );
-
-        // create thread pool
-        boost::thread_group worker_threads;
-        for( unsigned int i = 0; i < worker::numThread; ++i )
-        {
-            boost::thread *thread = worker_threads.create_thread(
-                boost::bind( &ThreadFun, &io_service )
-            );
-            OnThreadCreate( thread );
-        }
-
-        // signal parent process to say that PrExec has been initialized
-        kill( getppid(), SIGUSR1 );
-
-        Impersonate();
-
-        UnblockSighandlerMask();
-
-        if ( worker::isDaemon )
-        {
-			PLOG( "started" );
-        }
-
-		sigset_t waitset;
-		int sig;
-		sigemptyset( &waitset );
-		sigaddset( &waitset, SIGTERM );
-        while( 1 )
-        {
-            int ret = sigwait( &waitset, &sig );
-            if ( !ret )
-                break;
-            PLOG_ERR( "main(): sigwait failed: " << strerror(errno) );
-        }
-
-        io_service.stop();
-
-        worker::execTable.Clear();
-
-        CleanupThreads();
-
-        worker_threads.join_all();
+        app.Shutdown();
     }
     catch( std::exception &e )
     {

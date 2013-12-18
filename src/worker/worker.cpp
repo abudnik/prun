@@ -1067,7 +1067,6 @@ int main( int argc, char* argv[], char **envp )
 {
     try
     {
-        // initialization
         bool isDaemon = false;
         uid_t uid = 0;
 
