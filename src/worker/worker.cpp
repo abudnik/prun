@@ -45,7 +45,7 @@ the License.
 #include "common.h"
 #include "comm_descriptor.h"
 #include "master_ping.h"
-#include "node_job.h"
+#include "worker_job.h"
 #include "exec_info.h"
 #include "job_completion_ping.h"
 #include "computer_info.h"
