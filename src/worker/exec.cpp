@@ -29,7 +29,6 @@ the License.
 #include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/thread.hpp>
-#include <boost/array.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp> 
@@ -56,8 +55,7 @@ namespace worker {
 bool isFork;
 string exeDir, resourcesDir;
 
-boost::interprocess::shared_memory_object *sharedMemPool;
-boost::interprocess::mapped_region *mappedRegion; 
+boost::interprocess::mapped_region *mappedRegion;
 
 struct ThreadParams
 {
@@ -977,22 +975,6 @@ void UnblockSighandlerMask()
     pthread_sigmask( SIG_UNBLOCK, &sigset, NULL );
 }
 
-void SetupPrExecIPC()
-{
-    namespace ipc = boost::interprocess; 
-
-    try
-    {
-        worker::sharedMemPool = new ipc::shared_memory_object( ipc::open_only, worker::SHMEM_NAME, ipc::read_only );
-        worker::mappedRegion = new ipc::mapped_region( *worker::sharedMemPool, ipc::read_only );
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "SetupPrExecIPC failed: " << e.what() );
-        exit( 1 );
-    }
-}
-
 void SetupLanguageRuntime()
 {
     pid_t pid = fork();
@@ -1093,9 +1075,6 @@ void AtExit()
         return;
 
     CleanupThreads();
-
-    delete worker::mappedRegion;
-    delete worker::sharedMemPool;
 
     common::logger::ShutdownLogger();
 
@@ -1255,6 +1234,23 @@ private:
         ++threadCnt;
     }
 
+    void SetupPrExecIPC()
+    {
+        namespace ipc = boost::interprocess; 
+
+        try
+        {
+            sharedMemPool_.reset( new ipc::shared_memory_object( ipc::open_only, worker::SHMEM_NAME, ipc::read_only ) );
+            mappedRegion_.reset( new ipc::mapped_region( *sharedMemPool_.get(), ipc::read_only ) );
+            worker::mappedRegion = mappedRegion_.get();
+        }
+        catch( std::exception &e )
+        {
+            PLOG_ERR( "SetupPrExecIPC failed: " << e.what() );
+            exit( 1 );
+        }
+    }
+
 private:
     string cfgDir_;
     bool isDaemon_;
@@ -1266,6 +1262,9 @@ private:
     boost::asio::io_service io_service_;
 
     boost::shared_ptr< worker::ConnectionAcceptor > acceptor_;
+
+    boost::shared_ptr< boost::interprocess::shared_memory_object > sharedMemPool_;
+    boost::shared_ptr< boost::interprocess::mapped_region > mappedRegion_;
 };
 
 } // anonymous namespace
