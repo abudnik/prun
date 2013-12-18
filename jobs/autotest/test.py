@@ -6,22 +6,22 @@ path = '/home/budnik/prun/'
 
 def RunManyJobs():
     # run many simple jobs
-    jobPath = path + 'jobs/autotest/simple_one_cpu.job'
+    jobPath = 'autotest/simple_one_cpu.job'
     task = ''
     for i in range(0, 500):
         task += 'run ' + jobPath + ';'
     cmd = 'python admin.py -c "' + task + '"'
     os.system( cmd )
 
-    jobPath = path + 'jobs/autotest/simple_many_cpu.job'
+    jobPath = 'autotest/simple_many_cpu.job'
     task = ''
     for i in range(0, 500):
         task += 'run ' + jobPath + ';'
     cmd = 'python admin.py -c "' + task + '"'
     os.system( cmd )
-
+    
     # send many large source code files
-    jobPath = path + 'jobs/autotest/many_code.job'
+    jobPath = 'autotest/many_code.job'
     task = ''
     for i in range(0, 1):
         task += 'run ' + jobPath + ';'
@@ -29,7 +29,7 @@ def RunManyJobs():
     os.system( cmd )
 
     # run many medium jobs
-    jobPath = path + 'jobs/autotest/medium.job'
+    jobPath = 'autotest/medium.job'
     task = ''
     for i in range(0, 50):
         task += 'run ' + jobPath + ';'
@@ -37,7 +37,7 @@ def RunManyJobs():
     os.system( cmd )
 
     # run many heavy jobs
-    jobPath = path + 'jobs/autotest/heavy.job'
+    jobPath = 'autotest/heavy.job'
     task = ''
     for i in range(0, 10):
         task += 'run ' + jobPath + ';'
@@ -46,7 +46,7 @@ def RunManyJobs():
 
 def RunHeavyJobs():
     # run many heavy jobs
-    jobPath = path + 'jobs/autotest/heavy.job'
+    jobPath = 'autotest/heavy.job'
     task = ''
     for i in range(0, 10):
         task += 'run ' + jobPath + ';'
