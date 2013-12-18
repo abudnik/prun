@@ -57,12 +57,7 @@ using boost::asio::ip::tcp;
 
 namespace worker {
 
-bool isDaemon;
-uid_t uid;
-unsigned int numRequestThread;
-unsigned int numThread;
 pid_t prexecPid;
-string exeDir, cfgDir, resourcesDir;
 
 boost::interprocess::shared_memory_object *sharedMemPool;
 boost::interprocess::mapped_region *mappedRegion;
@@ -730,15 +725,15 @@ private:
 
 namespace {
 
-void VerifyCommandlineParams()
+void VerifyCommandlineParams( uid_t uid )
 {
-    if ( worker::uid )
+    if ( uid )
     {
         // check uid existance
         char line[256] = { '\0' };
 
         std::ostringstream command;
-        command << "getent passwd " << worker::uid << "|cut -d: -f1";
+        command << "getent passwd " << uid << "|cut -d: -f1";
 
         FILE *cmd = popen( command.str().c_str(), "r" );
         fgets( line, sizeof(line), cmd );
@@ -746,7 +741,7 @@ void VerifyCommandlineParams()
 
         if ( !strlen( line ) )
         {
-            std::cout << "Unknown uid: " << worker::uid << std::endl;
+            std::cout << "Unknown uid: " << uid << std::endl;
             exit( 1 );
         }
     }
@@ -804,75 +799,6 @@ void UserInteraction()
     while( !getchar() );
 }
 
-void RunPrExecProcess()
-{
-    pid_t pid = fork();
-
-    if ( pid < 0 )
-    {
-        PLOG_ERR( "RunPrExecProcess: fork() failed: " << strerror(errno) );
-        exit( pid );
-    }
-    else
-    if ( pid == 0 )
-    {
-        std::string exePath( worker::exeDir );
-        exePath += "/prexec";
-
-        int ret = execl( exePath.c_str(), "prexec", "--num_thread",
-                         ( boost::lexical_cast<std::string>( worker::numRequestThread ) ).c_str(),
-                         "--exe_dir", worker::exeDir.c_str(),
-                         worker::isDaemon ? "--d" : " ",
-                         worker::uid != 0 ? "--u" : " ",
-                         worker::uid != 0 ? ( boost::lexical_cast<std::string>( worker::uid ) ).c_str() : " ",
-                         !worker::cfgDir.empty() ? "--c" : " ",
-                         !worker::cfgDir.empty() ? worker::cfgDir.c_str() : " ",
-                         !worker::resourcesDir.empty() ? "--r" : " ",
-                         !worker::resourcesDir.empty() ? worker::resourcesDir.c_str() : " ",
-                         NULL );
-
-        if ( ret < 0 )
-        {
-            PLOG_ERR( "RunPrExecProcess: execl failed: " << strerror(errno) );
-            kill( getppid(), SIGTERM );
-        }
-    }
-    else
-    if ( pid > 0 )
-    {
-        // wait while prexec completes initialization
-        worker::prexecPid = pid;
-        siginfo_t info;
-        sigset_t waitset;
-        sigemptyset( &waitset );
-        sigaddset( &waitset, SIGUSR1 );
-
-        // TODO: sigtaimedwait && kill( pid, 0 )
-        while( ( sigwaitinfo( &waitset, &info ) <= 0 ) && ( info.si_pid != pid ) );
-    }
-}
-
-void SetupPrExecIPC()
-{
-    namespace ipc = boost::interprocess;
-
-    ipc::shared_memory_object::remove( worker::SHMEM_NAME );
-
-    try
-    {
-        worker::sharedMemPool = new ipc::shared_memory_object( ipc::create_only, worker::SHMEM_NAME, ipc::read_write );
-
-        size_t shmemSize = worker::numRequestThread * worker::SHMEM_BLOCK_SIZE;
-        worker::sharedMemPool->truncate( shmemSize );
-
-        worker::mappedRegion = new ipc::mapped_region( *worker::sharedMemPool, ipc::read_write );
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "SetupPrExecIPC failed: " << e.what() );
-        exit( 1 );
-    }
-}
 
 void AtExit()
 {
@@ -908,22 +834,254 @@ void ThreadFun( boost::asio::io_service *io_service )
     }
 }
 
-} // anonymous namespace
+class WorkerApplication
+{
+public:
+    WorkerApplication( const std::string &exeDir, const std::string &cfgDir,
+                       const std::string &resourcesDir, bool isDaemon, uid_t uid )
+    : exeDir_( exeDir ),
+     cfgDir_( cfgDir ),
+     resourcesDir_( resourcesDir ),
+     isDaemon_( isDaemon ), uid_( uid )
+    {}
 
+    void Initialize()
+    {
+        worker::ComputerInfo &compInfo = worker::ComputerInfo::Instance();
+        unsigned int numExecThread = compInfo.GetNumCPU();
+        numRequestThread_ = 2 * numExecThread;
+        numThread_ = numRequestThread_ + 1; // +1 for accept thread
+
+        common::logger::InitLogger( isDaemon_, "pworker" );
+
+        common::Config &cfg = common::Config::Instance();
+        if ( cfgDir_.empty() )
+        {
+            cfg.ParseConfig( exeDir_.c_str(), "worker.cfg" );
+        }
+        else
+        {
+            cfg.ParseConfig( "", cfgDir_.c_str() );
+        }
+
+        worker::JobCompletionTable::Instance();
+
+        SetupSignalHandlers();
+        SetupSignalMask();
+        atexit( AtExit );
+
+        SetupPrExecIPC();
+        RunPrExecProcess();
+
+        // create master request handlers
+        work_.reset( new boost::asio::io_service::work( io_service_ ) );
+
+        worker::requestSem = new common::Semaphore( numRequestThread_ );
+
+        // create thread pool
+        for( unsigned int i = 0; i < numThread_; ++i )
+        {
+            worker_threads_.create_thread(
+                boost::bind( &ThreadFun, &io_service_ )
+            );
+        }
+
+        // create pool for execute task actions
+        work_exec_.reset( new boost::asio::io_service::work( io_service_exec_ ) );
+
+        commDescrPool_.reset( new worker::CommDescrPool( numRequestThread_, &io_service_exec_,
+                                                         (char*)worker::mappedRegion->get_address() ) );
+        worker::commDescrPool = commDescrPool_.get();
+
+        for( unsigned int i = 0; i < numExecThread; ++i )
+        {
+            worker_threads_.create_thread(
+                boost::bind( &ThreadFun, &io_service_exec_ )
+            );
+        }
+
+        // start acceptor
+        acceptor_.reset( new worker::ConnectionAcceptor( io_service_, worker::DEFAULT_PORT ) );
+
+        // create master ping handlers
+        int completionPingTimeout = common::Config::Instance().Get<int>( "completion_ping_timeout" );
+        completionPing_.reset( new worker::JobCompletionPingerBoost( io_service_ping_, completionPingTimeout ) );
+        completionPing_->StartPing();
+
+        masterPing_.reset( new worker::MasterPingBoost( io_service_ping_ ) );
+        masterPing_->Start();
+
+        // create thread pool for pingers
+        // 1. job completion pinger
+        // 2. master heartbeat ping receiver
+        unsigned int numPingThread = 2;
+        for( unsigned int i = 0; i < numPingThread; ++i )
+        {
+            worker_threads_.create_thread(
+                boost::bind( &ThreadFun, &io_service_ping_ )
+            );
+        }
+    }
+
+    void Shutdown()
+    {
+        completionPing_->Stop();
+
+        io_service_ping_.stop();
+
+        work_exec_.reset();
+        io_service_exec_.stop();
+
+        work_.reset();
+        io_service_.stop();
+
+        worker::commDescrPool->Shutdown();
+
+        worker::requestSem->Reset();
+
+        worker_threads_.join_all();
+    }
+
+    void Run()
+    {
+        string pidfilePath = common::Config::Instance().Get<string>( "pidfile" );
+        if ( pidfilePath[0] != '/' )
+        {
+            pidfilePath = exeDir_ + '/' + pidfilePath;
+        }
+        common::Pidfile pidfile( pidfilePath.c_str() );
+
+        UnblockSighandlerMask();
+
+        if ( !isDaemon_ )
+        {
+            UserInteraction();
+        }
+        else
+        {
+            PLOG( "started" );
+
+            sigset_t waitset;
+            int sig;
+            sigemptyset( &waitset );
+            sigaddset( &waitset, SIGTERM );
+            while( 1 )
+            {
+                int ret = sigwait( &waitset, &sig );
+                if ( !ret )
+                    break;
+                PLOG_ERR( "main(): sigwait failed: " << strerror(errno) );
+            }
+        }
+    }
+
+private:
+    void RunPrExecProcess()
+    {
+        pid_t pid = fork();
+
+        if ( pid < 0 )
+        {
+            PLOG_ERR( "RunPrExecProcess: fork() failed: " << strerror(errno) );
+            exit( pid );
+        }
+        else
+        if ( pid == 0 )
+        {
+            std::string exePath( exeDir_ );
+            exePath += "/prexec";
+
+            int ret = execl( exePath.c_str(), "prexec", "--num_thread",
+                             ( boost::lexical_cast<std::string>( numRequestThread_ ) ).c_str(),
+                             "--exe_dir", exeDir_.c_str(),
+                             isDaemon_ ? "--d" : " ",
+                             uid_ != 0 ? "--u" : " ",
+                             uid_ != 0 ? ( boost::lexical_cast<std::string>( uid_ ) ).c_str() : " ",
+                             !cfgDir_.empty() ? "--c" : " ",
+                             !cfgDir_.empty() ? cfgDir_.c_str() : " ",
+                             !resourcesDir_.empty() ? "--r" : " ",
+                             !resourcesDir_.empty() ? resourcesDir_.c_str() : " ",
+                             NULL );
+
+            if ( ret < 0 )
+            {
+                PLOG_ERR( "RunPrExecProcess: execl failed: " << strerror(errno) );
+                kill( getppid(), SIGTERM );
+            }
+        }
+        else
+        if ( pid > 0 )
+        {
+            // wait while prexec completes initialization
+            worker::prexecPid = pid;
+            siginfo_t info;
+            sigset_t waitset;
+            sigemptyset( &waitset );
+            sigaddset( &waitset, SIGUSR1 );
+
+            // TODO: sigtaimedwait && kill( pid, 0 )
+            while( ( sigwaitinfo( &waitset, &info ) <= 0 ) && ( info.si_pid != pid ) );
+        }
+    }
+
+    void SetupPrExecIPC()
+    {
+        namespace ipc = boost::interprocess;
+
+        ipc::shared_memory_object::remove( worker::SHMEM_NAME );
+
+        try
+        {
+            worker::sharedMemPool = new ipc::shared_memory_object( ipc::create_only, worker::SHMEM_NAME, ipc::read_write );
+
+            size_t shmemSize = numRequestThread_ * worker::SHMEM_BLOCK_SIZE;
+            worker::sharedMemPool->truncate( shmemSize );
+
+            worker::mappedRegion = new ipc::mapped_region( *worker::sharedMemPool, ipc::read_write );
+        }
+        catch( std::exception &e )
+        {
+            PLOG_ERR( "SetupPrExecIPC failed: " << e.what() );
+            exit( 1 );
+        }
+    }
+
+private:
+    string exeDir_, cfgDir_, resourcesDir_;
+    bool isDaemon_;
+    uid_t uid_;
+    unsigned int numRequestThread_;
+    unsigned int numThread_;
+
+    boost::thread_group worker_threads_;
+
+    boost::asio::io_service io_service_;
+    boost::asio::io_service io_service_exec_;
+    boost::asio::io_service io_service_ping_;
+
+    boost::shared_ptr<boost::asio::io_service::work> work_;
+    boost::shared_ptr<boost::asio::io_service::work> work_exec_;
+
+    boost::shared_ptr< worker::CommDescrPool > commDescrPool_;
+
+    boost::shared_ptr< worker::ConnectionAcceptor > acceptor_;
+
+    boost::shared_ptr< worker::JobCompletionPinger > completionPing_;
+    boost::shared_ptr< worker::MasterPing > masterPing_;
+};
+
+} // anonymous namespace
 
 int main( int argc, char* argv[], char **envp )
 {
     try
     {
         // initialization
-        worker::ComputerInfo &compInfo = worker::ComputerInfo::Instance();
-        unsigned int numExecThread = compInfo.GetNumCPU();
-        worker::numRequestThread = 2 * numExecThread;
-        worker::numThread = worker::numRequestThread + 1; // +1 for accept thread
-        worker::isDaemon = false;
-        worker::uid = 0;
+        bool isDaemon = false;
+        uid_t uid = 0;
 
-        worker::exeDir = boost::filesystem::system_complete( argv[0] ).branch_path().string();
+        std::string exeDir = boost::filesystem::system_complete( argv[0] ).branch_path().string();
+        std::string cfgDir, resourcesDir;
 
         // parse input command line options
         namespace po = boost::program_options;
@@ -955,151 +1113,32 @@ int main( int argc, char* argv[], char **envp )
 
         if ( vm.count( "c" ) )
         {
-            worker::cfgDir = vm[ "c" ].as<std::string>();
+            cfgDir = vm[ "c" ].as<std::string>();
         }
 
         if ( vm.count( "r" ) )
         {
-            worker::resourcesDir = vm[ "r" ].as<std::string>();
+            resourcesDir = vm[ "r" ].as<std::string>();
         }
 
         if ( vm.count( "u" ) )
         {
-            worker::uid = vm[ "u" ].as<uid_t>();
+            uid = vm[ "u" ].as<uid_t>();
         }
-        VerifyCommandlineParams();
+        VerifyCommandlineParams( uid );
 
         if ( vm.count( "d" ) )
         {
             common::StartAsDaemon();
-            worker::isDaemon = true;
+            isDaemon = true;
         }
 
-        common::logger::InitLogger( worker::isDaemon, "pworker" );
+        WorkerApplication app( exeDir, cfgDir, resourcesDir, isDaemon, uid );
+        app.Initialize();
 
-        common::Config &cfg = common::Config::Instance();
-        if ( worker::cfgDir.empty() )
-        {
-            cfg.ParseConfig( worker::exeDir.c_str(), "worker.cfg" );
-        }
-        else
-        {
-            cfg.ParseConfig( "", worker::cfgDir.c_str() );
-        }
+        app.Run();
 
-        string pidfilePath = common::Config::Instance().Get<string>( "pidfile" );
-        if ( pidfilePath[0] != '/' )
-        {
-            pidfilePath = worker::exeDir + '/' + pidfilePath;
-        }
-        common::Pidfile pidfile( pidfilePath.c_str() );
-
-        worker::JobCompletionTable::Instance();
-
-        SetupSignalHandlers();
-        SetupSignalMask();
-        atexit( AtExit );
-
-        SetupPrExecIPC();
-        RunPrExecProcess();
-
-        // create master request handlers
-        boost::asio::io_service io_service;
-        boost::scoped_ptr<boost::asio::io_service::work> work(
-            new boost::asio::io_service::work( io_service ) );
-
-        worker::requestSem = new common::Semaphore( worker::numRequestThread );
-
-        // create thread pool
-        boost::thread_group worker_threads;
-        for( unsigned int i = 0; i < worker::numThread; ++i )
-        {
-            worker_threads.create_thread(
-                boost::bind( &ThreadFun, &io_service )
-            );
-        }
-
-        // create pool for execute task actions
-        boost::asio::io_service io_service_exec;
-        boost::scoped_ptr<boost::asio::io_service::work> work_exec(
-            new boost::asio::io_service::work( io_service_exec ) );
-
-        boost::scoped_ptr< worker::CommDescrPool > commDescrPool(
-            new worker::CommDescrPool( worker::numRequestThread, &io_service_exec,
-                                       (char*)worker::mappedRegion->get_address() ) );
-        worker::commDescrPool = commDescrPool.get();
-
-        for( unsigned int i = 0; i < numExecThread; ++i )
-        {
-            worker_threads.create_thread(
-                boost::bind( &ThreadFun, &io_service_exec )
-            );
-        }
-
-        // start acceptor
-        worker::ConnectionAcceptor acceptor( io_service, worker::DEFAULT_PORT );
-
-        // create master ping handlers
-        boost::asio::io_service io_service_ping;
-
-        int completionPingTimeout = common::Config::Instance().Get<int>( "completion_ping_timeout" );
-        boost::scoped_ptr< worker::JobCompletionPinger > completionPing(
-            new worker::JobCompletionPingerBoost( io_service_ping, completionPingTimeout ) );
-        completionPing->StartPing();
-
-        boost::scoped_ptr< worker::MasterPing > masterPing(
-            new worker::MasterPingBoost( io_service_ping ) );
-        masterPing->Start();
-
-        // create thread pool for pingers
-        // 1. job completion pinger
-        // 2. master heartbeat ping receiver
-        unsigned int numPingThread = 2;
-        for( unsigned int i = 0; i < numPingThread; ++i )
-        {
-            worker_threads.create_thread(
-                boost::bind( &ThreadFun, &io_service_ping )
-            );
-        }
-
-        UnblockSighandlerMask();
-
-        if ( !worker::isDaemon )
-        {
-            UserInteraction();
-        }
-        else
-        {
-            PLOG( "started" );
-
-            sigset_t waitset;
-            int sig;
-            sigemptyset( &waitset );
-            sigaddset( &waitset, SIGTERM );
-            while( 1 )
-            {
-                int ret = sigwait( &waitset, &sig );
-                if ( !ret )
-                    break;
-                PLOG_ERR( "main(): sigwait failed: " << strerror(errno) );
-            }
-        }
-
-        completionPing->Stop();
-
-        io_service_ping.stop();
-
-        work_exec.reset();
-        io_service_exec.stop();
-
-        work.reset();
-        io_service.stop();
-
-        worker::commDescrPool->Shutdown();
-
-        worker::requestSem->Reset();
-
-        worker_threads.join_all();
+        app.Shutdown();
     }
     catch( std::exception &e )
     {

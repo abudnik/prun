@@ -117,7 +117,7 @@ void ThreadFun( boost::asio::io_service *io_service )
 class MasterApplication
 {
 public:
-    MasterApplication(  const std::string &exeDir, const std::string &cfgPath, bool isDaemon )
+    MasterApplication( const std::string &exeDir, const std::string &cfgPath, bool isDaemon )
     : exeDir_( exeDir ),
      cfgPath_( cfgPath ),
      isDaemon_( isDaemon )
