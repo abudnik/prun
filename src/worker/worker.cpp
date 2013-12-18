@@ -28,7 +28,6 @@ the License.
 #include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/thread.hpp>
-#include <boost/array.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -58,9 +57,6 @@ using boost::asio::ip::tcp;
 namespace worker {
 
 pid_t prexecPid;
-
-boost::interprocess::shared_memory_object *sharedMemPool;
-boost::interprocess::mapped_region *mappedRegion;
 
 common::Semaphore *requestSem;
 
@@ -619,7 +615,6 @@ private:
         else
         {
             PLOG_WRN( "SessionBoost::HandleRead error=" << error.message() );
-            //HandleError( error );
             OnReadCompletion( false );
         }
     }
@@ -810,14 +805,7 @@ void AtExit()
     // remove shared memory
     ipc::shared_memory_object::remove( worker::SHMEM_NAME );
 
-    delete worker::mappedRegion;
-    worker::mappedRegion = NULL;
-
-    delete worker::sharedMemPool;
-    worker::sharedMemPool = NULL;
-
     delete worker::requestSem;
-    worker::requestSem = NULL;
 
     common::logger::ShutdownLogger();
 }
@@ -890,7 +878,7 @@ public:
         work_exec_.reset( new boost::asio::io_service::work( io_service_exec_ ) );
 
         commDescrPool_.reset( new worker::CommDescrPool( numRequestThread_, &io_service_exec_,
-                                                         (char*)worker::mappedRegion->get_address() ) );
+                                                         (char*)mappedRegion_->get_address() ) );
         worker::commDescrPool = commDescrPool_.get();
 
         for( unsigned int i = 0; i < numExecThread; ++i )
@@ -1032,12 +1020,12 @@ private:
 
         try
         {
-            worker::sharedMemPool = new ipc::shared_memory_object( ipc::create_only, worker::SHMEM_NAME, ipc::read_write );
+            sharedMemPool_.reset( new ipc::shared_memory_object( ipc::create_only, worker::SHMEM_NAME, ipc::read_write ) );
 
             size_t shmemSize = numRequestThread_ * worker::SHMEM_BLOCK_SIZE;
-            worker::sharedMemPool->truncate( shmemSize );
+            sharedMemPool_->truncate( shmemSize );
 
-            worker::mappedRegion = new ipc::mapped_region( *worker::sharedMemPool, ipc::read_write );
+            mappedRegion_.reset( new ipc::mapped_region( *sharedMemPool_.get(), ipc::read_write ) );
         }
         catch( std::exception &e )
         {
@@ -1068,6 +1056,9 @@ private:
 
     boost::shared_ptr< worker::JobCompletionPinger > completionPing_;
     boost::shared_ptr< worker::MasterPing > masterPing_;
+
+    boost::shared_ptr< boost::interprocess::shared_memory_object > sharedMemPool_;
+    boost::shared_ptr< boost::interprocess::mapped_region > mappedRegion_;
 };
 
 } // anonymous namespace

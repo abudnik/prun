@@ -1199,10 +1199,7 @@ void AtExit()
     CleanupThreads();
 
     delete worker::mappedRegion;
-    worker::mappedRegion = NULL;
-
     delete worker::sharedMemPool;
-    worker::sharedMemPool = NULL;
 
     common::logger::ShutdownLogger();
 
