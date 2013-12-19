@@ -175,7 +175,7 @@ And merge job description (see jobs/sort_merge.job)::
       "no_reschedule" : false
   }
 
-We want run merging job strictly after completion of all chunk sorting jobs.
+We want to run merging job strictly after completion of all chunk sorting jobs.
 It is possible to describe job dependencies in a directed acyclic graph. Prun
 takes that job dependencies from the .meta file, which is written in tsort
 format (man tsort). Here's a simple job dependency between two jobs (see
