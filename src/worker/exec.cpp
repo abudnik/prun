@@ -461,12 +461,23 @@ protected:
             timeout *= 1000;
 
         int errCode = NODE_FATAL;
+        char buf[32];
+        memset( buf, 0, sizeof( buf ) );
+
         int ret = poll( pfd, 1, timeout );
         if ( ret > 0 )
         {
-            ret = read( fifo, &errCode, sizeof( errCode ) );
+            ret = read( fifo, &buf, sizeof( buf ) );
             if ( ret > 0 )
             {
+                try
+                {
+                    errCode = boost::lexical_cast<int>( buf );
+                }
+                catch( std::exception &e )
+                {
+                    PLOG_WRN( "ScriptExec::ReadCompletionStatus: " << e.what() );
+                }
                 job_->OnError( errCode );
                 return true;
             }

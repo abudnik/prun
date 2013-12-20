@@ -1,15 +1,5 @@
 var fs = require('fs');
 
-function getBytes( x ) {
-    var bytes = new Buffer(4);
-    var i = 0;
-    do {
-        bytes[i++] = x & (255);
-        x = x>>8;
-    } while ( i < 4 );
-    return bytes;
-}
-
 var NODE_SCRIPT_EXEC_FAILED = -5;
 var errCode = 0;
 
@@ -44,7 +34,7 @@ try {
 try {
     var writeFifo = process.argv[2];
     var fifo = fs.openSync(writeFifo, "w");
-    fs.writeSync(fifo, getBytes( errCode ), 0, 4, null);
+    fs.writeSync( fifo, errCode.toString() );
     fs.close(fifo);
 } catch( e ) {
     console.log(e);

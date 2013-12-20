@@ -1,7 +1,3 @@
-command_exists () {
-    command -v "$1" >/dev/null 2>&1
-}
-
 NODE_SCRIPT_EXEC_FAILED=-5
 errCode=0
 
@@ -20,15 +16,4 @@ else
 fi
 
 fifoName=$1
-
-#not sure if xxd exists on target system
-
-if command_exists xxd ; then
-    printf "0: %.8x" $errCode | xxd -r -g0 > $fifoName
-else
-    if [ $errCode -eq 0 ]; then
-        printf "\x00\x00\x00\x00\x00\x00\x00\x00" > $fifoName
-    else
-        printf "\xff\xff\xff\xff\xff\xff\xff\xfb" > $fifoName
-    fi
-fi
+echo -n $errCode > $fifoName

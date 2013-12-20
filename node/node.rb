@@ -28,7 +28,7 @@ end
 begin
   fifoName = ARGV[0]
   fifo = File.open(fifoName, 'w')
-  fifo.write( [errCode].pack('V') )
+  fifo.write( errCode.to_s() )
   fifo.close()
 rescue Exception => e
   puts e.message
