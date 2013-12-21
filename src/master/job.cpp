@@ -116,6 +116,9 @@ bool JobQueue::DeleteJob( int64_t jobId )
     for( ; it != jobs_.end(); ++it )
     {
         JobPtr &job = *it;
+        if ( job->GetJobId() != jobId )
+            continue;
+
         std::ostringstream ss;
         ss << "================" << std::endl <<
             "Job deleted from job queue, jobId = " << job->GetJobId() << std::endl <<
