@@ -44,6 +44,14 @@ def RunManyJobs():
     cmd = 'python admin.py -c "' + task + '"'
     os.system( cmd )
 
+    # run many meta jobs
+    jobPath = 'test.meta'
+    task = ''
+    for i in range(0, 50):
+        task += 'run ' + jobPath + ';'
+    cmd = 'python admin.py -c "' + task + '"'
+    os.system( cmd )
+
 def RunHeavyJobs():
     # run many heavy jobs
     jobPath = 'autotest/heavy.job'
