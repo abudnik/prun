@@ -28,7 +28,7 @@ except Exception as e:
 try:
     writeFifo = sys.argv[1]
     fifo = os.open( writeFifo, os.O_WRONLY | os.O_NONBLOCK )
-    os.write( fifo, str(errCode) )
+    os.write( fifo, str(errCode).encode() )
     os.close( fifo )
 except Exception as e:
     print( e )

@@ -329,6 +329,7 @@ bool JobManager::PrepareJobGraph( std::istringstream &ss,
 
     ss.clear();
     ss.seekg( 0, ss.beg );
+    unsigned int lineNum = 1;
     std::string line;
     std::vector< std::string > jobFiles;
     while( std::getline( ss, line ) )
@@ -337,6 +338,12 @@ bool JobManager::PrepareJobGraph( std::istringstream &ss,
         std::copy( std::istream_iterator<std::string>( ss2 ),
                    std::istream_iterator<std::string>(),
                    std::back_inserter( jobFiles ) );
+
+        if ( jobFiles.size() < 2 )
+        {
+            PLOG_ERR( "JobManager::PrepareJobGraph: invalid jobs adjacency list, line=" << lineNum );
+            return false;
+        }
 
         int v1, v2;
 
@@ -356,6 +363,7 @@ bool JobManager::PrepareJobGraph( std::istringstream &ss,
         }
 
         jobFiles.clear();
+        ++lineNum;
     }
 
     // validate graph

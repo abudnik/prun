@@ -301,6 +301,9 @@ bool ReadHosts( const char *filePath, std::list< std::string > &hosts )
         {
             std::string host;
             getline( file, host );
+            if ( host.empty() )
+                continue;
+
             if ( isdigit( host[0] ) )
             {
                 boost::system::error_code error;
