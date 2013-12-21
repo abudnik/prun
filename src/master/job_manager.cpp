@@ -79,7 +79,7 @@ Job *JobManager::CreateJob( const std::string &job_description ) const
     return CreateJob( ptree );
 }
 
-void JobManager::CreateMetaJob( const std::string &meta_description, std::list< Job * > &jobs ) const
+void JobManager::CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs ) const
 {
     std::istringstream ss( meta_description );
     std::string line;
@@ -95,7 +95,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
     std::map< std::string, int > jobFileToIndex;
 
     boost::shared_ptr< JobGroup > jobGroup( new JobGroup() );
-    std::vector< Job * > &indexToJob = jobGroup->GetIndexToJob();
+    std::vector< JobWeakPtr > &indexToJob = jobGroup->GetIndexToJob();
 
     // parse job files 
     bool succeeded = true;
@@ -123,9 +123,10 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
         Job *job = CreateJob( jobDescr );
         if ( job )
         {
+            JobPtr jobPtr( job );
             jobFileToIndex[ *it ] = index++;
-            indexToJob.push_back( job );
-            jobs.push_back( job );
+            indexToJob.push_back( jobPtr );
+            jobs.push_back( jobPtr );
         }
         else
         {
@@ -141,12 +142,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
 
     if ( !succeeded )
     {
-        std::list< Job * >::iterator it = jobs.begin();
-        for( ; it != jobs.end(); )
-        {
-            delete *it;
-            jobs.erase( it++ );
-        }
+        jobs.clear();
     }
 }
 
@@ -159,17 +155,17 @@ void JobManager::PushJob( Job *job )
     timeoutManager_->PushJobQueue( job->GetJobId(), job->GetQueueTimeout() );
 }
 
-void JobManager::PushJobs( std::list< Job * > &jobs )
+void JobManager::PushJobs( std::list< JobPtr > &jobs )
 {
     PLOG( "push jobs" );
     jobs_.PushJobs( jobs, numJobGroups_++ );
 
     Scheduler::Instance().OnNewJob();
 
-    std::list< Job * >::const_iterator it = jobs.begin();
+    std::list< JobPtr >::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
-        const Job *job = *it;
+        const JobPtr &job = *it;
         timeoutManager_->PushJobQueue( job->GetJobId(), job->GetQueueTimeout() );
     }
 }
@@ -382,12 +378,14 @@ bool JobManager::PrepareJobGraph( std::istringstream &ss,
     VertexIter i, i_end;
     for( tie( i, i_end ) = vertices( graph ); i != i_end; ++i )
     {
-        Job *job = jobGroup->GetIndexToJob()[ *i ];
-
-        job->SetJobVertex( *i );
-        int deps = in_degree( *i, graph );
-        job->SetNumDepends( deps );
-        job->SetJobGroup( jobGroup );
+        JobPtr job = jobGroup->GetIndexToJob()[ *i ].lock();
+        if ( job )
+        {
+            job->SetJobVertex( *i );
+            int deps = in_degree( *i, graph );
+            job->SetNumDepends( deps );
+            job->SetJobGroup( jobGroup );
+        }
     }
 
     return true;

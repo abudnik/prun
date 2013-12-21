@@ -126,16 +126,16 @@ int AdminCommand_Run::RunMetaJob( std::ifstream &file, std::string &result ) con
         while( getline( file, line ) )
             metaDescr += line + '\n';
 
-        std::list< master::Job * > jobs;
-        master::JobManager::Instance().CreateMetaJob( metaDescr, jobs );
-        master::JobManager::Instance().PushJobs( jobs );
+        std::list< JobPtr > jobs;
+        JobManager::Instance().CreateMetaJob( metaDescr, jobs );
+        JobManager::Instance().PushJobs( jobs );
 
         std::ostringstream ss;
         ss << "----------------" << std::endl;
-        std::list< master::Job * >::const_iterator it = jobs.begin();
+        std::list< JobPtr >::const_iterator it = jobs.begin();
         for( ; it != jobs.end(); ++it )
         {
-            PrintJobInfo( *it, result );
+            PrintJobInfo( (*it).get(), result );
             ss << result << std::endl;
         }
         ss << "----------------" << std::endl;
@@ -317,7 +317,7 @@ int AdminCommand_AddGroup::Execute( const boost::property_tree::ptree &params,
     try
     {
         std::list< std::string > hosts;
-        if ( master::ReadHosts( filePath.c_str(), hosts ) )
+        if ( ReadHosts( filePath.c_str(), hosts ) )
         {
             WorkerManager::Instance().AddWorkerGroup( fileName, hosts );
         }

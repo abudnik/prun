@@ -48,9 +48,9 @@ class JobManager
 {
 public:
     Job *CreateJob( const std::string &job_description ) const;
-    void CreateMetaJob( const std::string &meta_description, std::list< Job * > &jobs ) const;
+    void CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs ) const;
     void PushJob( Job *job );
-    void PushJobs( std::list< Job * > &jobs );
+    void PushJobs( std::list< JobPtr > &jobs );
 
     bool GetJobById( int64_t jobId, JobPtr &job );
     bool DeleteJob( int64_t jobId );

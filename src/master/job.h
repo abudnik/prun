@@ -25,6 +25,7 @@ the License.
 
 #include <list>
 #include <vector>
+#include <boost/weak_ptr.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/function.hpp>
@@ -45,6 +46,8 @@ typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::bidirectionalS > 
 typedef boost::graph_traits<JobGraph>::vertex_descriptor JobVertex;
 
 class Job;
+typedef boost::weak_ptr< Job > JobWeakPtr;
+
 class JobGroup
 {
 public:
@@ -55,11 +58,11 @@ public:
 
     JobGraph &GetGraph() { return graph_; }
 
-    std::vector< Job * > &GetIndexToJob() { return indexToJob_; }
+    std::vector< JobWeakPtr > &GetIndexToJob() { return indexToJob_; }
 
 private:
     JobGraph graph_;
-    std::vector< Job * > indexToJob_;
+    std::vector< JobWeakPtr > indexToJob_;
 };
 
 class Job
@@ -173,7 +176,7 @@ public:
     JobQueue() : numJobs_( 0 ) {}
 
     void PushJob( Job *job, int64_t groupId );
-    void PushJobs( std::list< Job * > &jobs, int64_t groupId );
+    void PushJobs( std::list< JobPtr > &jobs, int64_t groupId );
 
     bool PopJob( JobPtr &job );
 

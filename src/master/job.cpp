@@ -33,10 +33,12 @@ void JobGroup::OnJobCompletion( const JobVertex &vertex )
     for( tie( i, i_end ) = out_edges( vertex, graph_ ); i != i_end; ++i )
     {
         JobVertex out = target( *i, graph_ );
-        Job *job = indexToJob_[ out ];
-
-        int numDeps = job->GetNumDepends();
-        job->SetNumDepends( numDeps - 1 );
+        JobPtr job = indexToJob_[ out ].lock();
+        if ( job )
+        {
+            int numDeps = job->GetNumDepends();
+            job->SetNumDepends( numDeps - 1 );
+        }
     }
 }
 
@@ -74,17 +76,16 @@ void JobQueue::PushJob( Job *job, int64_t groupId )
     ++numJobs_;
 }
 
-void JobQueue::PushJobs( std::list< Job * > &jobs, int64_t groupId )
+void JobQueue::PushJobs( std::list< JobPtr > &jobs, int64_t groupId )
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-    std::list< Job * >::const_iterator it = jobs.begin();
+    std::list< JobPtr >::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
-        Job *job = *it;
+        const JobPtr &job = *it;
         job->SetGroupId( groupId );
-        JobPtr j( job );
-        jobs_.push_back( j );
-        idToJob_[ job->GetJobId() ] = j;
+        jobs_.push_back( job );
+        idToJob_[ job->GetJobId() ] = job;
         ++numJobs_;
     }
 }
