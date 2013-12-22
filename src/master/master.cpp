@@ -74,6 +74,8 @@ void InitWorkerManager( const std::string &exeDir, const std::string &cfgPath )
     }
 
     master::WorkerManager &mgr = master::WorkerManager::Instance();
+    mgr.Initialize( hostsDir );
+
     std::string line;
     list< std::string > hosts;
     while( getline( file, line ) )

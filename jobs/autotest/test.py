@@ -2,8 +2,6 @@ import os
 import time
 import random
 
-path = '/home/budnik/prun/'
-
 def RunManyJobs():
     # run many simple jobs
     jobPath = 'autotest/simple_one_cpu.job'
@@ -78,7 +76,7 @@ def DeleteGroup():
     os.system( cmd )
 
 def AddGroup():
-    task = 'addg ' + path + 'hosts_group1'
+    task = 'addg hosts_group1'
     cmd = 'python admin.py -c "' + task + '"'
     os.system( cmd )
 

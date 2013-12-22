@@ -100,15 +100,20 @@ public:
     int GetTotalWorkers() const;
     int GetTotalCPU() const;
 
+    const std::string &GetConfigDir() const { return cfgDir_; }
+
     static WorkerManager &Instance()
     {
         static WorkerManager instance_;
         return instance_;
     }
 
+    void Initialize( const std::string &cfgDir );
     void Shutdown();
 
 private:
+    std::string cfgDir_;
+
     GrpNameToWorkerList workerGroups_;
     std::set< std::string > workerHosts_;
     mutable boost::mutex workersMut_;

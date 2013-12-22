@@ -304,6 +304,10 @@ int AdminCommand_AddGroup::Execute( const boost::property_tree::ptree &params,
     try
     {
         filePath = params.get<std::string>( "file" );
+        if ( filePath[0] != '/' )
+        {
+            filePath = WorkerManager::Instance().GetConfigDir() + '/' + filePath;
+        }
 
         boost::filesystem::path p( filePath );
         fileName = common::PathToString( p.filename() );

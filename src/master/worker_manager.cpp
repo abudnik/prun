@@ -274,6 +274,11 @@ int WorkerManager::GetTotalCPU() const
     return total;
 }
 
+void WorkerManager::Initialize( const std::string &cfgDir )
+{
+    cfgDir_ = cfgDir;
+}
+
 void WorkerManager::Shutdown()
 {
     boost::mutex::scoped_lock scoped_lock( workersMut_ );
