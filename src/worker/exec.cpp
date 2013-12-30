@@ -41,6 +41,7 @@ the License.
 #include "common/config.h"
 #include "common/error_code.h"
 #include "common/configure.h"
+#include "common/stack.h"
 #include "exec_info.h"
 #include "exec_job.h"
 #ifdef HAVE_SYS_PRCTL_H
@@ -941,18 +942,43 @@ namespace {
 
 void SigHandler( int s )
 {
-    if ( s == SIGCHLD )
+    switch( s )
     {
-        // On Linux, multiple children terminating will be compressed into a single SIGCHLD
-        while( 1 )
+        case SIGCHLD:
         {
-            int status;
-            pid_t pid = waitpid( -1, &status, WNOHANG );
-            if ( pid > 0 )
-                worker::childProcesses.Delete( pid );
-            else
-                break;
+            // On Linux, multiple children terminating will be compressed into a single SIGCHLD
+            while( 1 )
+            {
+                int status;
+                pid_t pid = waitpid( -1, &status, WNOHANG );
+                if ( pid > 0 )
+                    worker::childProcesses.Delete( pid );
+                else
+                    break;
+            }
+            break;
         }
+
+        case SIGABRT:
+        case SIGFPE:
+        case SIGBUS:
+        case SIGSEGV: 
+        case SIGILL:
+        case SIGSYS:
+        case SIGXCPU:
+        case SIGXFSZ:
+        case SIGSTKFLT:
+        {
+            std::ostringstream ss;
+            common::Stack stack;
+            stack.Out( ss );
+            PLOG_ERR( "Signal '" << strsignal( s ) << "', current stack:" << std::endl << ss.str() );
+            ::exit( 1 );
+            break;
+        }
+
+        default:
+            PLOG_WRN( "Unsupported signal '" << strsignal( s ) << "'" );
     }
 }
 
@@ -965,6 +991,16 @@ void SetupSignalHandlers()
     sigHandler.sa_flags = 0;
 
     sigaction( SIGCHLD, &sigHandler, NULL );
+
+    sigaction( SIGABRT, &sigHandler, NULL );
+    sigaction( SIGFPE,  &sigHandler, NULL );
+    sigaction( SIGBUS,  &sigHandler, NULL );
+    sigaction( SIGSEGV, &sigHandler, NULL );
+    sigaction( SIGILL,  &sigHandler, NULL );
+    sigaction( SIGSYS,  &sigHandler, NULL );
+    sigaction( SIGXCPU, &sigHandler, NULL );
+    sigaction( SIGXFSZ, &sigHandler, NULL );
+    sigaction( SIGSTKFLT, &sigHandler, NULL );
 }
 
 void SetupSignalMask()

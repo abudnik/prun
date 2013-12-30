@@ -33,6 +33,7 @@ the License.
 #include "common/config.h"
 #include "common/pidfile.h"
 #include "common/uuid.h"
+#include "common/stack.h"
 #include "ping.h"
 #include "node_ping.h"
 #include "job_manager.h"
@@ -89,6 +90,52 @@ void InitWorkerManager( const std::string &exeDir, const std::string &cfgPath )
     }
 }
 
+void SigHandler( int s )
+{
+    switch( s )
+    {
+        case SIGABRT:
+        case SIGFPE:
+        case SIGBUS:
+        case SIGSEGV: 
+        case SIGILL:
+        case SIGSYS:
+        case SIGXCPU:
+        case SIGXFSZ:
+        case SIGSTKFLT:
+        {
+            std::ostringstream ss;
+            common::Stack stack;
+            stack.Out( ss );
+            PLOG_ERR( "Signal '" << strsignal( s ) << "', current stack:" << std::endl << ss.str() );
+            ::exit( 1 );
+            break;
+        }
+
+        default:
+            PLOG_WRN( "Unsupported signal '" << strsignal( s ) << "'" );
+    }
+}
+
+void SetupSignalHandlers()
+{
+    struct sigaction sigHandler;
+    memset( &sigHandler, 0, sizeof( sigHandler ) );
+    sigHandler.sa_handler = SigHandler;
+    sigemptyset(&sigHandler.sa_mask);
+    sigHandler.sa_flags = 0;
+
+    sigaction( SIGABRT, &sigHandler, NULL );
+    sigaction( SIGFPE,  &sigHandler, NULL );
+    sigaction( SIGBUS,  &sigHandler, NULL );
+    sigaction( SIGSEGV, &sigHandler, NULL );
+    sigaction( SIGILL,  &sigHandler, NULL );
+    sigaction( SIGSYS,  &sigHandler, NULL );
+    sigaction( SIGXCPU, &sigHandler, NULL );
+    sigaction( SIGXFSZ, &sigHandler, NULL );
+    sigaction( SIGSTKFLT, &sigHandler, NULL );
+}
+
 void AtExit()
 {
     common::JsonRpc::Instance().Shutdown();
@@ -132,6 +179,8 @@ public:
         common::logger::InitLogger( isDaemon_, "pmaster" );
 
         //PLOG( "master_id= " << masterId_ );
+
+        SetupSignalHandlers();
 
         common::Config &cfg = common::Config::Instance();
         if ( cfgPath_.empty() )

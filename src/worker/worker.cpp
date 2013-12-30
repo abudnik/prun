@@ -42,6 +42,7 @@ the License.
 #include "common/pidfile.h"
 #include "common/daemon.h"
 #include "common/request.h"
+#include "common/stack.h"
 #include "common.h"
 #include "comm_descriptor.h"
 #include "master_ping.h"
@@ -751,10 +752,33 @@ void VerifyCommandlineParams( uid_t uid )
 
 void SigHandler( int s )
 {
-    if ( s == SIGCHLD )
+    switch( s )
     {
-        int status;
-        waitpid( -1, &status, WNOHANG );
+        case SIGCHLD:
+            int status;
+            waitpid( -1, &status, WNOHANG );
+            break;
+
+        case SIGABRT:
+        case SIGFPE:
+        case SIGBUS:
+        case SIGSEGV: 
+        case SIGILL:
+        case SIGSYS:
+        case SIGXCPU:
+        case SIGXFSZ:
+        case SIGSTKFLT:
+        {
+            std::ostringstream ss;
+            common::Stack stack;
+            stack.Out( ss );
+            PLOG_ERR( "Signal '" << strsignal( s ) << "', current stack:" << std::endl << ss.str() );
+            ::exit( 1 );
+            break;
+        }
+
+        default:
+            PLOG_WRN( "Unsupported signal '" << strsignal( s ) << "'" );
     }
 }
 
@@ -767,6 +791,16 @@ void SetupSignalHandlers()
     sigHandler.sa_flags = 0;
 
     sigaction( SIGCHLD, &sigHandler, NULL );
+
+    sigaction( SIGABRT, &sigHandler, NULL );
+    sigaction( SIGFPE,  &sigHandler, NULL );
+    sigaction( SIGBUS,  &sigHandler, NULL );
+    sigaction( SIGSEGV, &sigHandler, NULL );
+    sigaction( SIGILL,  &sigHandler, NULL );
+    sigaction( SIGSYS,  &sigHandler, NULL );
+    sigaction( SIGXCPU, &sigHandler, NULL );
+    sigaction( SIGXFSZ, &sigHandler, NULL );
+    sigaction( SIGSTKFLT, &sigHandler, NULL );
 }
 
 void SetupSignalMask()

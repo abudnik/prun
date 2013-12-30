@@ -41,7 +41,7 @@ foreach(cpp ${SRC_PWORKER_CPP})
 endforeach(cpp)
 
 add_executable( ${APP_NAME} ${SRC_PWORKER} )
-target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt )
+target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
 
 set(APP_NAME prexec)
 
@@ -51,7 +51,7 @@ foreach(cpp ${SRC_PREXEC_CPP})
 endforeach(cpp)
 
 add_executable( ${APP_NAME} ${SRC_PREXEC} )
-target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt )
+target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
 
 
 set(APP_NAME pmaster)
@@ -64,5 +64,5 @@ foreach(cpp ${SRC_MASTER_CPP})
 endforeach(cpp)
 
 add_executable( ${APP_NAME} ${SRC_MASTER} )
-target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt )
+target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
 
