@@ -104,7 +104,6 @@ void SigHandler( int s )
         case SIGSYS:
         case SIGXCPU:
         case SIGXFSZ:
-        case SIGSTKFLT:
         {
 #ifdef HAVE_EXEC_INFO_H
             std::ostringstream ss;
@@ -139,7 +138,6 @@ void SetupSignalHandlers()
     sigaction( SIGSYS,  &sigHandler, NULL );
     sigaction( SIGXCPU, &sigHandler, NULL );
     sigaction( SIGXFSZ, &sigHandler, NULL );
-    sigaction( SIGSTKFLT, &sigHandler, NULL );
 }
 
 void AtExit()
