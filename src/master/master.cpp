@@ -33,7 +33,6 @@ the License.
 #include "common/config.h"
 #include "common/pidfile.h"
 #include "common/uuid.h"
-#include "common/stack.h"
 #include "ping.h"
 #include "node_ping.h"
 #include "job_manager.h"
@@ -46,6 +45,9 @@ the License.
 #include "admin.h"
 #include "defines.h"
 #include "test.h"
+#ifdef HAVE_EXEC_INFO_H
+#include "common/stack.h"
+#endif
 
 using namespace std;
 
@@ -104,10 +106,14 @@ void SigHandler( int s )
         case SIGXFSZ:
         case SIGSTKFLT:
         {
+#ifdef HAVE_EXEC_INFO_H
             std::ostringstream ss;
             common::Stack stack;
             stack.Out( ss );
             PLOG_ERR( "Signal '" << strsignal( s ) << "', current stack:" << std::endl << ss.str() );
+#else
+            PLOG_ERR( "Signal '" << strsignal( s ) << "'" );
+#endif
             ::exit( 1 );
             break;
         }

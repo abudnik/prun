@@ -22,6 +22,7 @@ include_directories ( ${SRC_DIR} )
 set(COMMON_DIR ${SRC_DIR}/common)
 
 CHECK_INCLUDE_FILES ("sys/prctl.h" HAVE_SYS_PRCTL_H)
+CHECK_INCLUDE_FILES ("execinfo.h" HAVE_EXEC_INFO_H)
 CONFIGURE_FILE(${COMMON_DIR}/configure.h.in ${COMMON_DIR}/configure.h)
 
 set(SRC_COMMON_CPP log.cpp daemon.cpp config.cpp protocol.cpp json_rpc.cpp uuid.cpp)

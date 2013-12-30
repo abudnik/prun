@@ -41,11 +41,13 @@ the License.
 #include "common/config.h"
 #include "common/error_code.h"
 #include "common/configure.h"
-#include "common/stack.h"
 #include "exec_info.h"
 #include "exec_job.h"
 #ifdef HAVE_SYS_PRCTL_H
 #include <sys/prctl.h>
+#endif
+#ifdef HAVE_EXEC_INFO_H
+#include "common/stack.h"
 #endif
 
 using namespace std;
@@ -969,10 +971,14 @@ void SigHandler( int s )
         case SIGXFSZ:
         case SIGSTKFLT:
         {
+#ifdef HAVE_EXEC_INFO_H
             std::ostringstream ss;
             common::Stack stack;
             stack.Out( ss );
             PLOG_ERR( "Signal '" << strsignal( s ) << "', current stack:" << std::endl << ss.str() );
+#else
+            PLOG_ERR( "Signal '" << strsignal( s ) << "'" );
+#endif
             ::exit( 1 );
             break;
         }
