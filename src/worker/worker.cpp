@@ -994,9 +994,11 @@ public:
             while( 1 )
             {
                 int ret = sigwait( &waitset, &sig );
+                if ( ret == EINTR )
+                    continue;
                 if ( !ret )
                     break;
-                PLOG_ERR( "main(): sigwait failed: " << strerror(errno) );
+                PLOG_ERR( "main(): sigwait failed: " << strerror(ret) );
             }
         }
     }
