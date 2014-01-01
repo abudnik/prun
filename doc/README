@@ -10,4 +10,16 @@ other computers. Following job properties must be set in each job description:
 - script
 Path to the script file. This script file will be executed on worker computers.
 If path is relative, then master will look for the file in the "prun/jobs"
-directory.
+directory. "script" property is closely related to "send_script" property.
+If "send_script" value is false, then path must point to a script file on the
+remote worker computer, thus path must be absolute.
+
+- send_script
+Whether master sends content of a script file or not. It is possible to send
+script file content to workers without sharing this script file across network.
+If file is large, then there is a problem of sending too much data, devouring
+network bandwidth.
+Also, if script file size is larger than 512 Kb, then it is necessary to set
+"send_script" value to false, because of some worker's internal limitations.
+
+- language
