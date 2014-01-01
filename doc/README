@@ -1,1 +1,13 @@
-Under construction...
+Job description
+---------------
+
+Job description is represented in the JSON formatted file. So job description
+is a set of key-value pairs, where key is a certain job property. Master expects
+that job description files are in the "prun/jobs" directory. So this is a good
+idea to share this directory in the network for putting job descriptions from
+other computers. Following job properties must be set in each job description:
+
+- script
+Path to the script file. This script file will be executed on worker computers.
+If path is relative, then master will look for the file in the "prun/jobs"
+directory.
