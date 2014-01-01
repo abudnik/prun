@@ -220,6 +220,16 @@ class ExecuteTask : public Action
             return;
         }
 
+        const std::string &script = job->GetScript();
+        if ( script.size() > SHMEM_BLOCK_SIZE )
+        {
+            PLOG_WRN( "ExecuteTask::Execute: script size=" << script.size() <<
+                      ", exceeded limit=" << SHMEM_BLOCK_SIZE );
+            job->OnError( NODE_SCRIPT_FILE_NOT_FOUND );
+            SaveCompletionResults( job );
+            return;
+        }
+
         boost::asio::io_service *io_service = commDescrPool->GetIoService();
         Job::Tasks::const_iterator it = tasks.begin();
         for( ; it != tasks.end(); ++it )
