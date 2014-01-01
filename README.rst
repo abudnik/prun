@@ -3,7 +3,7 @@ PRUN: Parallel task executor and job scheduler in a high-availability computing 
 
 Prun is a an open-source cluster job scheduler and parallel task executor system.
 Prun can be compiled and used on *nix-like operating systems, but currently
-it has been tested only under Linux.
+it has been tested only under Linux and FreeBSD.
 
 Like other full-featured batch systems, Prun provides a job queueing mechanism,
 job scheduling, priority scheme, resource monitoring, and resource management.
