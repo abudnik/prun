@@ -23,3 +23,55 @@ Also, if script file size is larger than 512 Kb, then it is necessary to set
 "send_script" value to false, because of some worker's internal limitations.
 
 - language
+Script language might be one of the following: python, ruby, js, java, shell.
+
+- priority
+The smaller the integer value of the "priority" option, the higher the priority
+of the job. Job with a higher priority will be scheduled before another job with
+a lower priority.
+
+- job_timeout
+Job timeout in seconds. If scheduled by the master job is not completed in a
+period of job_timeout seconds, then master sends "stop job" command to all job
+executing workers.
+
+- queue_timeout
+All incoming master jobs are queued. If master doesn't schedule the job in a
+period of queue_timeout seconds, then this job will be removed from the job
+queue.
+
+- task_timeout
+Task timeout in seconds. This timeout means task execution timeout. If the
+running process is not completed in a period of task_timeout seconds, then
+supervising worker process will kill it.
+
+NOTE: Negative timeout value means infinite timeout.
+
+- max_failed_nodes
+Maximum number of failed nodes whereupon job will be stopped on all workers.
+
+- num_execution
+
+- max_cluster_cpu
+
+- max_cpu
+
+- exclusive
+
+- no_reschedule
+
+- hosts (optional)
+
+- groups (optional)
+
+Job requirenments
+-----------------
+
+Workers and worker groups management
+------------------------------------
+
+Master and Worker configuration
+-------------------------------
+
+Administration tool
+-------------------
