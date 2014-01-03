@@ -51,18 +51,33 @@ NOTE: Negative timeout value means infinite timeout.
 Maximum number of failed nodes whereupon job will be stopped on all workers.
 
 - num_execution
+Integer number of planned job executions. If the value is negative, then the
+number of planned job executions is dependent on max_cluster_cpu property as
+follows: if the value of max_cluster_cpu if negative, then the number of
+planned job executions equals to the total number of cluster CPUs, otherwise
+it equals to MIN( max_cluster_cpu, total_number_cpu ).
 
 - max_cluster_cpu
+Maximum number of simultaneously running instances of the job in the cluster.
+Negative value means no limits.
 
 - max_cpu
+Maximum number of simultaneously running instances of the job in the single
+worker machine. Negative value means no limits.
 
 - exclusive
+Exclusive job couldn't be executed simultaneously with any other job.
 
 - no_reschedule
+If the value is false, then master reassigns job from failed worker to any other
+free worker, otherwise job won't be reassigned.
 
 - hosts (optional)
+List of hosts that are allowed to execute job. Empty list means no limits.
 
 - groups (optional)
+List of groups of hosts, that are allowed to execute job. Empty list means no
+limits.
 
 Job requirenments
 -----------------
