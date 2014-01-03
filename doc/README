@@ -43,7 +43,7 @@ queue.
 - task_timeout
 Task timeout in seconds. This timeout means task execution timeout. If the
 running process is not completed in a period of task_timeout seconds, then
-supervising worker process will kill it.
+supervising worker process will terminate it immediately.
 
 NOTE: Negative timeout value means infinite timeout.
 
@@ -79,7 +79,7 @@ List of hosts that are allowed to execute job. Empty list means no limits.
 List of groups of hosts, that are allowed to execute job. Empty list means no
 limits.
 
-Job requirenments
+Job requirements
 -----------------
 
 Workers and worker groups management
