@@ -1,5 +1,5 @@
 {
-    "script" : "example/simple_heavy.py",
+    "script" : "autotest/simple_heavy.py",
     "language" : "python",
     "send_script" : true,
     "priority" : 8,
