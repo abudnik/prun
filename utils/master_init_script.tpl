@@ -1,7 +1,7 @@
 
 case "$1" in
     start)
-        if pidof pmaster
+        if pgrep -x pmaster
         then
                 echo "master is already running"
         else
@@ -10,11 +10,11 @@ case "$1" in
         fi
         ;;
     stop)
-        if pidof pmaster
+        if pgrep -x pmaster
         then
                 echo "Stopping ..."
                 $EXEC --s
-                while [ `pidof pmaster` ]
+                while [ `pgrep -x pmaster` ]
                 do
                     echo "Waiting for Master to shutdown ..."
                     sleep 1

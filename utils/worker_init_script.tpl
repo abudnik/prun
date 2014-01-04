@@ -1,7 +1,7 @@
 
 case "$1" in
     start)
-        if pidof pworker
+        if pgrep -x pworker
         then
                 echo "worker is already running"
         else
@@ -10,11 +10,11 @@ case "$1" in
         fi
         ;;
     stop)
-        if pidof pworker
+        if pgrep -x pworker
         then
                 echo "Stopping ..."
                 $EXEC --s
-                while [ `pidof pworker` ]
+                while [ `pgrep -x pworker` ]
                 do
                     echo "Waiting for Worker to shutdown ..."
                     sleep 1
