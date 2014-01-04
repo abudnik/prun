@@ -1,5 +1,5 @@
 {
-    "script" : "autotest/random_ret.py",
+    "script" : "autotest/random_fail.py",
     "language" : "python",
     "send_script" : true,
     "priority" : 8,
@@ -7,7 +7,7 @@
     "queue_timeout" : -1,
     "task_timeout" : 30,
     "max_failed_nodes" : -1,
-    "num_execution" : 100,
+    "num_execution" : 10,
     "max_cluster_cpu" : -1,
     "max_cpu" : -1,
     "exclusive" : false,
