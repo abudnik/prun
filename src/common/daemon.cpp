@@ -30,6 +30,7 @@ the License.
 #include <csignal>
 #include <iostream>
 #include <sstream>
+#include <vector>
 #include "daemon.h"
 
 namespace common {
@@ -82,25 +83,10 @@ int StartAsDaemon()
 
 int StopDaemon( const char *procName )
 {
-    char line[256] = { '\0' };
-
     std::ostringstream command;
-    command << "pidof -s -o " << getpid() << " " << procName;
+    command << "pkill " << procName;
 
-    FILE *cmd = popen( command.str().c_str(), "r" );
-    fgets( line, sizeof(line), cmd );
-    pclose( cmd );
-
-    if ( !strlen( line ) )
-    {
-        std::cout << "can't get pid of " << procName << ": " << strerror(errno) << std::endl;
-        exit( 1 );
-    }
-
-    pid_t pid = strtoul( line, NULL, 10 );
-
-    std::cout << "sending SIGTERM to " << pid << std::endl;
-    return kill( pid, SIGTERM );
+    return system( command.str().c_str() );
 }
 
 } // namespace common
