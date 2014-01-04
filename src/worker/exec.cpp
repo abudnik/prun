@@ -153,8 +153,8 @@ public:
             if ( FindFifo( execInfo, readFifo, writeFifo ) )
             {
                 // Stop ScriptExec::ReadCompletionStatus read waiting
-                int errCode = NODE_JOB_TIMEOUT;
-                int ret = write( readFifo, &errCode, sizeof( errCode ) );
+                std::string errCode = boost::lexical_cast<std::string>( NODE_JOB_TIMEOUT );
+                int ret = write( readFifo, errCode.c_str(), errCode.size() );
                 if ( ret == -1 )
                     PLOG( "StopTaskAction::StopTask: write fifo failed, err=" << strerror(errno) );
 
