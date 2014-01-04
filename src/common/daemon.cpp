@@ -30,7 +30,6 @@ the License.
 #include <csignal>
 #include <iostream>
 #include <sstream>
-#include <vector>
 #include "daemon.h"
 
 namespace common {
