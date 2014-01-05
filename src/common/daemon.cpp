@@ -83,7 +83,7 @@ int StartAsDaemon()
 int StopDaemon( const char *procName )
 {
     std::ostringstream command;
-    command << "pkill " << procName;
+    command << "pkill -x " << procName;
 
     return system( command.str().c_str() );
 }
