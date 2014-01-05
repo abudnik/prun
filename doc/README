@@ -82,6 +82,35 @@ limits.
 Job requirements
 -----------------
 
+In general, to create a job, do one of the following: write script that will
+perform the actual job itself or will start another program that will perform
+the job. Supported scripting languages are presented in the job description
+section.
+
+Master will execute a job multiple times across cluster machines. Each
+particularly running job is called a "task". So the "job" is a set of "tasks".
+Number of tasks depends on job properties "num_execution", "max_cluster_cpu"
+and the total number of cluster CPUs (for more detailed information see job
+description section).
+When Worker starts your script (aka "task"), it passes three input parameters:
+"taskId", "numTasks" and "jobId". The meaning of first two parameters are close
+to MPI's MPI_Comm_rank and MPI_Comm_size respectively. The value of "numTasks"
+parameter is the number of planned job executions. The value of "taskId"
+parameter is an integer identifier of a currently running task, that lies in
+the half-closed interval [0, "numTasks"). The value of "jobId" parameter is an
+integer identifier of currently running job. Note that "jobId" is a unique
+identifier only in a context of running Master session. So, after restart of a
+Master process, the value of "jobId" parameter for newly running tasks may be
+equal to such one "jobId" value of previously running jobs.
+
+Each running job returns its completion status to a supervising Worker process.
+If job is written in one of supported script languages (e.g Python or Ruby),
+then it should throw an exception to return its negative completion status,
+while returning positive completion status doesn't require any additional action.
+Note that shell scripts or running binary executables must return its exit code
+as a completion status, while other script languages shouldn't call "exit"
+command, because of its execution within a context of supervising script.
+
 Workers and worker groups management
 ------------------------------------
 
