@@ -85,7 +85,7 @@ Job requirements
 In general, to create a job, do one of the following: write script that will
 perform the actual job itself or will start another program that will perform
 the job. Supported scripting languages are presented in the job description
-section.
+section. Master expects that script files are in the "prun/jobs" directory.
 
 Master will execute a job multiple times across cluster machines. Each
 particularly running job is called a "task". So the "job" is a set of "tasks".
@@ -110,6 +110,9 @@ while returning positive completion status doesn't require any additional action
 Note that shell scripts or running binary executables must return its exit code
 as a completion status, while other script languages shouldn't call "exit"
 command, because of its execution within a context of supervising script.
+As usually, zero exit code means normal completion status, while non-zero value
+would be interpreted by a Master as job failure, so Master possibly reassigns
+that job to any other node as it mentioned above in the job description section.
 
 Workers and worker groups management
 ------------------------------------
