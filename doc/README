@@ -114,6 +114,10 @@ As usually, zero exit code means normal completion status, while non-zero value
 would be interpreted by a Master as job failure, so Master possibly reassigns
 that job to any other node as it mentioned above in the job description section.
 
+Job dependency graph. Metajobs
+------------------------------
+
+
 Workers and worker groups management
 ------------------------------------
 
