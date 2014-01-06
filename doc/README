@@ -117,6 +117,23 @@ that job to any other node as it mentioned above in the job description section.
 Workers and worker groups management
 ------------------------------------
 
+Workers are identified by a hostname or host ip. Set of workers is called worker
+group. Workers always belong to some worker group. Master reads "hosts" file
+during its initialization. This "hosts" file is in the "prun" directory, it
+contains list of worker groups. Master expects that worker group files are also
+in the "prun" directory. So, if you are deployed workers, you should create
+text file, which contains hostnames or IP's of worker machines (line by line).
+This text file must be named as the name of worker group. Then you just append
+this group name to the end of "hosts" file.
+Also it is possible to manually manage workers, using admin tool (see
+administration tool section). It is possible to add or delete workers, worker
+groups on the fly.
+So Master must know about Workers, but Workers should not know anything about
+Master, therefore connecting Master with Workers consists only of steps
+described above.
+Master takes into account computer specifications. Computer with lots of RAM and
+free CPU's is more likely to get a job.
+
 Master and Worker configuration
 -------------------------------
 
