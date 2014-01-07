@@ -940,8 +940,8 @@ public:
         acceptor_.reset( new worker::ConnectionAcceptor( io_service_, worker::DEFAULT_PORT ) );
 
         // create master ping handlers
-        int completionPingTimeout = common::Config::Instance().Get<int>( "completion_ping_timeout" );
-        completionPing_.reset( new worker::JobCompletionPingerBoost( io_service_ping_, completionPingTimeout ) );
+        int completionPingDelay = common::Config::Instance().Get<int>( "completion_ping_delay" );
+        completionPing_.reset( new worker::JobCompletionPingerBoost( io_service_ping_, completionPingDelay ) );
         completionPing_->StartPing();
 
         masterPing_.reset( new worker::MasterPingBoost( io_service_ping_ ) );

@@ -49,7 +49,7 @@ void JobCompletionPinger::Run()
 {
     while( !stopped_ )
     {
-        timer_.Wait( pingTimeout_ * 1000 );
+        timer_.Wait( pingDelay_ * 1000 );
         PingMasters();
     }
 }

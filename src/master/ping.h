@@ -36,9 +36,9 @@ namespace master {
 class Pinger
 {
 public:
-    Pinger( int pingTimeout, int maxDroped )
+    Pinger( int pingDelay, int maxDroped )
     : stopped_( false ),
-     pingTimeout_( pingTimeout ), maxDroped_( maxDroped ),
+     pingDelay_( pingDelay ), maxDroped_( maxDroped ),
      numPings_( 0 )
     {
         protocol_ = new common::ProtocolJson;
@@ -66,7 +66,7 @@ protected:
 protected:
     bool stopped_;
     common::SyncTimer timer_;
-    int pingTimeout_;
+    int pingDelay_;
     int maxDroped_;
     int numPings_;
     common::Protocol *protocol_;
@@ -80,8 +80,8 @@ class PingerBoost : public Pinger
     typedef std::map< std::string, udp::endpoint > EndpointMap;
 
 public:
-    PingerBoost( boost::asio::io_service &io_service, int pingTimeout, int maxDroped )
-    : Pinger( pingTimeout, maxDroped ),
+    PingerBoost( boost::asio::io_service &io_service, int pingDelay, int maxDroped )
+    : Pinger( pingDelay, maxDroped ),
      io_service_( io_service ),
      socket_( io_service ),
      resolver_( io_service )

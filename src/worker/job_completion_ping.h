@@ -36,8 +36,8 @@ namespace worker {
 class JobCompletionPinger
 {
 public:
-    JobCompletionPinger( int pingTimeout )
-    : stopped_( false ), pingTimeout_( pingTimeout )
+    JobCompletionPinger( int pingDelay )
+    : stopped_( false ), pingDelay_( pingDelay )
     {
         protocol_ = new common::ProtocolJson;
     }
@@ -60,7 +60,7 @@ protected:
 protected:
     bool stopped_;
     common::SyncTimer timer_;
-    int pingTimeout_;
+    int pingDelay_;
     common::Protocol *protocol_;
 };
 
@@ -70,8 +70,8 @@ using boost::asio::ip::udp;
 class JobCompletionPingerBoost : public JobCompletionPinger
 {
 public:
-    JobCompletionPingerBoost( boost::asio::io_service &io_service, int pingTimeout )
-    : JobCompletionPinger( pingTimeout ),
+    JobCompletionPingerBoost( boost::asio::io_service &io_service, int pingDelay )
+    : JobCompletionPinger( pingDelay ),
      io_service_( io_service ),
      socket_( io_service )
     {

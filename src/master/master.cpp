@@ -224,9 +224,9 @@ public:
         pingReceiver_->Start();
 
         // start node pinger
-        int heartbeatTimeout = cfg.Get<int>( "heartbeat_timeout" );
+        int heartbeatDelay = cfg.Get<int>( "heartbeat_delay" );
         int maxDroped = cfg.Get<int>( "heartbeat_max_droped" );
-        pinger_.reset( new master::PingerBoost( io_service_ping_, heartbeatTimeout, maxDroped ) );
+        pinger_.reset( new master::PingerBoost( io_service_ping_, heartbeatDelay, maxDroped ) );
         pinger_->StartPing();
 
         // create thread pool for pingers
