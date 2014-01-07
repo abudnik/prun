@@ -117,6 +117,11 @@ that job to any other node as it mentioned above in the job description section.
 Job dependency graph. Metajobs
 ------------------------------
 
+Job dependency graph is a directed acyclic graph (DAG) representing dependencies
+of several jobs towards each other. It is also called "metajob" in context of
+Prun. Master takes that job dependencies from the .meta file, which is written
+in tsort format (man tsort). Master expects that .meta files are in the
+"prun/jobs" directory.
 
 Workers and worker groups management
 ------------------------------------
@@ -138,8 +143,35 @@ described above.
 Master takes into account computer specifications. Computer with lots of RAM and
 free CPU's is more likely to get a job.
 
-Master and Worker configuration
--------------------------------
+Worker configuration
+--------------------
+
+Worker's configuration described in the "prun/worker.cfg" file. This file is a
+set of key-value pairs, written in JSON format. It contains pathes to language
+interpreters ("python", "ruby", "shell", "js") and compilers ("javac"). Other
+config settings:
+
+- pidfile
+Name of a pidfile. Worker writes its PID into this file during initialization
+phase. It is necessary for recognition of silent Worker failures.
+
+- completion_ping_delay
+After job completion, Worker puts job completion status into the job completion
+table. If this table is not empty, then Worker periodically sends signals to
+Master. Worker sends it every "completion_ping_delay" seconds, until Master
+connected to Worker to get job completion status.
+
+- ipv6
+Setting this parameter value to true leads to using of IPv6 protocol.
+
+Master configuration
+--------------------
+
+Network configuration
+---------------------
+
+Logs
+----
 
 Administration tool
 -------------------
