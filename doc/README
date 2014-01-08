@@ -167,6 +167,59 @@ Setting this parameter value to true leads to using of IPv6 protocol.
 Master configuration
 --------------------
 
+Master's configuration described in the "prun/master.cfg" file. This file is a
+set of key-value pairs, written in JSON format. Settings description:
+
+- pidfile
+Name of a pidfile. Master writes its PID into this file during initialization
+phase. It is necessary for recognition of silent Master failures.
+
+- jobs_path
+Relative or absolute path to the directory, where Master will search for job/
+metajob files and script files.
+
+- heartbeat_delay
+Master sends heartbeat signal to Workers every "heartbeat_delay" seconds.
+
+- heartbeat_max_droped
+If Worker doesn't respond for more than the value of "heartbeat_max_droped"
+heartbeat signals, then Master decides that Worker is not available.
+For example, if network failed between Worker and Master during more than
+"heartbeat_delay" * "heartbeat_max_droped" seconds, then Master should reassign
+Worker jobs to any other available Worker because of network failure. So, such
+events like network failure, Worker sudden termination and some other exceptional
+cases leads to Master decision of Worker's failure.
+
+- num_ping_receiver_thread
+The number of ping (heartbeat) receiving threads.
+
+- num_job_send_thread
+The number of job sending threads. Each thread waiting for a new planned job,
+prepares message for Worker and initiates asynchronous tcp connection to Worker
+for sending this message, containing job description.
+
+- num_result_getter_thread
+The number of threads that perform obtaining completion status of achieved jobs
+from Workers.
+
+- num_command_send_thread
+The number of command sending threads. List of commands described in the
+Administration tool section.
+
+- max_simult_sending_jobs
+The maximum number of simultaneously sending jobs.
+
+- max_simult_result_getters
+The maximum number of simultaneously job completion status getters.
+
+- max_simult_command_send
+The maximum number of simultaneously sending commands.
+
+- ipv6
+Setting this parameter value to true leads to using of IPv6 protocol. Note,
+that all Workers must have the same value of "ipv6" settings in their config
+files as the Master's "ipv6" value.
+
 Network configuration
 ---------------------
 
