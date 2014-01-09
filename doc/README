@@ -126,9 +126,9 @@ in tsort format (man tsort). Master expects that .meta files are in the
 Workers and worker groups management
 ------------------------------------
 
-Workers are identified by a hostname or host ip. Set of workers is called worker
-group. Workers always belong to some worker group. Master reads "hosts" file
-during its initialization. This "hosts" file is in the "prun" directory, it
+Workers are identified by a hostname or host ip. Set of workers is called a
+worker group. Workers always belong to some worker group. Master reads "hosts"
+file during its initialization. This "hosts" file is in the "prun" directory, it
 contains list of worker groups. Master expects that worker group files are also
 in the "prun" directory. So, if you are deployed workers, you should create
 text file, which contains hostnames or IP's of worker machines (line by line).
@@ -158,8 +158,8 @@ phase. It is necessary for recognition of silent Worker failures.
 - completion_ping_delay
 After job completion, Worker puts job completion status into the job completion
 table. If this table is not empty, then Worker periodically sends signals to
-Master. Worker sends it every "completion_ping_delay" seconds, until Master
-connected to Worker to get job completion status.
+Master. Worker sends signal every "completion_ping_delay" seconds, until Master
+connects to Worker to get job completion status.
 
 - ipv6
 Setting this parameter value to true leads to using of IPv6 protocol.
@@ -188,7 +188,7 @@ For example, if network failed between Worker and Master during more than
 "heartbeat_delay" * "heartbeat_max_droped" seconds, then Master should reassign
 Worker jobs to any other available Worker because of network failure. So, such
 events like network failure, Worker sudden termination and some other exceptional
-cases leads to Master decision of Worker's failure.
+cases lead to Master's decision of Worker's failure.
 
 - num_ping_receiver_thread
 The number of ping (heartbeat) receiving threads.
