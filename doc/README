@@ -1,5 +1,5 @@
-Job description
----------------
+                                Job description
+--------------------------------------------------------------------------------
 
 Job description is represented in the JSON formatted file. So job description
 is a set of key-value pairs, where key is a certain job property. Master expects
@@ -79,8 +79,8 @@ List of hosts that are allowed to execute job. Empty list means no limits.
 List of groups of hosts, that are allowed to execute job. Empty list means no
 limits.
 
-Job requirements
------------------
+                                Job requirements
+--------------------------------------------------------------------------------
 
 In general, to create a job, do one of the following: write script that will
 perform the actual job itself or will start another program that will perform
@@ -114,8 +114,8 @@ As usually, zero exit code means normal completion status, while non-zero value
 would be interpreted by a Master as job failure, so Master possibly reassigns
 that job to any other node as it mentioned above in the job description section.
 
-Job dependency graph. Metajobs
-------------------------------
+                           Job dependency graph. Metajobs
+--------------------------------------------------------------------------------
 
 Job dependency graph is a directed acyclic graph (DAG) representing dependencies
 of several jobs towards each other. It is also called "metajob" in context of
@@ -123,8 +123,8 @@ Prun. Master takes that job dependencies from the .meta file, which is written
 in tsort format (man tsort). Master expects that .meta files are in the
 "prun/jobs" directory.
 
-Workers and worker groups management
-------------------------------------
+                        Workers and worker groups management
+--------------------------------------------------------------------------------
 
 Workers are identified by a hostname or host ip. Set of workers is called a
 worker group. Workers always belong to some worker group. Master reads "hosts"
@@ -143,8 +143,8 @@ described above.
 Master takes into account computer specifications. Computer with lots of RAM and
 free CPU's is more likely to get a job.
 
-Worker configuration
---------------------
+                             Worker configuration
+--------------------------------------------------------------------------------
 
 Worker's configuration described in the "prun/worker.cfg" file. This file is a
 set of key-value pairs, written in JSON format. It contains pathes to language
@@ -164,8 +164,8 @@ connects to Worker to get job completion status.
 - ipv6
 Setting this parameter value to true leads to using of IPv6 protocol.
 
-Master configuration
---------------------
+                             Master configuration
+--------------------------------------------------------------------------------
 
 Master's configuration described in the "prun/master.cfg" file. This file is a
 set of key-value pairs, written in JSON format. Settings description:
@@ -220,20 +220,20 @@ Setting this parameter value to true leads to using of IPv6 protocol. Note,
 that all Workers must have the same value of "ipv6" settings in their config
 files as the Master's "ipv6" value.
 
-Network configuration
----------------------
+                             Network configuration
+--------------------------------------------------------------------------------
 
 Master listen ports: 5557 (tcp), 5553(udp)
 Worker listen ports: 5555 (tcp), 5556(tcp), 5554(udp)
 
-Logs
-----
+                                 Logs
+--------------------------------------------------------------------------------
 
 If Master or Worker is started as a daemon, then it writes logs to system log,
 otherwise it writes logs to standard output (console).
 
-Administration tool
--------------------
+                            Administration tool
+--------------------------------------------------------------------------------
 
 Prun has simple command-line administration tool. Admin tool connects to Master
 and then prompts user to write some command. To run admin tool type following
