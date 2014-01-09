@@ -223,8 +223,14 @@ files as the Master's "ipv6" value.
 Network configuration
 ---------------------
 
+Master listen ports: 5557 (tcp), 5553(udp)
+Worker listen ports: 5555 (tcp), 5556(tcp), 5554(udp)
+
 Logs
 ----
+
+If Master or Worker is started as a daemon, then it writes logs to system log,
+otherwise it writes logs to standard output (console).
 
 Administration tool
 -------------------
