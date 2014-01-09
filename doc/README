@@ -234,3 +234,19 @@ otherwise it writes logs to standard output (console).
 
 Administration tool
 -------------------
+
+Prun has simple command-line administration tool. Admin tool connects to Master
+and then prompts user to write some command. To run admin tool type following
+commands:
+
+> cd ~/prun                 # cd to the directory containing prun
+> python admin.py master_id # master_id is Master's ip or hostname
+                            # or empty, if Master started on localhost
+
+To display list of commands, type "help" and press return. Also, it is possible
+to push set of commands as a command-line argument, for example:
+
+> python admin.py -c "run my_job.meta; sleep 2; stopall"
+
+Command delimeter is ';'. There are special "sleep" command, which forces admin
+tool to sleep for N seconds, before execution of following commands.
