@@ -6,7 +6,7 @@ Prun can be compiled and used on *nix-like operating systems, but currently
 it has been tested only under Linux and FreeBSD.
 
 Like other full-featured batch systems, Prun provides a job queueing mechanism,
-job scheduling, priority scheme, resource monitoring, and resource management.
+job scheduling, priority scheme, resource monitoring and resource management.
 
 Prun consists of Worker and Master components. Users submit their jobs to Master,
 while Master places them into a queue, chooses when and where to run the jobs
