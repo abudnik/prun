@@ -12,6 +12,14 @@ public:
     {
         if ( taskType == "exec" )
             return new JobExec();
+        if ( taskType == "get_result" )
+            return new JobGetResult();
+        if ( taskType == "stop_task" )
+            return new JobStopTask();
+        if ( taskType == "stop_prev" )
+            return new JobStopPreviousTask();
+        if ( taskType == "stop_all" )
+            return new JobStopAll();
         return NULL;
     }
 };
@@ -20,7 +28,7 @@ class RequestParser
 {
 public:
     template< typename T >
-    Job *ParseRequest( /*const */common::Request<T> &request )
+    bool ParseRequest( /*const */common::Request<T> &request, JobPtr &job )
     {
         const std::string &req = request.GetString();
 
@@ -28,7 +36,7 @@ public:
         int version;
         if ( !common::Protocol::ParseMsg( req, protocol, version, header, body ) )
         {
-            PLOG_ERR( "Job::ParseRequest: couldn't parse request: " << req );
+            PLOG_ERR( "RequestParser::ParseRequest: couldn't parse request: " << req );
             return false;
         }
 
@@ -38,7 +46,7 @@ public:
         );
         if ( !parser )
         {
-            PLOG_ERR( "Job::ParseRequest: appropriate parser not found for protocol: "
+            PLOG_ERR( "RequestParser::ParseRequest: appropriate parser not found for protocol: "
                       << protocol << " " << version );
             return false;
         }
@@ -47,12 +55,13 @@ public:
         parser->ParseMsgType( header, taskType );
 
         JobCreator jobCreator;
-        Job *job = jobCreator.Create( taskType );
-        if ( job )
+        Job *j = jobCreator.Create( taskType );
+        if ( j )
         {
+            job.reset( j );
             if ( job->ParseRequestBody( body, parser.get() ) )
             {
-                return job;
+                return true;
             }
             else
             {
@@ -64,7 +73,7 @@ public:
             PLOG_ERR( "2" );
         }
 
-        return NULL;
+        return false;
     }
 };
 
