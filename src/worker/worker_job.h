@@ -73,6 +73,7 @@ public:
 
     void SetFilePath( const std::string &path ) { filePath_ = path; }
 
+    int64_t GetJobId() const { return jobId_; }
     const Tasks &GetTasks() const { return tasks_; }
     const std::string &GetMasterId() const { return masterId_; }
 
@@ -227,7 +228,6 @@ protected:
         protocol.SendCommandResult( response, GetErrorCode() );
     }
 };
-
 
 } // namespace worker
 

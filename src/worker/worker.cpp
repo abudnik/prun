@@ -46,6 +46,7 @@ the License.
 #include "comm_descriptor.h"
 #include "master_ping.h"
 #include "worker_job.h"
+#include "job_parser.h"
 #include "exec_info.h"
 #include "job_completion_ping.h"
 #include "computer_info.h"
@@ -202,9 +203,13 @@ private:
 
 class ExecuteTask : public Action
 {
-    virtual void Execute( const boost::shared_ptr< Job > &job )
+    virtual void Execute( const boost::shared_ptr< Job > &j )
     {
-        const Job::Tasks &tasks = job->GetTasks();
+        boost::shared_ptr< JobExec > job(
+            boost::dynamic_pointer_cast< JobExec >( j )
+        );
+
+        const JobExec::Tasks &tasks = job->GetTasks();
         if ( tasks.empty() )
         {
             PLOG_WRN( "ExecuteTask::Execute: empty tasks for jobId=" << job->GetJobId() );
@@ -231,7 +236,7 @@ class ExecuteTask : public Action
         }
 
         boost::asio::io_service *io_service = commDescrPool->GetIoService();
-        Job::Tasks::const_iterator it = tasks.begin();
+        JobExec::Tasks::const_iterator it = tasks.begin();
         for( ; it != tasks.end(); ++it )
         {
             ExecInfo execInfo;
@@ -242,11 +247,11 @@ class ExecuteTask : public Action
 
             io_service->post( boost::bind( &ExecuteTask::DoSend,
                                            boost::shared_ptr< ExecuteTask >( new ExecuteTask ),
-                                           boost::shared_ptr< Job >( job ), *it ) );
+                                           boost::shared_ptr< JobExec >( job ), *it ) );
         }
     }
 
-    void SaveCompletionResults( const boost::shared_ptr< Job > &job, int taskId, int64_t execTime ) const
+    void SaveCompletionResults( const boost::shared_ptr< JobExec > &job, int taskId, int64_t execTime ) const
     {
         JobDescriptor descr;
         JobCompletionStat stat;
@@ -259,7 +264,7 @@ class ExecuteTask : public Action
         JobCompletionTable::Instance().Set( descr, stat );
     }
 
-    void SaveCompletionResults( const boost::shared_ptr< Job > &job ) const
+    void SaveCompletionResults( const boost::shared_ptr< JobExec > &job ) const
     {
         JobDescriptor descr;
         JobCompletionStat stat;
@@ -268,8 +273,8 @@ class ExecuteTask : public Action
         descr.masterId = job->GetMasterId();
         stat.errCode = job->GetErrorCode();
 
-        const Job::Tasks &tasks = job->GetTasks();
-        Job::Tasks::const_iterator it = tasks.begin();
+        const JobExec::Tasks &tasks = job->GetTasks();
+        JobExec::Tasks::const_iterator it = tasks.begin();
         for( ; it != tasks.end(); ++it )
         {
             descr.taskId = *it;
@@ -277,7 +282,7 @@ class ExecuteTask : public Action
         }
     }
 
-    void NodeJobCompletionPing( const boost::shared_ptr< Job > &job, int taskId )
+    void NodeJobCompletionPing( const boost::shared_ptr< JobExec > &job, int taskId )
     {
         boost::asio::io_service *io_service = commDescrPool->GetIoService();
 
@@ -300,7 +305,7 @@ class ExecuteTask : public Action
         }
     }
 
-    bool ExpandFilePath( const boost::shared_ptr< Job > &job )
+    bool ExpandFilePath( const boost::shared_ptr< JobExec > &job )
     {
         if ( job->GetScriptLength() > 0 )
             return true;
@@ -318,7 +323,7 @@ class ExecuteTask : public Action
     }
 
 public:
-    void DoSend( const boost::shared_ptr< Job > &job, int taskId )
+    void DoSend( const boost::shared_ptr< JobExec > &job, int taskId )
     {
         PrExecConnection::connection_ptr prExecConnection( new PrExecConnection() );
         if ( !prExecConnection->Init() )
@@ -394,8 +399,12 @@ public:
 
 class StopTask : public Action
 {
-    virtual void Execute( const boost::shared_ptr< Job > &job )
+    virtual void Execute( const boost::shared_ptr< Job > &j )
     {
+        boost::shared_ptr< JobStopTask > job(
+            boost::dynamic_pointer_cast< JobStopTask >( j )
+        );
+
         if ( pendingTable.Delete( job->GetJobId(), job->GetTaskId(), job->GetMasterId() ) )
         {
             job->OnError( NODE_JOB_TIMEOUT );
@@ -433,8 +442,12 @@ class StopTask : public Action
 
 class StopPreviousJobs : public Action
 {
-    virtual void Execute( const boost::shared_ptr< Job > &job )
+    virtual void Execute( const boost::shared_ptr< Job > &j )
     {
+        boost::shared_ptr< JobStopPreviousTask > job(
+            boost::dynamic_pointer_cast< JobStopPreviousTask >( j )
+        );
+
         PrExecConnection::connection_ptr prExecConnection( new PrExecConnection() );
         if ( !prExecConnection->Init() )
             return;
@@ -459,8 +472,12 @@ class StopPreviousJobs : public Action
 
 class StopAllJobs : public Action
 {
-    virtual void Execute( const boost::shared_ptr< Job > &job )
+    virtual void Execute( const boost::shared_ptr< Job > &j )
     {
+        boost::shared_ptr< JobStopAll > job(
+            boost::dynamic_pointer_cast< JobStopAll >( j )
+        );
+
         pendingTable.Clear();
 
         PrExecConnection::connection_ptr prExecConnection( new PrExecConnection() );
@@ -506,10 +523,6 @@ public:
 class Session
 {
 public:
-    Session()
-    : job_( new Job )
-    {}
-
     virtual ~Session()
     {
         requestSem->Notify();
@@ -520,10 +533,14 @@ protected:
     template< typename T >
     void HandleRequest( T &request )
     {
-        if ( job_->ParseRequest( request ) )
+        RequestParser parser;
+        if ( parser.ParseRequest( request, job_ ) )
         {
+            job_->SetMasterIP( masterIP_ );
+
+            ActionCreator actionCreator;
             boost::scoped_ptr< Action > action(
-                actionCreator_.Create( job_->GetTaskType() )
+                actionCreator.Create( job_->GetTaskType() )
             );
             if ( action )
             {
@@ -539,15 +556,14 @@ protected:
         else
         {
             PLOG_ERR( request.GetString() );
-            job_->OnError( NODE_FATAL );
         }
     }
 
+    void SetMasterIP( const std::string &ip ) { masterIP_ = ip; }
+
 protected:
     boost::shared_ptr< Job > job_;
-
-private:
-    ActionCreator actionCreator_;
+    std::string masterIP_;
 };
 
 class BoostSession : public Session, public boost::enable_shared_from_this< BoostSession >
@@ -564,7 +580,7 @@ public:
     void Start()
     {
         boost::asio::ip::address remoteAddress = socket_.remote_endpoint().address();
-        job_->SetMasterIP( remoteAddress.to_string() );
+        SetMasterIP( remoteAddress.to_string() );
 
         socket_.async_read_some( boost::asio::buffer( buffer_ ),
                                  boost::bind( &BoostSession::FirstRead, shared_from_this(),
@@ -643,6 +659,8 @@ private:
 
     void WriteResponse()
     {
+        if ( !job_ )
+            return;
         job_->GetResponse( response_ );
         if ( !response_.empty() )
         {
