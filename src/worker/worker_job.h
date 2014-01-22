@@ -37,6 +37,8 @@ namespace worker {
 class Job
 {
 public:
+    virtual ~Job() {}
+
     virtual void GetResponse( std::string &response ) const = 0;
     virtual std::string GetTaskType() const = 0;
 
