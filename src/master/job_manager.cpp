@@ -149,7 +149,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
 void JobManager::PushJob( Job *job )
 {
     PLOG( "push job" );
-    jobs_.PushJob( job, numJobGroups_++ );
+    jobs_->PushJob( job, numJobGroups_++ );
 
     Scheduler::Instance().OnNewJob();
     timeoutManager_->PushJobQueue( job->GetJobId(), job->GetQueueTimeout() );
@@ -158,7 +158,7 @@ void JobManager::PushJob( Job *job )
 void JobManager::PushJobs( std::list< JobPtr > &jobs )
 {
     PLOG( "push jobs" );
-    jobs_.PushJobs( jobs, numJobGroups_++ );
+    jobs_->PushJobs( jobs, numJobGroups_++ );
 
     Scheduler::Instance().OnNewJob();
 
@@ -172,31 +172,33 @@ void JobManager::PushJobs( std::list< JobPtr > &jobs )
 
 bool JobManager::GetJobById( int64_t jobId, JobPtr &job )
 {
-    return jobs_.GetJobById( jobId, job );
+    return jobs_->GetJobById( jobId, job );
 }
 
 bool JobManager::DeleteJob( int64_t jobId )
 {
-    return jobs_.DeleteJob( jobId );
+    return jobs_->DeleteJob( jobId );
 }
 
 bool JobManager::DeleteJobGroup( int64_t groupId )
 {
-    return jobs_.DeleteJobGroup( groupId );
+    return jobs_->DeleteJobGroup( groupId );
 }
 
 void JobManager::DeleteAllJobs()
 {
-    jobs_.Clear();
+    jobs_->Clear();
 }
 
 bool JobManager::PopJob( JobPtr &job )
 {
-    return jobs_.PopJob( job );
+    return jobs_->PopJob( job );
 }
 
 void JobManager::Initialize( const std::string &masterId, const std::string &exeDir, TimeoutManager *timeoutManager )
 {
+    jobs_.reset( new JobQueueImpl );
+
     masterId_ = masterId;
     exeDir_ = exeDir;
     timeoutManager_ = timeoutManager;
@@ -212,7 +214,7 @@ void JobManager::Initialize( const std::string &masterId, const std::string &exe
 
 void JobManager::Shutdown()
 {
-    jobs_.Clear();
+    jobs_->Clear();
 }
 
 bool JobManager::ReadScript( const std::string &filePath, std::string &script ) const

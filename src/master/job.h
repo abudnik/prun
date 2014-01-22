@@ -167,24 +167,42 @@ private:
 
 typedef boost::shared_ptr< Job > JobPtr;
 
+
 class JobQueue
+{
+public:
+    virtual ~JobQueue() {}
+
+    virtual void PushJob( Job *job, int64_t groupId ) = 0;
+    virtual void PushJobs( std::list< JobPtr > &jobs, int64_t groupId ) = 0;
+
+    virtual bool PopJob( JobPtr &job ) = 0;
+
+    virtual bool GetJobById( int64_t jobId, JobPtr &job ) = 0;
+    virtual bool DeleteJob( int64_t jobId ) = 0;
+    virtual bool DeleteJobGroup( int64_t groupId ) = 0;
+
+    virtual void Clear() = 0;
+};
+
+class JobQueueImpl : public JobQueue
 {
     typedef std::map< int64_t, JobPtr > IdToJob;
     typedef std::list< JobPtr > JobList;
 
 public:
-    JobQueue() : numJobs_( 0 ) {}
+    JobQueueImpl() : numJobs_( 0 ) {}
 
-    void PushJob( Job *job, int64_t groupId );
-    void PushJobs( std::list< JobPtr > &jobs, int64_t groupId );
+    virtual void PushJob( Job *job, int64_t groupId );
+    virtual void PushJobs( std::list< JobPtr > &jobs, int64_t groupId );
 
-    bool PopJob( JobPtr &job );
+    virtual bool PopJob( JobPtr &job );
 
-    bool GetJobById( int64_t jobId, JobPtr &job );
-    bool DeleteJob( int64_t jobId );
-    bool DeleteJobGroup( int64_t groupId );
+    virtual bool GetJobById( int64_t jobId, JobPtr &job );
+    virtual bool DeleteJob( int64_t jobId );
+    virtual bool DeleteJobGroup( int64_t groupId );
 
-    void Clear();
+    virtual void Clear();
 
 private:
     void Sort( JobList &jobs );

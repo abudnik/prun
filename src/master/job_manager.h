@@ -82,7 +82,7 @@ private:
                           boost::shared_ptr< JobGroup > &jobGroup ) const;
 
 private:
-    JobQueue jobs_;
+    boost::shared_ptr< JobQueue > jobs_;
     TimeoutManager *timeoutManager_;
     std::string exeDir_, jobsDir_;
     std::string masterId_;

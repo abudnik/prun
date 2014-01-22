@@ -66,7 +66,8 @@ bool Job::IsGroupPermitted( const std::string &group ) const
     return it != groups_.end();
 }
 
-void JobQueue::PushJob( Job *job, int64_t groupId )
+
+void JobQueueImpl::PushJob( Job *job, int64_t groupId )
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     job->SetGroupId( groupId );
@@ -76,7 +77,7 @@ void JobQueue::PushJob( Job *job, int64_t groupId )
     ++numJobs_;
 }
 
-void JobQueue::PushJobs( std::list< JobPtr > &jobs, int64_t groupId )
+void JobQueueImpl::PushJobs( std::list< JobPtr > &jobs, int64_t groupId )
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     std::list< JobPtr >::const_iterator it = jobs.begin();
@@ -90,7 +91,7 @@ void JobQueue::PushJobs( std::list< JobPtr > &jobs, int64_t groupId )
     }
 }
 
-bool JobQueue::GetJobById( int64_t jobId, JobPtr &job )
+bool JobQueueImpl::GetJobById( int64_t jobId, JobPtr &job )
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     IdToJob::const_iterator it = idToJob_.find( jobId );
@@ -102,7 +103,7 @@ bool JobQueue::GetJobById( int64_t jobId, JobPtr &job )
     return false;
 }
 
-bool JobQueue::DeleteJob( int64_t jobId )
+bool JobQueueImpl::DeleteJob( int64_t jobId )
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
 
@@ -142,7 +143,7 @@ bool JobQueue::DeleteJob( int64_t jobId )
     return false;
 }
 
-bool JobQueue::DeleteJobGroup( int64_t groupId )
+bool JobQueueImpl::DeleteJobGroup( int64_t groupId )
 {
     JobList jobs;
     bool deleted = false;
@@ -168,7 +169,7 @@ bool JobQueue::DeleteJobGroup( int64_t groupId )
     return deleted;
 }
 
-bool JobQueue::PopJob( JobPtr &job )
+bool JobQueueImpl::PopJob( JobPtr &job )
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     if ( numJobs_ )
@@ -202,7 +203,7 @@ bool JobQueue::PopJob( JobPtr &job )
     return false;
 }
 
-void JobQueue::Clear()
+void JobQueueImpl::Clear()
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
     jobs_.clear();
@@ -225,7 +226,7 @@ struct JobComparatorPriority
     }
 };
 
-void JobQueue::Sort( JobList &jobs )
+void JobQueueImpl::Sort( JobList &jobs )
 {
     JobList::iterator it = jobs_.begin();
     for( ; it != jobs_.end(); ++it )
@@ -242,7 +243,7 @@ void JobQueue::Sort( JobList &jobs )
     //PrintJobs( jobs );
 }
 
-void JobQueue::PrintJobs( const JobList &jobs ) const
+void JobQueueImpl::PrintJobs( const JobList &jobs ) const
 {
     std::ostringstream ss;
     ss << std::endl;
