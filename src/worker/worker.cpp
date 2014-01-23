@@ -62,8 +62,6 @@ namespace worker {
 
 pid_t prexecPid;
 
-common::Semaphore *requestSem;
-
 CommDescrPool *commDescrPool;
 
 ExecTable execTable, pendingTable;
@@ -523,9 +521,13 @@ public:
 class Session
 {
 public:
+    Session( boost::shared_ptr< common::Semaphore > requestSem )
+    : requestSem_( requestSem )
+    {}
+
     virtual ~Session()
     {
-        requestSem->Notify();
+        requestSem_->Notify();
         cout << "S: ~Session()" << endl;
     }
 
@@ -564,6 +566,7 @@ protected:
 protected:
     boost::shared_ptr< Job > job_;
     std::string masterIP_;
+    boost::shared_ptr< common::Semaphore > requestSem_;
 };
 
 class BoostSession : public Session, public boost::enable_shared_from_this< BoostSession >
@@ -572,8 +575,10 @@ public:
     typedef boost::array< char, 32 * 1024 > BufferType;
 
 public:
-    BoostSession( boost::asio::io_service &io_service )
-    : socket_( io_service ),
+    BoostSession( boost::asio::io_service &io_service,
+                  boost::shared_ptr< common::Semaphore > &requestSem )
+    : Session( requestSem ),
+     socket_( io_service ),
      request_( false )
     {}
 
@@ -693,9 +698,11 @@ class ConnectionAcceptor
     typedef boost::shared_ptr< BoostSession > session_ptr;
 
 public:
-    ConnectionAcceptor( boost::asio::io_service &io_service, unsigned short port )
+    ConnectionAcceptor( boost::asio::io_service &io_service, unsigned short port,
+                        boost::shared_ptr< common::Semaphore > &requestSem )
     : io_service_( io_service ),
-      acceptor_( io_service )
+     acceptor_( io_service ),
+     requestSem_( requestSem )
     {
         try
         {
@@ -720,7 +727,7 @@ public:
 private:
     void StartAccept()
     {
-        session_ptr session( new BoostSession( io_service_ ) );
+        session_ptr session( new BoostSession( io_service_, requestSem_ ) );
         acceptor_.async_accept( session->GetSocket(),
                                 boost::bind( &ConnectionAcceptor::HandleAccept, this,
                                              session, boost::asio::placeholders::error ) );
@@ -731,7 +738,7 @@ private:
         if ( !error )
         {
             cout << "connection accepted..." << endl;
-            requestSem->Wait();
+            requestSem_->Wait();
             io_service_.post( boost::bind( &BoostSession::Start, session ) );
             StartAccept();
         }
@@ -744,6 +751,7 @@ private:
 private:
     boost::asio::io_service &io_service_;
     tcp::acceptor acceptor_;
+    boost::shared_ptr< common::Semaphore > requestSem_;
 };
 
 } // namespace worker
@@ -871,8 +879,6 @@ void AtExit()
     // remove shared memory
     ipc::shared_memory_object::remove( worker::SHMEM_NAME );
 
-    delete worker::requestSem;
-
     common::logger::ShutdownLogger();
 }
 
@@ -930,8 +936,6 @@ public:
         // create master request handlers
         work_.reset( new boost::asio::io_service::work( io_service_ ) );
 
-        worker::requestSem = new common::Semaphore( numRequestThread_ );
-
         // create thread pool
         for( unsigned int i = 0; i < numThread_; ++i )
         {
@@ -955,7 +959,8 @@ public:
         }
 
         // start acceptor
-        acceptor_.reset( new worker::ConnectionAcceptor( io_service_, worker::DEFAULT_PORT ) );
+        requestSem_.reset( new common::Semaphore( numRequestThread_ ) );
+        acceptor_.reset( new worker::ConnectionAcceptor( io_service_, worker::DEFAULT_PORT, requestSem_ ) );
 
         // create master ping handlers
         int completionPingDelay = common::Config::Instance().Get<int>( "completion_ping_delay" );
@@ -991,7 +996,7 @@ public:
 
         worker::commDescrPool->Shutdown();
 
-        worker::requestSem->Reset();
+        requestSem_->Reset();
 
         worker_threads_.join_all();
     }
@@ -1120,6 +1125,7 @@ private:
 
     boost::shared_ptr< worker::CommDescrPool > commDescrPool_;
 
+    boost::shared_ptr< common::Semaphore > requestSem_;
     boost::shared_ptr< worker::ConnectionAcceptor > acceptor_;
 
     boost::shared_ptr< worker::JobCompletionPinger > completionPing_;
