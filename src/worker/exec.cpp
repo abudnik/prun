@@ -1438,7 +1438,7 @@ private:
     boost::shared_ptr< boost::interprocess::shared_memory_object > sharedMemPool_;
     boost::shared_ptr< boost::interprocess::mapped_region > mappedRegion_;
 
-    boost::shared_ptr< ExecContext > execContext_;
+    ExecContextPtr execContext_;
 };
 
 } // namespace worker

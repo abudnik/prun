@@ -60,23 +60,50 @@ using boost::asio::ip::tcp;
 
 namespace worker {
 
-pid_t prexecPid;
+pid_t g_prexecPid;
 
-CommDescrPool *commDescrPool;
 
-ExecTable execTable, pendingTable;
+class ExecContext
+{
+private:
+    void SetCommDescrPool( boost::shared_ptr< worker::CommDescrPool > &pool )
+    {
+        commDescrPool_ = pool;
+    }
+
+public:
+    ExecTable &GetExecTable() { return execTable_; }
+    ExecTable &GetPendingTable() { return pendingTable_; }
+
+    boost::shared_ptr< worker::CommDescrPool > &GetCommDescrPool()
+    {
+        return commDescrPool_;
+    }
+
+private:
+    ExecTable execTable_;
+    ExecTable pendingTable_;
+
+    boost::shared_ptr< worker::CommDescrPool > commDescrPool_;
+
+    friend class WorkerApplication;
+};
+
+typedef boost::shared_ptr< ExecContext > ExecContextPtr;
 
 
 class Action
 {
 public:
-    virtual void Execute( const boost::shared_ptr< Job > &job ) = 0;
+    virtual void Execute( const boost::shared_ptr< Job > &job,
+                          ExecContextPtr &execContext ) = 0;
     virtual ~Action() {}
 };
 
 class NoAction : public Action
 {
-    virtual void Execute( const boost::shared_ptr< Job > &job ) {}
+    virtual void Execute( const boost::shared_ptr< Job > &job,
+                          ExecContextPtr &execContex ) {}
 };
 
 class PrExecConnection : public boost::enable_shared_from_this< PrExecConnection >
@@ -87,13 +114,17 @@ public:
     typedef boost::shared_ptr< PrExecConnection > connection_ptr;
 
 public:
-    PrExecConnection()
+    PrExecConnection( ExecContextPtr &execContext )
     : socket_( NULL ),
-     response_( true )
+     response_( true ),
+     execContext_( execContext )
     {}
 
     bool Init()
     {
+        boost::shared_ptr< CommDescrPool > &commDescrPool(
+            execContext_->GetCommDescrPool()
+        );
         if ( commDescrPool->AllocCommDescr() )
         {
             CommDescr &commDescr = commDescrPool->GetCommDescr();
@@ -112,6 +143,9 @@ public:
     {
         if ( socket_ )
         {
+            boost::shared_ptr< worker::CommDescrPool > &commDescrPool(
+                execContext_->GetCommDescrPool()
+            );
             commDescrPool->FreeCommDescr();
         }
     }
@@ -196,12 +230,14 @@ private:
     BufferType buffer_;
     boost::property_tree::ptree responsePtree_;
     common::Request< BufferType > response_;
+    ExecContextPtr &execContext_;
     int errCode_;
 };
 
 class ExecuteTask : public Action
 {
-    virtual void Execute( const boost::shared_ptr< Job > &j )
+    virtual void Execute( const boost::shared_ptr< Job > &j,
+                          ExecContextPtr &execContext )
     {
         boost::shared_ptr< JobExec > job(
             boost::dynamic_pointer_cast< JobExec >( j )
@@ -233,6 +269,9 @@ class ExecuteTask : public Action
             return;
         }
 
+        boost::shared_ptr< CommDescrPool > &commDescrPool(
+            execContext->GetCommDescrPool()
+        );
         boost::asio::io_service *io_service = commDescrPool->GetIoService();
         JobExec::Tasks::const_iterator it = tasks.begin();
         for( ; it != tasks.end(); ++it )
@@ -241,11 +280,14 @@ class ExecuteTask : public Action
             execInfo.jobId_ = job->GetJobId();
             execInfo.taskId_ = *it;
             execInfo.masterId_ = job->GetMasterId();
+
+            ExecTable &pendingTable = execContext->GetPendingTable();
             pendingTable.Add( execInfo );
 
             io_service->post( boost::bind( &ExecuteTask::DoSend,
                                            boost::shared_ptr< ExecuteTask >( new ExecuteTask ),
-                                           boost::shared_ptr< JobExec >( job ), *it ) );
+                                           boost::shared_ptr< JobExec >( job ), *it,
+                                           ExecContextPtr( execContext ) ) );
         }
     }
 
@@ -280,8 +322,12 @@ class ExecuteTask : public Action
         }
     }
 
-    void NodeJobCompletionPing( const boost::shared_ptr< JobExec > &job, int taskId )
+    void NodeJobCompletionPing( const boost::shared_ptr< JobExec > &job, int taskId,
+                                ExecContextPtr &execContext )
     {
+        boost::shared_ptr< CommDescrPool > &commDescrPool(
+            execContext->GetCommDescrPool()
+        );
         boost::asio::io_service *io_service = commDescrPool->GetIoService();
 
         using boost::asio::ip::udp;
@@ -321,9 +367,10 @@ class ExecuteTask : public Action
     }
 
 public:
-    void DoSend( const boost::shared_ptr< JobExec > &job, int taskId )
+    void DoSend( const boost::shared_ptr< JobExec > &job, int taskId,
+                 ExecContextPtr &execContext )
     {
-        PrExecConnection::connection_ptr prExecConnection( new PrExecConnection() );
+        PrExecConnection::connection_ptr prExecConnection( new PrExecConnection( execContext ) );
         if ( !prExecConnection->Init() )
             return;
 
@@ -331,9 +378,14 @@ public:
         execInfo.jobId_ = job->GetJobId();
         execInfo.taskId_ = taskId;
         execInfo.masterId_ = job->GetMasterId();
+
+        ExecTable &execTable = execContext->GetExecTable();
         execTable.Add( execInfo );
 
         // write script into shared memory
+        boost::shared_ptr< CommDescrPool > &commDescrPool(
+            execContext->GetCommDescrPool()
+        );
         CommDescr &commDescr = commDescrPool->GetCommDescr();
         const std::string &script = job->GetScript();
         if ( script.size() )
@@ -364,6 +416,7 @@ public:
 
         int errCode;
 
+        ExecTable &pendingTable = execContext->GetPendingTable();
         if ( pendingTable.Delete( job->GetJobId(), taskId, job->GetMasterId() ) )
         {
             errCode = prExecConnection->Send( ss2.str() );
@@ -391,30 +444,33 @@ public:
 
         SaveCompletionResults( job, taskId, execTime );
 
-        NodeJobCompletionPing( job, taskId );
+        NodeJobCompletionPing( job, taskId, execContext );
     }
 };
 
 class StopTask : public Action
 {
-    virtual void Execute( const boost::shared_ptr< Job > &j )
+    virtual void Execute( const boost::shared_ptr< Job > &j,
+                          ExecContextPtr &execContext )
     {
         boost::shared_ptr< JobStopTask > job(
             boost::dynamic_pointer_cast< JobStopTask >( j )
         );
 
+        ExecTable &pendingTable = execContext->GetPendingTable();
         if ( pendingTable.Delete( job->GetJobId(), job->GetTaskId(), job->GetMasterId() ) )
         {
             job->OnError( NODE_JOB_TIMEOUT );
         }
 
+        ExecTable &execTable = execContext->GetExecTable();
         if ( !execTable.Contains( job->GetJobId(), job->GetTaskId(), job->GetMasterId() ) )
         {
             job->OnError( NODE_TASK_NOT_FOUND );
             return;
         }
 
-        PrExecConnection::connection_ptr prExecConnection( new PrExecConnection() );
+        PrExecConnection::connection_ptr prExecConnection( new PrExecConnection( execContext ) );
         if ( !prExecConnection->Init() )
             return;
 
@@ -440,13 +496,14 @@ class StopTask : public Action
 
 class StopPreviousJobs : public Action
 {
-    virtual void Execute( const boost::shared_ptr< Job > &j )
+    virtual void Execute( const boost::shared_ptr< Job > &j,
+                          ExecContextPtr &execContext )
     {
         boost::shared_ptr< JobStopPreviousTask > job(
             boost::dynamic_pointer_cast< JobStopPreviousTask >( j )
         );
 
-        PrExecConnection::connection_ptr prExecConnection( new PrExecConnection() );
+        PrExecConnection::connection_ptr prExecConnection( new PrExecConnection( execContext ) );
         if ( !prExecConnection->Init() )
             return;
 
@@ -470,15 +527,17 @@ class StopPreviousJobs : public Action
 
 class StopAllJobs : public Action
 {
-    virtual void Execute( const boost::shared_ptr< Job > &j )
+    virtual void Execute( const boost::shared_ptr< Job > &j,
+                          ExecContextPtr &execContext )
     {
         boost::shared_ptr< JobStopAll > job(
             boost::dynamic_pointer_cast< JobStopAll >( j )
         );
 
+        ExecTable &pendingTable = execContext->GetPendingTable();
         pendingTable.Clear();
 
-        PrExecConnection::connection_ptr prExecConnection( new PrExecConnection() );
+        PrExecConnection::connection_ptr prExecConnection( new PrExecConnection( execContext ) );
         if ( !prExecConnection->Init() )
             return;
 
@@ -521,8 +580,10 @@ public:
 class Session
 {
 public:
-    Session( boost::shared_ptr< common::Semaphore > requestSem )
-    : requestSem_( requestSem )
+    Session( boost::shared_ptr< common::Semaphore > requestSem,
+             ExecContextPtr &execContext )
+    : requestSem_( requestSem ),
+     execContext_( execContext )
     {}
 
     virtual ~Session()
@@ -546,7 +607,7 @@ protected:
             );
             if ( action )
             {
-                action->Execute( job_ );
+                action->Execute( job_, execContext_ );
             }
             else
             {
@@ -567,6 +628,7 @@ protected:
     boost::shared_ptr< Job > job_;
     std::string masterIP_;
     boost::shared_ptr< common::Semaphore > requestSem_;
+    ExecContextPtr execContext_;
 };
 
 class BoostSession : public Session, public boost::enable_shared_from_this< BoostSession >
@@ -576,8 +638,9 @@ public:
 
 public:
     BoostSession( boost::asio::io_service &io_service,
-                  boost::shared_ptr< common::Semaphore > &requestSem )
-    : Session( requestSem ),
+                  boost::shared_ptr< common::Semaphore > &requestSem,
+                  ExecContextPtr &execContext )
+    : Session( requestSem, execContext ),
      socket_( io_service ),
      request_( false )
     {}
@@ -699,10 +762,12 @@ class ConnectionAcceptor
 
 public:
     ConnectionAcceptor( boost::asio::io_service &io_service, unsigned short port,
-                        boost::shared_ptr< common::Semaphore > &requestSem )
+                        boost::shared_ptr< common::Semaphore > &requestSem,
+                        ExecContextPtr &execContext )
     : io_service_( io_service ),
      acceptor_( io_service ),
-     requestSem_( requestSem )
+     requestSem_( requestSem ),
+     execContext_( execContext )
     {
         try
         {
@@ -727,7 +792,7 @@ public:
 private:
     void StartAccept()
     {
-        session_ptr session( new BoostSession( io_service_, requestSem_ ) );
+        session_ptr session( new BoostSession( io_service_, requestSem_, execContext_ ) );
         acceptor_.async_accept( session->GetSocket(),
                                 boost::bind( &ConnectionAcceptor::HandleAccept, this,
                                              session, boost::asio::placeholders::error ) );
@@ -752,6 +817,7 @@ private:
     boost::asio::io_service &io_service_;
     tcp::acceptor acceptor_;
     boost::shared_ptr< common::Semaphore > requestSem_;
+    ExecContextPtr execContext_;
 };
 
 } // namespace worker
@@ -874,7 +940,7 @@ void AtExit()
     namespace ipc = boost::interprocess;
 
     // send stop signal to PrExec proccess
-    kill( worker::prexecPid, SIGTERM );
+    kill( worker::g_prexecPid, SIGTERM );
 
     // remove shared memory
     ipc::shared_memory_object::remove( worker::SHMEM_NAME );
@@ -894,6 +960,11 @@ void ThreadFun( boost::asio::io_service *io_service )
     }
 }
 
+} // anonymous namespace
+
+
+namespace worker {
+
 class WorkerApplication
 {
 public:
@@ -902,12 +973,13 @@ public:
     : exeDir_( exeDir ),
      cfgDir_( cfgDir ),
      resourcesDir_( resourcesDir ),
-     isDaemon_( isDaemon ), uid_( uid )
+     isDaemon_( isDaemon ), uid_( uid ),
+     execContext_( new ExecContext )
     {}
 
     void Initialize()
     {
-        worker::ComputerInfo &compInfo = worker::ComputerInfo::Instance();
+        ComputerInfo &compInfo = ComputerInfo::Instance();
         unsigned int numExecThread = compInfo.GetNumCPU();
         numRequestThread_ = 2 * numExecThread;
         numThread_ = numRequestThread_ + 1; // +1 for accept thread
@@ -924,7 +996,7 @@ public:
             cfg.ParseConfig( "", cfgDir_.c_str() );
         }
 
-        worker::JobCompletionTable::Instance();
+        JobCompletionTable::Instance();
 
         SetupSignalHandlers();
         SetupSignalMask();
@@ -947,9 +1019,9 @@ public:
         // create pool for execute task actions
         work_exec_.reset( new boost::asio::io_service::work( io_service_exec_ ) );
 
-        commDescrPool_.reset( new worker::CommDescrPool( numRequestThread_, &io_service_exec_,
-                                                         (char*)mappedRegion_->get_address() ) );
-        worker::commDescrPool = commDescrPool_.get();
+        commDescrPool_.reset( new CommDescrPool( numRequestThread_, &io_service_exec_,
+                                                 (char*)mappedRegion_->get_address() ) );
+        execContext_->SetCommDescrPool( commDescrPool_ );
 
         for( unsigned int i = 0; i < numExecThread; ++i )
         {
@@ -960,14 +1032,16 @@ public:
 
         // start acceptor
         requestSem_.reset( new common::Semaphore( numRequestThread_ ) );
-        acceptor_.reset( new worker::ConnectionAcceptor( io_service_, worker::DEFAULT_PORT, requestSem_ ) );
+        acceptor_.reset(
+            new ConnectionAcceptor( io_service_, DEFAULT_PORT, requestSem_, execContext_ )
+        );
 
         // create master ping handlers
         int completionPingDelay = common::Config::Instance().Get<int>( "completion_ping_delay" );
-        completionPing_.reset( new worker::JobCompletionPingerBoost( io_service_ping_, completionPingDelay ) );
+        completionPing_.reset( new JobCompletionPingerBoost( io_service_ping_, completionPingDelay ) );
         completionPing_->StartPing();
 
-        masterPing_.reset( new worker::MasterPingBoost( io_service_ping_ ) );
+        masterPing_.reset( new MasterPingBoost( io_service_ping_ ) );
         masterPing_->Start();
 
         // create thread pool for pingers
@@ -994,7 +1068,7 @@ public:
         work_.reset();
         io_service_.stop();
 
-        worker::commDescrPool->Shutdown();
+        commDescrPool_->Shutdown();
 
         requestSem_->Reset();
 
@@ -1074,7 +1148,7 @@ private:
         if ( pid > 0 )
         {
             // wait while prexec completes initialization
-            worker::prexecPid = pid;
+            g_prexecPid = pid;
             siginfo_t info;
             sigset_t waitset;
             sigemptyset( &waitset );
@@ -1089,13 +1163,13 @@ private:
     {
         namespace ipc = boost::interprocess;
 
-        ipc::shared_memory_object::remove( worker::SHMEM_NAME );
+        ipc::shared_memory_object::remove( SHMEM_NAME );
 
         try
         {
-            sharedMemPool_.reset( new ipc::shared_memory_object( ipc::create_only, worker::SHMEM_NAME, ipc::read_write ) );
+            sharedMemPool_.reset( new ipc::shared_memory_object( ipc::create_only, SHMEM_NAME, ipc::read_write ) );
 
-            size_t shmemSize = numRequestThread_ * worker::SHMEM_BLOCK_SIZE;
+            size_t shmemSize = numRequestThread_ * SHMEM_BLOCK_SIZE;
             sharedMemPool_->truncate( shmemSize );
 
             mappedRegion_.reset( new ipc::mapped_region( *sharedMemPool_.get(), ipc::read_write ) );
@@ -1123,19 +1197,21 @@ private:
     boost::shared_ptr<boost::asio::io_service::work> work_;
     boost::shared_ptr<boost::asio::io_service::work> work_exec_;
 
-    boost::shared_ptr< worker::CommDescrPool > commDescrPool_;
+    boost::shared_ptr< CommDescrPool > commDescrPool_;
 
     boost::shared_ptr< common::Semaphore > requestSem_;
-    boost::shared_ptr< worker::ConnectionAcceptor > acceptor_;
+    boost::shared_ptr< ConnectionAcceptor > acceptor_;
 
-    boost::shared_ptr< worker::JobCompletionPinger > completionPing_;
-    boost::shared_ptr< worker::MasterPing > masterPing_;
+    boost::shared_ptr< JobCompletionPinger > completionPing_;
+    boost::shared_ptr< MasterPing > masterPing_;
 
     boost::shared_ptr< boost::interprocess::shared_memory_object > sharedMemPool_;
     boost::shared_ptr< boost::interprocess::mapped_region > mappedRegion_;
+
+    ExecContextPtr execContext_;
 };
 
-} // anonymous namespace
+} // namespace worker
 
 int main( int argc, char* argv[], char **envp )
 {
@@ -1197,7 +1273,7 @@ int main( int argc, char* argv[], char **envp )
             isDaemon = true;
         }
 
-        WorkerApplication app( exeDir, cfgDir, resourcesDir, isDaemon, uid );
+        worker::WorkerApplication app( exeDir, cfgDir, resourcesDir, isDaemon, uid );
         app.Initialize();
 
         app.Run();
