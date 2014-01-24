@@ -55,10 +55,9 @@ using boost::asio::ip::tcp;
 
 namespace worker {
 
-bool isFork;
-string exeDir, resourcesDir;
+bool g_isFork;
+PidContainer g_childProcesses;
 
-boost::interprocess::mapped_region *mappedRegion;
 
 struct ThreadParams
 {
@@ -68,35 +67,43 @@ struct ThreadParams
 };
 
 typedef std::map< boost::thread::id, ThreadParams > ThreadInfo;
-ThreadInfo threadInfo;
 
-ExecTable execTable;
-
-struct PidContainer
+class ExecContext
 {
-    void Add( pid_t pid )
+private:
+    void SetExeDir( const std::string &dir ) { exeDir_ = dir; }
+    void SetResourcesDir( const std::string &dir ) { resourcesDir_ = dir; }
+
+    void SetMappedRegion( boost::shared_ptr< boost::interprocess::mapped_region > &mappedRegion )
     {
-        boost::unique_lock< boost::mutex > lock( mut_ );
-        pids_.insert( pid );
+        mappedRegion_ = mappedRegion;
     }
 
-    bool Delete( pid_t pid )
+public:
+    ExecTable &GetExecTable() { return execTable_; }
+    ThreadInfo &GetThreadInfo() { return threadInfo_; }
+
+    const std::string &GetExeDir() const { return exeDir_; }
+    const std::string &GetResourcesDir() const { return resourcesDir_; }
+
+    const boost::shared_ptr< boost::interprocess::mapped_region > &GetMappedRegion() const
     {
-        boost::unique_lock< boost::mutex > lock( mut_ );
-        std::multiset< pid_t >::iterator it = pids_.find( pid );
-        if ( it != pids_.end() )
-        {
-            pids_.erase( it );
-            return true;
-        }
-        return false;
+        return mappedRegion_;
     }
 
 private:
-    std::multiset< pid_t > pids_;
-    boost::mutex mut_;
+    ExecTable execTable_;
+    ThreadInfo threadInfo_;
+
+    std::string exeDir_;
+    std::string resourcesDir_;
+
+    boost::shared_ptr< boost::interprocess::mapped_region > mappedRegion_;
+
+    friend class ExecApplication;
 };
-PidContainer childProcesses;
+
+typedef boost::shared_ptr< ExecContext > ExecContextPtr;
 
 
 void FlushFifo( int fifo )
@@ -121,15 +128,21 @@ void FlushFifo( int fifo )
 class StopTaskAction
 {
 public:
+    StopTaskAction( ExecContextPtr &execContext )
+    : execContext_( execContext )
+    {}
+
     void StopTask( JobStopTask &job )
     {
+        ExecTable &execTable = execContext_->GetExecTable();
+
         ExecInfo execInfo;
         if ( execTable.Find( job.GetJobId(), job.GetTaskId(), job.GetMasterId(), execInfo ) &&
              execTable.Delete( job.GetJobId(), job.GetTaskId(), job.GetMasterId() ) )
         {
             pid_t pid = execInfo.pid_;
 
-            if ( childProcesses.Delete( pid ) )
+            if ( g_childProcesses.Delete( pid ) )
             {
                 int ret = kill( pid, SIGTERM );
                 if ( ret != -1 )
@@ -178,6 +191,8 @@ public:
 private:
     bool FindFifo( const ExecInfo &execInfo, int &readFifo, int &writeFifo ) const
     {
+        ThreadInfo &threadInfo = execContext_->GetThreadInfo();
+
         ThreadInfo::const_iterator it = threadInfo.begin();
         for( ; it != threadInfo.end(); ++it )
         {
@@ -191,13 +206,22 @@ private:
         }
         return false;
     }
+
+private:
+    ExecContextPtr &execContext_;
 };
 
 class StopPreviousJobsAction
 {
 public:
+    StopPreviousJobsAction( ExecContextPtr &execContext )
+    : execContext_( execContext )
+    {}
+
     void StopJobs( JobStopPreviousJobs &job )
     {
+        ExecTable &execTable = execContext_->GetExecTable();
+
         std::list< ExecInfo > table;
         execTable.Get( table );
         std::list< ExecInfo >::const_iterator it = table.begin();
@@ -207,26 +231,42 @@ public:
             if ( execInfo.masterId_ != job.GetMasterId() )
             {
                 JobStopTask job( execInfo.jobId_, execInfo.taskId_, execInfo.masterId_ );
-                StopTaskAction action;
+                StopTaskAction action( execContext_ );
                 action.StopTask( job );
             }
         }
     }
+
+private:
+    ExecContextPtr &execContext_;
 };
 
 class StopAllJobsAction
 {
 public:
+    StopAllJobsAction( ExecContextPtr &execContext )
+    : execContext_( execContext )
+    {}
+
     void StopJobs()
     {
+        ExecTable &execTable = execContext_->GetExecTable();
         execTable.Clear();
     }
+
+private:
+    ExecContextPtr &execContext_;
 };
 
 class ScriptExec
 {
 public:
     virtual ~ScriptExec() {}
+
+    void SetExecContext( ExecContextPtr &execContext )
+    {
+        execContext_ = execContext;
+    }
 
     virtual void Execute( JobExec *job )
     {
@@ -248,6 +288,7 @@ public:
         string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
         string jobId = boost::lexical_cast<std::string>( job->GetJobId() );
 
+        ThreadInfo &threadInfo = execContext_->GetThreadInfo();
         const ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 
         int ret = execl( exePath_.c_str(), job->GetScriptLanguage().c_str(),
@@ -266,8 +307,9 @@ public:
     {
         PLOG( "poll timed out, trying to kill process: " << pid );
 
+        ExecTable &execTable = execContext_->GetExecTable();
         if ( execTable.Delete( job_->GetJobId(), job_->GetTaskId(), job_->GetMasterId() ) &&
-             childProcesses.Delete( pid ) )
+             g_childProcesses.Delete( pid ) )
         {
             int ret = kill( pid, SIGTERM );
             if ( ret == -1 )
@@ -281,10 +323,10 @@ public:
         }
     }
 
-    static void Cancel( const ExecInfo &execInfo )
+    static void Cancel( const ExecInfo &execInfo, ExecContextPtr &execContext )
     {
         JobStopTask job( execInfo.jobId_, execInfo.taskId_, execInfo.masterId_ );
-        StopTaskAction action;
+        StopTaskAction action( execContext );
         action.StopTask( job );
     }
 
@@ -304,8 +346,12 @@ protected:
 
         if ( pid > 0 )
         {
-            childProcesses.Add( pid );
+            g_childProcesses.Add( pid );
+
+            ThreadInfo &threadInfo = execContext_->GetThreadInfo();
             ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+
+            ExecTable &execTable = execContext_->GetExecTable();
 
             ExecInfo execInfo;
             execInfo.jobId_ = job_->GetJobId();
@@ -315,7 +361,7 @@ protected:
 
             threadParams.execInfo = execInfo; // copy without callback
 
-            execInfo.callback_ = boost::bind( &ScriptExec::Cancel, execInfo );
+            execInfo.callback_ = boost::bind( &ScriptExec::Cancel, execInfo, execContext_ );
             execTable.Add( execInfo );
 
             bool succeded = WriteScript( threadParams.writeFifoFD );
@@ -344,7 +390,7 @@ protected:
             sigaddset( &sigset, SIGTERM );
             pthread_sigmask( SIG_UNBLOCK, &sigset, NULL );
 
-            isFork = true;
+            g_isFork = true;
             // linux-only. kill child process, if parent exits
 #ifdef HAVE_SYS_PRCTL_H
             prctl( PR_SET_PDEATHSIG, SIGHUP );
@@ -403,7 +449,10 @@ protected:
         {
             // read script from shared memory
             size_t offset = job_->GetCommId() * SHMEM_BLOCK_SIZE;
-            scriptAddr = (const char*)worker::mappedRegion->get_address() + offset;
+            const boost::shared_ptr< boost::interprocess::mapped_region > &mappedRegion(
+                execContext_->GetMappedRegion()
+            );
+            scriptAddr = (const char*)mappedRegion->get_address() + offset;
             bytesToWrite = job_->GetScriptLength();
         }
 
@@ -507,7 +556,8 @@ protected:
 private:
     void FlushFifo()
     {
-        ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+        ThreadInfo &threadInfo = execContext_->GetThreadInfo();
+        const ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
         worker::FlushFifo( threadParams.readFifoFD );
         worker::FlushFifo( threadParams.writeFifoFD );
     }
@@ -516,6 +566,7 @@ protected:
     JobExec *job_;
     std::string exePath_;
     std::string nodePath_;
+    ExecContextPtr execContext_;
 };
 
 class PythonExec : public ScriptExec
@@ -526,7 +577,14 @@ protected:
         try
         {
             exePath_ = common::Config::Instance().Get<string>( "python" );
-            nodePath_ = resourcesDir.empty() ? exeDir : resourcesDir;
+            if ( execContext_->GetResourcesDir().empty() )
+            {
+                nodePath_ = execContext_->GetExeDir();
+            }
+            else
+            {
+                nodePath_ = execContext_->GetResourcesDir();
+            }
             nodePath_ += std::string( "/" ) + NODE_SCRIPT_NAME_PY;
         }
         catch( std::exception &e )
@@ -561,6 +619,7 @@ public:
         string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
         string jobId = boost::lexical_cast<std::string>( job->GetJobId() );
 
+        ThreadInfo &threadInfo = execContext_->GetThreadInfo();
         const ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
 
         int ret = execl( exePath_.c_str(), job->GetScriptLanguage().c_str(),
@@ -582,7 +641,14 @@ protected:
         try
         {
             exePath_ = common::Config::Instance().Get<string>( "java" );
-            nodePath_ = resourcesDir.empty() ? exeDir : resourcesDir;
+            if ( execContext_->GetResourcesDir().empty() )
+            {
+                nodePath_ = execContext_->GetExeDir();
+            }
+            else
+            {
+                nodePath_ = execContext_->GetResourcesDir();
+            }
             nodePath_ += "/node";
         }
         catch( std::exception &e )
@@ -602,7 +668,14 @@ protected:
         try
         {
             exePath_ = common::Config::Instance().Get<string>( "shell" );
-            nodePath_ = resourcesDir.empty() ? exeDir : resourcesDir;
+            if ( execContext_->GetResourcesDir().empty() )
+            {
+                nodePath_ = execContext_->GetExeDir();
+            }
+            else
+            {
+                nodePath_ = execContext_->GetResourcesDir();
+            }
             nodePath_ += std::string( "/" ) + NODE_SCRIPT_NAME_SHELL;
         }
         catch( std::exception &e )
@@ -622,7 +695,14 @@ protected:
         try
         {
             exePath_ = common::Config::Instance().Get<string>( "ruby" );
-            nodePath_ = resourcesDir.empty() ? exeDir : resourcesDir;
+            if ( execContext_->GetResourcesDir().empty() )
+            {
+                nodePath_ = execContext_->GetExeDir();
+            }
+            else
+            {
+                nodePath_ = execContext_->GetResourcesDir();
+            }
             nodePath_ += std::string( "/" ) + NODE_SCRIPT_NAME_RUBY;
         }
         catch( std::exception &e )
@@ -642,7 +722,14 @@ protected:
         try
         {
             exePath_ = common::Config::Instance().Get<string>( "js" );
-            nodePath_ = resourcesDir.empty() ? exeDir : resourcesDir;
+            if ( execContext_->GetResourcesDir().empty() )
+            {
+                nodePath_ = execContext_->GetExeDir();
+            }
+            else
+            {
+                nodePath_ = execContext_->GetResourcesDir();
+            }
             nodePath_ += std::string( "/" ) + NODE_SCRIPT_NAME_JS;
         }
         catch( std::exception &e )
@@ -677,6 +764,10 @@ public:
 class Session
 {
 protected:
+    Session( ExecContextPtr &execContext )
+    : execContext_( execContext )
+    {}
+
     template< typename T >
     void HandleRequest( T &request )
     {
@@ -699,7 +790,7 @@ protected:
         {
             JobStopTask job;
             job.ParseRequest( ptree );
-            StopTaskAction action;
+            StopTaskAction action( execContext_ );
             action.StopTask( job );
             errCode_ = job.GetError();
         }
@@ -708,14 +799,14 @@ protected:
         {
             JobStopPreviousJobs job;
             job.ParseRequest( ptree );
-            StopPreviousJobsAction action;
+            StopPreviousJobsAction action( execContext_ );
             action.StopJobs( job );
             errCode_ = job.GetError();
         }
         else
         if ( task == "stop_all" )
         {
-            StopAllJobsAction action;
+            StopAllJobsAction action( execContext_ );
             action.StopJobs();
             errCode_ = 0;
         }
@@ -750,6 +841,7 @@ private:
         );
         if ( scriptExec )
         {
+            scriptExec->SetExecContext( execContext_ );
             scriptExec->Execute( &job );
             errCode_ = job.GetError();
             execTime_ = job.GetExecTime();
@@ -765,6 +857,7 @@ private:
 protected:
     int errCode_;
     int64_t execTime_;
+    ExecContextPtr execContext_;
 };
 
 class SessionBoost : public Session, public boost::enable_shared_from_this< SessionBoost >
@@ -772,11 +865,13 @@ class SessionBoost : public Session, public boost::enable_shared_from_this< Sess
     typedef boost::array< char, 2048 > BufferType;
 
 public:
-    SessionBoost( boost::asio::io_service &io_service )
-    : socket_( io_service ), request_( true )
+    SessionBoost( boost::asio::io_service &io_service,
+                  ExecContextPtr &execContext )
+    : Session( execContext ),
+    socket_( io_service ), request_( true )
     {}
 
-    virtual ~SessionBoost()
+    ~SessionBoost()
     {
         cout << "E: ~Session()" << endl;
     }
@@ -885,9 +980,11 @@ class ConnectionAcceptor
     typedef boost::shared_ptr< SessionBoost > session_ptr;
 
 public:
-    ConnectionAcceptor( boost::asio::io_service &io_service, unsigned short port )
+    ConnectionAcceptor( boost::asio::io_service &io_service, unsigned short port,
+                        ExecContextPtr &execContext )
     : io_service_( io_service ),
-      acceptor_( io_service )
+     acceptor_( io_service ),
+     execContext_( execContext )
     {
         try
         {
@@ -912,7 +1009,7 @@ public:
 private:
     void StartAccept()
     {
-        session_ptr session( new SessionBoost( io_service_ ) );
+        session_ptr session( new SessionBoost( io_service_, execContext_ ) );
         acceptor_.async_accept( session->GetSocket(),
                                 boost::bind( &ConnectionAcceptor::HandleAccept, this,
                                              session, boost::asio::placeholders::error ) );
@@ -935,6 +1032,7 @@ private:
 private:
     boost::asio::io_service &io_service_;
     tcp::acceptor acceptor_;
+    ExecContextPtr execContext_;
 };
 
 } // namespace worker
@@ -954,7 +1052,7 @@ void SigHandler( int s )
                 int status;
                 pid_t pid = waitpid( -1, &status, WNOHANG );
                 if ( pid > 0 )
-                    worker::childProcesses.Delete( pid );
+                    worker::g_childProcesses.Delete( pid );
                 else
                     break;
             }
@@ -1026,12 +1124,12 @@ void UnblockSighandlerMask()
     pthread_sigmask( SIG_UNBLOCK, &sigset, NULL );
 }
 
-void SetupLanguageRuntime()
+void SetupLanguageRuntime( const worker::ExecContextPtr &execContext )
 {
     pid_t pid = fork();
     if ( pid == 0 )
     {
-        worker::isFork = true;
+        worker::g_isFork = true;
         std::string javacPath;
         try
         {
@@ -1041,7 +1139,15 @@ void SetupLanguageRuntime()
         {
             PLOG_WRN( "SetupLanguageRuntime: get javac path failed: " << e.what() );
         }
-        std::string nodePath = worker::resourcesDir.empty() ? worker::exeDir : worker::resourcesDir;
+        std::string nodePath;
+        if ( execContext->GetResourcesDir().empty() )
+        {
+            nodePath = execContext->GetExeDir();
+        }
+        else
+        {
+            nodePath = execContext->GetResourcesDir();
+        }
         nodePath += std::string( "/" ) + worker::NODE_SCRIPT_NAME_JAVA;
         if ( access( javacPath.c_str(), F_OK ) != -1 )
         {
@@ -1085,47 +1191,10 @@ void Impersonate( uid_t uid )
     }
 }
 
-void CleanupThreads()
-{
-    worker::ThreadInfo::iterator it;
-    for( it = worker::threadInfo.begin();
-         it != worker::threadInfo.end();
-       ++it )
-    {
-        worker::ThreadParams &threadParams = it->second;
-
-        if ( threadParams.readFifoFD != -1 )
-        {
-            close( threadParams.readFifoFD );
-            threadParams.readFifoFD = -1;
-        }
-
-        if ( !threadParams.readFifo.empty() )
-        {
-            unlink( threadParams.readFifo.c_str() );
-            threadParams.readFifo.clear();
-        }
-
-        if ( threadParams.writeFifoFD != -1 )
-        {
-            close( threadParams.writeFifoFD );
-            threadParams.writeFifoFD = -1;
-        }
-
-        if ( !threadParams.writeFifo.empty() )
-        {
-            unlink( threadParams.writeFifo.c_str() );
-            threadParams.writeFifo.clear();
-        }
-    }
-}
-
 void AtExit()
 {
-    if ( worker::isFork )
+    if ( worker::g_isFork )
         return;
-
-    CleanupThreads();
 
     common::logger::ShutdownLogger();
 
@@ -1144,15 +1213,24 @@ void ThreadFun( boost::asio::io_service *io_service )
     }
 }
 
+} // anonymous namespace
+
+namespace worker {
+
 class ExecApplication
 {
 public:
-    ExecApplication( const std::string &cfgDir, bool isDaemon, uid_t uid, unsigned int numThread )
+    ExecApplication( const std::string &exeDir, const std::string &resourcesDir,
+                     const std::string &cfgDir, bool isDaemon, uid_t uid, unsigned int numThread )
     : cfgDir_( cfgDir ),
      isDaemon_( isDaemon ),
      uid_( uid ),
-     numThread_( numThread )
-    {}
+     numThread_( numThread ),
+     execContext_( new ExecContext )
+    {
+        execContext_->SetExeDir( exeDir );
+        execContext_->SetResourcesDir( resourcesDir );
+    }
 
     void Initialize()
     {
@@ -1161,19 +1239,21 @@ public:
         common::Config &cfg = common::Config::Instance();
         if ( cfgDir_.empty() )
         {
-            cfg.ParseConfig( worker::exeDir.c_str(), "worker.cfg" );
+            cfg.ParseConfig( execContext_->GetExeDir().c_str(), "worker.cfg" );
         }
         else
         {
             cfg.ParseConfig( "", cfgDir_.c_str() );
         }
 
-        SetupLanguageRuntime();
+        SetupLanguageRuntime( execContext_ );
 
         SetupPrExecIPC();
         
         // start accepting connections
-        acceptor_.reset( new worker::ConnectionAcceptor( io_service_, worker::DEFAULT_PREXEC_PORT ) );
+        acceptor_.reset(
+            new ConnectionAcceptor( io_service_, DEFAULT_PREXEC_PORT, execContext_ )
+        );
 
         // create thread pool
 
@@ -1195,7 +1275,8 @@ public:
     {
         io_service_.stop();
 
-        worker::execTable.Clear();
+        ExecTable &execTable = execContext_->GetExecTable();
+        execTable.Clear();
 
         CleanupThreads();
 
@@ -1259,12 +1340,12 @@ private:
     {
         static int threadCnt = 0;
 
-        worker::ThreadParams threadParams;
+        ThreadParams threadParams;
         threadParams.writeFifoFD = -1;
         threadParams.readFifoFD = -1;
 
         std::ostringstream ss;
-        ss << worker::FIFO_NAME << 'w' << threadCnt;
+        ss << FIFO_NAME << 'w' << threadCnt;
         threadParams.writeFifo = ss.str();
 
         threadParams.writeFifoFD = CreateFifo( threadParams.writeFifo );
@@ -1274,7 +1355,7 @@ private:
         }
 
         std::ostringstream ss2;
-        ss2 << worker::FIFO_NAME << 'r' << threadCnt;
+        ss2 << FIFO_NAME << 'r' << threadCnt;
         threadParams.readFifo = ss2.str();
 
         threadParams.readFifoFD = CreateFifo( threadParams.readFifo );
@@ -1283,8 +1364,46 @@ private:
             threadParams.readFifo.clear();
         }
 
-        worker::threadInfo[ thread->get_id() ] = threadParams;
+        ThreadInfo &threadInfo = execContext_->GetThreadInfo();
+        threadInfo[ thread->get_id() ] = threadParams;
         ++threadCnt;
+    }
+
+    void CleanupThreads()
+    {
+        ThreadInfo &threadInfo = execContext_->GetThreadInfo();
+
+        ThreadInfo::iterator it;
+        for( it = threadInfo.begin();
+             it != threadInfo.end();
+             ++it )
+        {
+            ThreadParams &threadParams = it->second;
+
+            if ( threadParams.readFifoFD != -1 )
+            {
+                close( threadParams.readFifoFD );
+                threadParams.readFifoFD = -1;
+            }
+
+            if ( !threadParams.readFifo.empty() )
+            {
+                unlink( threadParams.readFifo.c_str() );
+                threadParams.readFifo.clear();
+            }
+
+            if ( threadParams.writeFifoFD != -1 )
+            {
+                close( threadParams.writeFifoFD );
+                threadParams.writeFifoFD = -1;
+            }
+
+            if ( !threadParams.writeFifo.empty() )
+            {
+                unlink( threadParams.writeFifo.c_str() );
+                threadParams.writeFifo.clear();
+            }
+        }
     }
 
     void SetupPrExecIPC()
@@ -1293,9 +1412,9 @@ private:
 
         try
         {
-            sharedMemPool_.reset( new ipc::shared_memory_object( ipc::open_only, worker::SHMEM_NAME, ipc::read_only ) );
+            sharedMemPool_.reset( new ipc::shared_memory_object( ipc::open_only, SHMEM_NAME, ipc::read_only ) );
             mappedRegion_.reset( new ipc::mapped_region( *sharedMemPool_.get(), ipc::read_only ) );
-            worker::mappedRegion = mappedRegion_.get();
+            execContext_->SetMappedRegion( mappedRegion_ );
         }
         catch( std::exception &e )
         {
@@ -1314,13 +1433,15 @@ private:
 
     boost::asio::io_service io_service_;
 
-    boost::shared_ptr< worker::ConnectionAcceptor > acceptor_;
+    boost::shared_ptr< ConnectionAcceptor > acceptor_;
 
     boost::shared_ptr< boost::interprocess::shared_memory_object > sharedMemPool_;
     boost::shared_ptr< boost::interprocess::mapped_region > mappedRegion_;
+
+    boost::shared_ptr< ExecContext > execContext_;
 };
 
-} // anonymous namespace
+} // namespace worker
 
 
 int main( int argc, char* argv[], char **envp )
@@ -1334,9 +1455,9 @@ int main( int argc, char* argv[], char **envp )
         bool isDaemon = false;
         uid_t uid = 0;
         unsigned int numThread = 0;
-        std::string cfgDir;
+        std::string cfgDir, exeDir, resourcesDir;
 
-        worker::isFork = false;
+        worker::g_isFork = false;
 
         // parse input command line options
         namespace po = boost::program_options;
@@ -1372,7 +1493,7 @@ int main( int argc, char* argv[], char **envp )
 
         if ( vm.count( "exe_dir" ) )
         {
-            worker::exeDir = vm[ "exe_dir" ].as<std::string>();
+            exeDir = vm[ "exe_dir" ].as<std::string>();
         }
 
         if ( vm.count( "c" ) )
@@ -1382,10 +1503,10 @@ int main( int argc, char* argv[], char **envp )
 
         if ( vm.count( "r" ) )
         {
-            worker::resourcesDir = vm[ "r" ].as<std::string>();
+            resourcesDir = vm[ "r" ].as<std::string>();
         }
 
-        ExecApplication app( cfgDir, isDaemon, uid, numThread );
+        worker::ExecApplication app( exeDir, resourcesDir, cfgDir, isDaemon, uid, numThread );
         app.Initialize();
 
         app.Run();

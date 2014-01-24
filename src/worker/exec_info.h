@@ -145,6 +145,32 @@ private:
     boost::mutex mut_;
 };
 
+class PidContainer
+{
+public:
+    void Add( pid_t pid )
+    {
+        boost::unique_lock< boost::mutex > lock( mut_ );
+        pids_.insert( pid );
+    }
+
+    bool Delete( pid_t pid )
+    {
+        boost::unique_lock< boost::mutex > lock( mut_ );
+        std::multiset< pid_t >::iterator it = pids_.find( pid );
+        if ( it != pids_.end() )
+        {
+            pids_.erase( it );
+            return true;
+        }
+        return false;
+    }
+
+private:
+    std::multiset< pid_t > pids_;
+    boost::mutex mut_;
+};
+
 } // namespace worker
 
 #endif
