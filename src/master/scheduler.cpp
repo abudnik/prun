@@ -200,12 +200,11 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
     return found;
 }
 
-bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob, JobPtr &job, int numFreeCPU )
+bool Scheduler::GetReschedJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob, JobPtr &job, int numFreeCPU )
 {
     int64_t jobId;
     bool foundReschedJob = false;
 
-    // firstly, check if there is a task which needs to reschedule
     if ( !needReschedule_.empty() )
     {
         TaskList::iterator it = needReschedule_.begin();
@@ -250,6 +249,14 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
             ++it;
         }
     }
+
+    return foundReschedJob;
+}
+
+bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob, JobPtr &job, int numFreeCPU )
+{
+    bool foundReschedJob = GetReschedJobForWorker( worker, plannedJob, job, numFreeCPU );
+    int64_t jobId = plannedJob.GetJobId();
 
     const ScheduledJobs::JobList &jobs = jobs_.GetJobList();
     ScheduledJobs::JobList::const_iterator it = jobs.begin();
