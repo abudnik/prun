@@ -29,9 +29,9 @@ the License.
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include "admin.h"
+#include "user_command.h"
 #include "job_manager.h"
 #include "worker_manager.h"
-#include "scheduler.h"
 #include "common/crutches.h"
 
 namespace master {
@@ -59,101 +59,10 @@ int AdminCommand_Run::Execute( const boost::property_tree::ptree &params,
         return JSON_RPC_INVALID_PARAMS;
     }
 
-    try
-    {
-        // read job description from file
-        std::ifstream file( filePath.c_str() );
-        if ( !file.is_open() )
-        {
-            PLOG_ERR( "AdminCommand_Run::Execute: couldn't open '" << filePath << "'" );
-            return JSON_RPC_INTERNAL_ERROR;
-        }
-
-        size_t found = filePath.rfind( '.' );
-        if ( found == std::string::npos )
-        {
-            PLOG_ERR( "AdminCommand_Run::Execute: couldn't extract job file extension '" << filePath << "'" );
-            return JSON_RPC_INTERNAL_ERROR;
-        }
-        std::string ext = filePath.substr( found + 1 );
-
-        if ( ext == "job" )
-            return RunJob( file, jobAlias, result );
-        else
-        if ( ext == "meta" )
-            return RunMetaJob( file, result );
-        else
-            PLOG_ERR( "AdminCommand_Run::Execute: unknown file extension '" << ext << "'" );
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "AdminCommand_Run::Execute: " << e.what() );
+    if ( !UserCommand().Run( filePath, jobAlias, result ) )
         return JSON_RPC_INTERNAL_ERROR;
-    }
+
     return 0;
-}
-
-int AdminCommand_Run::RunJob( std::ifstream &file, const std::string &jobAlias, std::string &result ) const
-{
-    try
-    {
-        std::string jobDescr, line;
-        while( std::getline( file, line ) )
-            jobDescr += line;
-
-        Job *job = JobManager::Instance().CreateJob( jobDescr );
-        if ( job )
-        {
-            job->SetAlias( jobAlias );
-            PrintJobInfo( job, result );
-            // add job to job queue
-            JobManager::Instance().PushJob( job );
-        }
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "AdminCommand_Run::RunJob: " << e.what() );
-        return JSON_RPC_INTERNAL_ERROR;
-    }
-    return 0;
-}
-
-int AdminCommand_Run::RunMetaJob( std::ifstream &file, std::string &result ) const
-{
-    try
-    {
-        std::string metaDescr, line;
-        while( getline( file, line ) )
-            metaDescr += line + '\n';
-
-        std::list< JobPtr > jobs;
-        JobManager::Instance().CreateMetaJob( metaDescr, jobs );
-        JobManager::Instance().PushJobs( jobs );
-
-        std::ostringstream ss;
-        ss << "----------------" << std::endl;
-        std::list< JobPtr >::const_iterator it = jobs.begin();
-        for( ; it != jobs.end(); ++it )
-        {
-            PrintJobInfo( (*it).get(), result );
-            ss << result << std::endl;
-        }
-        ss << "----------------" << std::endl;
-        result = ss.str();
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "AdminCommand_Run::RunMetaJob: " << e.what() );
-        return JSON_RPC_INTERNAL_ERROR;
-    }
-    return 0;
-}
-
-void AdminCommand_Run::PrintJobInfo( const Job *job, std::string &result ) const
-{
-    std::ostringstream ss;
-    ss << "jobId = " << job->GetJobId() << ", groupId = " << job->GetGroupId();
-    result = ss.str();
 }
 
 int AdminCommand_Stop::Execute( const boost::property_tree::ptree &params,
@@ -170,18 +79,9 @@ int AdminCommand_Stop::Execute( const boost::property_tree::ptree &params,
         return JSON_RPC_INVALID_PARAMS;
     }
 
-    try
-    {
-        if ( !JobManager::Instance().DeleteJob( jobId ) )
-        {
-            Scheduler::Instance().StopJob( jobId );
-        }
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "AdminCommand_Stop::Execute: " << e.what() );
+    if ( !UserCommand().Stop( jobId ) )
         return JSON_RPC_INTERNAL_ERROR;
-    }
+
     return 0;
 }
 
@@ -199,47 +99,27 @@ int AdminCommand_StopGroup::Execute( const boost::property_tree::ptree &params,
         return JSON_RPC_INVALID_PARAMS;
     }
 
-    try
-    {
-        JobManager::Instance().DeleteJobGroup( groupId );
-        Scheduler::Instance().StopJobGroup( groupId );
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "AdminCommand_StopGroup::Execute: " << e.what() );
+    if ( !UserCommand().StopGroup( groupId ) )
         return JSON_RPC_INTERNAL_ERROR;
-    }
+
     return 0;
 }
 
 int AdminCommand_StopAll::Execute( const boost::property_tree::ptree &params,
                                    std::string &result )
 {
-    try
-    {
-        JobManager::Instance().DeleteAllJobs();
-        Scheduler::Instance().StopAllJobs();
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "AdminCommand_StopAll::Execute: " << e.what() );
+    if ( !UserCommand().StopAll() )
         return JSON_RPC_INTERNAL_ERROR;
-    }
+
     return 0;
 }
 
 int AdminCommand_StopPrevious::Execute( const boost::property_tree::ptree &params,
                                         std::string &result )
 {
-    try
-    {
-        Scheduler::Instance().StopPreviousJobs();
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "AdminCommand_StopPrevious::Execute: " << e.what() );
+    if ( !UserCommand().StopPreviousJobs() )
         return JSON_RPC_INTERNAL_ERROR;
-    }
+
     return 0;
 }
 
@@ -248,7 +128,6 @@ int AdminCommand_AddHosts::Execute( const boost::property_tree::ptree &params,
 {
     try
     {
-        WorkerManager &mgr = WorkerManager::Instance();
         int i = 0;
         std::string groupName, host;
         BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
@@ -257,7 +136,7 @@ int AdminCommand_AddHosts::Execute( const boost::property_tree::ptree &params,
             if ( i++ % 2 > 0 )
             {
                 groupName = v.second.get_value< std::string >();
-                mgr.AddWorkerHost( groupName, host );
+                UserCommand().AddWorkerHost( groupName, host );
             }
             else
                 host = v.second.get_value< std::string >();
@@ -275,16 +154,13 @@ int AdminCommand_DeleteHosts::Execute( const boost::property_tree::ptree &params
                                        std::string &result )
 {
     try
-    {
-        WorkerManager &mgr = WorkerManager::Instance();
-        Scheduler &scheduler = Scheduler::Instance();
+    {;
         std::string host;
         BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
                        params.get_child( "hosts" ) )
         {
             host = v.second.get_value< std::string >();
-            mgr.DeleteWorkerHost( host );
-            scheduler.DeleteWorker( host );
+            UserCommand().DeleteHost( host );
         }
     }
     catch( std::exception &e )
@@ -294,7 +170,6 @@ int AdminCommand_DeleteHosts::Execute( const boost::property_tree::ptree &params
     }
     return 0;
 }
-
 
 
 int AdminCommand_AddGroup::Execute( const boost::property_tree::ptree &params,
@@ -318,23 +193,9 @@ int AdminCommand_AddGroup::Execute( const boost::property_tree::ptree &params,
         return JSON_RPC_INVALID_PARAMS;
     }
 
-    try
-    {
-        std::list< std::string > hosts;
-        if ( ReadHosts( filePath.c_str(), hosts ) )
-        {
-            WorkerManager::Instance().AddWorkerGroup( fileName, hosts );
-        }
-        else
-        {
-            return JSON_RPC_INTERNAL_ERROR;
-        }
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "AdminCommand_AddGroup::Execute: " << e.what() );
+    if ( !UserCommand().AddGroup( filePath, fileName ) )
         return JSON_RPC_INTERNAL_ERROR;
-    }
+
     return 0;
 }
 
@@ -352,25 +213,9 @@ int AdminCommand_DeleteGroup::Execute( const boost::property_tree::ptree &params
         return JSON_RPC_INVALID_PARAMS;
     }
 
-    try
-    {
-        std::vector< WorkerPtr > workers;
-        WorkerManager::Instance().GetWorkers( workers, group );
-        WorkerManager::Instance().DeleteWorkerGroup( group );
-
-        Scheduler &scheduler = Scheduler::Instance();
-        std::vector< WorkerPtr >::const_iterator it = workers.begin();
-        for( ; it != workers.end(); ++it )
-        {
-            const WorkerPtr &w = *it;
-            scheduler.DeleteWorker( w->GetHost() );
-        }
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "AdminCommand_DeleteGroup::Execute: " << e.what() );
+    if ( !UserCommand().DeleteGroup( group ) )
         return JSON_RPC_INTERNAL_ERROR;
-    }
+
     return 0;
 }
 
@@ -388,15 +233,9 @@ int AdminCommand_Info::Execute( const boost::property_tree::ptree &params,
         return JSON_RPC_INVALID_PARAMS;
     }
 
-    try
-    {
-        Scheduler::Instance().GetJobInfo( result, jobId );
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "AdminCommand_Info::Execute: " << e.what() );
+    if ( !UserCommand().Info( jobId, result ) )
         return JSON_RPC_INTERNAL_ERROR;
-    }
+
     return 0;
 }
 
@@ -404,45 +243,27 @@ int AdminCommand_Info::Execute( const boost::property_tree::ptree &params,
 int AdminCommand_Stat::Execute( const boost::property_tree::ptree &params,
                                 std::string &result )
 {
-    try
-    {
-        Scheduler::Instance().GetStatistics( result );
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "AdminCommand_Stat::Execute: " << e.what() );
+    if ( !UserCommand().GetStatistics( result ) )
         return JSON_RPC_INTERNAL_ERROR;
-    }
+
     return 0;
 }
 
 int AdminCommand_Jobs::Execute( const boost::property_tree::ptree &params,
                                 std::string &result )
 {
-    try
-    {
-        Scheduler::Instance().GetAllJobInfo( result );
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "AdminCommand_Jobs::Execute: " << e.what() );
+    if ( !UserCommand().GetAllJobInfo( result ) )
         return JSON_RPC_INTERNAL_ERROR;
-    }
+
     return 0;
 }
 
 int AdminCommand_Ls::Execute( const boost::property_tree::ptree &params,
                               std::string &result )
 {
-    try
-    {
-        Scheduler::Instance().GetWorkersStatistics( result );
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "AdminCommand_Ls::Execute: " << e.what() );
+    if ( !UserCommand().GetWorkersStatistics( result ) )
         return JSON_RPC_INTERNAL_ERROR;
-    }
+
     return 0;
 }
 

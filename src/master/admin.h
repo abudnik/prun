@@ -34,18 +34,11 @@ namespace master {
 
 using boost::asio::ip::tcp;
 
-
-class Job;
 class AdminCommand_Run : public common::JsonRpcHandler
 {
 public:
     virtual int Execute( const boost::property_tree::ptree &params,
                          std::string &result );
-
-private:
-    int RunJob( std::ifstream &file, const std::string &jobAlias, std::string &result ) const;
-    int RunMetaJob( std::ifstream &file, std::string &result ) const;
-    void PrintJobInfo( const Job *job, std::string &result ) const;
 };
 
 class AdminCommand_Stop : public common::JsonRpcHandler
