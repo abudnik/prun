@@ -33,7 +33,7 @@ the License.
 
 namespace master {
 
-class WorkerManager : public common::Observable< true >
+class WorkerManager : public common::Observable< common::MutexLockPolicy >
 {
     typedef std::map< std::string, WorkerList > GrpNameToWorkerList;
 

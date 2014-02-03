@@ -37,50 +37,58 @@ public:
     virtual ~Observer() {}
 };
 
-template< bool multithreaded >
-class Observable;
-
-template<>
-class Observable< false >
+class MutexLockPolicy
 {
-    typedef std::set<Observer *> Container;
-    typedef std::map< int, Container > EventToContainer;
+    typedef boost::shared_mutex MutexType;
 
 public:
-    void Subscribe( Observer *observer, int event = 0 )
+    class UniqueLock
     {
-        observers_[ event ].insert( observer );
-    }
+    public:
+        UniqueLock( MutexLockPolicy *policy )
+        : lock_( policy->GetLock() ), uniqueLock_( lock_ )
+        {}
 
-    void Unsubscribe( Observer *observer, int event = 0 )
-    {
-        EventToContainer::iterator it = observers_.find( event );
-        if ( it != observers_.end() )
-        {
-            it->second.erase( observer );
-        }
-    }
+    private:
+        boost::upgrade_lock< MutexType > lock_;
+        boost::upgrade_to_unique_lock< MutexType > uniqueLock_;
+    };
 
-    void NotifyAll( int event = 0 )
+    class SharedLock
     {
-        EventToContainer::iterator it = observers_.find( event );
-        if ( it == observers_.end() )
-            return;
-        
-        Container::iterator it_ob = it->second.begin();
-        for( ; it_ob != it->second.end(); ++it_ob )
-        {
-            Observer *observer = *it_ob;
-            observer->NotifyObserver( event );
-        }
-    }
+    public:
+        SharedLock( MutexLockPolicy *policy )
+        : lock_( policy->GetLock() )
+        {}
+
+    private:
+        boost::shared_lock< MutexType > lock_;
+    };
+
+    MutexType &GetLock() { return mut_; }
 
 private:
-    EventToContainer observers_;
+    MutexType mut_;
 };
 
-template<>
-class Observable< true >
+class NullLockPolicy
+{
+public:
+    class UniqueLock
+    {
+    public:
+        UniqueLock( NullLockPolicy *policy ) {}
+    };
+
+    class SharedLock
+    {
+    public:
+        SharedLock( NullLockPolicy *policy ) {}
+    };
+};
+
+template< typename LockPolicy = NullLockPolicy >
+class Observable : private LockPolicy
 {
     typedef std::set<Observer *> Container;
     typedef std::map< int, Container > EventToContainer;
@@ -88,15 +96,13 @@ class Observable< true >
 public:
     void Subscribe( Observer *observer, int event = 0 )
     {
-        boost::upgrade_lock< boost::shared_mutex > lock( mut_ );
-        boost::upgrade_to_unique_lock< boost::shared_mutex > uniqueLock( lock );
+        typename LockPolicy::UniqueLock lock( this );
         observers_[ event ].insert( observer );
     }
 
     void Unsubscribe( Observer *observer, int event = 0 )
     {
-        boost::upgrade_lock< boost::shared_mutex > lock( mut_ );
-        boost::upgrade_to_unique_lock< boost::shared_mutex > uniqueLock( lock );
+        typename LockPolicy::UniqueLock lock( this );
         EventToContainer::iterator it = observers_.find( event );
         if ( it != observers_.end() )
         {
@@ -106,11 +112,11 @@ public:
 
     void NotifyAll( int event = 0 )
     {
-        boost::shared_lock< boost::shared_mutex > lock( mut_ );
+        typename LockPolicy::SharedLock lock( this );
         EventToContainer::iterator it = observers_.find( event );
         if ( it == observers_.end() )
             return;
-        
+
         Container::iterator it_ob = it->second.begin();
         for( ; it_ob != it->second.end(); ++it_ob )
         {
@@ -121,7 +127,6 @@ public:
 
 private:
     EventToContainer observers_;
-    boost::shared_mutex mut_;
 };
 
 } // namespace common

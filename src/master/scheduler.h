@@ -38,7 +38,7 @@ the License.
 
 namespace master {
 
-class Scheduler : public common::Observable< true >
+class Scheduler : public common::Observable< common::MutexLockPolicy >
 {
 private:
     typedef std::map< std::string, NodeState > IPToNodeState;
