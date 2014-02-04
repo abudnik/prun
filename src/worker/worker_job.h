@@ -90,14 +90,37 @@ public:
 protected:
     virtual bool ParseRequestBody( const std::string &body, common::Protocol *parser )
     {
-        std::string script64;
-        parser->ParseSendScript( body, language_, script64, filePath_,
-                                 masterId_, jobId_, tasks_, numTasks_, timeout_ );
-        if ( !common::DecodeBase64( script64, script_ ) )
-            return false;
+        common::Demarshaller demarshaller;
+        if ( parser->ParseBody( body, demarshaller.GetProperties() ) )
+        {
+            try
+            {
+                std::string script64;
+                demarshaller( "lang", language_ )
+                    ( "script", script64 )
+                    ( "file_path", filePath_ )
+                    ( "master_id", masterId_ )
+                    ( "job_id", jobId_ )
+                    ( "tasks", tasks_ )
+                    ( "num_tasks", numTasks_ )
+                    ( "timeout", timeout_ );
 
-        scriptLength_ = script_.size();
-        return true;
+                if ( !common::DecodeBase64( script64, script_ ) )
+                    return false;
+
+                scriptLength_ = script_.size();
+                return true;
+            }
+            catch( std::exception &e )
+            {
+                PLOG_ERR( "JobExec::ParseRequestBody: " << e.what() );
+            }
+        }
+        else
+        {
+            PLOG_ERR( "JobExec::ParseRequestBody: couldn't parse msg body: " << body );
+        }
+        return false;
     }
 
     virtual void GetResponse( std::string &response ) const {}
@@ -128,7 +151,24 @@ public:
 protected:
     virtual bool ParseRequestBody( const std::string &body, common::Protocol *parser )
     {
-        return parser->ParseGetJobResult( body, masterId_, jobId_, taskId_ );
+        common::Demarshaller demarshaller;
+        if ( parser->ParseBody( body, demarshaller.GetProperties() ) )
+        {
+            try
+            {
+                demarshaller( "master_id", masterId_ )( "job_id", jobId_ )( "task_id", taskId_ );
+                return true;
+            }
+            catch( std::exception &e )
+            {
+                PLOG_ERR( "JobGetResult::ParseRequestBody: " << e.what() );
+            }
+        }
+        else
+        {
+            PLOG_ERR( "JobGetResult::ParseRequestBody: couldn't parse msg body: " << body );
+        }
+        return false;
     }
 
     virtual void GetResponse( std::string &response ) const
@@ -182,7 +222,24 @@ public:
 protected:
     virtual bool ParseRequestBody( const std::string &body, common::Protocol *parser )
     {
-        return parser->ParseStopTask( body, masterId_, jobId_, taskId_ );
+        common::Demarshaller demarshaller;
+        if ( parser->ParseBody( body, demarshaller.GetProperties() ) )
+        {
+            try
+            {
+                demarshaller( "master_id", masterId_ )( "job_id", jobId_ )( "task_id", taskId_ );
+                return true;
+            }
+            catch( std::exception &e )
+            {
+                PLOG_ERR( "JobStopTask::ParseRequestBody: " << e.what() );
+            }
+        }
+        else
+        {
+            PLOG_ERR( "JobStopTask::ParseRequestBody: couldn't parse msg body: " << body );
+        }
+        return false;
     }
 
     virtual void GetResponse( std::string &response ) const
@@ -210,7 +267,24 @@ public:
 protected:
     virtual bool ParseRequestBody( const std::string &body, common::Protocol *parser )
     {
-        return parser->ParseStopPreviousJobs( body, masterId_ );
+        common::Demarshaller demarshaller;
+        if ( parser->ParseBody( body, demarshaller.GetProperties() ) )
+        {
+            try
+            {
+                demarshaller( "master_id", masterId_ );
+                return true;
+            }
+            catch( std::exception &e )
+            {
+                PLOG_ERR( "JobStopPreviousTask::ParseRequestBody: " << e.what() );
+            }
+        }
+        else
+        {
+            PLOG_ERR( "JobStopPreviousTask::ParseRequestBody: couldn't parse msg body: " << body );
+        }
+        return false;
     }
 
     virtual void GetResponse( std::string &response ) const

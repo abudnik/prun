@@ -28,6 +28,7 @@ the License.
 #include <list>
 #include <stdint.h>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/foreach.hpp>
 #include "log.h"
 
 namespace common {
@@ -82,7 +83,26 @@ public:
     {
         try
         {
-            ptree_.get<T>( name );
+            var = ptree_.get<T>( name );
+        }
+        catch( std::exception &e )
+        {
+            PLOG_ERR( "Demarshaller: " << e.what() );
+            throw;
+        }
+        return *this;
+    }
+
+    template< typename T >
+    Demarshaller &operator ()( const char *name, std::set<T> &var )
+    {
+        try
+        {
+            BOOST_FOREACH( const Properties::value_type &v,
+                           ptree_.get_child( name ) )
+            {
+                var.insert( v.second.get_value< T >() );
+            }
         }
         catch( std::exception &e )
         {
@@ -107,27 +127,9 @@ public:
 
     virtual bool ParseBody( const std::string &msg, Demarshaller::Properties &ptree ) = 0;
 
-    // ping section
-    virtual bool ParseJobCompletionPing( const std::string &msg, int64_t &jobId, int &taskId ) = 0;
-
-    // script sending & results parsing
-    virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
-                                  std::string &script, std::string &filePath,
-                                  std::string &masterId,
-                                  int64_t &jobId, std::set<int> &tasks,
-                                  int &numTasks, int &timeout ) = 0;
-
-    virtual bool ParseGetJobResult( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId ) = 0;
-    virtual bool ParseJobResult( const std::string &msg, int &errCode, int64_t &execTime ) = 0;
-
     // commands section
     virtual bool SendCommand( std::string &msg, const std::string &masterId, const std::string &command,
                               const std::list< std::pair< std::string, std::string > > &params ) = 0;
-
-    virtual bool ParseSendCommandResult( const std::string &msg, int &errCode ) = 0;
-
-    virtual bool ParseStopTask( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId ) = 0;
-    virtual bool ParseStopPreviousJobs( const std::string &msg, std::string &masterId ) = 0;
 
     // internals
     virtual bool ParseMsgType( const std::string &msg, std::string &type ) = 0;
@@ -150,26 +152,8 @@ public:
 
     virtual bool ParseBody( const std::string &msg, Demarshaller::Properties &ptree );
 
-    virtual bool ParseJobCompletionPing( const std::string &msg, int64_t &jobId, int &taskId );
-
-    virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
-                                  std::string &script, std::string &filePath,
-                                  std::string &masterId,
-                                  int64_t &jobId, std::set<int> &tasks,
-                                  int &numTasks, int &timeout );
-
-    virtual bool ParseGetJobResult( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId );
-
-    virtual bool ParseJobResult( const std::string &msg, int &errCode, int64_t &execTime );
-
     virtual bool SendCommand( std::string &msg, const std::string &masterId, const std::string &command,
                               const std::list< std::pair< std::string, std::string > > &params );
-
-    virtual bool ParseSendCommandResult( const std::string &msg, int &errCode );
-
-    virtual bool ParseStopTask( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId );
-
-    virtual bool ParseStopPreviousJobs( const std::string &msg, std::string &masterId );
 
     virtual bool ParseMsgType( const std::string &msg, std::string &type );
 

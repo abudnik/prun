@@ -84,11 +84,20 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
     }
     if ( type == "job_completion" )
     {
-        int64_t jobId;
-        int taskId;
-        if ( parser->ParseJobCompletionPing( body, jobId, taskId ) )
+        common::Demarshaller demarshaller;
+        if ( parser->ParseBody( body, demarshaller.GetProperties() ) )
         {
-            WorkerManager::Instance().OnNodeTaskCompletion( nodeIP, jobId, taskId );
+            try
+            {
+                int64_t jobId;
+                int taskId;
+                demarshaller( "job_id", jobId )( "task_id", taskId );
+                WorkerManager::Instance().OnNodeTaskCompletion( nodeIP, jobId, taskId );
+            }
+            catch( std::exception &e )
+            {
+                PLOG_ERR( "PingReceiver::OnNodePing: " << e.what() );
+            }
         }
         else
         {

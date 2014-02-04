@@ -251,11 +251,24 @@ bool RpcBoost::HandleResponse()
 
     if ( type == "send_command_result" )
     {
-        int errCode;
-        if ( parser->ParseSendCommandResult( body, errCode ) )
+        common::Demarshaller demarshaller;
+        if ( parser->ParseBody( body, demarshaller.GetProperties() ) )
         {
-            OnCompletion( true, errCode );
-            return true;
+            try
+            {
+                int errCode;
+                demarshaller( "err_code", errCode );
+                OnCompletion( true, errCode );
+                return true;
+            }
+            catch( std::exception &e )
+            {
+                PLOG_ERR( "RpcBoost::HandleResponse: " << e.what() );
+            }
+        }
+        else
+        {
+            PLOG_ERR( "RpcBoost::HandleResponse: couldn't parse msg body: " << body );
         }
     }
     else

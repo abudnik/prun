@@ -249,12 +249,25 @@ bool GetterBoost::HandleResponse()
 
     if ( type == "send_job_result" )
     {
-        int errCode;
-        int64_t execTime;
-        if ( parser->ParseJobResult( body, errCode, execTime ) )
+        common::Demarshaller demarshaller;
+        if ( parser->ParseBody( body, demarshaller.GetProperties() ) )
         {
-            OnCompletion( true, errCode, execTime );
-            return true;
+            try
+            {
+                int errCode;
+                int64_t execTime;
+                demarshaller( "err_code", errCode )( "elapsed", execTime );
+                OnCompletion( true, errCode, execTime );
+                return true;
+            }
+            catch( std::exception &e )
+            {
+                PLOG_ERR( "GetterBoost::HandleResponse: " << e.what() );
+            }
+        }
+        else
+        {
+            PLOG_ERR( "GetterBoost::HandleResponse: couldn't parse msg body: " << body );
         }
     }
     else
