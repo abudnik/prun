@@ -27,43 +27,103 @@ the License.
 #include <set>
 #include <list>
 #include <stdint.h>
+#include <boost/property_tree/ptree.hpp>
+#include "log.h"
 
 namespace common {
+
+class Marshaller
+{
+public:
+    typedef boost::property_tree::ptree Properties;
+
+public:
+    template< typename T >
+    Marshaller &operator ()( const char *name, T var )
+    {
+        ptree_.put( name, var );
+        return *this;
+    }
+
+    Marshaller &operator ()( const char *name, const std::string &var )
+    {
+        ptree_.put( name, var );
+        return *this;
+    }
+
+    template< typename T >
+    Marshaller &operator ()( const char *name, const std::set<T> &var )
+    {
+        Properties child, element;
+        typename std::set<T>::const_iterator it = var.begin();
+        for( ; it != var.end(); ++it )
+        {
+            element.put_value( *it );
+            child.push_back( std::make_pair( "", element ) );
+        }
+        ptree_.add_child( name, child );
+        return *this;
+    }
+
+    const Properties &GetProperties() const { return ptree_; }
+
+private:
+    Properties ptree_;
+};
+
+class Demarshaller
+{
+public:
+    typedef boost::property_tree::ptree Properties;
+
+public:
+    template< typename T >
+    Demarshaller &operator ()( const char *name, T &var )
+    {
+        try
+        {
+            ptree_.get<T>( name );
+        }
+        catch( std::exception &e )
+        {
+            PLOG_ERR( "Demarshaller: " << e.what() );
+            throw;
+        }
+        return *this;
+    }
+
+    Properties &GetProperties() { return ptree_; }
+
+protected:
+    Properties ptree_;
+};
 
 class Protocol
 {
 public:
     virtual ~Protocol() {}
 
+    virtual bool Serialize( std::string &msg, const char *method, const Marshaller &marshaller ) = 0;
+
+    virtual bool ParseBody( const std::string &msg, Demarshaller::Properties &ptree ) = 0;
+
     // ping section
-    virtual bool NodePing( std::string &msg, const std::string &hostName ) = 0;
-    virtual bool NodeResponsePing( std::string &msg, int numCPU, int64_t memSizeMb ) = 0;
-    virtual bool ParseResponsePing( const std::string &msg, int &numCPU, int64_t &memSizeMb ) = 0;
-    virtual bool NodeJobCompletionPing( std::string &msg, int64_t jobId, int taskId ) = 0;
     virtual bool ParseJobCompletionPing( const std::string &msg, int64_t &jobId, int &taskId ) = 0;
 
     // script sending & results parsing
-    virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
-                             const std::string &script, const std::string &filePath,
-                             const std::string &masterId,
-                             int64_t jobId, const std::set<int> &tasks,
-                             int numTasks, int timeout ) = 0;
-
     virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
                                   std::string &script, std::string &filePath,
                                   std::string &masterId,
                                   int64_t &jobId, std::set<int> &tasks,
                                   int &numTasks, int &timeout ) = 0;
 
-    virtual bool GetJobResult( std::string &msg, const std::string &masterId, int64_t jobId, int taskId ) = 0;
     virtual bool ParseGetJobResult( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId ) = 0;
-    virtual bool SendJobResult( std::string &msg, int errCode, int64_t execTime ) = 0;
     virtual bool ParseJobResult( const std::string &msg, int &errCode, int64_t &execTime ) = 0;
 
     // commands section
     virtual bool SendCommand( std::string &msg, const std::string &masterId, const std::string &command,
                               const std::list< std::pair< std::string, std::string > > &params ) = 0;
-    virtual bool SendCommandResult( std::string &msg, int errCode ) = 0;
+
     virtual bool ParseSendCommandResult( const std::string &msg, int &errCode ) = 0;
 
     virtual bool ParseStopTask( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId ) = 0;
@@ -86,21 +146,11 @@ private:
 class ProtocolJson : public Protocol
 {
 public:
-    virtual bool NodePing( std::string &msg, const std::string &host );
+    virtual bool Serialize( std::string &msg, const char *method, const Marshaller &marshaller );
 
-    virtual bool NodeResponsePing( std::string &msg, int numCPU, int64_t memSizeMb );
-
-    virtual bool ParseResponsePing( const std::string &msg, int &numCPU, int64_t &memSizeMb );
-
-    virtual bool NodeJobCompletionPing( std::string &msg, int64_t jobId, int taskId );
+    virtual bool ParseBody( const std::string &msg, Demarshaller::Properties &ptree );
 
     virtual bool ParseJobCompletionPing( const std::string &msg, int64_t &jobId, int &taskId );
-
-    virtual bool SendScript( std::string &msg, const std::string &scriptLanguage,
-                             const std::string &script, const std::string &filePath,
-                             const std::string &masterId,
-                             int64_t jobId, const std::set<int> &tasks,
-                             int numTasks, int timeout );
 
     virtual bool ParseSendScript( const std::string &msg, std::string &scriptLanguage,
                                   std::string &script, std::string &filePath,
@@ -108,18 +158,12 @@ public:
                                   int64_t &jobId, std::set<int> &tasks,
                                   int &numTasks, int &timeout );
 
-    virtual bool GetJobResult( std::string &msg, const std::string &masterId, int64_t jobId, int taskId );
-
     virtual bool ParseGetJobResult( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId );
-
-    virtual bool SendJobResult( std::string &msg, int errCode, int64_t execTime );
 
     virtual bool ParseJobResult( const std::string &msg, int &errCode, int64_t &execTime );
 
     virtual bool SendCommand( std::string &msg, const std::string &masterId, const std::string &command,
                               const std::list< std::pair< std::string, std::string > > &params );
-
-    virtual bool SendCommandResult( std::string &msg, int errCode );
 
     virtual bool ParseSendCommandResult( const std::string &msg, int &errCode );
 

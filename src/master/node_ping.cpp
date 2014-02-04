@@ -62,11 +62,20 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
 
     if ( type == "ping_response" )
     {
-        int numCPU;
-        int64_t memSizeMb;
-        if ( parser->ParseResponsePing( body, numCPU, memSizeMb ) )
+        common::Demarshaller demarshaller;
+        if ( parser->ParseBody( body, demarshaller.GetProperties() ) )
         {
-            WorkerManager::Instance().OnNodePingResponse( nodeIP, numCPU, memSizeMb );
+            try
+            {
+                int numCPU;
+                int64_t memSizeMb;
+                demarshaller( "num_cpu", numCPU )( "mem_size", memSizeMb );
+                WorkerManager::Instance().OnNodePingResponse( nodeIP, numCPU, memSizeMb );
+            }
+            catch( std::exception &e )
+            {
+                PLOG_ERR( "PingReceiver::OnNodePing: " << e.what() );
+            }
         }
         else
         {

@@ -136,6 +136,7 @@ protected:
         JobDescriptor descr;
         JobCompletionStat stat;
         common::ProtocolJson protocol;
+        common::Marshaller marshaller;
 
         descr.jobId = GetJobId();
         descr.taskId = GetTaskId();
@@ -144,7 +145,9 @@ protected:
         if ( JobCompletionTable::Instance().Get( descr, stat ) )
         {
             JobCompletionTable::Instance().Erase( descr );
-            protocol.SendJobResult( response, stat.errCode, stat.execTime );
+
+            marshaller( "err_code", stat.errCode )
+                ( "elapsed", stat.execTime );
         }
         else
         {
@@ -153,8 +156,12 @@ protected:
             PLOG( "Job::GetResponse: job not found in completion table: "
                   "jobId=" << GetJobId() << ", taskId=" << GetTaskId() <<
                   ", masterIP=" << GetMasterIP() << ", masterId=" << GetMasterId() );
-            protocol.SendJobResult( response, NODE_JOB_COMPLETION_NOT_FOUND, 0 );
+
+            marshaller( "err_code", NODE_JOB_COMPLETION_NOT_FOUND )
+                ( "elapsed", 0 );
         }
+
+        protocol.Serialize( response, "send_job_result", marshaller );
     }
 
 protected:
@@ -181,7 +188,10 @@ protected:
     virtual void GetResponse( std::string &response ) const
     {
         common::ProtocolJson protocol;
-        protocol.SendCommandResult( response, GetErrorCode() );
+        common::Marshaller marshaller;
+
+        marshaller( "err_code", GetErrorCode() );
+        protocol.Serialize( response, "send_command_result", marshaller );
     }
 
 protected:
@@ -206,7 +216,10 @@ protected:
     virtual void GetResponse( std::string &response ) const
     {
         common::ProtocolJson protocol;
-        protocol.SendCommandResult( response, GetErrorCode() );
+        common::Marshaller marshaller;
+
+        marshaller( "err_code", GetErrorCode() );
+        protocol.Serialize( response, "send_command_result", marshaller );
     }
 
 protected:
@@ -227,7 +240,10 @@ protected:
     virtual void GetResponse( std::string &response ) const
     {
         common::ProtocolJson protocol;
-        protocol.SendCommandResult( response, GetErrorCode() );
+        common::Marshaller marshaller;
+
+        marshaller( "err_code", GetErrorCode() );
+        protocol.Serialize( response, "send_command_result", marshaller );
     }
 };
 

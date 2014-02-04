@@ -335,9 +335,13 @@ class ExecuteTask : public Action
         udp::endpoint master_endpoint( address, DEFAULT_MASTER_UDP_PORT );
         udp::socket socket( *io_service, udp::endpoint( master_endpoint.protocol(), 0 ) );
 
-        common::ProtocolJson protocol;
+        common::Marshaller marshaller;
+        marshaller( "job_id", job->GetJobId() )
+            ( "task_id", taskId );
+
         std::string msg;
-        protocol.NodeJobCompletionPing( msg, job->GetJobId(), taskId );
+        common::ProtocolJson protocol;
+        protocol.Serialize( msg, "job_completion", marshaller );
 
         try
         {

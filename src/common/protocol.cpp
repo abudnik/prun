@@ -22,15 +22,12 @@ the License.
 
 #define BOOST_SPIRIT_THREADSAFE
 
-#include <algorithm>
-#include <cctype> // isspace
 #include <sstream>
 #include <stdint.h> // boost/atomic/atomic.hpp:202:16: error: ‘uintptr_t’ was not declared in this scope
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
 #include "protocol.h"
-#include "log.h"
 
 namespace common {
 
@@ -66,85 +63,37 @@ bool Protocol::ParseMsg( const std::string &msg, std::string &protocol, int &ver
 }
 
 
-bool ProtocolJson::NodePing( std::string &msg, const std::string &host )
+bool ProtocolJson::Serialize( std::string &msg, const char *method, const Marshaller &marshaller )
 {
     std::ostringstream ss;
-    boost::property_tree::ptree ptree;
     try
     {
-        ptree.put( "host", host );
-        boost::property_tree::write_json( ss, ptree, false );
+        boost::property_tree::write_json( ss, marshaller.GetProperties(), false );
     }
     catch( std::exception &e )
     {
-        PLOG_ERR( "ProtocolJson::NodePing: " << e.what() );
+        PLOG_ERR( "ProtocolJson::Serialize: " << e.what() );
         return false;
     }
-    msg = std::string( "{\"type\":\"ping\"}\n" );
+    msg = std::string( "{\"type\":\"" ) + std::string( method ) + std::string( "\"}\n" );
     msg += ss.str();
     AddHeader( msg );
     return true;
 }
 
-bool ProtocolJson::NodeResponsePing( std::string &msg, int numCPU, int64_t memSizeMb )
+bool ProtocolJson::ParseBody( const std::string &msg, Demarshaller::Properties &ptree )
 {
-    std::ostringstream ss;
-    boost::property_tree::ptree ptree;
     try
     {
-        ptree.put( "num_cpu", numCPU );
-        ptree.put( "mem_size", memSizeMb );
-        boost::property_tree::write_json( ss, ptree, false );
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "ProtocolJson::NodeResponsePing: " << e.what() );
-        return false;
-    }
-    msg = std::string( "{\"type\":\"ping_response\"}\n" );
-    msg += ss.str();
-    AddHeader( msg );
-    return true;
-}
-
-bool ProtocolJson::ParseResponsePing( const std::string &msg, int &numCPU, int64_t &memSizeMb )
-{
-    std::istringstream ss( msg );
-
-    boost::property_tree::ptree ptree;
-    try
-    {
+        std::istringstream ss( msg );
         boost::property_tree::read_json( ss, ptree );
-        numCPU = ptree.get<int>( "num_cpu" );
-        memSizeMb = ptree.get<int64_t>( "mem_size" );
     }
     catch( std::exception &e )
     {
-        PLOG_ERR( "ProtocolJson::ParseResponsePing: " << e.what() );
+        PLOG_ERR( "ProtocolJson::ParseBody: " << e.what() );
         return false;
     }
 
-    return true;
-}
-
-bool ProtocolJson::NodeJobCompletionPing( std::string &msg, int64_t jobId, int taskId )
-{
-    std::ostringstream ss;
-    boost::property_tree::ptree ptree;
-    try
-    {
-        ptree.put( "job_id", jobId );
-        ptree.put( "task_id", taskId );
-        boost::property_tree::write_json( ss, ptree, false );
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "ProtocolJson::NodeJobCompletionPing: " << e.what() );
-        return false;
-    }
-    msg = std::string( "{\"type\":\"job_completion\"}\n" );
-    msg += ss.str();
-    AddHeader( msg );
     return true;
 }
 
@@ -165,48 +114,6 @@ bool ProtocolJson::ParseJobCompletionPing( const std::string &msg, int64_t &jobI
         return false;
     }
 
-    return true;
-}
-
-bool ProtocolJson::SendScript( std::string &msg, const std::string &scriptLanguage,
-                               const std::string &script, const std::string &filePath,
-                               const std::string &masterId,
-                               int64_t jobId, const std::set<int> &tasks,
-                               int numTasks, int timeout )
-{
-    std::ostringstream ss;
-    boost::property_tree::ptree ptree, child, element;
-    try
-    {
-        ptree.put( "lang", scriptLanguage );
-        ptree.put( "script", script );
-        ptree.put( "file_path", filePath );
-        ptree.put( "master_id", masterId );
-        ptree.put( "job_id", jobId );
-        ptree.put( "num_tasks", numTasks );
-        ptree.put( "timeout", timeout );
-
-        std::set<int>::const_iterator it = tasks.begin();
-        for( ; it != tasks.end(); ++it )
-        {
-            element.put_value( *it );
-            child.push_back( std::make_pair( "", element ) );
-        }
-        ptree.add_child( "tasks", child );
-
-        boost::property_tree::write_json( ss, ptree, false );
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "ProtocolJson::SendScript: " << e.what() );
-        return false;
-    }
-    msg = ss.str();
-    // cratch for boost bug with unexepected whitespaces in arrays:  "val": [   <whitespaces> ]
-    msg.erase( std::remove_if( msg.begin(), msg.end(), isspace ), msg.end() );
-    msg = std::string( "{\"type\":\"exec\"}\n" ) + msg;
-
-    AddHeader( msg );
     return true;
 }
 
@@ -244,28 +151,6 @@ bool ProtocolJson::ParseSendScript( const std::string &msg, std::string &scriptL
     return true;
 }
 
-bool ProtocolJson::GetJobResult( std::string &msg, const std::string &masterId, int64_t jobId, int taskId )
-{
-    std::ostringstream ss;
-    boost::property_tree::ptree ptree;
-    try
-    {
-        ptree.put( "master_id", masterId );
-        ptree.put( "job_id", jobId );
-        ptree.put( "task_id", taskId );
-        boost::property_tree::write_json( ss, ptree, false );
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "ProtocolJson::GetJobResult: " << e.what() );
-        return false;
-    }
-    msg = std::string( "{\"type\":\"get_result\"}\n" );
-    msg += ss.str();
-    AddHeader( msg );
-    return true;
-}
-
 bool ProtocolJson::ParseGetJobResult( const std::string &msg, std::string &masterId, int64_t &jobId, int &taskId )
 {
     std::istringstream ss( msg );
@@ -284,27 +169,6 @@ bool ProtocolJson::ParseGetJobResult( const std::string &msg, std::string &maste
         return false;
     }
 
-    return true;
-}
-
-bool ProtocolJson::SendJobResult( std::string &msg, int errCode, int64_t execTime )
-{
-    std::ostringstream ss;
-    boost::property_tree::ptree ptree;
-    try
-    {
-        ptree.put( "err_code", errCode );
-        ptree.put( "elapsed", execTime );
-        boost::property_tree::write_json( ss, ptree, false );
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "ProtocolJson::SendJobResult: " << e.what() );
-        return false;
-    }
-    msg = std::string( "{\"type\":\"send_job_result\"}\n" );
-    msg += ss.str();
-    AddHeader( msg );
     return true;
 }
 
@@ -350,26 +214,6 @@ bool ProtocolJson::SendCommand( std::string &msg, const std::string &masterId, c
         return false;
     }
     msg = std::string( "{\"type\":\"" ) + command + std::string( "\"}\n" );
-    msg += ss.str();
-    AddHeader( msg );
-    return true;
-}
-
-bool ProtocolJson::SendCommandResult( std::string &msg, int errCode )
-{
-    std::ostringstream ss;
-    boost::property_tree::ptree ptree;
-    try
-    {
-        ptree.put( "err_code", errCode );
-        boost::property_tree::write_json( ss, ptree, false );
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "ProtocolJson::SendCommandResult: " << e.what() );
-        return false;
-    }
-    msg = std::string( "{\"type\":\"send_command_result\"}\n" );
     msg += ss.str();
     AddHeader( msg );
     return true;

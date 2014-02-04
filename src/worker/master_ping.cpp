@@ -52,8 +52,12 @@ void MasterPingBoost::HandleRead( const boost::system::error_code& error, size_t
         const int numCPU = compInfo.GetNumCPU();
         const int64_t memSizeMb = compInfo.GetPhysicalMemory() >> 10; // divide by 1024
 
+        common::Marshaller marshaller;
+        marshaller( "num_cpu", numCPU )
+                  ( "mem_size", memSizeMb );
+
         std::string msg;
-        protocol_->NodeResponsePing( msg, numCPU, memSizeMb );
+        protocol_->Serialize( msg, "ping_response", marshaller );
 
         udp::endpoint master_endpoint( remote_endpoint_.address(), DEFAULT_MASTER_UDP_PORT );
 

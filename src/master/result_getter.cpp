@@ -284,7 +284,12 @@ void GetterBoost::MakeRequest()
 
     const std::string &masterId = JobManager::Instance().GetMasterId();
 
-    protocol.GetJobResult( request_, masterId, workerTask_.GetJobId(), workerTask_.GetTaskId() );
+    common::Marshaller marshaller;
+    marshaller( "master_id", masterId )
+        ( "job_id", workerTask_.GetJobId() )
+        ( "task_id", workerTask_.GetTaskId() );
+
+    protocol.Serialize( request_, "get_result", marshaller );
 }
 
 } // namespace master

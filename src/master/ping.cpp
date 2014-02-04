@@ -105,8 +105,11 @@ void PingerBoost::PingWorker( WorkerPtr &worker )
 
     const std::string &node_ip = it->second.address().to_string();
 
+    common::Marshaller marshaller;
+    marshaller( "host", node_ip );
+
     std::string msg;
-    protocol_->NodePing( msg, node_ip );
+    protocol_->Serialize( msg, "ping", marshaller );
     //PLOG( msg );
     //PLOG( node_ip );
 

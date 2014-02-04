@@ -200,6 +200,12 @@ void SenderBoost::OnCompletion( bool success )
     sender_->OnJobSendCompletion( success, workerJob_, hostIP_, job_ );
 }
 
+
+    struct IsBlank
+    {
+        bool operator () ( char c ) { return true; }
+    };
+
 void SenderBoost::MakeRequest()
 {
     WorkerJob::Tasks tasks;
@@ -207,11 +213,21 @@ void SenderBoost::MakeRequest()
 
     const std::string &masterId = JobManager::Instance().GetMasterId();
 
+    common::Marshaller marshaller;
+    marshaller( "lang", job_->GetScriptLanguage() )
+        ( "script", job_->GetScript() )
+        ( "file_path", job_->GetFilePath() )
+        ( "master_id", masterId )
+        ( "job_id", workerJob_.GetJobId() )
+        ( "num_tasks", job_->GetNumPlannedExec() )
+        ( "timeout", job_->GetTaskTimeout() )
+        ( "tasks", tasks );
+
     common::ProtocolJson protocol;
-    protocol.SendScript( request_, job_->GetScriptLanguage(),
-                         job_->GetScript(), job_->GetFilePath(),
-                         masterId, workerJob_.GetJobId(), tasks,
-                         job_->GetNumPlannedExec(), job_->GetTaskTimeout() );
+    protocol.Serialize( request_, "exec", marshaller );
+
+    // cratch for boost bug with unexepected whitespaces in arrays:  "val": [   <whitespaces> ]
+    request_.erase( std::remove_if( request_.begin(), request_.end(), common::IsBlank ), request_.end() );
 }
 
 } // namespace master

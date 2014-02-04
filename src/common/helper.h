@@ -141,6 +141,11 @@ bool DecodeBase64( std::string &data, Container &out )
     return true;
 }
 
+inline bool IsBlank( char c )
+{
+    return c == ' ' || c == '\t';
+}
+
 } // namespace common
 
 #endif

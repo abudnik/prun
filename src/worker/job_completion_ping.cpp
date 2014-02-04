@@ -62,8 +62,12 @@ void JobCompletionPingerBoost::StartPing()
 
 void JobCompletionPingerBoost::PingMaster( const JobDescriptor &descr )
 {
+    common::Marshaller marshaller;
+    marshaller( "job_id", descr.jobId )
+        ( "task_id", descr.taskId );
+
     std::string msg;
-    protocol_->NodeJobCompletionPing( msg, descr.jobId, descr.taskId );
+    protocol_->Serialize( msg, "job_completion", marshaller );
     PLOG( msg );
 
     boost::asio::ip::address address( boost::asio::ip::address::from_string( descr.masterIP ) );
