@@ -25,6 +25,7 @@ the License.
 #include "job_manager.h"
 #include "worker_manager.h"
 #include "scheduler.h"
+#include "statistics.h"
 #include "common/log.h"
 
 namespace master {
@@ -271,7 +272,9 @@ bool UserCommand::Info( int64_t jobId, std::string &result )
 {
     try
     {
-        Scheduler::Instance().GetJobInfo( result, jobId );
+        JobInfo jobInfo( jobId );
+        Scheduler::Instance().Accept( &jobInfo );
+        jobInfo.GetInfo( result );
     }
     catch( std::exception &e )
     {
@@ -286,7 +289,9 @@ bool UserCommand::GetStatistics( std::string &result )
 {
     try
     {
-        Scheduler::Instance().GetStatistics( result );
+        Statistics stat;
+        Scheduler::Instance().Accept( &stat );
+        stat.GetInfo( result );
     }
     catch( std::exception &e )
     {
@@ -300,7 +305,9 @@ bool UserCommand::GetAllJobInfo( std::string &result )
 {
     try
     {
-        Scheduler::Instance().GetAllJobInfo( result );
+        AllJobInfo jobInfo;
+        Scheduler::Instance().Accept( &jobInfo );
+        jobInfo.GetInfo( result );
     }
     catch( std::exception &e )
     {
@@ -314,7 +321,9 @@ bool UserCommand::GetWorkersStatistics( std::string &result )
 {
     try
     {
-        Scheduler::Instance().GetWorkersStatistics( result );
+        WorkerStatistics stat;
+        Scheduler::Instance().Accept( &stat );
+        stat.GetInfo( result );
     }
     catch( std::exception &e )
     {

@@ -38,9 +38,11 @@ the License.
 
 namespace master {
 
+class SchedulerVisitor;
+
 class Scheduler : public common::Observable< common::MutexLockPolicy >
 {
-private:
+public:
     typedef std::map< std::string, NodeState > IPToNodeState;
     typedef std::list< WorkerTask > TaskList;
     typedef std::map< int64_t, std::set< int > > JobIdToTasks; // job_id -> set(task_id)
@@ -70,10 +72,12 @@ public:
     void StopAllJobs();
     void StopPreviousJobs();
 
-    void GetJobInfo( std::string &info, int64_t jobId );
-    void GetAllJobInfo( std::string &info );
-    void GetStatistics( std::string &stat );
-    void GetWorkersStatistics( std::string &stat );
+    void Accept( SchedulerVisitor *visitor );
+
+    const IPToNodeState &GetNodeState() const { return nodeState_; }
+    const FailedWorkers &GetFailedWorkers() const { return failedWorkers_; }
+    const TaskList &GetNeedReschedule() const { return needReschedule_; }
+    ScheduledJobs &GetScheduledJobs() { return jobs_; }
 
     static Scheduler &Instance()
     {
@@ -99,12 +103,6 @@ private:
                              int64_t jobId, const JobPtr &job ) const;
 
     int GetNumPlannedExec( const JobPtr &job ) const;
-
-    // stats
-    void PrintJobInfo( std::string &info, int64_t jobId );
-    int GetNumBusyWorkers() const;
-    int GetNumFreeWorkers() const;
-    int GetNumBusyCPU() const;
 
 private:
     IPToNodeState nodeState_;

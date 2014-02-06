@@ -26,6 +26,7 @@ the License.
 #include "job_manager.h"
 #include "worker_manager.h"
 #include "worker_command.h"
+#include "statistics.h"
 
 // hint: avoid deadlocks. always lock jobs mutex after workers mutex
 
@@ -704,234 +705,17 @@ int Scheduler::GetNumPlannedExec( const JobPtr &job ) const
     return numExec;
 }
 
+void Scheduler::Accept( SchedulerVisitor *visitor )
+{
+    boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+    boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+
+    visitor->Visit( *this );
+}
+
 void Scheduler::Shutdown()
 {
     jobs_.Clear();
-}
-
-void Scheduler::PrintJobInfo( std::string &info, int64_t jobId )
-{
-    std::ostringstream ss;
-
-    JobPtr job;
-    if ( !jobs_.FindJobByJobId( jobId, job ) )
-     {
-        ss << "job isn't executing now, jobId = " << jobId;
-        info = ss.str();
-        return;
-    }
-
-    ss << "================" << std::endl <<
-        "Job info, jobId = " << job->GetJobId() << std::endl;
-
-    if ( job->GetGroupId() >= 0 )
-    {
-        ss << "group id = " << job->GetGroupId() << std::endl;
-    }
-
-    if ( !job->GetAlias().empty() )
-    {
-        ss << "job alias = '" << job->GetAlias() << "'" << std::endl;
-    }
-    else
-    {
-        ss << "job path = '" << job->GetFilePath() << "'" << std::endl;
-    }
-
-    ss << "----------------" << std::endl;
-
-    {
-        int totalExec = job->GetNumPlannedExec();
-        int numExec = totalExec - jobs_.GetNumExec( jobId );
-        ss << "job executions = " << numExec << std::endl <<
-            "total planned executions = " << totalExec << std::endl;
-    }
-
-    {
-        int numWorkers = 0;
-        int numCPU = 0;
-        IPToNodeState::const_iterator it = nodeState_.begin();
-        for( ; it != nodeState_.end(); ++it )
-        {
-            const NodeState &nodeState = it->second;
-            const WorkerPtr &worker = nodeState.GetWorker();
-            if ( !worker )
-                continue;
-
-            const WorkerJob &workerJob = worker->GetJob();
-
-            if ( workerJob.HasJob( jobId ) )
-            {
-                ++numWorkers;
-                numCPU += workerJob.GetNumTasks( jobId );
-            }
-        }
-        ss << "busy workers = " << numWorkers << std::endl;
-        ss << "busy cpu's = " << numCPU << std::endl;
-    }
-
-    ss << "================";
-    info = ss.str();
-}
-
-void Scheduler::GetJobInfo( std::string &info, int64_t jobId )
-{
-    boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
-    boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
-
-    PrintJobInfo( info, jobId );
-}
-
-void Scheduler::GetAllJobInfo( std::string &info )
-{
-    boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
-    boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
-
-    const ScheduledJobs::JobList &jobs = jobs_.GetJobList();
-
-    ScheduledJobs::JobList::const_iterator it = jobs.begin();
-    for( ; it != jobs.end(); ++it )
-    {
-        const JobPtr &job = *it;
-        std::string jobInfo;
-        PrintJobInfo( jobInfo, job->GetJobId() );
-        info += jobInfo + '\n';
-    }
-}
-
-void Scheduler::GetStatistics( std::string &stat )
-{
-    std::ostringstream ss;
-
-    boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
-    boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
-
-    ss << "================" << std::endl <<
-        "busy workers = " << GetNumBusyWorkers() << std::endl <<
-        "free workers = " << GetNumFreeWorkers() << std::endl <<
-        "failed jobs = " << failedWorkers_.GetFailedJobsCnt() << std::endl <<
-        "busy cpu's = " << GetNumBusyCPU() << std::endl <<
-        "total cpu's = " << WorkerManager::Instance().GetTotalCPU() << std::endl;
-
-    ss << "jobs = " << jobs_.GetNumJobs() << std::endl <<
-        "need reschedule = " << needReschedule_.size() << std::endl;
-
-    ss << "executing jobs: {";
-    const ScheduledJobs::JobList &jobs = jobs_.GetJobList();
-    ScheduledJobs::JobList::const_iterator it = jobs.begin();
-    for( ; it != jobs.end(); ++it )
-    {
-        if ( it != jobs.begin() )
-            ss << ", ";
-        const JobPtr &job = *it;
-        ss << job->GetJobId();
-    }
-    ss << "}" << std::endl;
-
-    ss << "================";
-
-    stat = ss.str();
-}
-
-void Scheduler::GetWorkersStatistics( std::string &stat )
-{
-    std::ostringstream ss;
-
-    boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
-
-    ss << "================" << std::endl;
-
-    IPToNodeState::const_iterator it = nodeState_.begin();
-    for( ; it != nodeState_.end(); ++it )
-    {
-        const NodeState &nodeState = it->second;
-        const WorkerPtr &worker = nodeState.GetWorker();
-        if ( !worker )
-            continue;
-
-        if ( it != nodeState_.begin() )
-            ss << "----------------" << std::endl;
-
-        ss << "host = '" << worker->GetHost() << "', ip = " << worker->GetIP() << std::endl;
-
-        if ( !worker->GetGroup().empty() )
-        {
-            ss << "group = " << worker->GetGroup() << std::endl;
-        }
-
-        const WorkerJob &workerJob = worker->GetJob();
-
-        ss << "num cpu = " << worker->GetNumCPU() << std::endl <<
-            "memory = " << worker->GetMemorySize() << std::endl <<
-            "num executing tasks = " << workerJob.GetTotalNumTasks() << std::endl;
-
-        ss << "tasks = {";
-        std::vector< WorkerTask > tasks;
-        workerJob.GetTasks( tasks );
-        std::vector< WorkerTask >::const_iterator it = tasks.begin();
-        for( ; it != tasks.end(); ++it )
-        {
-            const WorkerTask &task = *it;
-            if ( it != tasks.begin() )
-                ss << ",";
-            ss << "(jobId=" << task.GetJobId() << ", taskId=" << task.GetTaskId() << ")";
-        }
-        ss << "}" << std::endl;
-    }
-
-    ss << "================";
-
-    stat = ss.str();
-}
-
-int Scheduler::GetNumBusyWorkers() const
-{
-    int num = 0;
-    IPToNodeState::const_iterator it = nodeState_.begin();
-    for( ; it != nodeState_.end(); ++it )
-    {
-        const NodeState &nodeState = it->second;
-        const WorkerPtr &worker = nodeState.GetWorker();
-        if ( !worker || !worker->IsAvailable() )
-            continue;
-
-        if ( nodeState.GetNumBusyCPU() > 0 )
-            ++num;
-    }
-    return num;
-}
-
-int Scheduler::GetNumFreeWorkers() const
-{
-    int num = 0;
-    IPToNodeState::const_iterator it = nodeState_.begin();
-    for( ; it != nodeState_.end(); ++it )
-    {
-        const NodeState &nodeState = it->second;
-        const WorkerPtr &worker = nodeState.GetWorker();
-        if ( !worker || !worker->IsAvailable() )
-            continue;
-
-        if ( nodeState.GetNumBusyCPU() <= 0 )
-            ++num;
-    }
-    return num;
-}
-
-int Scheduler::GetNumBusyCPU() const
-{
-    int num = 0;
-    IPToNodeState::const_iterator it = nodeState_.begin();
-    for( ; it != nodeState_.end(); ++it )
-    {
-        const NodeState &nodeState = it->second;
-        const WorkerPtr &worker = nodeState.GetWorker();
-        if ( !worker || !worker->IsAvailable() )
-            continue;
-
-        num += nodeState.GetNumBusyCPU();
-    }
-    return num;
 }
 
 } // namespace master

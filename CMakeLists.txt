@@ -59,7 +59,7 @@ set(APP_NAME pmaster)
 
 set(MASTER_DIR ${SRC_DIR}/master)
 
-set(SRC_MASTER_CPP defines.cpp ping.cpp node_ping.cpp job.cpp worker.cpp job_manager.cpp worker_manager.cpp scheduler.cpp job_sender.cpp result_getter.cpp command_sender.cpp timeout_manager.cpp admin.cpp user_command.cpp master.cpp)
+set(SRC_MASTER_CPP defines.cpp ping.cpp node_ping.cpp job.cpp worker.cpp job_manager.cpp worker_manager.cpp scheduler.cpp statistics.cpp job_sender.cpp result_getter.cpp command_sender.cpp timeout_manager.cpp admin.cpp user_command.cpp master.cpp)
 foreach(cpp ${SRC_MASTER_CPP})
   list(APPEND SRC_MASTER ${MASTER_DIR}/${cpp} )
 endforeach(cpp)
