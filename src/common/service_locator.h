@@ -1,0 +1,121 @@
+/*
+===========================================================================
+
+This software is licensed under the Apache 2 license, quoted below.
+
+Copyright (C) 2013 Andrey Budnik <budnik27@gmail.com>
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use this file except in compliance with the License. You may obtain a copy of
+the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+License for the specific language governing permissions and limitations under
+the License.
+
+===========================================================================
+*/
+
+#ifndef __SERVICE_LOCATOR_H
+#define __SERVICE_LOCATOR_H
+
+#include <typeinfo>
+#include <map>
+#include "common/log.h"
+
+namespace common {
+
+class ServiceLocator
+{
+    struct TypeComparator
+    {
+        bool operator () ( const std::type_info *a, const std::type_info *b ) const
+        {
+            return a->before( *b );
+        }
+    };
+
+    typedef std::map< const std::type_info *, void *, TypeComparator > ServiceContainer;
+
+    class ServiceNotFoundException : public std::exception
+    {
+    public:
+        ServiceNotFoundException( const char *service )
+        : msg( "Service not found: " )
+        {
+            msg += service;
+        }
+
+        ~ServiceNotFoundException() throw () {}
+
+        const char * what() const throw () { return msg.c_str(); }
+
+    private:
+        std::string msg;
+    };
+
+public:
+    template< typename T >
+    bool Register( T *service )
+    {
+        try
+        {
+            const std::type_info &type = typeid( T );
+            void *pService = reinterpret_cast<void *>( service );
+
+            if ( !services_.insert( std::make_pair( type, pService ) ).second )
+            {
+                PLOG_WRN( "ServiceLocator::Register: service with type=" << type.name() <<
+                          " already registered" );
+                return false;
+            }
+        }
+        catch( std::bad_typeid &ex )
+        {
+            PLOG_ERR( "ServiceLocator::Register: bad_typeid caught: " << ex.what() );
+            return false;
+        }
+        return true;
+    }
+
+    template< typename T >
+    T *Get() // throw( std::bad_typeid, ServiceNotFoundException )
+    {
+        try
+        {
+            const std::type_info &type = typeid( T );
+
+            ServiceContainer::iterator it = services_.find( &type );
+            if ( it != services_.end() )
+            {
+                return reinterpret_cast<T*>( it->second );
+            }
+
+            throw ServiceNotFoundException( type.name() );
+        }
+        catch( std::bad_typeid &ex )
+        {
+            PLOG_ERR( "ServiceLocator::Get: bad_typeid caught: " << ex.what() );
+            throw;
+        }
+
+        return NULL;
+    }
+
+    static ServiceLocator &Instance()
+    {
+        static ServiceLocator instance_;
+        return instance_;
+    }
+
+private:
+    ServiceContainer services_;
+};
+
+} // namespace common
+
+#endif
