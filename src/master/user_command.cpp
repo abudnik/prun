@@ -27,6 +27,7 @@ the License.
 #include "scheduler.h"
 #include "statistics.h"
 #include "common/log.h"
+#include "common/service_locator.h"
 
 namespace master {
 
@@ -74,13 +75,14 @@ bool UserCommand::RunJob( std::ifstream &file, const std::string &jobAlias, std:
         while( std::getline( file, line ) )
             jobDescr += line;
 
-        Job *job = JobManager::Instance().CreateJob( jobDescr );
+        IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+        Job *job = jobManager->CreateJob( jobDescr );
         if ( job )
         {
             job->SetAlias( jobAlias );
             PrintJobInfo( job, result );
             // add job to job queue
-            JobManager::Instance().PushJob( job );
+            jobManager->PushJob( job );
         }
     }
     catch( std::exception &e )
@@ -100,8 +102,9 @@ bool UserCommand::RunMetaJob( std::ifstream &file, std::string &result ) const
             metaDescr += line + '\n';
 
         std::list< JobPtr > jobs;
-        JobManager::Instance().CreateMetaJob( metaDescr, jobs );
-        JobManager::Instance().PushJobs( jobs );
+        IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+        jobManager->CreateMetaJob( metaDescr, jobs );
+        jobManager->PushJobs( jobs );
 
         std::ostringstream ss;
         ss << "----------------" << std::endl;
@@ -133,7 +136,8 @@ bool UserCommand::Stop( int64_t jobId )
 {
     try
     {
-        if ( !JobManager::Instance().DeleteJob( jobId ) )
+        IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+        if ( !jobManager->DeleteJob( jobId ) )
         {
             Scheduler::Instance().StopJob( jobId );
         }
@@ -150,7 +154,8 @@ bool UserCommand::StopGroup( int64_t groupId )
 {
     try
     {
-        JobManager::Instance().DeleteJobGroup( groupId );
+        IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+        jobManager->DeleteJobGroup( groupId );
         Scheduler::Instance().StopJobGroup( groupId );
     }
     catch( std::exception &e )
@@ -165,7 +170,8 @@ bool UserCommand::StopAll()
 {
     try
     {
-        JobManager::Instance().DeleteAllJobs();
+        IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+        jobManager->DeleteAllJobs();
         Scheduler::Instance().StopAllJobs();
     }
     catch( std::exception &e )

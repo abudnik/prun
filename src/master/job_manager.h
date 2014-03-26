@@ -44,29 +44,41 @@ public:
 
 class TimeoutManager;
 
-class JobManager
+struct IJobManager
+{
+    virtual Job *CreateJob( const std::string &job_description ) const = 0;
+    virtual void CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs ) const = 0;
+    virtual void PushJob( Job *job ) = 0;
+    virtual void PushJobs( std::list< JobPtr > &jobs ) = 0;
+
+    virtual bool GetJobById( int64_t jobId, JobPtr &job ) = 0;
+    virtual bool DeleteJob( int64_t jobId ) = 0;
+    virtual bool DeleteJobGroup( int64_t groupId ) = 0;
+    virtual void DeleteAllJobs() = 0;
+
+    virtual bool PopJob( JobPtr &job ) = 0;
+
+    virtual const std::string &GetMasterId() const = 0;
+    virtual const std::string &GetJobsDir() const = 0;
+};
+
+class JobManager : public IJobManager
 {
 public:
-    Job *CreateJob( const std::string &job_description ) const;
-    void CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs ) const;
-    void PushJob( Job *job );
-    void PushJobs( std::list< JobPtr > &jobs );
+    virtual Job *CreateJob( const std::string &job_description ) const;
+    virtual void CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs ) const;
+    virtual void PushJob( Job *job );
+    virtual void PushJobs( std::list< JobPtr > &jobs );
 
-    bool GetJobById( int64_t jobId, JobPtr &job );
-    bool DeleteJob( int64_t jobId );
-    bool DeleteJobGroup( int64_t groupId );
-    void DeleteAllJobs();
+    virtual bool GetJobById( int64_t jobId, JobPtr &job );
+    virtual bool DeleteJob( int64_t jobId );
+    virtual bool DeleteJobGroup( int64_t groupId );
+    virtual void DeleteAllJobs();
 
-    bool PopJob( JobPtr &job );
+    virtual bool PopJob( JobPtr &job );
 
-    const std::string &GetMasterId() const { return masterId_; }
-    const std::string &GetJobsDir() const { return jobsDir_; }
-
-    static JobManager &Instance()
-    {
-        static JobManager instance_;
-        return instance_;
-    }
+    virtual const std::string &GetMasterId() const { return masterId_; }
+    virtual const std::string &GetJobsDir() const { return jobsDir_; }
 
     void Initialize( const std::string &masterId, const std::string &exeDir, TimeoutManager *timeoutManager );
     void Shutdown();

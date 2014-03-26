@@ -67,7 +67,7 @@ public:
             const std::type_info &type = typeid( T );
             void *pService = reinterpret_cast<void *>( service );
 
-            if ( !services_.insert( std::make_pair( type, pService ) ).second )
+            if ( !services_.insert( std::make_pair( &type, pService ) ).second )
             {
                 PLOG_WRN( "ServiceLocator::Register: service with type=" << type.name() <<
                           " already registered" );
@@ -80,6 +80,38 @@ public:
             return false;
         }
         return true;
+    }
+
+    template< typename T >
+    bool Unregister( T *service )
+    {
+        try
+        {
+            const std::type_info &type = typeid( T );
+
+            ServiceContainer::iterator it = services_.find( &type );
+            if ( it != services_.end() )
+            {
+                services_.erase( it );
+            }
+            else
+            {
+                PLOG_WRN( "ServiceLocator::Register: service with type=" << type.name() <<
+                          " is not registered" );
+                return false;
+            }
+        }
+        catch( std::bad_typeid &ex )
+        {
+            PLOG_ERR( "ServiceLocator::Register: bad_typeid caught: " << ex.what() );
+            return false;
+        }
+        return true;
+    }
+
+    void UnregisterAll()
+    {
+        services_.clear();
     }
 
     template< typename T >

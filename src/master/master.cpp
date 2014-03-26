@@ -33,6 +33,7 @@ the License.
 #include "common/config.h"
 #include "common/pidfile.h"
 #include "common/uuid.h"
+#include "common/service_locator.h"
 #include "ping.h"
 #include "node_ping.h"
 #include "job_manager.h"
@@ -144,7 +145,6 @@ void AtExit()
 {
     common::JsonRpc::Instance().Shutdown();
     master::WorkerManager::Instance().Shutdown();
-    master::JobManager::Instance().Shutdown();
     master::Scheduler::Instance().Shutdown();
 
     common::logger::ShutdownLogger();
@@ -203,11 +203,15 @@ public:
         unsigned int numCommandSendThread = 1 + cfg.Get<unsigned int>( "num_command_send_thread" );
         unsigned int numPingThread = numHeartbeatThread + numPingReceiverThread;
 
+        common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
+
         InitWorkerManager( exeDir_, cfgPath_ );
 
         timeoutManager_.reset( new master::TimeoutManager( io_service_timeout_ ) );
 
-        master::JobManager::Instance().Initialize( masterId_, exeDir_, timeoutManager_.get() );
+        jobManager_.reset( new master::JobManager );
+        jobManager_->Initialize( masterId_, exeDir_, timeoutManager_.get() );
+        serviceLocator.Register( (master::IJobManager*)jobManager_.get() );
 
         master::Scheduler::Instance();
         master::AdminSession::InitializeRpcHandlers();
@@ -315,6 +319,12 @@ public:
 
         // stop thread pool
         worker_threads_.join_all();
+
+        // shutdown managers
+        if ( jobManager_ )
+            jobManager_->Shutdown();
+
+        common::ServiceLocator::Instance().UnregisterAll();
     }
 
     void Run()
@@ -369,7 +379,9 @@ private:
     boost::asio::io_service io_service_command_send_;
     boost::asio::io_service io_service_admin_;
 
+    boost::shared_ptr< master::JobManager > jobManager_;
     boost::shared_ptr< master::TimeoutManager > timeoutManager_;
+
     boost::shared_ptr< master::PingReceiver > pingReceiver_;
     boost::shared_ptr< master::Pinger > pinger_;
     boost::shared_ptr< master::JobSender > jobSender_;
@@ -429,7 +441,8 @@ int main( int argc, char* argv[], char **envp )
         app.Initialize();
 
 #ifdef _DEBUG
-        const std::string &jobsDir = master::JobManager::Instance().GetJobsDir();
+        master::IJobManager *jobManager = common::ServiceLocator::Instance().Get< master::IJobManager >();
+        const std::string &jobsDir = jobManager->GetJobsDir();
         master::RunTests( jobsDir );
 #endif
 

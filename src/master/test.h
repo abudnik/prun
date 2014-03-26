@@ -20,11 +20,12 @@ void TestSingleJob( const std::string &filePath )
     while( getline( file, line ) )
         jobDescr += line;
 
-    Job *job = JobManager::Instance().CreateJob( jobDescr );
+    IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+    Job *job = jobManager->CreateJob( jobDescr );
     if ( job )
     {
         // add job to job queue
-        JobManager::Instance().PushJob( job );
+        jobManager->PushJob( job );
     }
 }
 
@@ -42,8 +43,9 @@ void TestMetaJob( const std::string &filePath )
         metaDescr += line + '\n';
 
     std::list< JobPtr > jobs;
-    JobManager::Instance().CreateMetaJob( metaDescr, jobs );
-    JobManager::Instance().PushJobs( jobs );
+    IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+    jobManager->CreateMetaJob( metaDescr, jobs );
+    jobManager->PushJobs( jobs );
 }
 
 void RunTests( const std::string &jobsDir )

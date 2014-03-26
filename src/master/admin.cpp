@@ -33,6 +33,7 @@ the License.
 #include "job_manager.h"
 #include "worker_manager.h"
 #include "common/crutches.h"
+#include "common/service_locator.h"
 
 namespace master {
 
@@ -45,7 +46,8 @@ int AdminCommand_Run::Execute( const boost::property_tree::ptree &params,
         filePath = params.get<std::string>( "file" );
         if ( filePath[0] != '/' )
         {
-            filePath = JobManager::Instance().GetJobsDir() + '/' + filePath;
+            IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+            filePath = jobManager->GetJobsDir() + '/' + filePath;
         }
 
         if ( params.count( "alias" ) > 0 )

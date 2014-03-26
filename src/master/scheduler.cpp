@@ -23,6 +23,7 @@ the License.
 #include "scheduler.h"
 #include "common/log.h"
 #include "common/error_code.h"
+#include "common/service_locator.h"
 #include "job_manager.h"
 #include "worker_manager.h"
 #include "worker_command.h"
@@ -131,7 +132,9 @@ void Scheduler::OnNewJob()
 void Scheduler::PlanJobExecution()
 {
     JobPtr job;
-    if ( !JobManager::Instance().PopJob( job ) )
+
+    IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+    if ( !jobManager->PopJob( job ) )
         return;
 
     int numExec = GetNumPlannedExec( job );

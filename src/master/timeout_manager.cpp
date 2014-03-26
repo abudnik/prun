@@ -25,6 +25,7 @@ the License.
 #include "scheduler.h"
 #include "job_manager.h"
 #include "worker_manager.h"
+#include "common/service_locator.h"
 
 namespace master {
 
@@ -40,7 +41,8 @@ void TimeoutManager::JobTimeoutHandler::HandleTimeout()
 
 void TimeoutManager::JobQueueTimeoutHandler::HandleTimeout()
 {
-    JobManager::Instance().DeleteJob( jobId_ );
+    IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+    jobManager->DeleteJob( jobId_ );
 }
 
 void TimeoutManager::StopTaskTimeoutHandler::HandleTimeout()

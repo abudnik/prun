@@ -26,6 +26,7 @@ the License.
 #include "job_manager.h"
 #include "common/log.h"
 #include "common/protocol.h"
+#include "common/service_locator.h"
 #include "defines.h"
 
 namespace master {
@@ -211,7 +212,8 @@ void SenderBoost::MakeRequest()
     WorkerJob::Tasks tasks;
     workerJob_.GetTasks( workerJob_.GetJobId(), tasks );
 
-    const std::string &masterId = JobManager::Instance().GetMasterId();
+    IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+    const std::string &masterId = jobManager->GetMasterId();
 
     common::Marshaller marshaller;
     marshaller( "lang", job_->GetScriptLanguage() )

@@ -28,6 +28,7 @@ the License.
 #include "scheduler.h"
 #include "common/log.h"
 #include "common/protocol.h"
+#include "common/service_locator.h"
 #include "defines.h"
 
 namespace master {
@@ -295,7 +296,8 @@ void GetterBoost::MakeRequest()
 {
     common::ProtocolJson protocol;
 
-    const std::string &masterId = JobManager::Instance().GetMasterId();
+    IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+    const std::string &masterId = jobManager->GetMasterId();
 
     common::Marshaller marshaller;
     marshaller( "master_id", masterId )
