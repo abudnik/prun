@@ -33,41 +33,45 @@ the License.
 
 namespace master {
 
-class WorkerManager : public common::Observable< common::MutexLockPolicy >
+class IWorkerManager
 {
+protected:
     typedef std::map< std::string, WorkerList > GrpNameToWorkerList;
 
 public:
-    enum ObserverEvent { eTaskCompletion, eCommand };
+    virtual void AddWorkerGroup( const std::string &groupName, std::list< std::string > &hosts ) = 0;
+    virtual void AddWorkerHost( const std::string &groupName, const std::string &host ) = 0;
 
-public:
-    void AddWorkerGroup( const std::string &groupName, std::list< std::string > &hosts );
-    void AddWorkerHost( const std::string &groupName, const std::string &host );
+    virtual void DeleteWorkerGroup( const std::string &groupName ) = 0;
+    virtual void DeleteWorkerHost( const std::string &host ) = 0;
 
-    void DeleteWorkerGroup( const std::string &groupName );
-    void DeleteWorkerHost( const std::string &host );
+    virtual void CheckDropedPingResponses() = 0;
 
-    void CheckDropedPingResponses();
+    virtual void OnNodePingResponse( const std::string &hostIP, int numCPU, int64_t memSizeMb ) = 0;
 
-    void OnNodePingResponse( const std::string &hostIP, int numCPU, int64_t memSizeMb );
+    virtual void OnNodeTaskCompletion( const std::string &hostIP, int64_t jobId, int taskId ) = 0;
 
-    void OnNodeTaskCompletion( const std::string &hostIP, int64_t jobId, int taskId );
+    virtual bool GetAchievedTask( WorkerTask &worker, std::string &hostIP ) = 0;
 
-    bool GetAchievedTask( WorkerTask &worker, std::string &hostIP );
+    virtual void SetWorkerIP( WorkerPtr &worker, const std::string &ip ) = 0;
+    virtual bool GetWorkerByIP( const std::string &ip, WorkerPtr &worker ) const = 0;
 
-    void SetWorkerIP( WorkerPtr &worker, const std::string &ip );
-    bool GetWorkerByIP( const std::string &ip, WorkerPtr &worker ) const;
+    virtual void AddCommand( CommandPtr &command, const std::string &hostIP ) = 0;
+    virtual bool GetCommand( CommandPtr &command, std::string &hostIP ) = 0;
 
-    void AddCommand( CommandPtr &command, const std::string &hostIP );
-    bool GetCommand( CommandPtr &command, std::string &hostIP );
+    virtual int GetTotalWorkers() const = 0;
+    virtual int GetTotalCPU() const = 0;
+
+    virtual const std::string &GetConfigDir() const = 0;
 
     template< typename Container >
     void GetWorkers( Container &workers ) const
     {
-        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+        boost::mutex::scoped_lock scoped_lock( GetWorkersMutex() );
 
-        GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
-        for( ; it != workerGroups_.end(); ++it )
+        const GrpNameToWorkerList &workerGroups = GetWorkerGroups();
+        GrpNameToWorkerList::const_iterator it = workerGroups.begin();
+        for( ; it != workerGroups.end(); ++it )
         {
             const WorkerList &workerList = it->second;
             const WorkerList::WorkerContainer &w = workerList.GetWorkers();
@@ -82,10 +86,11 @@ public:
     template< typename Container >
     void GetWorkers( Container &workers, const std::string &groupName ) const
     {
-        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+        boost::mutex::scoped_lock scoped_lock( GetWorkersMutex() );
 
-        GrpNameToWorkerList::const_iterator it = workerGroups_.find( groupName );
-        if ( it != workerGroups_.end() )
+        const GrpNameToWorkerList &workerGroups = GetWorkerGroups();
+        GrpNameToWorkerList::const_iterator it = workerGroups.find( groupName );
+        if ( it != workerGroups.end() )
         {
             const WorkerList &workerList = it->second;
             const WorkerList::WorkerContainer &w = workerList.GetWorkers();
@@ -97,10 +102,42 @@ public:
         }
     }
 
-    int GetTotalWorkers() const;
-    int GetTotalCPU() const;
+protected:
+    virtual const GrpNameToWorkerList &GetWorkerGroups() const = 0;
+    virtual boost::mutex &GetWorkersMutex() const = 0;
+};
 
-    const std::string &GetConfigDir() const { return cfgDir_; }
+class WorkerManager : public IWorkerManager,
+                      public common::Observable< common::MutexLockPolicy >
+{
+public:
+    enum ObserverEvent { eTaskCompletion, eCommand };
+
+public:
+    virtual void AddWorkerGroup( const std::string &groupName, std::list< std::string > &hosts );
+    virtual void AddWorkerHost( const std::string &groupName, const std::string &host );
+
+    virtual void DeleteWorkerGroup( const std::string &groupName );
+    virtual void DeleteWorkerHost( const std::string &host );
+
+    virtual void CheckDropedPingResponses();
+
+    virtual void OnNodePingResponse( const std::string &hostIP, int numCPU, int64_t memSizeMb );
+
+    virtual void OnNodeTaskCompletion( const std::string &hostIP, int64_t jobId, int taskId );
+
+    virtual bool GetAchievedTask( WorkerTask &worker, std::string &hostIP );
+
+    virtual void SetWorkerIP( WorkerPtr &worker, const std::string &ip );
+    virtual bool GetWorkerByIP( const std::string &ip, WorkerPtr &worker ) const;
+
+    virtual void AddCommand( CommandPtr &command, const std::string &hostIP );
+    virtual bool GetCommand( CommandPtr &command, std::string &hostIP );
+
+    virtual int GetTotalWorkers() const;
+    virtual int GetTotalCPU() const;
+
+    virtual const std::string &GetConfigDir() const { return cfgDir_; }
 
     static WorkerManager &Instance()
     {
@@ -110,6 +147,10 @@ public:
 
     void Initialize( const std::string &cfgDir );
     void Shutdown();
+
+private:
+    virtual const GrpNameToWorkerList &GetWorkerGroups() const { return workerGroups_; }
+    virtual boost::mutex &GetWorkersMutex() const { return workersMut_; }
 
 private:
     std::string cfgDir_;
