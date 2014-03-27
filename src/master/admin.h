@@ -34,91 +34,91 @@ namespace master {
 
 using boost::asio::ip::tcp;
 
-class AdminCommand_Run : public common::JsonRpcHandler
+class AdminCommand_Run : public common::IJsonRpcHandler
 {
 public:
     virtual int Execute( const boost::property_tree::ptree &params,
                          std::string &result );
 };
 
-class AdminCommand_Stop : public common::JsonRpcHandler
+class AdminCommand_Stop : public common::IJsonRpcHandler
 {
 public:
     virtual int Execute( const boost::property_tree::ptree &params,
                          std::string &result );
 };
 
-class AdminCommand_StopGroup : public common::JsonRpcHandler
+class AdminCommand_StopGroup : public common::IJsonRpcHandler
 {
 public:
     virtual int Execute( const boost::property_tree::ptree &params,
                          std::string &result );
 };
 
-class AdminCommand_StopAll : public common::JsonRpcHandler
+class AdminCommand_StopAll : public common::IJsonRpcHandler
 {
 public:
     virtual int Execute( const boost::property_tree::ptree &params,
                          std::string &result );
 };
 
-class AdminCommand_StopPrevious : public common::JsonRpcHandler
+class AdminCommand_StopPrevious : public common::IJsonRpcHandler
 {
 public:
     virtual int Execute( const boost::property_tree::ptree &params,
                          std::string &result );
 };
 
-class AdminCommand_AddHosts : public common::JsonRpcHandler
+class AdminCommand_AddHosts : public common::IJsonRpcHandler
 {
 public:
     virtual int Execute( const boost::property_tree::ptree &params,
                          std::string &result );
 };
 
-class AdminCommand_DeleteHosts : public common::JsonRpcHandler
+class AdminCommand_DeleteHosts : public common::IJsonRpcHandler
 {
 public:
     virtual int Execute( const boost::property_tree::ptree &params,
                          std::string &result );
 };
 
-class AdminCommand_AddGroup : public common::JsonRpcHandler
+class AdminCommand_AddGroup : public common::IJsonRpcHandler
 {
 public:
     virtual int Execute( const boost::property_tree::ptree &params,
                          std::string &result );
 };
 
-class AdminCommand_DeleteGroup : public common::JsonRpcHandler
+class AdminCommand_DeleteGroup : public common::IJsonRpcHandler
 {
 public:
     virtual int Execute( const boost::property_tree::ptree &params,
                          std::string &result );
 };
 
-class AdminCommand_Info : public common::JsonRpcHandler
+class AdminCommand_Info : public common::IJsonRpcHandler
 {
 public:
     virtual int Execute( const boost::property_tree::ptree &params,
                          std::string &result );
 };
 
-class AdminCommand_Stat : public common::JsonRpcHandler
+class AdminCommand_Stat : public common::IJsonRpcHandler
 {
 public:
     virtual int Execute( const boost::property_tree::ptree &params,
                          std::string &result );
 };
 
-class AdminCommand_Jobs : public common::JsonRpcHandler
+class AdminCommand_Jobs : public common::IJsonRpcHandler
 {
 public:
     virtual int Execute( const boost::property_tree::ptree &params,
                          std::string &result );
 };
 
-class AdminCommand_Ls : public common::JsonRpcHandler
+class AdminCommand_Ls : public common::IJsonRpcHandler
 {
 public:
     virtual int Execute( const boost::property_tree::ptree &params,
@@ -131,8 +131,10 @@ class AdminSession : public boost::enable_shared_from_this< AdminSession >
     typedef boost::array< char, 32 * 1024 > BufferType;
 
 public:
-    AdminSession( boost::asio::io_service &io_service )
-    : socket_( io_service )
+    AdminSession( boost::asio::io_service &io_service,
+                  common::JsonRpc &requestHandler )
+    : socket_( io_service ),
+     requestHandler_( requestHandler )
     {}
 
     ~AdminSession()
@@ -140,8 +142,6 @@ public:
         if ( !remoteIP_.empty() )
             PLOG( "~AdminSession " << remoteIP_ );
     }
-
-    static void InitializeRpcHandlers();
 
     void Start();
 
@@ -155,6 +155,7 @@ private:
 
 private:
     tcp::socket socket_;
+    common::JsonRpc &requestHandler_;
     BufferType buffer_;
     std::string request_, response_;
     std::string remoteIP_;
@@ -169,6 +170,8 @@ public:
     : io_service_( io_service ),
      acceptor_( io_service )
     {
+        InitializeRpcHandlers();
+
         try
         {
             common::Config &cfg = common::Config::Instance();
@@ -190,12 +193,16 @@ public:
     }
 
 private:
+    void InitializeRpcHandlers();
+
     void StartAccept();
     void HandleAccept( session_ptr session, const boost::system::error_code &error );
 
 private:
     boost::asio::io_service &io_service_;
     tcp::acceptor acceptor_;
+
+    common::JsonRpc requestHandler_;
 };
 
 } // namespace master

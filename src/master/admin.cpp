@@ -271,24 +271,6 @@ int AdminCommand_Ls::Execute( const boost::property_tree::ptree &params,
 }
 
 
-void AdminSession::InitializeRpcHandlers()
-{
-    common::JsonRpc &rpc = common::JsonRpc::Instance();
-    rpc.RegisterHandler( "run",          new AdminCommand_Run );
-    rpc.RegisterHandler( "stop",         new AdminCommand_Stop );
-    rpc.RegisterHandler( "stop_group",   new AdminCommand_StopGroup );
-    rpc.RegisterHandler( "stop_all",     new AdminCommand_StopAll );
-    rpc.RegisterHandler( "stop_prev",    new AdminCommand_StopPrevious );
-    rpc.RegisterHandler( "add_hosts",    new AdminCommand_AddHosts );
-    rpc.RegisterHandler( "delete_hosts", new AdminCommand_DeleteHosts );
-    rpc.RegisterHandler( "add_group",    new AdminCommand_AddGroup );
-    rpc.RegisterHandler( "delete_group", new AdminCommand_DeleteGroup );
-    rpc.RegisterHandler( "info",         new AdminCommand_Info );
-    rpc.RegisterHandler( "stat",         new AdminCommand_Stat );
-    rpc.RegisterHandler( "jobs",         new AdminCommand_Jobs );
-    rpc.RegisterHandler( "ls",           new AdminCommand_Ls );
-}
-
 void AdminSession::Start()
 {
     remoteIP_ = socket_.remote_endpoint().address().to_string();
@@ -342,7 +324,7 @@ void AdminSession::HandleRequest()
 {
     PLOG( request_ );
     std::string requestId, result;
-    int errCode = common::JsonRpc::Instance().HandleRequest( request_, requestId, result );
+    int errCode = requestHandler_->HandleRequest( request_, requestId, result );
 
     try
     {
@@ -353,7 +335,7 @@ void AdminSession::HandleRequest()
         if ( errCode )
         {
             std::string description;
-            common::JsonRpc::Instance().GetErrorDescription( errCode, description );
+            requestHandler_->GetErrorDescription( errCode, description );
             boost::property_tree::ptree perror;
             perror.put( "code", errCode );
             perror.put( "message", description );
@@ -381,9 +363,27 @@ void AdminSession::HandleRequest()
 }
 
 
+void AdminConnection::InitializeRpcHandlers()
+{
+    common::JsonRpc &rpc = requestHandler_;
+    rpc.RegisterHandler( "run",          new AdminCommand_Run );
+    rpc.RegisterHandler( "stop",         new AdminCommand_Stop );
+    rpc.RegisterHandler( "stop_group",   new AdminCommand_StopGroup );
+    rpc.RegisterHandler( "stop_all",     new AdminCommand_StopAll );
+    rpc.RegisterHandler( "stop_prev",    new AdminCommand_StopPrevious );
+    rpc.RegisterHandler( "add_hosts",    new AdminCommand_AddHosts );
+    rpc.RegisterHandler( "delete_hosts", new AdminCommand_DeleteHosts );
+    rpc.RegisterHandler( "add_group",    new AdminCommand_AddGroup );
+    rpc.RegisterHandler( "delete_group", new AdminCommand_DeleteGroup );
+    rpc.RegisterHandler( "info",         new AdminCommand_Info );
+    rpc.RegisterHandler( "stat",         new AdminCommand_Stat );
+    rpc.RegisterHandler( "jobs",         new AdminCommand_Jobs );
+    rpc.RegisterHandler( "ls",           new AdminCommand_Ls );
+}
+
 void AdminConnection::StartAccept()
 {
-    session_ptr session( new AdminSession( io_service_ ) );
+    session_ptr session( new AdminSession( io_service_, requestHandler_ ) );
     acceptor_.async_accept( session->GetSocket(),
                             boost::bind( &AdminConnection::HandleAccept, this,
                                          session, boost::asio::placeholders::error ) );

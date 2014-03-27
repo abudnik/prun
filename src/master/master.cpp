@@ -143,7 +143,6 @@ void SetupSignalHandlers()
 
 void AtExit()
 {
-    common::JsonRpc::Instance().Shutdown();
     master::Scheduler::Instance().Shutdown();
 
     common::logger::ShutdownLogger();
@@ -215,7 +214,6 @@ public:
         serviceLocator.Register( (master::IJobManager*)jobManager_.get() );
 
         master::Scheduler::Instance();
-        master::AdminSession::InitializeRpcHandlers();
 
         atexit( AtExit );
 
