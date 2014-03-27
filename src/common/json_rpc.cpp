@@ -38,6 +38,15 @@ JsonRpc::JsonRpc()
     errDescription_[ JSON_RPC_VERSION_MISMATCH ] = "Json-rpc version mismatch";
 }
 
+JsonRpc::~JsonRpc()
+{
+    std::map< std::string, IJsonRpcHandler * >::iterator it = cmdToHandler_.begin();
+    for( ; it != cmdToHandler_.end(); ++it )
+    {
+        delete it->second;
+    }
+}
+
 int JsonRpc::HandleRequest( const std::string &request, std::string &requestId, std::string &result )
 {
     boost::property_tree::ptree ptree;
@@ -61,7 +70,7 @@ int JsonRpc::HandleRequest( const std::string &request, std::string &requestId, 
         requestId = ptree.get<std::string>( "id" );
 
         std::string method = ptree.get<std::string>( "method" );
-        JsonRpcHandler *handler = GetHandler( method );
+        IJsonRpcHandler *handler = GetHandler( method );
         if ( !handler )
             return JSON_RPC_METHOD_NOT_FOUND;
 
@@ -77,9 +86,9 @@ int JsonRpc::HandleRequest( const std::string &request, std::string &requestId, 
     return 0;
 }
 
-bool JsonRpc::RegisterHandler( const std::string &method, JsonRpcHandler *handler )
+bool JsonRpc::RegisterHandler( const std::string &method, IJsonRpcHandler *handler )
 {
-    std::map< std::string, JsonRpcHandler * >::const_iterator it;
+    std::map< std::string, IJsonRpcHandler * >::const_iterator it;
     it = cmdToHandler_.find( method );
     if ( it != cmdToHandler_.end() )
     {
@@ -92,22 +101,13 @@ bool JsonRpc::RegisterHandler( const std::string &method, JsonRpcHandler *handle
     return true;
 }
 
-JsonRpcHandler *JsonRpc::GetHandler( const std::string &method ) const
+IJsonRpcHandler *JsonRpc::GetHandler( const std::string &method ) const
 {
-    std::map< std::string, JsonRpcHandler * >::const_iterator it;
+    std::map< std::string, IJsonRpcHandler * >::const_iterator it;
     it = cmdToHandler_.find( method );
     if ( it != cmdToHandler_.end() )
         return it->second;
     return NULL;
-}
-
-void JsonRpc::Shutdown()
-{
-    std::map< std::string, JsonRpcHandler * >::iterator it = cmdToHandler_.begin();
-    for( ; it != cmdToHandler_.end(); ++it )
-    {
-        delete it->second;
-    }
 }
 
 bool JsonRpc::ValidateJsonBraces( const std::string &json )

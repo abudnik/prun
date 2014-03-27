@@ -38,42 +38,34 @@ the License.
 
 namespace common {
 
-class JsonRpcHandler
+struct IJsonRpcHandler
 {
-public:
-    virtual ~JsonRpcHandler() {}
+    virtual ~IJsonRpcHandler() {}
     virtual int Execute( const boost::property_tree::ptree &params,
                          std::string &result ) = 0;
 };
 
 class JsonRpc
 {
-private:
-    JsonRpc();
-
 public:
+    JsonRpc();
+    ~JsonRpc();
+
     int HandleRequest( const std::string &request, std::string &requestId, std::string &result );
 
-    bool RegisterHandler( const std::string &method, JsonRpcHandler *handler );
+    bool RegisterHandler( const std::string &method, IJsonRpcHandler *handler );
 
-    void Shutdown();
-
-    static JsonRpc &Instance()
-    {
-        static JsonRpc instance_;
-        return instance_;
-    }
+    bool GetErrorDescription( int errCode, std::string &descr ) const;
 
     static bool ValidateJsonBraces( const std::string &json );
-    bool GetErrorDescription( int errCode, std::string &descr ) const;
 
     static const char *GetProtocolVersion() { return "2.0"; }
 
 private:
-    JsonRpcHandler *GetHandler( const std::string &method ) const;
+    IJsonRpcHandler *GetHandler( const std::string &method ) const;
 
 private:
-    std::map< std::string, JsonRpcHandler * > cmdToHandler_;
+    std::map< std::string, IJsonRpcHandler * > cmdToHandler_;
     std::map< int, std::string > errDescription_;
 };
 
