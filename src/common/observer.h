@@ -37,6 +37,13 @@ public:
     virtual ~Observer() {}
 };
 
+struct IObservable
+{
+    virtual void Subscribe( Observer *observer, int event = 0 ) = 0;
+    virtual void Unsubscribe( Observer *observer, int event = 0 ) = 0;
+    virtual void NotifyAll( int event = 0 ) = 0;
+};
+
 class MutexLockPolicy
 {
     typedef boost::shared_mutex MutexType;
@@ -88,19 +95,20 @@ public:
 };
 
 template< typename LockPolicy = NullLockPolicy >
-class Observable : private LockPolicy
+class Observable : private LockPolicy,
+                   virtual public IObservable
 {
     typedef std::set<Observer *> Container;
     typedef std::map< int, Container > EventToContainer;
 
 public:
-    void Subscribe( Observer *observer, int event = 0 )
+    virtual void Subscribe( Observer *observer, int event = 0 )
     {
         typename LockPolicy::UniqueLock lock( this );
         observers_[ event ].insert( observer );
     }
 
-    void Unsubscribe( Observer *observer, int event = 0 )
+    virtual void Unsubscribe( Observer *observer, int event = 0 )
     {
         typename LockPolicy::UniqueLock lock( this );
         EventToContainer::iterator it = observers_.find( event );
@@ -110,7 +118,7 @@ public:
         }
     }
 
-    void NotifyAll( int event = 0 )
+    virtual void NotifyAll( int event = 0 )
     {
         typename LockPolicy::SharedLock lock( this );
         EventToContainer::iterator it = observers_.find( event );
