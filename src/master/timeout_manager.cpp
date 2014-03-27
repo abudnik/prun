@@ -47,7 +47,8 @@ void TimeoutManager::JobQueueTimeoutHandler::HandleTimeout()
 
 void TimeoutManager::StopTaskTimeoutHandler::HandleTimeout()
 {
-    WorkerManager::Instance().AddCommand( command_, hostIP_ );
+    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    workerManager->AddCommand( command_, hostIP_ );
 }
 
 

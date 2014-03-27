@@ -200,8 +200,8 @@ bool UserCommand::AddWorkerHost( const std::string &groupName, const std::string
 {
     try
     {
-        WorkerManager &mgr = WorkerManager::Instance();
-        mgr.AddWorkerHost( groupName, host );
+        IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+        workerManager->AddWorkerHost( groupName, host );
     }
     catch( std::exception &e )
     {
@@ -215,8 +215,8 @@ bool UserCommand::DeleteHost( const std::string &host )
 {
     try
     {
-        WorkerManager &mgr = WorkerManager::Instance();
-        mgr.DeleteWorkerHost( host );
+        IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+        workerManager->DeleteWorkerHost( host );
 
         Scheduler &scheduler = Scheduler::Instance();
         scheduler.DeleteWorker( host );
@@ -237,7 +237,8 @@ bool UserCommand::AddGroup( const std::string &filePath, const std::string &file
         std::list< std::string > hosts;
         if ( ReadHosts( filePath.c_str(), hosts ) )
         {
-            WorkerManager::Instance().AddWorkerGroup( fileName, hosts );
+            IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+            workerManager->AddWorkerGroup( fileName, hosts );
         }
         else
             return false;
@@ -255,8 +256,9 @@ bool UserCommand::DeleteGroup( const std::string &group )
     try
     {
         std::vector< WorkerPtr > workers;
-        WorkerManager::Instance().GetWorkers( workers, group );
-        WorkerManager::Instance().DeleteWorkerGroup( group );
+        IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+        workerManager->GetWorkers( workers, group );
+        workerManager->DeleteWorkerGroup( group );
 
         Scheduler &scheduler = Scheduler::Instance();
         std::vector< WorkerPtr >::const_iterator it = workers.begin();

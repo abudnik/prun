@@ -33,7 +33,7 @@ the License.
 
 namespace master {
 
-class IWorkerManager
+class IWorkerManager : virtual public common::IObservable
 {
 protected:
     typedef std::map< std::string, WorkerList > GrpNameToWorkerList;
@@ -138,12 +138,6 @@ public:
     virtual int GetTotalCPU() const;
 
     virtual const std::string &GetConfigDir() const { return cfgDir_; }
-
-    static WorkerManager &Instance()
-    {
-        static WorkerManager instance_;
-        return instance_;
-    }
 
     void Initialize( const std::string &cfgDir );
     void Shutdown();

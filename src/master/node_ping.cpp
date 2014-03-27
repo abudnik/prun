@@ -25,6 +25,7 @@ the License.
 #include "node_ping.h"
 #include "common/log.h"
 #include "common/protocol.h"
+#include "common/service_locator.h"
 #include "worker_manager.h"
 
 namespace master {
@@ -70,7 +71,8 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
                 int numCPU;
                 int64_t memSizeMb;
                 demarshaller( "num_cpu", numCPU )( "mem_size", memSizeMb );
-                WorkerManager::Instance().OnNodePingResponse( nodeIP, numCPU, memSizeMb );
+                IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+                workerManager->OnNodePingResponse( nodeIP, numCPU, memSizeMb );
             }
             catch( std::exception &e )
             {
@@ -92,7 +94,8 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
                 int64_t jobId;
                 int taskId;
                 demarshaller( "job_id", jobId )( "task_id", taskId );
-                WorkerManager::Instance().OnNodeTaskCompletion( nodeIP, jobId, taskId );
+                IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+                workerManager->OnNodeTaskCompletion( nodeIP, jobId, taskId );
             }
             catch( std::exception &e )
             {

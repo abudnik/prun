@@ -183,7 +183,8 @@ int AdminCommand_AddGroup::Execute( const boost::property_tree::ptree &params,
         filePath = params.get<std::string>( "file" );
         if ( filePath[0] != '/' )
         {
-            filePath = WorkerManager::Instance().GetConfigDir() + '/' + filePath;
+            IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+            filePath = workerManager->GetConfigDir() + '/' + filePath;
         }
 
         boost::filesystem::path p( filePath );

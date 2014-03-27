@@ -37,8 +37,8 @@ void CommandSender::Run()
     CommandPtr command;
     std::string hostIP;
 
-    WorkerManager &workerMgr = WorkerManager::Instance();
-    workerMgr.Subscribe( this, WorkerManager::eCommand );
+    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    workerManager->Subscribe( this, WorkerManager::eCommand );
 
     bool getCommand = false;
     while( !stopped_ )
@@ -51,7 +51,7 @@ void CommandSender::Run()
             newCommandAvailable_ = false;
         }
 
-        getCommand = workerMgr.GetCommand( command, hostIP );
+        getCommand = workerManager->GetCommand( command, hostIP );
         if ( getCommand )
         {
             PLOG( "Get command '" << command->GetCommand() << "' : " << hostIP );

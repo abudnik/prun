@@ -25,6 +25,7 @@ the License.
 #include <stdint.h> // boost/atomic/atomic.hpp:202:16: error: ‘uintptr_t’ was not declared in this scope
 #include "ping.h"
 #include "common/log.h"
+#include "common/service_locator.h"
 #include "worker_manager.h"
 
 namespace master {
@@ -38,7 +39,8 @@ void Pinger::Stop()
 void Pinger::PingWorkers()
 {
     std::vector< WorkerPtr > workers;
-    WorkerManager::Instance().GetWorkers( workers );
+    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    workerManager->GetWorkers( workers );
     std::vector< WorkerPtr >::iterator it = workers.begin();
     for( ; it != workers.end(); ++it )
     {
@@ -62,13 +64,15 @@ void Pinger::CheckDropedPingResponses()
     if ( numPings_ < maxDroped_ + 1 )
         return;
 
-    WorkerManager::Instance().CheckDropedPingResponses();
+    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    workerManager->CheckDropedPingResponses();
     numPings_ = 0;
 }
 
 void Pinger::OnWorkerIPResolve( WorkerPtr &worker, const std::string &ip )
 {
-    WorkerManager::Instance().SetWorkerIP( worker, ip );
+    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    workerManager->SetWorkerIP( worker, ip );
 }
 
 void PingerBoost::StartPing()

@@ -360,7 +360,8 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
     {
         {
             WorkerPtr w;
-            if ( !WorkerManager::Instance().GetWorkerByIP( hostIP, w ) )
+            IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+            if ( !workerManager->GetWorkerByIP( hostIP, w ) )
                 return;
 
             PLOG( "Scheduler::OnTaskSendCompletion: job sending failed."
@@ -396,7 +397,8 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
     if ( !errCode )
     {
         WorkerPtr w;
-        if ( !WorkerManager::Instance().GetWorkerByIP( hostIP, w ) )
+        IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+        if ( !workerManager->GetWorkerByIP( hostIP, w ) )
             return;
 
         boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
@@ -436,7 +438,8 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
             return;
 
         WorkerPtr w;
-        if ( !WorkerManager::Instance().GetWorkerByIP( hostIP, w ) )
+        IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+        if ( !workerManager->GetWorkerByIP( hostIP, w ) )
             return;
 
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
@@ -472,7 +475,8 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
 void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &hostIP )
 {
     WorkerPtr w;
-    if ( !WorkerManager::Instance().GetWorkerByIP( hostIP, w ) )
+    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    if ( !workerManager->GetWorkerByIP( hostIP, w ) )
         return;
     const WorkerJob &workerJob = w->GetJob();
 
@@ -491,7 +495,7 @@ void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &
         stopCommand->SetParam( "job_id", workerTask.GetJobId() );
         stopCommand->SetParam( "task_id", workerTask.GetTaskId() );
         CommandPtr commandPtr( stopCommand );
-        WorkerManager::Instance().AddCommand( commandPtr, hostIP );
+        workerManager->AddCommand( commandPtr, hostIP );
 
         OnTaskCompletion( NODE_JOB_TIMEOUT, 0, workerTask, hostIP );
     }
@@ -550,6 +554,8 @@ void Scheduler::StopAllJobs()
 
     // send stop all command
     {
+        IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
         IPToNodeState::const_iterator it = nodeState_.begin();
         for( ; it != nodeState_.end(); ++it )
@@ -559,13 +565,15 @@ void Scheduler::StopAllJobs()
 
             Command *stopCommand = new StopAllJobsCommand();
             CommandPtr commandPtr( stopCommand );
-            WorkerManager::Instance().AddCommand( commandPtr, worker->GetIP() );
+            workerManager->AddCommand( commandPtr, worker->GetIP() );
         }
     }
 }
 
 void Scheduler::StopPreviousJobs()
 {
+    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+
     boost::mutex::scoped_lock scoped_lock( workersMut_ );
     IPToNodeState::const_iterator it = nodeState_.begin();
     for( ; it != nodeState_.end(); ++it )
@@ -575,7 +583,7 @@ void Scheduler::StopPreviousJobs()
 
         Command *stopCommand = new StopPreviousJobsCommand();
         CommandPtr commandPtr( stopCommand );
-        WorkerManager::Instance().AddCommand( commandPtr, worker->GetIP() );
+        workerManager->AddCommand( commandPtr, worker->GetIP() );
     }
 }
 
@@ -587,6 +595,8 @@ void Scheduler::OnRemoveJob( int64_t jobId )
 void Scheduler::StopWorkers( int64_t jobId )
 {
     {
+        IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+
         IPToNodeState::iterator it = nodeState_.begin();
         for( ; it != nodeState_.end(); ++it )
         {
@@ -606,7 +616,7 @@ void Scheduler::StopWorkers( int64_t jobId )
                     stopCommand->SetParam( "job_id", jobId );
                     stopCommand->SetParam( "task_id", *it_task );
                     CommandPtr commandPtr( stopCommand );
-                    WorkerManager::Instance().AddCommand( commandPtr, worker->GetIP() );
+                    workerManager->AddCommand( commandPtr, worker->GetIP() );
                 }
 
                 nodeState.FreeCPU( workerJob.GetNumTasks( jobId ) );
@@ -640,6 +650,8 @@ void Scheduler::StopWorker( const std::string &hostIP ) const
     const WorkerPtr &worker = nodeState.GetWorker();
     const WorkerJob &workerJob = worker->GetJob();
 
+    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+
     std::vector< WorkerTask > tasks;
     workerJob.GetTasks( tasks );
     std::vector< WorkerTask >::const_iterator it_task = tasks.begin();
@@ -649,7 +661,7 @@ void Scheduler::StopWorker( const std::string &hostIP ) const
         stopCommand->SetParam( "job_id", it_task->GetJobId() );
         stopCommand->SetParam( "task_id", it_task->GetTaskId() );
         CommandPtr commandPtr( stopCommand );
-        WorkerManager::Instance().AddCommand( commandPtr, worker->GetIP() );
+        workerManager->AddCommand( commandPtr, worker->GetIP() );
     }
 }
 
@@ -694,7 +706,8 @@ int Scheduler::GetNumPlannedExec( const JobPtr &job ) const
     if ( job->GetNumExec() > 0 )
         return job->GetNumExec();
 
-    int totalCPU = WorkerManager::Instance().GetTotalCPU();
+    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    int totalCPU = workerManager->GetTotalCPU();
     int maxClusterCPU = job->GetMaxClusterCPU();
     int numExec = 1; // init just to suppress compiler warning
 

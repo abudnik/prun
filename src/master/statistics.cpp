@@ -22,6 +22,7 @@ the License.
 
 #include "statistics.h"
 #include "worker_manager.h"
+#include "common/service_locator.h"
 
 namespace master {
 
@@ -119,12 +120,14 @@ void Statistics::Visit( Scheduler &scheduler )
     const ScheduledJobs &schedJobs = scheduler.GetScheduledJobs();
     const FailedWorkers &failedWorkers = scheduler.GetFailedWorkers();
 
+    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+
     ss << "================" << std::endl <<
         "busy workers = " << GetNumBusyWorkers( scheduler ) << std::endl <<
         "free workers = " << GetNumFreeWorkers( scheduler ) << std::endl <<
         "failed jobs = " << failedWorkers.GetFailedJobsCnt() << std::endl <<
         "busy cpu's = " << GetNumBusyCPU( scheduler ) << std::endl <<
-        "total cpu's = " << WorkerManager::Instance().GetTotalCPU() << std::endl;
+        "total cpu's = " << workerManager->GetTotalCPU() << std::endl;
 
     const Scheduler::TaskList &needReschedule = scheduler.GetNeedReschedule();
 

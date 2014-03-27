@@ -55,7 +55,8 @@ using namespace std;
 
 namespace {
 
-void InitWorkerManager( const std::string &exeDir, const std::string &cfgPath )
+void InitWorkerManager( boost::shared_ptr< master::WorkerManager > &mgr,
+                        const std::string &exeDir, const std::string &cfgPath )
 {
     string hostsDir, hostsPath;
     if ( cfgPath.empty() )
@@ -77,8 +78,7 @@ void InitWorkerManager( const std::string &exeDir, const std::string &cfgPath )
         return;
     }
 
-    master::WorkerManager &mgr = master::WorkerManager::Instance();
-    mgr.Initialize( hostsDir );
+    mgr->Initialize( hostsDir );
 
     std::string line;
     list< std::string > hosts;
@@ -88,7 +88,7 @@ void InitWorkerManager( const std::string &exeDir, const std::string &cfgPath )
         hosts.clear();
         if ( master::ReadHosts( hostsPath.c_str(), hosts ) )
         {
-            mgr.AddWorkerGroup( line, hosts );
+            mgr->AddWorkerGroup( line, hosts );
         }
     }
 }
@@ -144,7 +144,6 @@ void SetupSignalHandlers()
 void AtExit()
 {
     common::JsonRpc::Instance().Shutdown();
-    master::WorkerManager::Instance().Shutdown();
     master::Scheduler::Instance().Shutdown();
 
     common::logger::ShutdownLogger();
@@ -205,7 +204,9 @@ public:
 
         common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
 
-        InitWorkerManager( exeDir_, cfgPath_ );
+        workerManager_.reset( new master::WorkerManager );
+        serviceLocator.Register( (master::IWorkerManager*)workerManager_.get() );
+        InitWorkerManager( workerManager_, exeDir_, cfgPath_ );
 
         timeoutManager_.reset( new master::TimeoutManager( io_service_timeout_ ) );
 
@@ -324,6 +325,9 @@ public:
         if ( jobManager_ )
             jobManager_->Shutdown();
 
+        if ( workerManager_ )
+            workerManager_->Shutdown();
+
         common::ServiceLocator::Instance().UnregisterAll();
     }
 
@@ -380,6 +384,7 @@ private:
     boost::asio::io_service io_service_admin_;
 
     boost::shared_ptr< master::JobManager > jobManager_;
+    boost::shared_ptr< master::WorkerManager > workerManager_;
     boost::shared_ptr< master::TimeoutManager > timeoutManager_;
 
     boost::shared_ptr< master::PingReceiver > pingReceiver_;

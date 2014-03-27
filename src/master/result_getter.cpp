@@ -38,8 +38,8 @@ void ResultGetter::Run()
     WorkerTask workerTask;
     std::string hostIP;
 
-    WorkerManager &workerMgr = WorkerManager::Instance();
-    workerMgr.Subscribe( this, WorkerManager::eTaskCompletion );
+    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    workerManager->Subscribe( this, WorkerManager::eTaskCompletion );
 
     bool getTask = false;
     while( !stopped_ )
@@ -52,7 +52,7 @@ void ResultGetter::Run()
             newJobAvailable_ = false;
         }
 
-        getTask = workerMgr.GetAchievedTask( workerTask, hostIP );
+        getTask = workerManager->GetAchievedTask( workerTask, hostIP );
         if ( getTask )
         {
             PLOG( "Get achieved work " << workerTask.GetJobId() << " : " << workerTask.GetTaskId() );
