@@ -139,7 +139,8 @@ bool UserCommand::Stop( int64_t jobId )
         IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
         if ( !jobManager->DeleteJob( jobId ) )
         {
-            Scheduler::Instance().StopJob( jobId );
+            IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+            scheduler->StopJob( jobId );
         }
     }
     catch( std::exception &e )
@@ -156,7 +157,8 @@ bool UserCommand::StopGroup( int64_t groupId )
     {
         IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
         jobManager->DeleteJobGroup( groupId );
-        Scheduler::Instance().StopJobGroup( groupId );
+        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        scheduler->StopJobGroup( groupId );
     }
     catch( std::exception &e )
     {
@@ -172,7 +174,8 @@ bool UserCommand::StopAll()
     {
         IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
         jobManager->DeleteAllJobs();
-        Scheduler::Instance().StopAllJobs();
+        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        scheduler->StopAllJobs();
     }
     catch( std::exception &e )
     {
@@ -186,7 +189,8 @@ bool UserCommand::StopPreviousJobs()
 {
     try
     {
-        Scheduler::Instance().StopPreviousJobs();
+        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        scheduler->StopPreviousJobs();
     }
     catch( std::exception &e )
     {
@@ -218,8 +222,8 @@ bool UserCommand::DeleteHost( const std::string &host )
         IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
         workerManager->DeleteWorkerHost( host );
 
-        Scheduler &scheduler = Scheduler::Instance();
-        scheduler.DeleteWorker( host );
+        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        scheduler->DeleteWorker( host );
     }
     catch( std::exception &e )
     {
@@ -260,12 +264,12 @@ bool UserCommand::DeleteGroup( const std::string &group )
         workerManager->GetWorkers( workers, group );
         workerManager->DeleteWorkerGroup( group );
 
-        Scheduler &scheduler = Scheduler::Instance();
+        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
         std::vector< WorkerPtr >::const_iterator it = workers.begin();
         for( ; it != workers.end(); ++it )
         {
             const WorkerPtr &w = *it;
-            scheduler.DeleteWorker( w->GetHost() );
+            scheduler->DeleteWorker( w->GetHost() );
         }
     }
     catch( std::exception &e )
@@ -281,7 +285,8 @@ bool UserCommand::Info( int64_t jobId, std::string &result )
     try
     {
         JobInfo jobInfo( jobId );
-        Scheduler::Instance().Accept( &jobInfo );
+        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        scheduler->Accept( &jobInfo );
         jobInfo.GetInfo( result );
     }
     catch( std::exception &e )
@@ -298,7 +303,8 @@ bool UserCommand::GetStatistics( std::string &result )
     try
     {
         Statistics stat;
-        Scheduler::Instance().Accept( &stat );
+        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        scheduler->Accept( &stat );
         stat.GetInfo( result );
     }
     catch( std::exception &e )
@@ -314,7 +320,8 @@ bool UserCommand::GetAllJobInfo( std::string &result )
     try
     {
         AllJobInfo jobInfo;
-        Scheduler::Instance().Accept( &jobInfo );
+        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        scheduler->Accept( &jobInfo );
         jobInfo.GetInfo( result );
     }
     catch( std::exception &e )
@@ -330,7 +337,8 @@ bool UserCommand::GetWorkersStatistics( std::string &result )
     try
     {
         WorkerStatistics stat;
-        Scheduler::Instance().Accept( &stat );
+        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        scheduler->Accept( &stat );
         stat.GetInfo( result );
     }
     catch( std::exception &e )

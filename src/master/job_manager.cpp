@@ -32,6 +32,7 @@ the License.
 #include "common/log.h"
 #include "common/config.h"
 #include "common/helper.h"
+#include "common/service_locator.h"
 #include "scheduler.h"
 #include "timeout_manager.h"
 
@@ -151,7 +152,8 @@ void JobManager::PushJob( Job *job )
     PLOG( "push job" );
     jobs_->PushJob( job, numJobGroups_++ );
 
-    Scheduler::Instance().OnNewJob();
+    IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+    scheduler->OnNewJob();
     timeoutManager_->PushJobQueue( job->GetJobId(), job->GetQueueTimeout() );
 }
 
@@ -160,7 +162,8 @@ void JobManager::PushJobs( std::list< JobPtr > &jobs )
     PLOG( "push jobs" );
     jobs_->PushJobs( jobs, numJobGroups_++ );
 
-    Scheduler::Instance().OnNewJob();
+    IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+    scheduler->OnNewJob();
 
     std::list< JobPtr >::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )

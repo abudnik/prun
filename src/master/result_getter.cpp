@@ -79,7 +79,8 @@ void ResultGetter::OnGetTaskResult( bool success, int errCode, int64_t execTime,
 {
     if ( !success ) // retrieving of job result from message failed
         errCode = -1;
-    Scheduler::Instance().OnTaskCompletion( errCode, execTime, workerTask, hostIP );
+    IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+    scheduler->OnTaskCompletion( errCode, execTime, workerTask, hostIP );
 }
 
 void ResultGetterBoost::Start()

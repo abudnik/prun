@@ -143,8 +143,6 @@ void SetupSignalHandlers()
 
 void AtExit()
 {
-    master::Scheduler::Instance().Shutdown();
-
     common::logger::ShutdownLogger();
 }
 
@@ -183,7 +181,9 @@ public:
         //PLOG( "master_id= " << masterId_ );
 
         SetupSignalHandlers();
+        atexit( AtExit );
 
+        // parse config & read some parameters
         common::Config &cfg = common::Config::Instance();
         if ( cfgPath_.empty() )
         {
@@ -201,6 +201,7 @@ public:
         unsigned int numCommandSendThread = 1 + cfg.Get<unsigned int>( "num_command_send_thread" );
         unsigned int numPingThread = numHeartbeatThread + numPingReceiverThread;
 
+        // initialize main components
         common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
 
         workerManager_.reset( new master::WorkerManager );
@@ -213,9 +214,8 @@ public:
         jobManager_->Initialize( masterId_, exeDir_, timeoutManager_.get() );
         serviceLocator.Register( (master::IJobManager*)jobManager_.get() );
 
-        master::Scheduler::Instance();
-
-        atexit( AtExit );
+        scheduler_.reset( new master::Scheduler );
+        serviceLocator.Register( (master::IScheduler*)scheduler_.get() );
 
         timeoutManager_->Start();
         worker_threads_.create_thread(
@@ -326,6 +326,9 @@ public:
         if ( workerManager_ )
             workerManager_->Shutdown();
 
+        if ( scheduler_ )
+            scheduler_->Shutdown();
+
         common::ServiceLocator::Instance().UnregisterAll();
     }
 
@@ -383,6 +386,7 @@ private:
 
     boost::shared_ptr< master::JobManager > jobManager_;
     boost::shared_ptr< master::WorkerManager > workerManager_;
+    boost::shared_ptr< master::Scheduler > scheduler_;
     boost::shared_ptr< master::TimeoutManager > timeoutManager_;
 
     boost::shared_ptr< master::PingReceiver > pingReceiver_;

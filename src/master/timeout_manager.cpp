@@ -31,12 +31,14 @@ namespace master {
 
 void TimeoutManager::TaskTimeoutHandler::HandleTimeout()
 {
-    Scheduler::Instance().OnTaskTimeout( workerTask_, hostIP_ );
+    IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+    scheduler->OnTaskTimeout( workerTask_, hostIP_ );
 }
 
 void TimeoutManager::JobTimeoutHandler::HandleTimeout()
 {
-    Scheduler::Instance().OnJobTimeout( jobId_ );
+    IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+    scheduler->OnJobTimeout( jobId_ );
 }
 
 void TimeoutManager::JobQueueTimeoutHandler::HandleTimeout()

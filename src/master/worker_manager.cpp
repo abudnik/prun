@@ -24,6 +24,7 @@ the License.
 #include <boost/asio/ip/address.hpp>
 #include "worker_manager.h"
 #include "common/log.h"
+#include "common/service_locator.h"
 #include "scheduler.h"
 
 namespace master {
@@ -127,7 +128,8 @@ void WorkerManager::CheckDropedPingResponses()
 
     if ( !changedWorkers.empty() )
     {
-        Scheduler::Instance().OnChangedWorkerState( changedWorkers );
+        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        scheduler->OnChangedWorkerState( changedWorkers );
     }
 }
 
@@ -149,7 +151,8 @@ void WorkerManager::OnNodePingResponse( const std::string &hostIP, int numCPU, i
         {
             worker->SetNumCPU( numCPU );
             worker->SetMemorySize( memSizeMb );
-            Scheduler::Instance().OnHostAppearance( worker );
+            IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+            scheduler->OnHostAppearance( worker );
         }
     }
     else

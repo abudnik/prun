@@ -37,8 +37,8 @@ void JobSender::Run()
     std::string hostIP;
     JobPtr job;
 
-    Scheduler &scheduler = Scheduler::Instance();
-    scheduler.Subscribe( this );
+    IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+    scheduler->Subscribe( this );
 
     bool getTask = false;
     while( !stopped_ )
@@ -51,7 +51,7 @@ void JobSender::Run()
             newJobAvailable_ = false;
         }
 
-        getTask = scheduler.GetTaskToSend( workerJob, hostIP, job );
+        getTask = scheduler->GetTaskToSend( workerJob, hostIP, job );
         if ( getTask )
         {
             PLOG( "Get task " << workerJob.GetJobId() );
@@ -78,7 +78,8 @@ void JobSender::NotifyObserver( int event )
 void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const JobPtr &job )
 {
     PLOG("JobSender::OnJobSendCompletion "<<success);
-    Scheduler::Instance().OnTaskSendCompletion( success, workerJob, hostIP );
+    IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+    scheduler->OnTaskSendCompletion( success, workerJob, hostIP );
     if ( success )
     {
         WorkerJob::Tasks tasks;

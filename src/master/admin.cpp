@@ -324,7 +324,7 @@ void AdminSession::HandleRequest()
 {
     PLOG( request_ );
     std::string requestId, result;
-    int errCode = requestHandler_->HandleRequest( request_, requestId, result );
+    int errCode = requestHandler_.HandleRequest( request_, requestId, result );
 
     try
     {
@@ -335,7 +335,7 @@ void AdminSession::HandleRequest()
         if ( errCode )
         {
             std::string description;
-            requestHandler_->GetErrorDescription( errCode, description );
+            requestHandler_.GetErrorDescription( errCode, description );
             boost::property_tree::ptree perror;
             perror.put( "code", errCode );
             perror.put( "message", description );

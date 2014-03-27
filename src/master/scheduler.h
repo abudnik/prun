@@ -40,50 +40,70 @@ namespace master {
 
 class SchedulerVisitor;
 
-class Scheduler : public common::Observable< common::MutexLockPolicy >
+struct IScheduler : virtual public common::IObservable
+{
+    virtual void OnHostAppearance( WorkerPtr &worker ) = 0;
+    virtual void DeleteWorker( const std::string &host ) = 0;
+
+    virtual void OnChangedWorkerState( std::vector< WorkerPtr > &workers ) = 0;
+
+    virtual void OnNewJob() = 0;
+
+    virtual bool GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, JobPtr &job ) = 0;
+
+    virtual void OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP ) = 0;
+
+    virtual void OnTaskCompletion( int errCode, int64_t execTime, const WorkerTask &workerTask, const std::string &hostIP ) = 0;
+
+    virtual void OnTaskTimeout( const WorkerTask &workerTask, const std::string &hostIP ) = 0;
+    virtual void OnJobTimeout( int64_t jobId ) = 0;
+
+    virtual void StopJob( int64_t jobId ) = 0;
+    virtual void StopJobGroup( int64_t groupId ) = 0;
+    virtual void StopAllJobs() = 0;
+    virtual void StopPreviousJobs() = 0;
+
+    virtual void Accept( SchedulerVisitor *visitor ) = 0;
+};
+
+class Scheduler : public IScheduler,
+                  public common::Observable< common::MutexLockPolicy >
 {
 public:
     typedef std::map< std::string, NodeState > IPToNodeState;
     typedef std::list< WorkerTask > TaskList;
     typedef std::map< int64_t, std::set< int > > JobIdToTasks; // job_id -> set(task_id)
 
-private:
+public:
     Scheduler();
 
-public:
-    void OnHostAppearance( WorkerPtr &worker );
-    void DeleteWorker( const std::string &host );
+    virtual void OnHostAppearance( WorkerPtr &worker );
+    virtual void DeleteWorker( const std::string &host );
 
-    void OnChangedWorkerState( std::vector< WorkerPtr > &workers );
+    virtual void OnChangedWorkerState( std::vector< WorkerPtr > &workers );
 
-    void OnNewJob();
+    virtual void OnNewJob();
 
-    bool GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, JobPtr &job );
+    virtual bool GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, JobPtr &job );
 
-    void OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP );
+    virtual void OnTaskSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP );
 
-    void OnTaskCompletion( int errCode, int64_t execTime, const WorkerTask &workerTask, const std::string &hostIP );
+    virtual void OnTaskCompletion( int errCode, int64_t execTime, const WorkerTask &workerTask, const std::string &hostIP );
 
-    void OnTaskTimeout( const WorkerTask &workerTask, const std::string &hostIP );
-    void OnJobTimeout( int64_t jobId );
+    virtual void OnTaskTimeout( const WorkerTask &workerTask, const std::string &hostIP );
+    virtual void OnJobTimeout( int64_t jobId );
 
-    void StopJob( int64_t jobId );
-    void StopJobGroup( int64_t groupId );
-    void StopAllJobs();
-    void StopPreviousJobs();
+    virtual void StopJob( int64_t jobId );
+    virtual void StopJobGroup( int64_t groupId );
+    virtual void StopAllJobs();
+    virtual void StopPreviousJobs();
 
-    void Accept( SchedulerVisitor *visitor );
+    virtual void Accept( SchedulerVisitor *visitor );
 
     const IPToNodeState &GetNodeState() const { return nodeState_; }
     const FailedWorkers &GetFailedWorkers() const { return failedWorkers_; }
     const TaskList &GetNeedReschedule() const { return needReschedule_; }
     ScheduledJobs &GetScheduledJobs() { return jobs_; }
-
-    static Scheduler &Instance()
-    {
-        static Scheduler instance_;
-        return instance_;
-    }
 
     void Shutdown();
 
