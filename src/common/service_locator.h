@@ -41,23 +41,6 @@ class ServiceLocator
 
     typedef std::map< const std::type_info *, void *, TypeComparator > ServiceContainer;
 
-    class ServiceNotFoundException : public std::exception
-    {
-    public:
-        ServiceNotFoundException( const char *service )
-        : msg( "Service not found: " )
-        {
-            msg += service;
-        }
-
-        ~ServiceNotFoundException() throw () {}
-
-        const char * what() const throw () { return msg.c_str(); }
-
-    private:
-        std::string msg;
-    };
-
 public:
     template< typename T >
     bool Register( T *service )
@@ -127,7 +110,7 @@ public:
                 return reinterpret_cast<T*>( it->second );
             }
 
-            throw ServiceNotFoundException( type.name() );
+            throw std::logic_error( std::string( "Service not found: " ) + type.name() );
         }
         catch( std::bad_typeid &ex )
         {
