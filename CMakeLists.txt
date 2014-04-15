@@ -67,3 +67,22 @@ endforeach(cpp)
 add_executable( ${APP_NAME} ${SRC_MASTER} )
 target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
 
+
+if (Test)
+  set(APP_NAME ptest_unit)
+
+  set(TEST_DIR ${SRC_DIR}/test)
+
+  set(SRC_TEST_UNIT_CPP unit.cpp)
+  foreach(cpp ${SRC_TEST_UNIT_CPP})
+    list(APPEND SRC_TEST_UNIT ${TEST_DIR}/${cpp} )
+  endforeach(cpp)
+
+  set(SRC_TEST_MASTER_CPP job.cpp worker.cpp job_manager.cpp worker_manager.cpp scheduler.cpp timeout_manager.cpp)
+  foreach(cpp ${SRC_TEST_MASTER_CPP})
+    list(APPEND SRC_TEST_UNIT ${MASTER_DIR}/${cpp} )
+  endforeach(cpp)
+
+  add_executable( ${APP_NAME} ${SRC_TEST_UNIT} )
+  target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lboost_unit_test_framework -lrt -rdynamic )
+endif()
