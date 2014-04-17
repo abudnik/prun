@@ -5,6 +5,7 @@
 #include <vector>
 #include "mock.h"
 #include "master/worker_manager.h"
+#include "master/job_manager.h"
 #include "master/scheduler.h"
 #include "common/service_locator.h"
 
@@ -206,6 +207,56 @@ BOOST_AUTO_TEST_CASE( check_total_cpu )
     }
     BOOST_CHECK_GT( mgr.GetTotalCPU(), 0 );
     BOOST_CHECK_EQUAL( mgr.GetTotalCPU(), numCPU );
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+////////////////////////////////
+// JobManager
+////////////////////////////////
+
+struct JobManagerEnvironment
+{
+    JobManagerEnvironment()
+    {
+        common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
+        serviceLocator.Register( (master::IScheduler*)&sched );
+    }
+
+    ~JobManagerEnvironment()
+    {
+        common::ServiceLocator::Instance().UnregisterAll();
+    }
+
+    JobManager mgr;
+    Scheduler sched;
+};
+
+BOOST_FIXTURE_TEST_SUITE( JobManagerSuite, JobManagerEnvironment )
+
+BOOST_AUTO_TEST_CASE( job_creation )
+{
+    JobPtr job1( mgr.CreateJob(
+                     "{\"script\" : \"simple.py\","
+                     "\"language\" : \"python\","
+                     "\"send_script\" : false,"
+                     "\"priority\" : 4,"
+                     "\"job_timeout\" : 120,"
+                     "\"queue_timeout\" : 60,"
+                     "\"task_timeout\" : 15,"
+                     "\"max_failed_nodes\" : 10,"
+                     "\"num_execution\" : 1,"
+                     "\"max_cluster_cpu\" : -1,"
+                     "\"max_cpu\" : 1,"
+                     "\"exclusive\" : false,"
+                     "\"no_reschedule\" : false}" ) );
+    BOOST_CHECK( (bool)job1 );
+
+    JobPtr job2( mgr.CreateJob( "_garbage_" ) );
+    BOOST_CHECK_EQUAL( (bool)job2, false );
+
+    JobPtr job3( mgr.CreateJob( "{\"_random_field_\" : 1}" ) );
+    BOOST_CHECK_EQUAL( (bool)job3, false );
 }
 
 BOOST_AUTO_TEST_SUITE_END()
