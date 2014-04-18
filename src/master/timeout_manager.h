@@ -33,9 +33,19 @@ the License.
 
 namespace master {
 
+struct ITimeoutManager
+{
+    virtual void PushJobQueue( int64_t jobId, int queueTimeout ) = 0;
+    virtual void PushJob( int64_t jobId, int jobTimeout ) = 0;
+    virtual void PushTask( const WorkerTask &task, const std::string &hostIP, int timeout ) = 0;
+
+    virtual void PushCommand( CommandPtr &command, const std::string &hostIP, int delay ) = 0;
+};
+
+
 // hint: don't use boost::asio::deadline_timer due to os timer limitations (~16k or so)
 
-class TimeoutManager
+class TimeoutManager : public ITimeoutManager
 {
     typedef boost::function< void () > Callback;
     typedef std::multimap< boost::posix_time::ptime,
@@ -76,11 +86,11 @@ public:
 
     void Run();
 
-    void PushJobQueue( int64_t jobId, int queueTimeout );
-    void PushJob( int64_t jobId, int jobTimeout );
-    void PushTask( const WorkerTask &task, const std::string &hostIP, int timeout );
+    virtual void PushJobQueue( int64_t jobId, int queueTimeout );
+    virtual void PushJob( int64_t jobId, int jobTimeout );
+    virtual void PushTask( const WorkerTask &task, const std::string &hostIP, int timeout );
 
-    void PushCommand( CommandPtr &command, const std::string &hostIP, int delay );
+    virtual void PushCommand( CommandPtr &command, const std::string &hostIP, int delay );
 
 private:
     void CheckTimeouts();

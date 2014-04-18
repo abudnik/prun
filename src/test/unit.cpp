@@ -5,6 +5,7 @@
 #include <vector>
 #include "mock.h"
 #include "master/worker_manager.h"
+#include "master/timeout_manager.h"
 #include "master/job_manager.h"
 #include "master/scheduler.h"
 #include "common/service_locator.h"
@@ -219,6 +220,7 @@ struct JobManagerEnvironment
 {
     JobManagerEnvironment()
     {
+        mgr.SetTimeoutManager( &timeoutManager );
         common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
         serviceLocator.Register( (master::IScheduler*)&sched );
     }
@@ -228,6 +230,7 @@ struct JobManagerEnvironment
         common::ServiceLocator::Instance().UnregisterAll();
     }
 
+    MockTimeoutManager timeoutManager;
     JobManager mgr;
     Scheduler sched;
 };
@@ -257,6 +260,42 @@ BOOST_AUTO_TEST_CASE( job_creation )
 
     JobPtr job3( mgr.CreateJob( "{\"_random_field_\" : 1}" ) );
     BOOST_CHECK_EQUAL( (bool)job3, false );
+}
+
+BOOST_AUTO_TEST_CASE( job_queue )
+{
+    const int numJobs = 10;
+
+    for( int i = 0; i < numJobs; ++i )
+    {
+        Job *job( mgr.CreateJob(
+                      "{\"script\" : \"simple.py\","
+                      "\"language\" : \"python\","
+                      "\"send_script\" : false,"
+                      "\"priority\" : 4,"
+                      "\"job_timeout\" : 120,"
+                      "\"queue_timeout\" : 60,"
+                      "\"task_timeout\" : 15,"
+                      "\"max_failed_nodes\" : 10,"
+                      "\"num_execution\" : 1,"
+                      "\"max_cluster_cpu\" : -1,"
+                      "\"max_cpu\" : 1,"
+                      "\"exclusive\" : false,"
+                      "\"no_reschedule\" : false}" ) );
+        BOOST_REQUIRE( job );
+
+        mgr.PushJob( job );
+    }
+
+    for( int i = 0; i < numJobs; ++i )
+    {
+        JobPtr j;
+        BOOST_CHECK( mgr.PopJob( j ) );
+        BOOST_CHECK( (bool)j );
+    }
+
+    JobPtr j;
+    BOOST_CHECK_EQUAL( mgr.PopJob( j ), false );
 }
 
 BOOST_AUTO_TEST_SUITE_END()

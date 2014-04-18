@@ -211,7 +211,7 @@ public:
         timeoutManager_.reset( new master::TimeoutManager( io_service_timeout_ ) );
 
         jobManager_.reset( new master::JobManager );
-        jobManager_->Initialize( masterId_, exeDir_, timeoutManager_.get() );
+        jobManager_->SetMasterId( masterId_ ).SetExeDir( exeDir_ ).SetTimeoutManager( timeoutManager_.get() );
         serviceLocator.Register( (master::IJobManager*)jobManager_.get() );
 
         scheduler_.reset( new master::Scheduler );

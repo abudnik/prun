@@ -68,7 +68,11 @@ bool JDLJason::ParseJob( const std::string &job_description, boost::property_tre
     return true;
 }
 
-int64_t JobManager::numJobGroups_ = 0;
+JobManager::JobManager()
+: jobs_( new JobQueueImpl ),
+ timeoutManager_( NULL ),
+ numJobGroups_( 0 )
+{}
 
 Job *JobManager::CreateJob( const std::string &job_description ) const
 {
@@ -198,13 +202,21 @@ bool JobManager::PopJob( JobPtr &job )
     return jobs_->PopJob( job );
 }
 
-void JobManager::Initialize( const std::string &masterId, const std::string &exeDir, TimeoutManager *timeoutManager )
+JobManager &JobManager::SetTimeoutManager( ITimeoutManager *timeoutManager )
 {
-    jobs_.reset( new JobQueueImpl );
-
-    masterId_ = masterId;
-    exeDir_ = exeDir;
     timeoutManager_ = timeoutManager;
+    return *this;
+}
+
+JobManager &JobManager::SetMasterId( const std::string &masterId )
+{
+    masterId_ = masterId;
+    return *this;
+}
+
+JobManager &JobManager::SetExeDir( const std::string &exeDir )
+{
+    exeDir_ = exeDir;
 
     common::Config &cfg = common::Config::Instance();
     std::string jobsDir = cfg.Get<std::string>( "jobs_path" );
@@ -213,6 +225,7 @@ void JobManager::Initialize( const std::string &masterId, const std::string &exe
         jobsDir = exeDir + '/' + jobsDir;
     }
     jobsDir_ = jobsDir;
+    return *this;
 }
 
 void JobManager::Shutdown()

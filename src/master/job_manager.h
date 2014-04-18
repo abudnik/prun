@@ -42,7 +42,7 @@ public:
     bool ParseJob( const std::string &job_description, boost::property_tree::ptree &ptree );
 };
 
-class TimeoutManager;
+struct ITimeoutManager;
 
 struct IJobManager
 {
@@ -65,6 +65,8 @@ struct IJobManager
 class JobManager : public IJobManager
 {
 public:
+    JobManager();
+
     virtual Job *CreateJob( const std::string &job_description ) const;
     virtual void CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs ) const;
     virtual void PushJob( Job *job );
@@ -80,7 +82,10 @@ public:
     virtual const std::string &GetMasterId() const { return masterId_; }
     virtual const std::string &GetJobsDir() const { return jobsDir_; }
 
-    void Initialize( const std::string &masterId, const std::string &exeDir, TimeoutManager *timeoutManager );
+    JobManager &SetTimeoutManager( ITimeoutManager *timeoutManager );
+    JobManager &SetMasterId( const std::string &masterId );
+    JobManager &SetExeDir( const std::string &exeDir );
+
     void Shutdown();
 
 private:
@@ -95,10 +100,10 @@ private:
 
 private:
     boost::shared_ptr< JobQueue > jobs_;
-    TimeoutManager *timeoutManager_;
+    ITimeoutManager *timeoutManager_;
     std::string exeDir_, jobsDir_;
     std::string masterId_;
-    static int64_t numJobGroups_;
+    int64_t numJobGroups_;
 };
 
 } // namespace master
