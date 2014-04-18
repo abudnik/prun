@@ -179,9 +179,9 @@ public:
     virtual bool PopJob( JobPtr &job ) = 0;
 
     virtual bool GetJobById( int64_t jobId, JobPtr &job ) = 0;
+
     virtual bool DeleteJob( int64_t jobId ) = 0;
     virtual bool DeleteJobGroup( int64_t groupId ) = 0;
-
     virtual void Clear() = 0;
 };
 
@@ -199,9 +199,9 @@ public:
     virtual bool PopJob( JobPtr &job );
 
     virtual bool GetJobById( int64_t jobId, JobPtr &job );
+
     virtual bool DeleteJob( int64_t jobId );
     virtual bool DeleteJobGroup( int64_t groupId );
-
     virtual void Clear();
 
 private:

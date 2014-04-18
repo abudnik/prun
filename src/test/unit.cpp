@@ -3,6 +3,7 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/lexical_cast.hpp>
 #include <vector>
+#include <list>
 #include "mock.h"
 #include "master/worker_manager.h"
 #include "master/timeout_manager.h"
@@ -14,9 +15,9 @@ using namespace std;
 using namespace master;
 
 
-////////////////////////////////
+////////////////////////////////////////////////////////////////
 // WorkerManager
-////////////////////////////////
+////////////////////////////////////////////////////////////////
 
 BOOST_FIXTURE_TEST_SUITE( WorkerManagerSuite, WorkerManager )
 
@@ -212,9 +213,9 @@ BOOST_AUTO_TEST_CASE( check_total_cpu )
 
 BOOST_AUTO_TEST_SUITE_END()
 
-////////////////////////////////
+////////////////////////////////////////////////////////////////
 // JobManager
-////////////////////////////////
+////////////////////////////////////////////////////////////////
 
 struct JobManagerEnvironment
 {
@@ -283,7 +284,6 @@ BOOST_AUTO_TEST_CASE( job_queue )
                       "\"exclusive\" : false,"
                       "\"no_reschedule\" : false}" ) );
         BOOST_REQUIRE( job );
-
         mgr.PushJob( job );
     }
 
@@ -294,6 +294,177 @@ BOOST_AUTO_TEST_CASE( job_queue )
         BOOST_CHECK( (bool)j );
     }
 
+    JobPtr j;
+    BOOST_CHECK_EQUAL( mgr.PopJob( j ), false );
+}
+
+BOOST_AUTO_TEST_CASE( job_queue2 )
+{
+    const int numJobs = 10;
+
+    list< JobPtr > jobs;
+    for( int i = 0; i < numJobs; ++i )
+    {
+        Job *job( mgr.CreateJob(
+                      "{\"script\" : \"simple.py\","
+                      "\"language\" : \"python\","
+                      "\"send_script\" : false,"
+                      "\"priority\" : 4,"
+                      "\"job_timeout\" : 120,"
+                      "\"queue_timeout\" : 60,"
+                      "\"task_timeout\" : 15,"
+                      "\"max_failed_nodes\" : 10,"
+                      "\"num_execution\" : 1,"
+                      "\"max_cluster_cpu\" : -1,"
+                      "\"max_cpu\" : 1,"
+                      "\"exclusive\" : false,"
+                      "\"no_reschedule\" : false}" ) );
+        BOOST_REQUIRE( job );
+        jobs.push_back( JobPtr( job ) );
+    }
+    mgr.PushJobs( jobs );
+
+    for( int i = 0; i < numJobs; ++i )
+    {
+        JobPtr j;
+        BOOST_CHECK( mgr.PopJob( j ) );
+        BOOST_CHECK( (bool)j );
+    }
+
+    JobPtr j;
+    BOOST_CHECK_EQUAL( mgr.PopJob( j ), false );
+}
+
+BOOST_AUTO_TEST_CASE( job_get_by_id )
+{
+    const int numJobs = 10;
+
+    list< JobPtr > jobs;
+    for( int i = 0; i < numJobs; ++i )
+    {
+        Job *job( mgr.CreateJob(
+                      "{\"script\" : \"simple.py\","
+                      "\"language\" : \"python\","
+                      "\"send_script\" : false,"
+                      "\"priority\" : 4,"
+                      "\"job_timeout\" : 120,"
+                      "\"queue_timeout\" : 60,"
+                      "\"task_timeout\" : 15,"
+                      "\"max_failed_nodes\" : 10,"
+                      "\"num_execution\" : 1,"
+                      "\"max_cluster_cpu\" : -1,"
+                      "\"max_cpu\" : 1,"
+                      "\"exclusive\" : false,"
+                      "\"no_reschedule\" : false}" ) );
+        BOOST_REQUIRE( job );
+        jobs.push_back( JobPtr( job ) );
+    }
+    mgr.PushJobs( jobs );
+
+    list< JobPtr >::iterator it = jobs.begin();
+    for( ; it != jobs.end(); ++it )
+    {
+        JobPtr j;
+        BOOST_CHECK( mgr.GetJobById( (*it)->GetJobId(), j ) );
+        BOOST_CHECK( (bool)j );
+    }
+}
+
+BOOST_AUTO_TEST_CASE( job_delete_by_id )
+{
+    const int numJobs = 10;
+
+    list< JobPtr > jobs;
+    for( int i = 0; i < numJobs; ++i )
+    {
+        Job *job( mgr.CreateJob(
+                      "{\"script\" : \"simple.py\","
+                      "\"language\" : \"python\","
+                      "\"send_script\" : false,"
+                      "\"priority\" : 4,"
+                      "\"job_timeout\" : 120,"
+                      "\"queue_timeout\" : 60,"
+                      "\"task_timeout\" : 15,"
+                      "\"max_failed_nodes\" : 10,"
+                      "\"num_execution\" : 1,"
+                      "\"max_cluster_cpu\" : -1,"
+                      "\"max_cpu\" : 1,"
+                      "\"exclusive\" : false,"
+                      "\"no_reschedule\" : false}" ) );
+        BOOST_REQUIRE( job );
+        jobs.push_back( JobPtr( job ) );
+    }
+    mgr.PushJobs( jobs );
+
+    list< JobPtr >::iterator it = jobs.begin();
+    for( ; it != jobs.end(); ++it )
+    {
+        JobPtr j;
+        BOOST_CHECK( mgr.DeleteJob( (*it)->GetJobId() ) );
+        BOOST_CHECK_EQUAL( mgr.GetJobById( (*it)->GetJobId(), j ), false );
+    }
+}
+
+BOOST_AUTO_TEST_CASE( job_group_delete )
+{
+    const int numJobs = 10;
+
+    list< JobPtr > jobs;
+    for( int i = 0; i < numJobs; ++i )
+    {
+        Job *job( mgr.CreateJob(
+                      "{\"script\" : \"simple.py\","
+                      "\"language\" : \"python\","
+                      "\"send_script\" : false,"
+                      "\"priority\" : 4,"
+                      "\"job_timeout\" : 120,"
+                      "\"queue_timeout\" : 60,"
+                      "\"task_timeout\" : 15,"
+                      "\"max_failed_nodes\" : 10,"
+                      "\"num_execution\" : 1,"
+                      "\"max_cluster_cpu\" : -1,"
+                      "\"max_cpu\" : 1,"
+                      "\"exclusive\" : false,"
+                      "\"no_reschedule\" : false}" ) );
+        BOOST_REQUIRE( job );
+        jobs.push_back( JobPtr( job ) );
+    }
+    mgr.PushJobs( jobs );
+
+    JobPtr j;
+    BOOST_REQUIRE( mgr.PopJob( j ) );
+    BOOST_REQUIRE( (bool)j );
+
+    mgr.DeleteJobGroup( j->GetGroupId() );
+
+    BOOST_CHECK_EQUAL( mgr.PopJob( j ), false );
+}
+
+BOOST_AUTO_TEST_CASE( job_delete_all )
+{
+    const int numJobs = 10;
+
+    for( int i = 0; i < numJobs; ++i )
+    {
+        Job *job( mgr.CreateJob(
+                      "{\"script\" : \"simple.py\","
+                      "\"language\" : \"python\","
+                      "\"send_script\" : false,"
+                      "\"priority\" : 4,"
+                      "\"job_timeout\" : 120,"
+                      "\"queue_timeout\" : 60,"
+                      "\"task_timeout\" : 15,"
+                      "\"max_failed_nodes\" : 10,"
+                      "\"num_execution\" : 1,"
+                      "\"max_cluster_cpu\" : -1,"
+                      "\"max_cpu\" : 1,"
+                      "\"exclusive\" : false,"
+                      "\"no_reschedule\" : false}" ) );
+        BOOST_REQUIRE( job );
+        mgr.PushJob( job );
+    }
+
+    mgr.DeleteAllJobs();
     JobPtr j;
     BOOST_CHECK_EQUAL( mgr.PopJob( j ), false );
 }

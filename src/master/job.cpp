@@ -169,6 +169,26 @@ bool JobQueueImpl::DeleteJobGroup( int64_t groupId )
     return deleted;
 }
 
+void JobQueueImpl::Clear()
+{
+    JobList jobs;
+    {
+        boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+        JobList::iterator it = jobs_.begin();
+        for( ; it != jobs_.end(); ++it )
+        {
+            jobs.push_back( *it );
+        }
+    }
+
+    JobList::const_iterator it = jobs.begin();
+    for( ; it != jobs.end(); ++it )
+    {
+        const JobPtr &job = *it;
+        DeleteJob( job->GetJobId() );
+    }
+}
+
 bool JobQueueImpl::PopJob( JobPtr &job )
 {
     boost::mutex::scoped_lock scoped_lock( jobsMut_ );
@@ -201,14 +221,6 @@ bool JobQueueImpl::PopJob( JobPtr &job )
         }
     }
     return false;
-}
-
-void JobQueueImpl::Clear()
-{
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-    jobs_.clear();
-    idToJob_.clear();
-    numJobs_ = 0;
 }
 
 struct JobComparatorPriority
