@@ -470,3 +470,51 @@ BOOST_AUTO_TEST_CASE( job_delete_all )
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+////////////////////////////////////////////////////////////////
+// Scheduler
+////////////////////////////////////////////////////////////////
+
+struct SchedulerEnvironment
+{
+    SchedulerEnvironment()
+    {
+        jobMgr.SetTimeoutManager( &timeoutMgr );
+        common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
+        serviceLocator.Register( (master::IScheduler*)&sched );
+        serviceLocator.Register( (master::IJobManager*)&jobMgr );
+        serviceLocator.Register( (master::IWorkerManager*)&workerMgr );
+    }
+
+    ~SchedulerEnvironment()
+    {
+        common::ServiceLocator::Instance().UnregisterAll();
+    }
+
+    MockTimeoutManager timeoutMgr;
+    JobManager jobMgr;
+    WorkerManager workerMgr;
+    Scheduler sched;
+};
+
+BOOST_FIXTURE_TEST_SUITE( SchedulerSuite, SchedulerEnvironment )
+
+BOOST_AUTO_TEST_CASE( host_appearance )
+{
+    workerMgr.AddWorkerHost( "grp", "host1" );
+
+    vector< WorkerPtr > workers;
+    workerMgr.GetWorkers( workers );
+    BOOST_REQUIRE_EQUAL( workers.size(), 1 );
+
+    workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
+    workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
+
+    const Scheduler::IPToNodeState &ipToNodeState = sched.GetNodeState();
+    Scheduler::IPToNodeState::const_iterator it = ipToNodeState.find( "127.0.0.1" );
+    BOOST_REQUIRE( it != ipToNodeState.end() );
+    const NodeState &nodeState = it->second;
+    BOOST_CHECK_EQUAL( nodeState.GetNumFreeCPU(), 2 );
+}
+
+BOOST_AUTO_TEST_SUITE_END()
