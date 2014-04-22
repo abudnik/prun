@@ -517,4 +517,94 @@ BOOST_AUTO_TEST_CASE( host_appearance )
     BOOST_CHECK_EQUAL( nodeState.GetNumFreeCPU(), 2 );
 }
 
+BOOST_AUTO_TEST_CASE( delete_worker )
+{
+    workerMgr.AddWorkerHost( "grp", "host1" );
+
+    vector< WorkerPtr > workers;
+    workerMgr.GetWorkers( workers );
+    BOOST_REQUIRE_EQUAL( workers.size(), 1 );
+
+    workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
+    workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
+
+    sched.DeleteWorker( "host1" );
+
+    const Scheduler::IPToNodeState &ipToNodeState = sched.GetNodeState();
+    BOOST_CHECK( ipToNodeState.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( on_new_job )
+{
+    workerMgr.AddWorkerHost( "grp", "host1" );
+
+    vector< WorkerPtr > workers;
+    workerMgr.GetWorkers( workers );
+    BOOST_REQUIRE_EQUAL( workers.size(), 1 );
+
+    workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
+    workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
+
+    const int numJobs = 5;
+
+    for( int i = 0; i < numJobs; ++i )
+    {
+        Job *job( jobMgr.CreateJob(
+                      "{\"script\" : \"simple.py\","
+                      "\"language\" : \"python\","
+                      "\"send_script\" : false,"
+                      "\"priority\" : 4,"
+                      "\"job_timeout\" : 120,"
+                      "\"queue_timeout\" : 60,"
+                      "\"task_timeout\" : 15,"
+                      "\"max_failed_nodes\" : 10,"
+                      "\"num_execution\" : 1,"
+                      "\"max_cluster_cpu\" : -1,"
+                      "\"max_cpu\" : 1,"
+                      "\"exclusive\" : false,"
+                      "\"no_reschedule\" : false}" ) );
+        BOOST_REQUIRE( job );
+        jobMgr.PushJob( job ); // implicitly calls OnNewJob()
+    }
+
+    const ScheduledJobs &jobs = sched.GetScheduledJobs();
+    BOOST_CHECK_EQUAL( jobs.GetNumJobs(), numJobs );
+}
+
+BOOST_AUTO_TEST_CASE( get_task_to_send )
+{
+    workerMgr.AddWorkerHost( "grp", "host1" );
+
+    vector< WorkerPtr > workers;
+    workerMgr.GetWorkers( workers );
+    BOOST_REQUIRE_EQUAL( workers.size(), 1 );
+
+    workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
+    workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
+
+    Job *job( jobMgr.CreateJob(
+                  "{\"script\" : \"simple.py\","
+                  "\"language\" : \"python\","
+                  "\"send_script\" : false,"
+                  "\"priority\" : 4,"
+                  "\"job_timeout\" : 120,"
+                  "\"queue_timeout\" : 60,"
+                  "\"task_timeout\" : 15,"
+                  "\"max_failed_nodes\" : 10,"
+                  "\"num_execution\" : 1,"
+                  "\"max_cluster_cpu\" : -1,"
+                  "\"max_cpu\" : 1,"
+                  "\"exclusive\" : false,"
+                  "\"no_reschedule\" : false}" ) );
+    BOOST_REQUIRE( job );
+    jobMgr.PushJob( job );
+
+    WorkerJob workerJob;
+    std::string hostIP;
+    JobPtr spJob;
+
+    BOOST_CHECK( sched.GetTaskToSend( workerJob, hostIP, spJob ) );
+    BOOST_CHECK( (bool)spJob );
+}
+
 BOOST_AUTO_TEST_SUITE_END()
