@@ -610,7 +610,6 @@ BOOST_AUTO_TEST_CASE( get_task_to_send )
     spJob.reset();
 
     BOOST_CHECK_EQUAL( sched.GetTaskToSend( workerJob, hostIP, spJob ), false );
-    BOOST_CHECK_EQUAL( (bool)spJob, false );
 }
 
 BOOST_AUTO_TEST_CASE( get_task_to_send_multiple )
@@ -655,6 +654,149 @@ BOOST_AUTO_TEST_CASE( get_task_to_send_multiple )
         BOOST_CHECK( sched.GetTaskToSend( workerJob, hostIP, spJob ) );
         BOOST_CHECK( (bool)spJob );
     }
+}
+
+BOOST_AUTO_TEST_CASE( task_send_completion )
+{
+    workerMgr.AddWorkerHost( "grp", "host1" );
+
+    vector< WorkerPtr > workers;
+    workerMgr.GetWorkers( workers );
+    BOOST_REQUIRE_EQUAL( workers.size(), 1 );
+
+    workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
+    workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
+
+    Job *job( jobMgr.CreateJob(
+                  "{\"script\" : \"simple.py\","
+                  "\"language\" : \"python\","
+                  "\"send_script\" : false,"
+                  "\"priority\" : 4,"
+                  "\"job_timeout\" : 120,"
+                  "\"queue_timeout\" : 60,"
+                  "\"task_timeout\" : 15,"
+                  "\"max_failed_nodes\" : 10,"
+                  "\"num_execution\" : 1,"
+                  "\"max_cluster_cpu\" : -1,"
+                  "\"max_cpu\" : 1,"
+                  "\"exclusive\" : false,"
+                  "\"no_reschedule\" : false}" ) );
+    BOOST_REQUIRE( job );
+    jobMgr.PushJob( job );
+
+    WorkerJob workerJob;
+    std::string hostIP;
+    JobPtr spJob;
+
+    BOOST_CHECK( sched.GetTaskToSend( workerJob, hostIP, spJob ) );
+    BOOST_CHECK( (bool)spJob );
+
+    sched.OnTaskSendCompletion( false, workerJob, hostIP );
+
+    workerJob.Reset();
+    spJob.reset();
+
+    BOOST_CHECK_EQUAL( sched.GetTaskToSend( workerJob, hostIP, spJob ), false );
+
+    const FailedWorkers &failed = sched.GetFailedWorkers();
+    BOOST_CHECK_EQUAL( failed.GetFailedJobsCnt(), 1 );
+}
+
+BOOST_AUTO_TEST_CASE( task_completion_failure )
+{
+    workerMgr.AddWorkerHost( "grp", "host1" );
+
+    vector< WorkerPtr > workers;
+    workerMgr.GetWorkers( workers );
+    BOOST_REQUIRE_EQUAL( workers.size(), 1 );
+
+    workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
+    workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
+
+    Job *job( jobMgr.CreateJob(
+                  "{\"script\" : \"simple.py\","
+                  "\"language\" : \"python\","
+                  "\"send_script\" : false,"
+                  "\"priority\" : 4,"
+                  "\"job_timeout\" : 120,"
+                  "\"queue_timeout\" : 60,"
+                  "\"task_timeout\" : 15,"
+                  "\"max_failed_nodes\" : 10,"
+                  "\"num_execution\" : 1,"
+                  "\"max_cluster_cpu\" : -1,"
+                  "\"max_cpu\" : 1,"
+                  "\"exclusive\" : false,"
+                  "\"no_reschedule\" : false}" ) );
+    BOOST_REQUIRE( job );
+    jobMgr.PushJob( job );
+
+    WorkerJob workerJob;
+    std::string hostIP;
+    JobPtr spJob;
+
+    BOOST_CHECK( sched.GetTaskToSend( workerJob, hostIP, spJob ) );
+    BOOST_CHECK( (bool)spJob );
+
+    std::vector< WorkerTask > tasks;
+    workerJob.GetTasks( tasks );
+    BOOST_REQUIRE_EQUAL( tasks.empty(), false );
+
+    sched.OnTaskCompletion( -1, 10, tasks[0], hostIP ); // -1 means error
+    const FailedWorkers &failed = sched.GetFailedWorkers();
+    BOOST_CHECK_EQUAL( failed.GetFailedJobsCnt(), 1 );
+    BOOST_CHECK_EQUAL( sched.GetNeedReschedule().size(), 1 );
+}
+
+BOOST_AUTO_TEST_CASE( task_completion )
+{
+    workerMgr.AddWorkerHost( "grp", "host1" );
+
+    vector< WorkerPtr > workers;
+    workerMgr.GetWorkers( workers );
+    BOOST_REQUIRE_EQUAL( workers.size(), 1 );
+
+    workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
+    workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
+
+    Job *job( jobMgr.CreateJob(
+                  "{\"script\" : \"simple.py\","
+                  "\"language\" : \"python\","
+                  "\"send_script\" : false,"
+                  "\"priority\" : 4,"
+                  "\"job_timeout\" : 120,"
+                  "\"queue_timeout\" : 60,"
+                  "\"task_timeout\" : 15,"
+                  "\"max_failed_nodes\" : 10,"
+                  "\"num_execution\" : 1,"
+                  "\"max_cluster_cpu\" : -1,"
+                  "\"max_cpu\" : 1,"
+                  "\"exclusive\" : false,"
+                  "\"no_reschedule\" : false}" ) );
+    BOOST_REQUIRE( job );
+    jobMgr.PushJob( job );
+
+    WorkerJob workerJob;
+    std::string hostIP;
+    JobPtr spJob;
+
+    BOOST_CHECK( sched.GetTaskToSend( workerJob, hostIP, spJob ) );
+    BOOST_CHECK( (bool)spJob );
+
+    std::vector< WorkerTask > tasks;
+    workerJob.GetTasks( tasks );
+    BOOST_REQUIRE_EQUAL( tasks.empty(), false );
+
+    sched.OnTaskCompletion( 0, 10, tasks[0], hostIP ); // normal completion
+
+    const Scheduler::IPToNodeState &ipToNodeState = sched.GetNodeState();
+    Scheduler::IPToNodeState::const_iterator it = ipToNodeState.find( "127.0.0.1" );
+    BOOST_REQUIRE( it != ipToNodeState.end() );
+    const NodeState &nodeState = it->second;
+    BOOST_CHECK_EQUAL( nodeState.GetNumFreeCPU(), 2 );
+
+    const FailedWorkers &failed = sched.GetFailedWorkers();
+    BOOST_CHECK_EQUAL( failed.GetFailedJobsCnt(), 0 );
+    BOOST_CHECK( sched.GetNeedReschedule().empty() );
 }
 
 BOOST_AUTO_TEST_SUITE_END()
