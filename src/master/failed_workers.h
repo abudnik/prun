@@ -31,9 +31,9 @@ namespace master {
 class FailedWorkers
 {
 public:
-    void Add( int64_t jobId, const std::string &hostIP )
+    bool Add( int64_t jobId, const std::string &hostIP )
     {
-        failedWorkers_[ jobId ].insert( hostIP );
+        return failedWorkers_[ jobId ].insert( hostIP ).second;
     }
 
     void Add( const WorkerJob &workerJob, const std::string &hostIP )

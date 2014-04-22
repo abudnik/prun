@@ -379,14 +379,21 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
             if ( it == nodeState_.end() )
                 return;
 
-            failedWorkers_.Add( workerJob.GetJobId(), hostIP );
+            if ( failedWorkers_.Add( workerJob.GetJobId(), hostIP ) )
+            {
+                // worker job should be rescheduled to any other node
+                RescheduleJob( w->GetJob() );
 
-            // worker job should be rescheduled to any other node
-            RescheduleJob( w->GetJob() );
-
-            NodeState &nodeState = it->second;
-            nodeState.FreeCPU( workerJob.GetTotalNumTasks() );
-            w->ResetJob();
+                NodeState &nodeState = it->second;
+                nodeState.FreeCPU( workerJob.GetTotalNumTasks() );
+                w->ResetJob();
+            }
+            else
+            {
+                PLOG_WRN( "Scheduler::OnTaskSendCompletion: job already sended" <<
+                          ", jobId=" << workerJob.GetJobId() << ", ip=" << hostIP );
+                return;
+            }
         }
         NotifyAll();
     }
@@ -458,15 +465,23 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
               ", jobId=" << workerTask.GetJobId() <<
               ", taskId=" << workerTask.GetTaskId() << ", ip=" << hostIP );
 
-        failedWorkers_.Add( workerTask.GetJobId(), hostIP );
+        if ( failedWorkers_.Add( workerTask.GetJobId(), hostIP ) )
+        {
+            const WorkerJob &workerJob = w->GetJob();
+            // worker job should be rescheduled to any other node
+            RescheduleJob( workerJob );
 
-        const WorkerJob &workerJob = w->GetJob();
-        // worker job should be rescheduled to any other node
-        RescheduleJob( workerJob );
-
-        NodeState &nodeState = it->second;
-        nodeState.FreeCPU( workerJob.GetTotalNumTasks() );
-        w->ResetJob();
+            NodeState &nodeState = it->second;
+            nodeState.FreeCPU( workerJob.GetTotalNumTasks() );
+            w->ResetJob();
+        }
+        else
+        {
+            PLOG_WRN( "Scheduler::OnTaskCompletion: job already completed" <<
+                      ", jobId=" << workerTask.GetJobId() <<
+                      ", taskId=" << workerTask.GetTaskId() << ", ip=" << hostIP );
+            return;
+        }
     }
 
     NotifyAll();
