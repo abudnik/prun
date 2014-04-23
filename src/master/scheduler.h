@@ -73,6 +73,7 @@ public:
     typedef std::map< std::string, NodeState > IPToNodeState;
     typedef std::list< WorkerTask > TaskList;
     typedef std::map< int64_t, std::set< int > > JobIdToTasks; // job_id -> set(task_id)
+    typedef std::map< int64_t, int > JobIdToExecCnt; // job_id -> number of simultaneously running instances of the job
 
 public:
     Scheduler();
@@ -133,6 +134,7 @@ private:
     ScheduledJobs jobs_;
     JobIdToTasks tasksToSend_;
     TaskList needReschedule_;
+    JobIdToExecCnt simultExecCnt_;
     boost::mutex jobsMut_;
 };
 

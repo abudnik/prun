@@ -172,6 +172,8 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
         JobPtr job;
         if ( jobs_.FindJobByJobId( jobId, job ) )
         {
+            simultExecCnt_[ jobId ] -= workerJob.GetNumTasks( jobId );
+
             size_t failedNodesCnt = failedWorkers_.GetFailedNodesCnt( jobId );
             if ( failedNodesCnt >= (size_t)job->GetMaxFailedNodes() )
             {
@@ -340,7 +342,9 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, JobPtr
             w->GetJob() += workerJob;
             hostIP = w->GetIP();
 
-            nodeState.AllocCPU( workerJob.GetTotalNumTasks() );
+            const int numTasks = workerJob.GetTotalNumTasks();
+            nodeState.AllocCPU( numTasks );
+            simultExecCnt_[ workerJob.GetJobId() ] += numTasks;
             return true;
         }
     }
@@ -381,12 +385,14 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
 
             if ( failedWorkers_.Add( workerJob.GetJobId(), hostIP ) )
             {
-                // worker job should be rescheduled to any other node
-                RescheduleJob( w->GetJob() );
-
+                const int numTasks = workerJob.GetTotalNumTasks();
                 NodeState &nodeState = it->second;
-                nodeState.FreeCPU( workerJob.GetTotalNumTasks() );
-                w->ResetJob();
+                nodeState.FreeCPU( numTasks );
+
+                // worker job should be rescheduled to any other node
+                RescheduleJob( workerJob );
+                WorkerJob &workerJob = w->GetJob();
+                workerJob.DeleteJob( workerJob.GetJobId() );
             }
             else
             {
@@ -436,6 +442,7 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
 
         NodeState &nodeState = it->second;
         nodeState.FreeCPU( 1 );
+        simultExecCnt_[ workerTask.GetJobId() ] -= 1;
 
         jobs_.DecrementJobExecution( workerTask.GetJobId(), 1 );
     }
@@ -467,13 +474,16 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
 
         if ( failedWorkers_.Add( workerTask.GetJobId(), hostIP ) )
         {
-            const WorkerJob &workerJob = w->GetJob();
-            // worker job should be rescheduled to any other node
-            RescheduleJob( workerJob );
+            WorkerJob jobToReschedule;
+            jobToReschedule.AddTask( workerTask.GetJobId(), workerTask.GetTaskId() );
 
             NodeState &nodeState = it->second;
-            nodeState.FreeCPU( workerJob.GetTotalNumTasks() );
-            w->ResetJob();
+            nodeState.FreeCPU( 1 );
+
+            // worker task should be rescheduled to any other node
+            RescheduleJob( jobToReschedule );
+            WorkerJob &workerJob = w->GetJob();
+            workerJob.DeleteTask( workerTask.GetJobId(), workerTask.GetTaskId() );
         }
         else
         {
@@ -604,6 +614,7 @@ void Scheduler::StopPreviousJobs()
 
 void Scheduler::OnRemoveJob( int64_t jobId )
 {
+    simultExecCnt_.erase( jobId );
     failedWorkers_.Delete( jobId );
 }
 
@@ -634,7 +645,8 @@ void Scheduler::StopWorkers( int64_t jobId )
                     workerManager->AddCommand( commandPtr, worker->GetIP() );
                 }
 
-                nodeState.FreeCPU( workerJob.GetNumTasks( jobId ) );
+                const int numTasks = workerJob.GetNumTasks( jobId );
+                nodeState.FreeCPU( numTasks );
                 workerJob.DeleteJob( jobId );
             }
         }
@@ -708,12 +720,27 @@ bool Scheduler::CanAddTaskToWorker( const WorkerJob &workerJob, const WorkerJob 
     }
 
     // max cpu host limit case
-    int maxCPU = job->GetMaxCPU();
-    if ( maxCPU < 0 )
-        return true;
+    const int maxCPU = job->GetMaxCPU();
+    if ( maxCPU > 0 )
+    {
+        int numTasks = workerJob.GetNumTasks( jobId ) + workerPlannedJob.GetNumTasks( jobId );
+        if ( numTasks >= maxCPU )
+            return false;
+    }
 
-    int numTasks = workerJob.GetNumTasks( jobId ) + workerPlannedJob.GetNumTasks( jobId );
-    return numTasks < maxCPU;
+    // max cluster cpu limit case
+    if ( job->GetMaxClusterCPU() > 0 )
+    {
+        JobIdToExecCnt::const_iterator it = simultExecCnt_.find( jobId );
+        if ( it != simultExecCnt_.end() )
+        {
+            const int numClusterCPU = (*it).second + workerPlannedJob.GetNumTasks( jobId );
+            if ( numClusterCPU >= job->GetMaxClusterCPU() )
+                return false;
+        }
+    }
+
+    return true;
 }
 
 int Scheduler::GetNumPlannedExec( const JobPtr &job ) const
@@ -722,15 +749,7 @@ int Scheduler::GetNumPlannedExec( const JobPtr &job ) const
         return job->GetNumExec();
 
     IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
-    int totalCPU = workerManager->GetTotalCPU();
-    int maxClusterCPU = job->GetMaxClusterCPU();
-    int numExec = 1; // init just to suppress compiler warning
-
-    if ( maxClusterCPU <= 0 )
-        numExec = totalCPU;
-    else
-        numExec = std::min( maxClusterCPU, totalCPU );
-
+    int numExec = workerManager->GetTotalCPU();
     if ( numExec < 1 )
         numExec = 1;
     return numExec;

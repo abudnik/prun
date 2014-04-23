@@ -52,10 +52,7 @@ Maximum number of failed nodes whereupon job will be stopped on all workers.
 
 - num_execution
 Integer number of planned job executions. If the value is negative, then the
-number of planned job executions is dependent on max_cluster_cpu property as
-follows: if the value of max_cluster_cpu if negative, then the number of
-planned job executions equals to the total number of cluster CPUs, otherwise
-it equals to MIN( max_cluster_cpu, total_number_cpu ).
+number of planned job executions equals to the total number of cluster CPUs.
 
 - max_cluster_cpu
 Maximum number of simultaneously running instances of the job in the cluster.
