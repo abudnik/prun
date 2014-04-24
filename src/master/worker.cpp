@@ -40,7 +40,13 @@ bool WorkerJob::DeleteTask( int64_t jobId, int taskId )
         {
             tasks.erase( it_tasks );
             if ( tasks.empty() )
+            {
                 jobs_.erase( it );
+                if ( IsExclusive() && jobs_.empty() )
+                {
+                    SetExclusive( false );
+                }
+            }
             return true;
         }
     }
@@ -53,6 +59,10 @@ bool WorkerJob::DeleteJob( int64_t jobId )
     if ( it != jobs_.end() )
     {
         jobs_.erase( it );
+        if ( IsExclusive() && jobs_.empty() )
+        {
+            SetExclusive( false );
+        }
         return true;
     }
     return false;
@@ -156,12 +166,27 @@ WorkerJob &WorkerJob::operator += ( const WorkerJob &workerJob )
         const WorkerTask &task = *it;
         AddTask( task.GetJobId(), task.GetTaskId() );
     }
+    if ( workerJob.IsExclusive() )
+    {
+        SetExclusive( true );
+    }
     return *this;
+}
+
+void WorkerJob::SetExclusive( bool exclusive )
+{
+    exclusive_ = exclusive;
+}
+
+bool WorkerJob::IsExclusive() const
+{
+    return exclusive_;
 }
 
 void WorkerJob::Reset()
 {
     jobs_.clear();
+    exclusive_ = false;
 }
 
 

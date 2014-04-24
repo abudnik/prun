@@ -64,6 +64,8 @@ private:
     typedef std::map< int64_t, Tasks > JobIdToTasks;
 
 public:
+    WorkerJob() : exclusive_( false ) {}
+
     void AddTask( int64_t jobId, int taskId );
 
     bool DeleteTask( int64_t jobId, int taskId );
@@ -90,10 +92,15 @@ public:
 
     WorkerJob &operator += ( const WorkerJob &workerJob );
 
+    void SetExclusive( bool exclusive );
+
+    bool IsExclusive() const;
+
     void Reset();
 
 private:
     JobIdToTasks jobs_;
+    bool exclusive_;
 };
 
 

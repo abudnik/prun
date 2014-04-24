@@ -211,49 +211,47 @@ bool Scheduler::GetReschedJobForWorker( const WorkerPtr &worker, WorkerJob &plan
     int64_t jobId;
     bool foundReschedJob = false;
 
-    if ( !needReschedule_.empty() )
+    TaskList::iterator it = needReschedule_.begin();
+    for( ; it != needReschedule_.end(); )
     {
-        TaskList::iterator it = needReschedule_.begin();
-        for( ; it != needReschedule_.end(); )
+        if ( plannedJob.GetTotalNumTasks() >= numFreeCPU )
+            break;
+
+        const WorkerTask &workerTask = *it;
+
+        if ( !jobs_.FindJobByJobId( workerTask.GetJobId(), job ) ||
+             !CanAddTaskToWorker( worker->GetJob(), plannedJob, workerTask.GetJobId(), job ) )
         {
-            if ( plannedJob.GetTotalNumTasks() >= numFreeCPU )
-                break;
+            ++it;
+            continue;
+        }
 
-            const WorkerTask &workerTask = *it;
-
-            if ( !jobs_.FindJobByJobId( workerTask.GetJobId(), job ) ||
-                 !CanAddTaskToWorker( worker->GetJob(), plannedJob, workerTask.GetJobId(), job ) )
+        if ( foundReschedJob )
+        {
+            if ( workerTask.GetJobId() == jobId )
             {
-                ++it;
+                plannedJob.AddTask( jobId, workerTask.GetTaskId() );
+                needReschedule_.erase( it++ );
                 continue;
             }
-
-            if ( foundReschedJob )
+        }
+        else
+        {
+            jobId = workerTask.GetJobId();
+            if ( !failedWorkers_.IsWorkerFailedJob( worker->GetIP(), jobId ) )
             {
-                if ( workerTask.GetJobId() == jobId )
+                if ( job->IsHostPermitted( worker->GetHost() ) &&
+                     job->IsGroupPermitted( worker->GetGroup() ) )
                 {
+                    foundReschedJob = true;
                     plannedJob.AddTask( jobId, workerTask.GetTaskId() );
+                    plannedJob.SetExclusive( job->IsExclusive() );
                     needReschedule_.erase( it++ );
                     continue;
                 }
             }
-            else
-            {
-                jobId = workerTask.GetJobId();
-                if ( !failedWorkers_.IsWorkerFailedJob( worker->GetIP(), jobId ) )
-                {
-                    if ( job->IsHostPermitted( worker->GetHost() ) &&
-                         job->IsGroupPermitted( worker->GetGroup() ) )
-                    {
-                        foundReschedJob = true;
-                        plannedJob.AddTask( jobId, workerTask.GetTaskId() );
-                        needReschedule_.erase( it++ );
-                        continue;
-                    }
-                }
-            }
-            ++it;
         }
+        ++it;
     }
 
     return foundReschedJob;
@@ -302,6 +300,7 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
 
                 int taskId = *it_task;
                 plannedJob.AddTask( j->GetJobId(), taskId );
+                plannedJob.SetExclusive( j->IsExclusive() );
 
                 tasks.erase( it_task++ );
                 if ( tasks.empty() )
@@ -709,7 +708,7 @@ bool Scheduler::CanAddTaskToWorker( const WorkerJob &workerJob, const WorkerJob 
                                     int64_t jobId, const JobPtr &job ) const
 {
     // job exclusive case
-    if ( job->IsExclusive() )
+    if ( job->IsExclusive() || workerJob.IsExclusive() )
     {
         if ( workerJob.GetNumJobs() > 1 )
             return false;
