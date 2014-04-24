@@ -1124,4 +1124,62 @@ BOOST_AUTO_TEST_CASE( task_completion_max_cpu )
     BOOST_CHECK_EQUAL( tasks.size(), maxCPU );
 }
 
+BOOST_AUTO_TEST_CASE( task_completion_exclusive )
+{
+    workerMgr.AddWorkerHost( "grp", "host1" );
+
+    vector< WorkerPtr > workers;
+    workerMgr.GetWorkers( workers );
+    BOOST_REQUIRE_EQUAL( workers.size(), 1 );
+
+    workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
+    workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
+
+    Job *job( jobMgr.CreateJob(
+                  "{\"script\" : \"simple.py\","
+                  "\"language\" : \"python\","
+                  "\"send_script\" : false,"
+                  "\"priority\" : 4,"
+                  "\"job_timeout\" : 120,"
+                  "\"queue_timeout\" : 60,"
+                  "\"task_timeout\" : 15,"
+                  "\"max_failed_nodes\" : 10,"
+                  "\"num_execution\" : 1,"
+                  "\"max_cluster_cpu\" : -1,"
+                  "\"max_cpu\" : 1,"
+                  "\"exclusive\" : true,"
+                  "\"no_reschedule\" : false}" ) );
+    BOOST_REQUIRE( job );
+    jobMgr.PushJob( job );
+
+    WorkerJob workerJob;
+    string hostIP;
+    JobPtr spJob;
+
+    BOOST_CHECK( sched.GetTaskToSend( workerJob, hostIP, spJob ) );
+    BOOST_CHECK( (bool)spJob );
+
+    job = jobMgr.CreateJob(
+                  "{\"script\" : \"simple.py\","
+                  "\"language\" : \"python\","
+                  "\"send_script\" : false,"
+                  "\"priority\" : 4,"
+                  "\"job_timeout\" : 120,"
+                  "\"queue_timeout\" : 60,"
+                  "\"task_timeout\" : 15,"
+                  "\"max_failed_nodes\" : 10,"
+                  "\"num_execution\" : 1,"
+                  "\"max_cluster_cpu\" : -1,"
+                  "\"max_cpu\" : 1,"
+                  "\"exclusive\" : false,"
+                  "\"no_reschedule\" : false}" );
+    BOOST_REQUIRE( job );
+    jobMgr.PushJob( job );
+
+    workerJob.Reset();
+    spJob.reset();
+
+    BOOST_CHECK_EQUAL( sched.GetTaskToSend( workerJob, hostIP, spJob ), false );
+}
+
 BOOST_AUTO_TEST_SUITE_END()
