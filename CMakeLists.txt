@@ -69,9 +69,10 @@ target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
 
 
 if (Test)
-  set(APP_NAME ptest_unit)
-
   set(TEST_DIR ${SRC_DIR}/test)
+
+
+  set(APP_NAME ptest_unit)
 
   set(SRC_TEST_UNIT_CPP unit.cpp)
   foreach(cpp ${SRC_TEST_UNIT_CPP})
@@ -84,5 +85,21 @@ if (Test)
   endforeach(cpp)
 
   add_executable( ${APP_NAME} ${SRC_TEST_UNIT} )
+  target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lboost_unit_test_framework -lrt -rdynamic )
+
+
+  set(APP_NAME ptest_load)
+
+  set(SRC_TEST_LOAD_CPP load.cpp)
+  foreach(cpp ${SRC_TEST_LOAD_CPP})
+    list(APPEND SRC_TEST_LOAD ${TEST_DIR}/${cpp} )
+  endforeach(cpp)
+
+  set(SRC_TEST_MASTER_CPP job.cpp worker.cpp job_manager.cpp worker_manager.cpp scheduler.cpp timeout_manager.cpp)
+  foreach(cpp ${SRC_TEST_MASTER_CPP})
+    list(APPEND SRC_TEST_LOAD ${MASTER_DIR}/${cpp} )
+  endforeach(cpp)
+
+  add_executable( ${APP_NAME} ${SRC_TEST_LOAD} )
   target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lboost_unit_test_framework -lrt -rdynamic )
 endif()
