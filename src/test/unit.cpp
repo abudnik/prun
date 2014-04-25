@@ -469,6 +469,51 @@ BOOST_AUTO_TEST_CASE( job_delete_all )
     BOOST_CHECK_EQUAL( mgr.PopJob( j ), false );
 }
 
+BOOST_AUTO_TEST_CASE( job_priority )
+{
+    const int numGroups = 5;
+    const int numJobs = 10;
+
+    for( int k = 0; k < numGroups; ++k )
+    {
+        vector< Job * > jobs;
+        for( int i = 0; i < numJobs; ++i )
+        {
+            int priority = i % 10;
+            Job *job = new Job( "", "python", priority, 1, 1, 1, 1,
+                                1, 1, 1, false, false );
+            BOOST_REQUIRE( job );
+            jobs.push_back( job );
+        }
+        random_shuffle( jobs.begin(), jobs.end() );
+        list< JobPtr > jobList;
+
+        for( int i = 0; i < numJobs; ++i )
+        {
+            jobList.push_back( JobPtr( jobs[i] ) );
+        }
+
+        mgr.PushJobs( jobList );
+    }
+
+    int lastPriority, lastGroupId;
+    for( int i = 0; i < numJobs * numGroups; ++i )
+    {
+        JobPtr j;
+        BOOST_CHECK( mgr.PopJob( j ) );
+        BOOST_CHECK( (bool)j );
+
+        if ( i )
+        {
+            BOOST_CHECK_GE( j->GetPriority(), lastPriority );
+            if ( i % numGroups )
+                BOOST_CHECK_GE( j->GetGroupId(), lastGroupId );
+        }
+        lastPriority = j->GetPriority();
+        lastGroupId = j->GetGroupId();
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 ////////////////////////////////////////////////////////////////
