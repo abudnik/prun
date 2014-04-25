@@ -80,39 +80,16 @@ BOOST_AUTO_TEST_CASE( get_task )
     WorkerJob workerJob;
     string hostIP;
     JobPtr spJob;
-    for( int i = 0; i < numJobs; ++i, ++numTasksScheduled )
+    while( sched.GetTaskToSend( workerJob, hostIP, spJob ) )
     {
         workerJob.Reset();
         spJob.reset();
-
-        if ( !sched.GetTaskToSend( workerJob, hostIP, spJob ) )
-            break;
+        ++numTasksScheduled;
     }
 
     BOOST_TEST_MESSAGE( "NUM HOSTS: " << numHosts );
     BOOST_TEST_MESSAGE( "NUM JOBS: " << numJobs );
     BOOST_TEST_MESSAGE( "TASKS SCHEDULED: " << numTasksScheduled );
-
-    /*
-    vector< WorkerTask > tasks;
-    workerJob.GetTasks( tasks );
-    BOOST_REQUIRE_EQUAL( tasks.empty(), false );
-
-    sched.OnTaskCompletion( -1, 10, tasks[0], hostIP ); // task failed
-
-    workerJob.Reset();
-    spJob.reset();
-
-    BOOST_CHECK( sched.GetTaskToSend( workerJob, hostIP2, spJob ) );
-    BOOST_CHECK( (bool)spJob );
-    BOOST_CHECK_NE( hostIP, hostIP2 );
-
-    sched.OnTaskCompletion( -1, 10, tasks[0], hostIP2 ); // task failed once again
-
-    workerJob.Reset();
-    spJob.reset();
-
-    BOOST_CHECK_EQUAL( sched.GetTaskToSend( workerJob, hostIP2, spJob ), false ); // no more avail workers*/
 }
 
 BOOST_AUTO_TEST_SUITE_END()
