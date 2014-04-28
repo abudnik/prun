@@ -39,6 +39,17 @@ public:
     void Add( JobPtr &job, int numExec )
     {
         jobExecutions_[ job->GetJobId() ] = numExec;
+
+        JobComparatorPriority comparator;
+        JobList::iterator it = jobs_.begin();
+        for( ; it != jobs_.end(); ++it )
+        {
+            if ( comparator( *it, job ) )
+            {
+                jobs_.insert( it, job );
+                return;
+            }
+        }
         jobs_.push_back( job );
     }
 
@@ -121,7 +132,13 @@ public:
 
     void Clear()
     {
-        jobs_.clear();
+        JobList jobs( jobs_ );
+        JobList::const_iterator it = jobs.begin();
+        for( ; it != jobs.end(); ++it )
+        {
+            const JobPtr &job = *it;
+            RemoveJob( job->GetJobId(), "timeout" );
+        }
     }
 
 private:

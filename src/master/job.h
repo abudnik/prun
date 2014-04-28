@@ -175,6 +175,21 @@ private:
     boost::function< void (const std::string &method, const boost::property_tree::ptree &params) > callback_;
 };
 
+struct JobComparatorPriority
+{
+    bool operator() ( const JobPtr &a, const JobPtr &b ) const
+    {
+        if ( a->GetPriority() > b->GetPriority() )
+            return true;
+        if ( a->GetPriority() == b->GetPriority() )
+        {
+            if ( a->GetGroupId() > b->GetGroupId() )
+                return true;
+        }
+        return false;
+    }
+};
+
 
 class JobQueue
 {

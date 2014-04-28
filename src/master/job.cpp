@@ -75,21 +75,6 @@ bool Job::IsGroupPermitted( const std::string &group ) const
 }
 
 
-struct JobComparatorPriority
-{
-    bool operator() ( const JobPtr &a, const JobPtr &b ) const
-    {
-        if ( a->GetPriority() > b->GetPriority() )
-            return true;
-        if ( a->GetPriority() == b->GetPriority() )
-        {
-            if ( a->GetGroupId() > b->GetGroupId() )
-                return true;
-        }
-        return false;
-    }
-};
-
 void JobQueueImpl::PushJob( JobPtr &job, int64_t groupId )
 {
     boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
