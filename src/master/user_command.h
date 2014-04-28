@@ -25,10 +25,9 @@ the License.
 
 #include <fstream>
 #include <stdint.h> // int64_t
+#include "job.h"
 
 namespace master {
-
-class Job;
 
 class UserCommand
 {
@@ -50,7 +49,7 @@ public:
 private:
     bool RunJob( std::ifstream &file, const std::string &jobAlias, std::string &result ) const;
     bool RunMetaJob( std::ifstream &file, std::string &result ) const;
-    void PrintJobInfo( const Job *job, std::string &result ) const;
+    void PrintJobInfo( const JobPtr &job, std::string &result ) const;
 };
 
 } // namespace master

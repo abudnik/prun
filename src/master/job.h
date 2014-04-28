@@ -26,7 +26,7 @@ the License.
 #include <list>
 #include <vector>
 #include <boost/weak_ptr.hpp>
-#include <boost/thread/mutex.hpp>
+#include <boost/thread/recursive_mutex.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
@@ -47,6 +47,13 @@ typedef boost::graph_traits<JobGraph>::vertex_descriptor JobVertex;
 
 class Job;
 typedef boost::weak_ptr< Job > JobWeakPtr;
+typedef boost::shared_ptr< Job > JobPtr;
+
+struct IJobGroupEventReceiver
+{
+    virtual void OnJobDependenciesResolved( const JobPtr &job ) = 0;
+};
+typedef IJobGroupEventReceiver *IJobGroupEventReceiverPtr;
 
 class JobGroup
 {
@@ -54,6 +61,8 @@ public:
     typedef boost::property_map< JobGraph, boost::vertex_index_t >::type PropertyMap;
 
 public:
+    JobGroup( IJobGroupEventReceiverPtr &evReceiver );
+
     void OnJobCompletion( const JobVertex &vertex );
 
     JobGraph &GetGraph() { return graph_; }
@@ -63,6 +72,7 @@ public:
 private:
     JobGraph graph_;
     std::vector< JobWeakPtr > indexToJob_;
+    IJobGroupEventReceiverPtr eventReceiver_;
 };
 
 class Job
@@ -165,18 +175,18 @@ private:
     boost::function< void (const std::string &method, const boost::property_tree::ptree &params) > callback_;
 };
 
-typedef boost::shared_ptr< Job > JobPtr;
-
 
 class JobQueue
 {
 public:
     virtual ~JobQueue() {}
 
-    virtual void PushJob( Job *job, int64_t groupId ) = 0;
+    virtual void PushJob( JobPtr &job, int64_t groupId ) = 0;
     virtual void PushJobs( std::list< JobPtr > &jobs, int64_t groupId ) = 0;
 
     virtual bool PopJob( JobPtr &job ) = 0;
+
+    virtual void OnJobDependenciesResolved( const JobPtr &job ) = 0;
 
     virtual bool GetJobById( int64_t jobId, JobPtr &job ) = 0;
 
@@ -188,15 +198,16 @@ public:
 class JobQueueImpl : public JobQueue
 {
     typedef std::map< int64_t, JobPtr > IdToJob;
-    typedef std::list< JobPtr > JobList;
+    typedef std::vector< JobPtr > JobList;
+    typedef std::set< JobPtr > JobSet;
 
 public:
-    JobQueueImpl() : numJobs_( 0 ) {}
-
-    virtual void PushJob( Job *job, int64_t groupId );
+    virtual void PushJob( JobPtr &job, int64_t groupId );
     virtual void PushJobs( std::list< JobPtr > &jobs, int64_t groupId );
 
     virtual bool PopJob( JobPtr &job );
+
+    virtual void OnJobDependenciesResolved( const JobPtr &job );
 
     virtual bool GetJobById( int64_t jobId, JobPtr &job );
 
@@ -205,14 +216,13 @@ public:
     virtual void Clear();
 
 private:
-    void Sort( JobList &jobs );
-    void PrintJobs( const JobList &jobs ) const; // debug only
+    void OnJobDeletion( JobPtr &job ) const;
 
 private:
     JobList jobs_;
+    JobSet delayedJobs_; // jobs with unresolved dependencies
     IdToJob idToJob_;
-    unsigned int numJobs_;
-    boost::mutex jobsMut_;
+    boost::recursive_mutex jobsMut_;
 };
 
 } // namespace master

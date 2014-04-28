@@ -21,7 +21,7 @@ void TestSingleJob( const std::string &filePath )
         jobDescr += line;
 
     IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
-    Job *job = jobManager->CreateJob( jobDescr );
+    JobPtr job( jobManager->CreateJob( jobDescr ) );
     if ( job )
     {
         // add job to job queue

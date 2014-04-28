@@ -76,7 +76,7 @@ bool UserCommand::RunJob( std::ifstream &file, const std::string &jobAlias, std:
             jobDescr += line;
 
         IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
-        Job *job = jobManager->CreateJob( jobDescr );
+        JobPtr job( jobManager->CreateJob( jobDescr ) );
         if ( job )
         {
             job->SetAlias( jobAlias );
@@ -111,7 +111,7 @@ bool UserCommand::RunMetaJob( std::ifstream &file, std::string &result ) const
         std::list< JobPtr >::const_iterator it = jobs.begin();
         for( ; it != jobs.end(); ++it )
         {
-            PrintJobInfo( (*it).get(), result );
+            PrintJobInfo( *it, result );
             ss << result << std::endl;
         }
         ss << "----------------" << std::endl;
@@ -125,7 +125,7 @@ bool UserCommand::RunMetaJob( std::ifstream &file, std::string &result ) const
     return true;
 }
 
-void UserCommand::PrintJobInfo( const Job *job, std::string &result ) const
+void UserCommand::PrintJobInfo( const JobPtr &job, std::string &result ) const
 {
     std::ostringstream ss;
     ss << "jobId = " << job->GetJobId() << ", groupId = " << job->GetGroupId();

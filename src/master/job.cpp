@@ -25,6 +25,10 @@ the License.
 
 namespace master {
 
+JobGroup::JobGroup( IJobGroupEventReceiverPtr &evReceiver )
+: eventReceiver_( evReceiver )
+{}
+
 void JobGroup::OnJobCompletion( const JobVertex &vertex )
 {
     using namespace boost;
@@ -38,6 +42,10 @@ void JobGroup::OnJobCompletion( const JobVertex &vertex )
         {
             int numDeps = job->GetNumDepends();
             job->SetNumDepends( numDeps - 1 );
+            if ( numDeps < 2 )
+            {
+                eventReceiver_->OnJobDependenciesResolved( job );
+            }
         }
     }
 }
@@ -67,33 +75,54 @@ bool Job::IsGroupPermitted( const std::string &group ) const
 }
 
 
-void JobQueueImpl::PushJob( Job *job, int64_t groupId )
+struct JobComparatorPriority
 {
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    bool operator() ( const JobPtr &a, const JobPtr &b ) const
+    {
+        if ( a->GetPriority() > b->GetPriority() )
+            return true;
+        if ( a->GetPriority() == b->GetPriority() )
+        {
+            if ( a->GetGroupId() > b->GetGroupId() )
+                return true;
+        }
+        return false;
+    }
+};
+
+void JobQueueImpl::PushJob( JobPtr &job, int64_t groupId )
+{
+    boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
     job->SetGroupId( groupId );
-    JobPtr j( job );
-    jobs_.push_back( j );
-    idToJob_[ job->GetJobId() ] = j;
-    ++numJobs_;
+    idToJob_[ job->GetJobId() ] = job;
+    jobs_.push_back( job );
+    std::push_heap( jobs_.begin(), jobs_.end(), JobComparatorPriority() );
 }
 
 void JobQueueImpl::PushJobs( std::list< JobPtr > &jobs, int64_t groupId )
 {
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
     std::list< JobPtr >::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
         const JobPtr &job = *it;
         job->SetGroupId( groupId );
-        jobs_.push_back( job );
         idToJob_[ job->GetJobId() ] = job;
-        ++numJobs_;
+        if ( job->GetNumDepends() )
+        {
+            delayedJobs_.insert( job );
+        }
+        else
+        {
+            jobs_.push_back( job );
+            std::push_heap( jobs_.begin(), jobs_.end(), JobComparatorPriority() );
+        }
     }
 }
 
 bool JobQueueImpl::GetJobById( int64_t jobId, JobPtr &job )
 {
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
     IdToJob::const_iterator it = idToJob_.find( jobId );
     if ( it != idToJob_.end() )
     {
@@ -105,42 +134,50 @@ bool JobQueueImpl::GetJobById( int64_t jobId, JobPtr &job )
 
 bool JobQueueImpl::DeleteJob( int64_t jobId )
 {
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
+
+    IdToJob::iterator it = idToJob_.find( jobId );
+    if ( it == idToJob_.end() )
+        return false;
+    JobPtr job( it->second );
+    idToJob_.erase( it );
+
+    OnJobDeletion( job );
 
     {
-        IdToJob::iterator it = idToJob_.find( jobId );
-        if ( it == idToJob_.end() )
-            return false;
-        idToJob_.erase( it );
+        JobList::iterator it = jobs_.begin();
+        for( ; it != jobs_.end(); ++it )
+        {
+            const JobPtr &job = *it;
+            if ( job->GetJobId() == jobId )
+            {
+                jobs_.erase( it );
+                std::make_heap( jobs_.begin(), jobs_.end(), JobComparatorPriority() );
+                return true;
+            }
+        }
     }
 
-    JobList::iterator it = jobs_.begin();
-    for( ; it != jobs_.end(); ++it )
-    {
-        JobPtr &job = *it;
-        if ( job->GetJobId() != jobId )
-            continue;
+    delayedJobs_.erase( job );
+    return true;
+}
 
-        std::ostringstream ss;
-        ss << "================" << std::endl <<
-            "Job deleted from job queue, jobId = " << job->GetJobId() << std::endl <<
-            "completion status: failed" << std::endl <<
-            "================";
+void JobQueueImpl::OnJobDeletion( JobPtr &job ) const
+{
+    std::ostringstream ss;
+    ss << "================" << std::endl <<
+        "Job deleted from job queue, jobId = " << job->GetJobId() << std::endl <<
+        "completion status: failed" << std::endl <<
+        "================";
 
-        PLOG( ss.str() );
+    PLOG( ss.str() );
 
-        boost::property_tree::ptree params;
-        params.put( "job_id", job->GetJobId() );
-        params.put( "user_msg", ss.str() );
+    boost::property_tree::ptree params;
+    params.put( "job_id", job->GetJobId() );
+    params.put( "user_msg", ss.str() );
 
-        job->RunCallback( "on_job_deletion", params );
-        job->ReleaseJobGroup();
-
-        jobs_.erase( it );
-        --numJobs_;
-        return true;
-    }
-    return false;
+    job->RunCallback( "on_job_deletion", params );
+    job->ReleaseJobGroup();
 }
 
 bool JobQueueImpl::DeleteJobGroup( int64_t groupId )
@@ -148,11 +185,18 @@ bool JobQueueImpl::DeleteJobGroup( int64_t groupId )
     JobList jobs;
     bool deleted = false;
     {
-        boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-        JobList::iterator it = jobs_.begin();
+        boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
+        JobList::const_iterator it = jobs_.begin();
         for( ; it != jobs_.end(); ++it )
         {
-            JobPtr &job = *it;
+            const JobPtr &job = *it;
+            if ( job->GetGroupId() == groupId )
+                jobs.push_back( job );
+        }
+        JobSet::const_iterator its = delayedJobs_.begin();
+        for( ; its != delayedJobs_.end(); ++its )
+        {
+            const JobPtr &job = *its;
             if ( job->GetGroupId() == groupId )
                 jobs.push_back( job );
         }
@@ -173,12 +217,10 @@ void JobQueueImpl::Clear()
 {
     JobList jobs;
     {
-        boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-        JobList::iterator it = jobs_.begin();
-        for( ; it != jobs_.end(); ++it )
-        {
-            jobs.push_back( *it );
-        }
+        boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
+        jobs = jobs_;
+        jobs.insert( jobs.end(), delayedJobs_.begin(), delayedJobs_.end() );
+        // std::copy( delayedJobs.begin(), delayedJobs.end(), std::back_inserter( jobs ) ); // less effective
     }
 
     JobList::const_iterator it = jobs.begin();
@@ -191,83 +233,32 @@ void JobQueueImpl::Clear()
 
 bool JobQueueImpl::PopJob( JobPtr &job )
 {
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-    if ( numJobs_ )
+    boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
+    if ( !jobs_.empty() )
     {
-        JobList jobs;
-        Sort( jobs );
-
-        JobList::iterator it = jobs.begin();
-        for( ; it != jobs.end(); ++it )
-        {
-            JobPtr &j = *it;
-            if ( j->GetNumDepends() > 0 )
-                continue;
-
-            JobList::iterator i = jobs_.begin();
-            for( ; i != jobs_.end(); ++i )
-            {
-                if ( j == *i )
-                {
-                    jobs_.erase( i );
-                    break;
-                }
-            }
-
-            idToJob_.erase( j->GetJobId() );
-            --numJobs_;
-            job = j;
-            return true;
-        }
+        job = jobs_.front();
+        std::pop_heap( jobs_.begin(), jobs_.end(), JobComparatorPriority() );
+        jobs_.pop_back();
+        idToJob_.erase( job->GetJobId() );
+        return true;
     }
     return false;
 }
 
-struct JobComparatorPriority
+void JobQueueImpl::OnJobDependenciesResolved( const JobPtr &job )
 {
-    bool operator() ( const JobPtr &a, const JobPtr &b ) const
+    boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
+    JobSet::iterator it = delayedJobs_.find( job );
+    if ( it != delayedJobs_.end() )
     {
-        if ( a->GetPriority() < b->GetPriority() )
-            return true;
-        if ( a->GetPriority() == b->GetPriority() )
-        {
-            if ( a->GetGroupId() < b->GetGroupId() )
-                return true;
-        }
-        return false;
+        jobs_.push_back( job );
+        std::push_heap( jobs_.begin(), jobs_.end(), JobComparatorPriority() );
+        delayedJobs_.erase( it );
     }
-};
-
-void JobQueueImpl::Sort( JobList &jobs )
-{
-    JobList::iterator it = jobs_.begin();
-    for( ; it != jobs_.end(); ++it )
+    else
     {
-        JobPtr &job = *it;
-        if ( job->GetNumDepends() == 0 )
-        {
-            jobs.push_back( job );
-        }
+        PLOG_WRN( "JobQueueImpl::OnJobDependenciesResolved: unknown delayed job, jobId=" << job->GetJobId() );
     }
-
-    // sort jobs by priority, saving group order
-    jobs.sort( JobComparatorPriority() );
-    //PrintJobs( jobs );
-}
-
-void JobQueueImpl::PrintJobs( const JobList &jobs ) const
-{
-    std::ostringstream ss;
-    ss << std::endl;
-    JobList::const_iterator it = jobs.begin();
-    for( ; it != jobs.end(); ++it )
-    {
-        if ( it != jobs.begin() )
-            ss << "," << std::endl;
-        ss << "(priority=" << (*it)->GetPriority() <<
-            ", groupid=" << (*it)->GetGroupId() << ")";
-    }
-    PLOG( ss.str() );
 }
 
 } // namespace master

@@ -269,7 +269,7 @@ BOOST_AUTO_TEST_CASE( job_queue )
 
     for( int i = 0; i < numJobs; ++i )
     {
-        Job *job( mgr.CreateJob(
+        JobPtr job( mgr.CreateJob(
                       "{\"script\" : \"simple.py\","
                       "\"language\" : \"python\","
                       "\"send_script\" : false,"
@@ -305,7 +305,7 @@ BOOST_AUTO_TEST_CASE( job_queue2 )
     list< JobPtr > jobs;
     for( int i = 0; i < numJobs; ++i )
     {
-        Job *job( mgr.CreateJob(
+        JobPtr job( mgr.CreateJob(
                       "{\"script\" : \"simple.py\","
                       "\"language\" : \"python\","
                       "\"send_script\" : false,"
@@ -320,7 +320,7 @@ BOOST_AUTO_TEST_CASE( job_queue2 )
                       "\"exclusive\" : false,"
                       "\"no_reschedule\" : false}" ) );
         BOOST_REQUIRE( job );
-        jobs.push_back( JobPtr( job ) );
+        jobs.push_back( job );
     }
     mgr.PushJobs( jobs );
 
@@ -342,7 +342,7 @@ BOOST_AUTO_TEST_CASE( job_get_by_id )
     list< JobPtr > jobs;
     for( int i = 0; i < numJobs; ++i )
     {
-        Job *job( mgr.CreateJob(
+        JobPtr job( mgr.CreateJob(
                       "{\"script\" : \"simple.py\","
                       "\"language\" : \"python\","
                       "\"send_script\" : false,"
@@ -357,7 +357,7 @@ BOOST_AUTO_TEST_CASE( job_get_by_id )
                       "\"exclusive\" : false,"
                       "\"no_reschedule\" : false}" ) );
         BOOST_REQUIRE( job );
-        jobs.push_back( JobPtr( job ) );
+        jobs.push_back( job );
     }
     mgr.PushJobs( jobs );
 
@@ -377,7 +377,7 @@ BOOST_AUTO_TEST_CASE( job_delete_by_id )
     list< JobPtr > jobs;
     for( int i = 0; i < numJobs; ++i )
     {
-        Job *job( mgr.CreateJob(
+        JobPtr job( mgr.CreateJob(
                       "{\"script\" : \"simple.py\","
                       "\"language\" : \"python\","
                       "\"send_script\" : false,"
@@ -392,7 +392,7 @@ BOOST_AUTO_TEST_CASE( job_delete_by_id )
                       "\"exclusive\" : false,"
                       "\"no_reschedule\" : false}" ) );
         BOOST_REQUIRE( job );
-        jobs.push_back( JobPtr( job ) );
+        jobs.push_back( job );
     }
     mgr.PushJobs( jobs );
 
@@ -412,7 +412,7 @@ BOOST_AUTO_TEST_CASE( job_group_delete )
     list< JobPtr > jobs;
     for( int i = 0; i < numJobs; ++i )
     {
-        Job *job( mgr.CreateJob(
+        JobPtr job( mgr.CreateJob(
                       "{\"script\" : \"simple.py\","
                       "\"language\" : \"python\","
                       "\"send_script\" : false,"
@@ -427,7 +427,7 @@ BOOST_AUTO_TEST_CASE( job_group_delete )
                       "\"exclusive\" : false,"
                       "\"no_reschedule\" : false}" ) );
         BOOST_REQUIRE( job );
-        jobs.push_back( JobPtr( job ) );
+        jobs.push_back( job );
     }
     mgr.PushJobs( jobs );
 
@@ -446,7 +446,7 @@ BOOST_AUTO_TEST_CASE( job_delete_all )
 
     for( int i = 0; i < numJobs; ++i )
     {
-        Job *job( mgr.CreateJob(
+        JobPtr job( mgr.CreateJob(
                       "{\"script\" : \"simple.py\","
                       "\"language\" : \"python\","
                       "\"send_script\" : false,"
@@ -476,12 +476,12 @@ BOOST_AUTO_TEST_CASE( job_priority )
 
     for( int k = 0; k < numGroups; ++k )
     {
-        vector< Job * > jobs;
+        vector< JobPtr > jobs;
         for( int i = 0; i < numJobs; ++i )
         {
             int priority = i % 10;
-            Job *job = new Job( "", "python", priority, 1, 1, 1, 1,
-                                1, 1, 1, false, false );
+            JobPtr job( new Job( "", "python", priority, 1, 1, 1, 1,
+                                 1, 1, 1, false, false ) );
             BOOST_REQUIRE( job );
             jobs.push_back( job );
         }
@@ -594,7 +594,7 @@ BOOST_AUTO_TEST_CASE( on_new_job )
 
     for( int i = 0; i < numJobs; ++i )
     {
-        Job *job( jobMgr.CreateJob(
+        JobPtr job( jobMgr.CreateJob(
                       "{\"script\" : \"simple.py\","
                       "\"language\" : \"python\","
                       "\"send_script\" : false,"
@@ -627,7 +627,7 @@ BOOST_AUTO_TEST_CASE( get_task_to_send )
     workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
     workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -672,7 +672,7 @@ BOOST_AUTO_TEST_CASE( get_task_to_send_multiple )
 
     for( int i = 0; i < numJobs; ++i )
     {
-        Job *job( jobMgr.CreateJob(
+        JobPtr job( jobMgr.CreateJob(
                       "{\"script\" : \"simple.py\","
                       "\"language\" : \"python\","
                       "\"send_script\" : false,"
@@ -712,7 +712,7 @@ BOOST_AUTO_TEST_CASE( task_send_completion )
     workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
     workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -758,7 +758,7 @@ BOOST_AUTO_TEST_CASE( task_completion_failure )
     workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
     workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -803,7 +803,7 @@ BOOST_AUTO_TEST_CASE( task_completion )
     workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
     workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -858,7 +858,7 @@ BOOST_AUTO_TEST_CASE( task_completion_reschedule )
     workerMgr.SetWorkerIP( workers[1], "127.0.0.2" );
     workerMgr.OnNodePingResponse( "127.0.0.2", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -917,7 +917,7 @@ BOOST_AUTO_TEST_CASE( task_completion_reschedule_exclusive )
     workerMgr.SetWorkerIP( workers[1], "127.0.0.2" );
     workerMgr.OnNodePingResponse( "127.0.0.2", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -954,7 +954,7 @@ BOOST_AUTO_TEST_CASE( task_completion_reschedule_exclusive )
     BOOST_CHECK( (bool)spJob );
     BOOST_CHECK_NE( hostIP, hostIP2 );
 
-    job = jobMgr.CreateJob(
+    job.reset( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -967,7 +967,7 @@ BOOST_AUTO_TEST_CASE( task_completion_reschedule_exclusive )
                   "\"max_cluster_cpu\" : -1,"
                   "\"max_cpu\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" );
+                  "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -999,7 +999,7 @@ BOOST_AUTO_TEST_CASE( task_completion_no_reschedule )
     workerMgr.SetWorkerIP( workers[1], "127.0.0.2" );
     workerMgr.OnNodePingResponse( "127.0.0.2", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1052,7 +1052,7 @@ BOOST_AUTO_TEST_CASE( task_completion_max_failed_nodes )
     workerMgr.SetWorkerIP( workers[1], "127.0.0.2" );
     workerMgr.OnNodePingResponse( "127.0.0.2", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1107,7 +1107,7 @@ BOOST_AUTO_TEST_CASE( task_completion_num_executions )
     workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
     workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1167,7 +1167,7 @@ BOOST_AUTO_TEST_CASE( task_completion_max_cluster_cpu )
     workerMgr.SetWorkerIP( workers[1], "127.0.0.2" );
     workerMgr.OnNodePingResponse( "127.0.0.2", numCPU, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1220,7 +1220,7 @@ BOOST_AUTO_TEST_CASE( task_completion_max_cpu )
     workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
     workerMgr.OnNodePingResponse( "127.0.0.1", numCPU, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1263,7 +1263,7 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive ) // 1st job - exclusive, 2nd jo
     workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
     workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1287,7 +1287,7 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive ) // 1st job - exclusive, 2nd jo
     BOOST_CHECK( sched.GetTaskToSend( workerJob, hostIP, spJob ) );
     BOOST_CHECK( (bool)spJob );
 
-    job = jobMgr.CreateJob(
+    job.reset( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1300,7 +1300,7 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive ) // 1st job - exclusive, 2nd jo
                   "\"max_cluster_cpu\" : -1,"
                   "\"max_cpu\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" );
+                  "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -1321,7 +1321,7 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive2 ) // 1st job - not exclusive, 2
     workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
     workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1345,7 +1345,7 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive2 ) // 1st job - not exclusive, 2
     BOOST_CHECK( sched.GetTaskToSend( workerJob, hostIP, spJob ) );
     BOOST_CHECK( (bool)spJob );
 
-    job = jobMgr.CreateJob(
+    job.reset( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1358,7 +1358,7 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive2 ) // 1st job - not exclusive, 2
                   "\"max_cluster_cpu\" : -1,"
                   "\"max_cpu\" : 1,"
                   "\"exclusive\" : true,"
-                  "\"no_reschedule\" : false}" );
+                  "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -1379,7 +1379,7 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive3 ) // 1st _completed_ job - excl
     workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
     workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1413,7 +1413,7 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive3 ) // 1st _completed_ job - excl
         sched.OnTaskCompletion( 0, 10, *it, hostIP );
     }
 
-    job = jobMgr.CreateJob(
+    job.reset( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1426,7 +1426,7 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive3 ) // 1st _completed_ job - excl
                   "\"max_cluster_cpu\" : -1,"
                   "\"max_cpu\" : 1,"
                   "\"exclusive\" : true,"
-                  "\"no_reschedule\" : false}" );
+                  "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -1451,7 +1451,7 @@ BOOST_AUTO_TEST_CASE( task_completion_delete_worker )
     workerMgr.SetWorkerIP( workers[1], "127.0.0.2" );
     workerMgr.OnNodePingResponse( "127.0.0.2", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1496,7 +1496,7 @@ BOOST_AUTO_TEST_CASE( on_task_timeout )
     workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
     workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1543,7 +1543,7 @@ BOOST_AUTO_TEST_CASE( on_task_timeout_after_completion )
     workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
     workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1595,7 +1595,7 @@ BOOST_AUTO_TEST_CASE( on_job_timeout )
     workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
     workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1635,7 +1635,7 @@ BOOST_AUTO_TEST_CASE( stop_job )
     workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
     workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
 
-    Job *job( jobMgr.CreateJob(
+    JobPtr job( jobMgr.CreateJob(
                   "{\"script\" : \"simple.py\","
                   "\"language\" : \"python\","
                   "\"send_script\" : false,"
@@ -1679,7 +1679,7 @@ BOOST_AUTO_TEST_CASE( stop_all_jobs )
 
     for( int i = 0; i < numJobs; ++i )
     {
-        Job *job( jobMgr.CreateJob(
+        JobPtr job( jobMgr.CreateJob(
                       "{\"script\" : \"simple.py\","
                       "\"language\" : \"python\","
                       "\"send_script\" : false,"

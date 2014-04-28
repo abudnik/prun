@@ -84,7 +84,7 @@ Job *JobManager::CreateJob( const std::string &job_description ) const
     return CreateJob( ptree );
 }
 
-void JobManager::CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs ) const
+void JobManager::CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs )
 {
     std::istringstream ss( meta_description );
     std::string line;
@@ -99,7 +99,8 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
     int index = 0;
     std::map< std::string, int > jobFileToIndex;
 
-    boost::shared_ptr< JobGroup > jobGroup( new JobGroup() );
+    IJobGroupEventReceiverPtr evReceiverPtr = static_cast< IJobGroupEventReceiver * >( this );
+    boost::shared_ptr< JobGroup > jobGroup( new JobGroup( evReceiverPtr ) );
     std::vector< JobWeakPtr > &indexToJob = jobGroup->GetIndexToJob();
 
     // parse job files 
@@ -151,7 +152,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
     }
 }
 
-void JobManager::PushJob( Job *job )
+void JobManager::PushJob( JobPtr &job )
 {
     PLOG( "push job" );
     jobs_->PushJob( job, numJobGroups_++ );
@@ -200,6 +201,11 @@ void JobManager::DeleteAllJobs()
 bool JobManager::PopJob( JobPtr &job )
 {
     return jobs_->PopJob( job );
+}
+
+void JobManager::OnJobDependenciesResolved( const JobPtr &job )
+{
+    jobs_->OnJobDependenciesResolved( job );
 }
 
 JobManager &JobManager::SetTimeoutManager( ITimeoutManager *timeoutManager )

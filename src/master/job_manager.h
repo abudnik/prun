@@ -47,8 +47,8 @@ struct ITimeoutManager;
 struct IJobManager
 {
     virtual Job *CreateJob( const std::string &job_description ) const = 0;
-    virtual void CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs ) const = 0;
-    virtual void PushJob( Job *job ) = 0;
+    virtual void CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs ) = 0;
+    virtual void PushJob( JobPtr &job ) = 0;
     virtual void PushJobs( std::list< JobPtr > &jobs ) = 0;
 
     virtual bool GetJobById( int64_t jobId, JobPtr &job ) = 0;
@@ -62,14 +62,15 @@ struct IJobManager
     virtual const std::string &GetJobsDir() const = 0;
 };
 
-class JobManager : public IJobManager
+class JobManager : public IJobManager, public IJobGroupEventReceiver
 {
 public:
     JobManager();
 
+    // IJobManager
     virtual Job *CreateJob( const std::string &job_description ) const;
-    virtual void CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs ) const;
-    virtual void PushJob( Job *job );
+    virtual void CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs );
+    virtual void PushJob( JobPtr &job );
     virtual void PushJobs( std::list< JobPtr > &jobs );
 
     virtual bool GetJobById( int64_t jobId, JobPtr &job );
@@ -81,6 +82,9 @@ public:
 
     virtual const std::string &GetMasterId() const { return masterId_; }
     virtual const std::string &GetJobsDir() const { return jobsDir_; }
+
+    // IJobGroupEventReceiver
+    virtual void OnJobDependenciesResolved( const JobPtr &job );
 
     JobManager &SetTimeoutManager( ITimeoutManager *timeoutManager );
     JobManager &SetMasterId( const std::string &masterId );
