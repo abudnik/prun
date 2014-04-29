@@ -23,7 +23,7 @@ the License.
 #ifndef __SCHEDULED_JOBS_H
 #define __SCHEDULED_JOBS_H
 
-#include <list>
+#include <set>
 #include <map>
 #include "job.h"
 #include "common/log.h"
@@ -32,43 +32,39 @@ namespace master {
 
 class ScheduledJobs
 {
+private:
+    typedef std::map< int64_t, int > IdToJobExec;
+
 public:
-    typedef std::list< JobPtr > JobList;
+    typedef std::multiset< JobPtr, JobComparatorPriority > JobQueue;
 
 public:
     void Add( JobPtr &job, int numExec )
     {
         jobExecutions_[ job->GetJobId() ] = numExec;
-
-        JobComparatorPriority comparator;
-        JobList::iterator it = jobs_.begin();
-        for( ; it != jobs_.end(); ++it )
-        {
-            if ( comparator( *it, job ) )
-            {
-                jobs_.insert( it, job );
-                return;
-            }
-        }
-        jobs_.push_back( job );
+        jobs_.insert( job );
     }
 
     void DecrementJobExecution( int64_t jobId, int numTasks )
     {
-        int numExecution = jobExecutions_[ jobId ] - numTasks;
-        jobExecutions_[ jobId ] = numExecution;
-        if ( numExecution < 1 )
+        IdToJobExec::iterator it = jobExecutions_.find( jobId );
+        if ( it != jobExecutions_.end() )
         {
-            RemoveJob( jobId, "success" );
+            const int numExecution = it->second - numTasks;
+            it->second = numExecution;
+            if ( numExecution < 1 )
+            {
+                RemoveJob( jobId, "success" );
+            }
         }
     }
 
-    bool FindJobByJobId( int64_t jobId, JobPtr &job )
+    bool FindJobByJobId( int64_t jobId, JobPtr &job ) const
     {
-        JobList::iterator it = jobs_.begin();
+        JobQueue::const_iterator it = jobs_.begin();
         for( ; it != jobs_.end(); ++it )
         {
-            JobPtr &j = *it;
+            const JobPtr &j = *it;
             if ( j->GetJobId() == jobId )
             {
                 job = j;
@@ -78,12 +74,12 @@ public:
         return false;
     }
 
-    void GetJobGroup( int64_t groupId, std::list< JobPtr > &jobs )
+    void GetJobGroup( int64_t groupId, std::list< JobPtr > &jobs ) const
     {
-        JobList::iterator it = jobs_.begin();
+        JobQueue::const_iterator it = jobs_.begin();
         for( ; it != jobs_.end(); ++it )
         {
-            JobPtr &job = *it;
+            const JobPtr &job = *it;
             if ( job->GetGroupId() == groupId )
                 jobs.push_back( job );
         }
@@ -91,7 +87,7 @@ public:
 
     int GetNumExec( int64_t jobId ) const
     {
-        std::map< int64_t, int >::const_iterator it = jobExecutions_.find( jobId );
+        IdToJobExec::const_iterator it = jobExecutions_.find( jobId );
         if ( it != jobExecutions_.end() )
         {
             return it->second;
@@ -100,7 +96,7 @@ public:
     }
 
     size_t GetNumJobs() const { return jobs_.size(); }
-    const JobList &GetJobList() const { return jobs_; }
+    const JobQueue &GetJobQueue() const { return jobs_; }
 
     template< typename T >
     void SetOnRemoveCallback( T *obj, void (T::*f)( int64_t jobId ) )
@@ -114,10 +110,10 @@ public:
             onRemoveCallback_( jobId );
 
         jobExecutions_.erase( jobId );
-        JobList::iterator it = jobs_.begin();
+        JobQueue::iterator it = jobs_.begin();
         for( ; it != jobs_.end(); ++it )
         {
-            JobPtr &job = *it;
+            const JobPtr &job = *it;
             if ( job->GetJobId() == jobId )
             {
                 RunJobCallback( job, completionStatus );
@@ -132,8 +128,8 @@ public:
 
     void Clear()
     {
-        JobList jobs( jobs_ );
-        JobList::const_iterator it = jobs.begin();
+        JobQueue jobs( jobs_ );
+        JobQueue::const_iterator it = jobs.begin();
         for( ; it != jobs.end(); ++it )
         {
             const JobPtr &job = *it;
@@ -142,7 +138,7 @@ public:
     }
 
 private:
-    void RunJobCallback( JobPtr &job, const char *completionStatus )
+    void RunJobCallback( const JobPtr &job, const char *completionStatus )
     {
         std::ostringstream ss;
         ss << std::endl << "================" << std::endl <<
@@ -160,8 +156,8 @@ private:
     }
 
 private:
-    JobList jobs_;
-    std::map< int64_t, int > jobExecutions_; // job_id -> num job remaining executions (== 0, if job execution completed)
+    JobQueue jobs_;
+    IdToJobExec jobExecutions_; // job_id -> num job remaining executions (== 0, if job execution completed)
     boost::function< void (int64_t) > onRemoveCallback_;
 };
 

@@ -101,9 +101,9 @@ void JobInfo::PrintJobInfo( std::string &info, Scheduler &scheduler, int64_t job
 void AllJobInfo::Visit( Scheduler &scheduler )
 {
     const ScheduledJobs &schedJobs = scheduler.GetScheduledJobs();
-    const ScheduledJobs::JobList &jobs = schedJobs.GetJobList();
+    const ScheduledJobs::JobQueue &jobs = schedJobs.GetJobQueue();
 
-    ScheduledJobs::JobList::const_iterator it = jobs.begin();
+    ScheduledJobs::JobQueue::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
         const JobPtr &job = *it;
@@ -135,8 +135,8 @@ void Statistics::Visit( Scheduler &scheduler )
         "need reschedule = " << needReschedule.size() << std::endl;
 
     ss << "executing jobs: {";
-    const ScheduledJobs::JobList &jobs = schedJobs.GetJobList();
-    ScheduledJobs::JobList::const_iterator it = jobs.begin();
+    const ScheduledJobs::JobQueue &jobs = schedJobs.GetJobQueue();
+    ScheduledJobs::JobQueue::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
         if ( it != jobs.begin() )

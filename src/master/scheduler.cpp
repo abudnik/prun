@@ -262,8 +262,8 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
     bool foundReschedJob = GetReschedJobForWorker( worker, plannedJob, job, numFreeCPU );
     int64_t jobId = plannedJob.GetJobId();
 
-    const ScheduledJobs::JobList &jobs = jobs_.GetJobList();
-    ScheduledJobs::JobList::const_iterator it = jobs.begin();
+    const ScheduledJobs::JobQueue &jobs = jobs_.GetJobQueue();
+    ScheduledJobs::JobQueue::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
         const JobPtr &j = *it;
@@ -564,12 +564,12 @@ void Scheduler::StopJobGroup( int64_t groupId )
 
 void Scheduler::StopAllJobs()
 {
-    ScheduledJobs::JobList jobs;
+    ScheduledJobs::JobQueue jobs;
     {
         boost::mutex::scoped_lock scoped_lock( jobsMut_ );
-        jobs = jobs_.GetJobList();
+        jobs = jobs_.GetJobQueue();
     }
-    ScheduledJobs::JobList::const_iterator it = jobs.begin();
+    ScheduledJobs::JobQueue::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
         const JobPtr &job = *it;
