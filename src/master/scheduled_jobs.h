@@ -30,19 +30,41 @@ the License.
 
 namespace master {
 
+class JobState
+{
+public:
+    JobState( JobPtr &job ) : job_( job ), sendedCompletely_( false ) {}
+    JobState() : sendedCompletely_( false ) {}
+
+    const JobPtr &GetJob() const { return job_; }
+
+    bool IsSendedCompletely() const { return sendedCompletely_; }
+    void SetSendedCompletely( bool v ) { sendedCompletely_ = v; }
+
+    bool operator < ( const JobState &jobState ) const
+    {
+        static JobComparatorPriority comparator;
+        return comparator( jobState.GetJob(), job_ );
+    }
+
+private:
+    JobPtr job_;
+    bool sendedCompletely_;
+};
+
 class ScheduledJobs
 {
 private:
     typedef std::map< int64_t, int > IdToJobExec;
 
 public:
-    typedef std::multiset< JobPtr, JobComparatorPriority > JobQueue;
+    typedef std::multiset< JobState > JobQueue;
 
 public:
     void Add( JobPtr &job, int numExec )
     {
         jobExecutions_[ job->GetJobId() ] = numExec;
-        jobs_.insert( job );
+        jobs_.insert( JobState( job ) );
     }
 
     void DecrementJobExecution( int64_t jobId, int numTasks )
@@ -64,7 +86,7 @@ public:
         JobQueue::const_iterator it = jobs_.begin();
         for( ; it != jobs_.end(); ++it )
         {
-            const JobPtr &j = *it;
+            const JobPtr &j = (*it).GetJob();
             if ( j->GetJobId() == jobId )
             {
                 job = j;
@@ -79,7 +101,7 @@ public:
         JobQueue::const_iterator it = jobs_.begin();
         for( ; it != jobs_.end(); ++it )
         {
-            const JobPtr &job = *it;
+            const JobPtr &job = (*it).GetJob();
             if ( job->GetGroupId() == groupId )
                 jobs.push_back( job );
         }
@@ -113,7 +135,7 @@ public:
         JobQueue::iterator it = jobs_.begin();
         for( ; it != jobs_.end(); ++it )
         {
-            const JobPtr &job = *it;
+            const JobPtr &job = (*it).GetJob();
             if ( job->GetJobId() == jobId )
             {
                 RunJobCallback( job, completionStatus );
@@ -132,7 +154,7 @@ public:
         JobQueue::const_iterator it = jobs.begin();
         for( ; it != jobs.end(); ++it )
         {
-            const JobPtr &job = *it;
+            const JobPtr &job = (*it).GetJob();
             RemoveJob( job->GetJobId(), "timeout" );
         }
     }

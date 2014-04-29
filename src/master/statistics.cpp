@@ -106,7 +106,7 @@ void AllJobInfo::Visit( Scheduler &scheduler )
     ScheduledJobs::JobQueue::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
-        const JobPtr &job = *it;
+        const JobPtr &job = (*it).GetJob();
         std::string jobInfo;
         JobInfo::PrintJobInfo( jobInfo, scheduler, job->GetJobId() );
         info_ += jobInfo + '\n';
@@ -141,7 +141,7 @@ void Statistics::Visit( Scheduler &scheduler )
     {
         if ( it != jobs.begin() )
             ss << ", ";
-        const JobPtr &job = *it;
+        const JobPtr &job = (*it).GetJob();
         ss << job->GetJobId();
     }
     ss << "}" << std::endl;

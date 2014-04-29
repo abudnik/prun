@@ -266,7 +266,11 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
     ScheduledJobs::JobQueue::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
-        const JobPtr &j = *it;
+        JobState &jobState = const_cast< JobState & >(*it);
+        if ( jobState.IsSendedCompletely() )
+            continue;
+
+        const JobPtr &j = jobState.GetJob();
 
         // plannedJob tasks must belong to the only one job,
         // so jobId must be the same
@@ -305,6 +309,7 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
                 tasks.erase( it_task++ );
                 if ( tasks.empty() )
                 {
+                    jobState.SetSendedCompletely( true );
                     tasksToSend_.erase( it );
                     break;
                 }
@@ -572,7 +577,7 @@ void Scheduler::StopAllJobs()
     ScheduledJobs::JobQueue::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
-        const JobPtr &job = *it;
+        const JobPtr &job = (*it).GetJob();
         StopJob( job->GetJobId() );
     }
 
