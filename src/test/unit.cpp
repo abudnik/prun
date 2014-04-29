@@ -1796,19 +1796,39 @@ BOOST_AUTO_TEST_CASE( jobs_get_group )
     BOOST_CHECK_EQUAL( jobs.size(), numJobs / 2 );
 }
 
-BOOST_AUTO_TEST_CASE( jobs_clear )
+BOOST_AUTO_TEST_CASE( jobs_priority )
 {
+    const int numGroups = 5;
     const int numJobs = 10;
 
-    for( int i = 0; i < numJobs; ++i )
+    for( int k = 0; k < numGroups; ++k )
     {
-        JobPtr job( new Job( "", "python", 4, 1, 1, 1, 1,
-                             1, 1, 1, false, false ) );
-        Add( job, i + 1 );
+        for( int i = 0; i < numJobs; ++i )
+        {
+            int priority = i % 10;
+            JobPtr job( new Job( "", "python", priority, 1, 1, 1, 1,
+                                 1, 1, 1, false, false ) );
+            job->SetGroupId( k );
+            Add( job, i + 1 );
+        }
     }
 
-    Clear();
-    BOOST_CHECK_EQUAL( GetNumJobs(), 0 );
+    const ScheduledJobs::JobQueue &jobs = GetJobQueue();
+    ScheduledJobs::JobQueue::const_iterator it = jobs.begin();
+
+    int lastPriority, lastGroupId;
+    for( int i = 0; it != jobs.end(); ++it, ++i )
+    {
+        const JobPtr &j = (*it).GetJob();
+        if ( i )
+        {
+            BOOST_CHECK_GE( j->GetPriority(), lastPriority );
+            if ( i % numGroups )
+                BOOST_CHECK_GE( j->GetGroupId(), lastGroupId );
+        }
+        lastPriority = j->GetPriority();
+        lastGroupId = j->GetGroupId();
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
