@@ -32,6 +32,7 @@ the License.
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/noncopyable.hpp>
 #include <unistd.h>
 #include <csignal>
 #include <sys/wait.h>
@@ -106,12 +107,12 @@ class NoAction : public Action
                           ExecContextPtr &execContex ) {}
 };
 
-class PrExecConnection : public boost::enable_shared_from_this< PrExecConnection >
+class PrExecConnection
 {
     typedef boost::array< char, 2048 > BufferType;
 
 public:
-    typedef boost::shared_ptr< PrExecConnection > connection_ptr;
+    typedef PrExecConnection *connection_ptr;
 
 public:
     PrExecConnection( ExecContextPtr &execContext )
@@ -147,6 +148,7 @@ public:
                 execContext_->GetCommDescrPool()
             );
             commDescrPool->FreeCommDescr();
+            socket_ = NULL;
         }
     }
 
@@ -162,11 +164,7 @@ public:
 
         try
         {
-            boost::asio::async_write( *socket_,
-                                      boost::asio::buffer( message ),
-                                      boost::bind( &PrExecConnection::HandleWrite, shared_from_this(),
-                                                   boost::asio::placeholders::error,
-                                                   boost::asio::placeholders::bytes_transferred ) );
+            boost::asio::write( *socket_, boost::asio::buffer( message ), boost::asio::transfer_all() );
 
             boost::system::error_code error;
             bool firstRead = true;
@@ -209,14 +207,6 @@ public:
     const boost::property_tree::ptree &GetResponsePtree() const { return responsePtree_; }
 
 private:
-    void HandleWrite( const boost::system::error_code& error, size_t bytes_transferred )
-    {
-        if ( error )
-        {
-            PLOG_ERR( "PrExecConnection::HandleWrite error=" << error.message() );
-        }
-    }
-
     void HandleResponse()
     {
         std::istringstream ss( response_.GetString() );
@@ -233,6 +223,30 @@ private:
     ExecContextPtr &execContext_;
     int errCode_;
 };
+
+class PrExecConnectionHolder : private boost::noncopyable
+{
+public:
+    PrExecConnectionHolder( PrExecConnection::connection_ptr con )
+    : connection_( con )
+    {}
+
+    ~PrExecConnectionHolder()
+    {
+        try
+        {
+            connection_->Release();
+        }
+        catch( ... )
+        {
+            PLOG_ERR( "PrExecConnectionHolder::~PrExecConnectionHolder: caught unexpected exception" );
+        }
+    }
+
+private:
+    PrExecConnection::connection_ptr connection_;
+};
+
 
 class ExecuteTask : public Action
 {
@@ -374,8 +388,9 @@ public:
     void DoSend( const boost::shared_ptr< JobExec > &job, int taskId,
                  ExecContextPtr &execContext )
     {
-        PrExecConnection::connection_ptr prExecConnection( new PrExecConnection( execContext ) );
-        if ( !prExecConnection->Init() )
+        PrExecConnection prExecConnection( execContext );
+        PrExecConnectionHolder connectionHolder( &prExecConnection );
+        if ( !prExecConnection.Init() )
             return;
 
         ExecInfo execInfo;
@@ -423,7 +438,7 @@ public:
         ExecTable &pendingTable = execContext->GetPendingTable();
         if ( pendingTable.Delete( job->GetJobId(), taskId, job->GetMasterId() ) )
         {
-            errCode = prExecConnection->Send( ss2.str() );
+            errCode = prExecConnection.Send( ss2.str() );
         }
         else
         {
@@ -431,11 +446,11 @@ public:
         }
         job->OnError( errCode );
 
-        prExecConnection->Release();
+        prExecConnection.Release();
 
         // save completion results and ping master
         execTable.Delete( job->GetJobId(), taskId, job->GetMasterId() );
-        const boost::property_tree::ptree &responsePtree = prExecConnection->GetResponsePtree();
+        const boost::property_tree::ptree &responsePtree = prExecConnection.GetResponsePtree();
         int64_t execTime = 0;
         try
         {
@@ -474,8 +489,9 @@ class StopTask : public Action
             return;
         }
 
-        PrExecConnection::connection_ptr prExecConnection( new PrExecConnection( execContext ) );
-        if ( !prExecConnection->Init() )
+        PrExecConnection prExecConnection( execContext );
+        PrExecConnectionHolder connectionHolder( &prExecConnection );
+        if ( !prExecConnection.Init() )
             return;
 
         // prepare json command
@@ -491,10 +507,8 @@ class StopTask : public Action
 
         ss2 << ss.str().size() << '\n' << ss.str();
 
-        int errCode = prExecConnection->Send( ss2.str() );
+        int errCode = prExecConnection.Send( ss2.str() );
         job->OnError( errCode );
-
-        prExecConnection->Release();
     }
 };
 
@@ -507,8 +521,9 @@ class StopPreviousJobs : public Action
             boost::dynamic_pointer_cast< JobStopPreviousTask >( j )
         );
 
-        PrExecConnection::connection_ptr prExecConnection( new PrExecConnection( execContext ) );
-        if ( !prExecConnection->Init() )
+        PrExecConnection prExecConnection( execContext );
+        PrExecConnectionHolder connectionHolder( &prExecConnection );
+        if ( !prExecConnection.Init() )
             return;
 
         // prepare json command
@@ -522,10 +537,8 @@ class StopPreviousJobs : public Action
 
         ss2 << ss.str().size() << '\n' << ss.str();
 
-        int errCode = prExecConnection->Send( ss2.str() );
+        int errCode = prExecConnection.Send( ss2.str() );
         job->OnError( errCode );
-
-        prExecConnection->Release();
     }
 };
 
@@ -541,8 +554,9 @@ class StopAllJobs : public Action
         ExecTable &pendingTable = execContext->GetPendingTable();
         pendingTable.Clear();
 
-        PrExecConnection::connection_ptr prExecConnection( new PrExecConnection( execContext ) );
-        if ( !prExecConnection->Init() )
+        PrExecConnection prExecConnection( execContext );
+        PrExecConnectionHolder connectionHolder( &prExecConnection );
+        if ( !prExecConnection.Init() )
             return;
 
         // prepare json command
@@ -555,10 +569,8 @@ class StopAllJobs : public Action
 
         ss2 << ss.str().size() << '\n' << ss.str();
 
-        int errCode = prExecConnection->Send( ss2.str() );
+        int errCode = prExecConnection.Send( ss2.str() );
         job->OnError( errCode );
-
-        prExecConnection->Release();
     }
 };
 
