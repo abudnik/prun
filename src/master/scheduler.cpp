@@ -43,6 +43,8 @@ void Scheduler::OnHostAppearance( WorkerPtr &worker )
     {
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
         nodeState_[ worker->GetIP() ].SetWorker( worker );
+        typedef typename NodePriorityQueue::value_type value_type;
+        nodePriority_.insert( value_type( worker->GetIP(), &nodeState_[ worker->GetIP() ] ) );
     }
     NotifyAll();
 }
@@ -70,6 +72,7 @@ void Scheduler::DeleteWorker( const std::string &host )
 
             failedWorkers_.Add( workerJob, worker->GetIP() );
 
+            nodePriority_.left.erase( worker->GetIP() );
             nodeState_.erase( it++ );
 
             // worker job should be rescheduled to any other node
@@ -106,6 +109,7 @@ void Scheduler::OnChangedWorkerState( std::vector< WorkerPtr > &workers )
                 failedWorkers_.Add( workerJob, worker->GetIP() );
                 nodeState.Reset();
                 worker->ResetJob();
+                UpdateNodePriority( worker->GetIP(), &nodeState );
 
                 if ( RescheduleJob( workerJob ) )
                 {
@@ -127,6 +131,20 @@ void Scheduler::OnNewJob()
 {
     if ( CanTakeNewJob() )
         PlanJobExecution();
+}
+
+void Scheduler::UpdateNodePriority( const std::string &ip, NodeState *nodeState )
+{
+    nodePriority_.left.erase( ip );
+    if ( nodeState )
+    {
+        typedef typename NodePriorityQueue::value_type value_type;
+        nodePriority_.insert( value_type( ip, nodeState ) );
+    }
+    else
+    {
+        PLOG_ERR( "Scheduler::UpdateNodePriority: nodeState is null, hostIP=" << ip );
+    }
 }
 
 void Scheduler::PlanJobExecution()
@@ -325,14 +343,13 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, JobPtr
 {
     boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
 
-    workerPriority_.Sort( nodeState_.begin(), nodeState_.end(), nodeState_.size(), CompareByCPUandMemory() );
+    typename NodePriorityQueue::right_map::iterator it = nodePriority_.right.begin();
 
     boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
 
-    WorkerPriority::iterator it = workerPriority_.Begin();
-    for( ; it != workerPriority_.End(); ++it )
+    for( ; it != nodePriority_.right.end(); ++it )
     {
-        NodeState &nodeState = *(*it);
+        NodeState &nodeState = *(it->first);
         int numFreeCPU = nodeState.GetNumFreeCPU();
         if ( numFreeCPU <= 0 )
             continue;
@@ -392,6 +409,7 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
                 const int numTasks = workerJob.GetTotalNumTasks();
                 NodeState &nodeState = it->second;
                 nodeState.FreeCPU( numTasks );
+                UpdateNodePriority( hostIP, &nodeState );
 
                 // worker job should be rescheduled to any other node
                 RescheduleJob( workerJob );
@@ -446,6 +464,7 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
 
         NodeState &nodeState = it->second;
         nodeState.FreeCPU( 1 );
+        UpdateNodePriority( hostIP, &nodeState );
         simultExecCnt_[ workerTask.GetJobId() ] -= 1;
 
         jobs_.DecrementJobExecution( workerTask.GetJobId(), 1 );
@@ -483,6 +502,7 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
 
             NodeState &nodeState = it->second;
             nodeState.FreeCPU( 1 );
+            UpdateNodePriority( hostIP, &nodeState );
 
             // worker task should be rescheduled to any other node
             RescheduleJob( jobToReschedule );

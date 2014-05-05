@@ -26,6 +26,8 @@ the License.
 #include <set>
 #include <map>
 #include <list>
+#include <boost/bimap/bimap.hpp>
+#include <boost/bimap/multiset_of.hpp>
 #include <boost/thread/mutex.hpp>
 #include "common/observer.h"
 #include "worker.h"
@@ -66,9 +68,15 @@ struct IScheduler : virtual public common::IObservable
     virtual void Accept( SchedulerVisitor *visitor ) = 0;
 };
 
+using namespace boost::bimaps;
+
 class Scheduler : public IScheduler,
                   public common::Observable< common::MutexLockPolicy >
 {
+private:
+    typedef bimap< set_of< std::string >, multiset_of< NodeState *, CompareByCPUandMemory > > NodePriorityQueue; // ip -> NodeState
+    typedef typename NodePriorityQueue::value_type value_type;
+
 public:
     typedef std::map< std::string, NodeState > IPToNodeState;
     typedef std::list< WorkerTask > TaskList;
@@ -109,6 +117,8 @@ public:
     void Shutdown();
 
 private:
+    void UpdateNodePriority( const std::string &ip, NodeState *nodeState );
+
     void PlanJobExecution();
     bool RescheduleJob( const WorkerJob &workerJob );
 
@@ -127,7 +137,7 @@ private:
 
 private:
     IPToNodeState nodeState_;
-    WorkerPriority workerPriority_;
+    NodePriorityQueue nodePriority_;
     FailedWorkers failedWorkers_;
     boost::mutex workersMut_;
 
