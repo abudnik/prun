@@ -43,7 +43,7 @@ void Scheduler::OnHostAppearance( WorkerPtr &worker )
     {
         boost::mutex::scoped_lock scoped_lock( workersMut_ );
         nodeState_[ worker->GetIP() ].SetWorker( worker );
-        typedef typename NodePriorityQueue::value_type value_type;
+        typedef NodePriorityQueue::value_type value_type;
         nodePriority_.insert( value_type( worker->GetIP(), &nodeState_[ worker->GetIP() ] ) );
     }
     NotifyAll();
@@ -138,7 +138,7 @@ void Scheduler::UpdateNodePriority( const std::string &ip, NodeState *nodeState 
     nodePriority_.left.erase( ip );
     if ( nodeState )
     {
-        typedef typename NodePriorityQueue::value_type value_type;
+        typedef NodePriorityQueue::value_type value_type;
         nodePriority_.insert( value_type( ip, nodeState ) );
     }
     else
@@ -343,7 +343,7 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, JobPtr
 {
     boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
 
-    typename NodePriorityQueue::right_map::iterator it = nodePriority_.right.begin();
+    NodePriorityQueue::right_map::iterator it = nodePriority_.right.begin();
 
     boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
 

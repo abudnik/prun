@@ -75,7 +75,6 @@ class Scheduler : public IScheduler,
 {
 private:
     typedef bimap< set_of< std::string >, multiset_of< NodeState *, CompareByCPUandMemory > > NodePriorityQueue; // ip -> NodeState
-    typedef typename NodePriorityQueue::value_type value_type;
 
 public:
     typedef std::map< std::string, NodeState > IPToNodeState;
