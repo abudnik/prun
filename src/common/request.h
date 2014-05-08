@@ -73,11 +73,11 @@ public:
         return requestLength_;
     }
 
-    void Reset()
+    void Reset( bool skipHeader = true )
     {
         request_.clear();
         requestLength_ = bytesRead_ = headerOffset_ = 0;
-        skipHeader_ = true;
+        skipHeader_ = skipHeader;
     }
 
 private:
