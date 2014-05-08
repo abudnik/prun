@@ -68,6 +68,19 @@ add_executable( ${APP_NAME} ${SRC_MASTER} )
 target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
 
 
+set(APP_NAME pmasterdb)
+
+set(MASTERDB_DIR ${SRC_DIR}/masterdb)
+
+set(SRC_MASTERDB_CPP session.cpp masterdb.cpp)
+foreach(cpp ${SRC_MASTERDB_CPP})
+  list(APPEND SRC_MASTERDB ${MASTERDB_DIR}/${cpp} )
+endforeach(cpp)
+
+add_executable( ${APP_NAME} ${SRC_MASTERDB} )
+target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
+
+
 if (Test)
   set(TEST_DIR ${SRC_DIR}/test)
 

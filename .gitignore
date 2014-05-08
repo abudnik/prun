@@ -4,5 +4,6 @@ CMakeFiles
 Makefile
 *.a
 pmaster
+pmasterdb
 pworker
 prexec
