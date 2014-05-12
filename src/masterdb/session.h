@@ -89,6 +89,8 @@ public:
 
     void Start();
 
+    void Stop();
+
     tcp::socket &GetSocket() { return socket_; }
 
 private:
@@ -110,10 +112,12 @@ class ConnectionAcceptor
 public:
     ConnectionAcceptor( boost::asio::io_service &io_service, unsigned short port );
 
+    void Stop();
+
 private:
     void StartAccept();
 
-    bool HandleAccept( const boost::system::error_code &error );
+    void HandleAccept( const boost::system::error_code &error );
 
 private:
     boost::asio::io_service &io_service_;

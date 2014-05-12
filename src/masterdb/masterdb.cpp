@@ -32,6 +32,8 @@ the License.
 #include "common/daemon.h"
 #include "common/config.h"
 #include "common/pidfile.h"
+#include "session.h"
+#include "defines.h"
 #ifdef HAVE_EXEC_INFO_H
 #include "common/stack.h"
 #endif
@@ -138,6 +140,8 @@ public:
             cfg.ParseConfig( "", cfgPath_.c_str() );
         }
 
+        acceptor_.reset( new masterdb::ConnectionAcceptor( io_service_, masterdb::MASTERDB_PORT ) );
+
         workerThread_.reset(
             new boost::thread( boost::bind( &ThreadFun, &io_service_ ) )
         );
@@ -145,11 +149,13 @@ public:
 
     void Shutdown()
     {
-        // stop io service
         io_service_.stop();
+        acceptor_->Stop();
 
-        // stop thread pool
-        workerThread_->join();
+        if ( !workerThread_->timed_join( boost::posix_time::seconds( 2 ) ) )
+        {
+            PLOG_WRN( "MasterDbApplication::Shutdown: timed_join() timeout" );
+        }
     }
 
     void Run()
@@ -196,6 +202,8 @@ private:
 
     boost::scoped_ptr< boost::thread > workerThread_;
     boost::asio::io_service io_service_;
+
+    boost::scoped_ptr< masterdb::ConnectionAcceptor > acceptor_;
 };
 
 } // anonymous namespace

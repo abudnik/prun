@@ -72,7 +72,7 @@ set(APP_NAME pmasterdb)
 
 set(MASTERDB_DIR ${SRC_DIR}/masterdb)
 
-set(SRC_MASTERDB_CPP session.cpp masterdb.cpp)
+set(SRC_MASTERDB_CPP defines.cpp session.cpp dbmemory.cpp masterdb.cpp)
 foreach(cpp ${SRC_MASTERDB_CPP})
   list(APPEND SRC_MASTERDB ${MASTERDB_DIR}/${cpp} )
 endforeach(cpp)

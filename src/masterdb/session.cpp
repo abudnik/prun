@@ -41,6 +41,14 @@ void BoostSession::Start()
     }
 }
 
+void BoostSession::Stop()
+{
+    boost::system::error_code error;
+    socket_.shutdown( boost::asio::ip::tcp::socket::shutdown_both, error );
+    error.clear();
+    socket_.close( error );
+}
+
 bool BoostSession::ReadRequest()
 {
     try
@@ -111,29 +119,33 @@ ConnectionAcceptor::ConnectionAcceptor( boost::asio::io_service &io_service, uns
 
 void ConnectionAcceptor::StartAccept()
 {
-    boost::system::error_code error;
-    do
-    {
-        session_.reset( new BoostSession( io_service_ ) );
-        acceptor_.accept( session_->GetSocket(), error );
-    }
-    while( HandleAccept( error ) );
+    session_.reset( new BoostSession( io_service_ ) );
+    acceptor_.async_accept( session_->GetSocket(),
+                            boost::bind( &ConnectionAcceptor::HandleAccept, this,
+                                         boost::asio::placeholders::error ) );
 }
 
-bool ConnectionAcceptor::HandleAccept( const boost::system::error_code &error )
+void ConnectionAcceptor::Stop()
+{
+    if ( session_ )
+    {
+        session_->Stop();
+    }
+}
+
+void ConnectionAcceptor::HandleAccept( const boost::system::error_code &error )
 {
     if ( !error )
     {
         PLOG( "connection accepted..." );
         session_->Start();
         PLOG( "connection lost..." );
-        return true;
+        StartAccept();
     }
     else
     {
         PLOG_ERR( "HandleAccept: " << error.message() );
     }
-    return false;
 }
 
 } // namespace masterdb
