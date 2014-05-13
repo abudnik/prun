@@ -25,6 +25,7 @@ the License.
 
 #include <typeinfo>
 #include <map>
+#include <stdexcept>
 #include "common/log.h"
 
 namespace common {
