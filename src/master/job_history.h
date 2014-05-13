@@ -20,30 +20,40 @@ the License.
 ===========================================================================
 */
 
-#include "dbmemory.h"
+#ifndef __JOB_HISTORY_H
+#define __JOB_HISTORY_H
+
+#include "job.h"
+#include "dbconnection.h"
 
 
-namespace masterdb {
+namespace master {
 
-bool DbInMemory::Put( const std::string &key, const std::string &value )
+struct IJobEventReceiver
 {
-    return idToString_.insert( PairType( key, value ) ).second;
-}
+    virtual ~IJobEventReceiver() {}
+    virtual void OnJobAdd( const JobPtr &job ) = 0;
+    virtual void OnJobDelete( int64_t jobId ) = 0;
+};
 
-bool DbInMemory::Get( const std::string &key, std::string &value )
+class JobHistory: public IJobEventReceiver
 {
-    SSTable::const_iterator it = idToString_.find( key );
-    if ( it != idToString_.end() )
-    {
-        value = it->second;
-        return true;
-    }
-    return false;
-}
+public:
+    JobHistory( IHistoryChannel *channel );
 
-bool DbInMemory::Delete( const std::string &key )
-{
-    return idToString_.erase( key ) > 0;
-}
+    // IJobEventReceiver
+    virtual void OnJobAdd( const JobPtr &job );
+    virtual void OnJobDelete( int64_t jobId );
 
-} // namespace masterdb
+    void OnAddCompleted( const std::string &response );
+    void OnDeleteCompleted( const std::string &response );
+
+private:
+    IHistoryChannel *channel_;
+    IHistoryChannel::Callback addCallback_;
+    IHistoryChannel::Callback deleteCallback_;
+};
+
+} // namespace master
+
+#endif

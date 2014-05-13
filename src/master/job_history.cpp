@@ -20,30 +20,38 @@ the License.
 ===========================================================================
 */
 
-#include "dbmemory.h"
+#include <boost/lexical_cast.hpp>
+#include "job_history.h"
 
+namespace master {
 
-namespace masterdb {
-
-bool DbInMemory::Put( const std::string &key, const std::string &value )
+JobHistory::JobHistory( IHistoryChannel *channel )
+: channel_( channel )
 {
-    return idToString_.insert( PairType( key, value ) ).second;
+    addCallback_ = boost::bind( &JobHistory::OnAddCompleted, this, _1 );
+    deleteCallback_ = boost::bind( &JobHistory::OnDeleteCompleted, this, _1 );
 }
 
-bool DbInMemory::Get( const std::string &key, std::string &value )
+void JobHistory::OnJobAdd( const JobPtr &job )
 {
-    SSTable::const_iterator it = idToString_.find( key );
-    if ( it != idToString_.end() )
-    {
-        value = it->second;
-        return true;
-    }
-    return false;
+    std::string request( "PUT " );
+    request += boost::lexical_cast<std::string>( job->GetJobId() );
+    request += "$";
+    request += job->GetDescription();
+
+    channel_->Send( request, addCallback_ );
 }
 
-bool DbInMemory::Delete( const std::string &key )
+void JobHistory::OnAddCompleted( const std::string &response )
 {
-    return idToString_.erase( key ) > 0;
 }
 
-} // namespace masterdb
+void JobHistory::OnJobDelete( int64_t jobId )
+{
+}
+
+void JobHistory::OnDeleteCompleted( const std::string &response )
+{
+}
+
+} // namespace master

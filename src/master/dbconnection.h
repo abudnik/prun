@@ -20,16 +20,43 @@ the License.
 ===========================================================================
 */
 
-#include "defines.h"
+#ifndef __DB_CONNECTION_H
+#define __DB_CONNECTION_H
+
+#include <boost/asio.hpp>
+#include <boost/function.hpp>
+
+using boost::asio::ip::tcp;
+
 
 namespace master {
 
-unsigned short NODE_PORT = 5555;
-unsigned short NODE_UDP_PORT = NODE_PORT - 1;
-unsigned short MASTER_UDP_PORT = NODE_PORT - 2;
-unsigned short MASTER_ADMIN_PORT = NODE_PORT + 2;
-unsigned short MASTERDB_PORT = 5559;
+struct IHistoryChannel
+{
+    typedef boost::function< void (const std::string &response) > Callback;
 
-char const HOSTS_FILE_NAME[] = "hosts";
+    virtual void Send( const std::string &request, Callback &callback ) = 0;
+};
+
+class DbHistoryConnection: public IHistoryChannel
+{
+public:
+    DbHistoryConnection( boost::asio::io_service &io_service )
+    : io_service_( io_service ), socket_( io_service ),
+     established_( false )
+    {}
+
+    // IHistoryChannel
+    virtual void Send( const std::string &request, Callback &callback );
+
+    bool Connect( const std::string &host, unsigned short port );
+
+private:
+    boost::asio::io_service &io_service_;
+    tcp::socket socket_;
+    bool established_;
+};
 
 } // namespace master
+
+#endif

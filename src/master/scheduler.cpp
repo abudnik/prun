@@ -25,6 +25,7 @@ the License.
 #include "common/error_code.h"
 #include "common/service_locator.h"
 #include "job_manager.h"
+#include "job_history.h"
 #include "worker_manager.h"
 #include "worker_command.h"
 #include "statistics.h"
@@ -640,6 +641,9 @@ void Scheduler::OnRemoveJob( int64_t jobId )
 {
     simultExecCnt_.erase( jobId );
     failedWorkers_.Delete( jobId );
+
+    IJobEventReceiver *jobEventReceiver = common::ServiceLocator::Instance().Get< IJobEventReceiver >();
+    jobEventReceiver->OnJobDelete( jobId );
 }
 
 void Scheduler::StopWorkers( int64_t jobId )

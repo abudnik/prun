@@ -20,30 +20,31 @@ the License.
 ===========================================================================
 */
 
-#include "dbmemory.h"
+#include "dbaction.h"
+#include "dbaccess.h"
+#include "common/service_locator.h"
 
 
 namespace masterdb {
 
-bool DbInMemory::Put( const std::string &key, const std::string &value )
+bool DbPut::Execute( const DbRequest &request )
 {
-    return idToString_.insert( PairType( key, value ) ).second;
-}
-
-bool DbInMemory::Get( const std::string &key, std::string &value )
-{
-    SSTable::const_iterator it = idToString_.find( key );
-    if ( it != idToString_.end() )
+    const DbRequest::ArgList &args = request.GetArgs();
+    if ( args.size() < 1 )
     {
-        value = it->second;
-        return true;
+        PLOG_ERR( "DbPut::Execute: missing key" );
+        return false;
     }
-    return false;
-}
 
-bool DbInMemory::Delete( const std::string &key )
-{
-    return idToString_.erase( key ) > 0;
+    const std::string &key = *args.begin();
+    if ( key.empty() )
+    {
+        PLOG_ERR( "DbPut::Execute: empty key" );
+        return false;
+    }
+
+    IDAO *dbClient = common::ServiceLocator::Instance().Get< IDAO >();
+    return dbClient->Put( key, request.GetData() );
 }
 
 } // namespace masterdb

@@ -37,6 +37,8 @@ the License.
 #include "ping.h"
 #include "node_ping.h"
 #include "job_manager.h"
+#include "job_history.h"
+#include "dbconnection.h"
 #include "worker_manager.h"
 #include "scheduler.h"
 #include "job_sender.h"
@@ -201,6 +203,8 @@ public:
         unsigned int numCommandSendThread = 1 + cfg.Get<unsigned int>( "num_command_send_thread" );
         unsigned int numPingThread = numHeartbeatThread + numPingReceiverThread;
 
+        std::string masterdb = cfg.Get<std::string>( "masterdb" );
+
         // initialize main components
         common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
 
@@ -213,6 +217,12 @@ public:
         jobManager_.reset( new master::JobManager );
         jobManager_->SetMasterId( masterId_ ).SetExeDir( exeDir_ ).SetTimeoutManager( timeoutManager_.get() );
         serviceLocator.Register( (master::IJobManager*)jobManager_.get() );
+
+        dbConnection_.reset( new master::DbHistoryConnection( io_service_db_ ) );
+        dbConnection_->Connect( masterdb, master::MASTERDB_PORT );
+
+        jobHistory_.reset( new master::JobHistory( (master::IHistoryChannel*)&dbConnection_ ) );
+        serviceLocator.Register( (master::IJobEventReceiver*)jobHistory_.get() );
 
         scheduler_.reset( new master::Scheduler );
         serviceLocator.Register( (master::IScheduler*)scheduler_.get() );
@@ -383,8 +393,11 @@ private:
     boost::asio::io_service io_service_getters_;
     boost::asio::io_service io_service_command_send_;
     boost::asio::io_service io_service_admin_;
+    boost::asio::io_service io_service_db_;
 
     boost::shared_ptr< master::JobManager > jobManager_;
+    boost::shared_ptr< master::JobHistory > jobHistory_;
+    boost::shared_ptr< master::DbHistoryConnection > dbConnection_;
     boost::shared_ptr< master::WorkerManager > workerManager_;
     boost::shared_ptr< master::Scheduler > scheduler_;
     boost::shared_ptr< master::TimeoutManager > timeoutManager_;

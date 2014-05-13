@@ -38,10 +38,7 @@ public:
 class DbPut : public DbAction
 {
 public:
-    virtual bool Execute( const DbRequest &request )
-    {
-        return true;
-    }
+    virtual bool Execute( const DbRequest &request );
 };
 
 class DbActionCreator

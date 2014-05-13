@@ -32,8 +32,10 @@ the License.
 #include "common/daemon.h"
 #include "common/config.h"
 #include "common/pidfile.h"
+#include "common/service_locator.h"
 #include "session.h"
 #include "defines.h"
+#include "dbmemory.h"
 #ifdef HAVE_EXEC_INFO_H
 #include "common/stack.h"
 #endif
@@ -140,6 +142,11 @@ public:
             cfg.ParseConfig( "", cfgPath_.c_str() );
         }
 
+        // initialize main components
+        common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
+
+        serviceLocator.Register( (masterdb::IDAO*)&dbClient_ );
+
         acceptor_.reset( new masterdb::ConnectionAcceptor( io_service_, masterdb::MASTERDB_PORT ) );
 
         workerThread_.reset(
@@ -156,6 +163,8 @@ public:
         {
             PLOG_WRN( "MasterDbApplication::Shutdown: timed_join() timeout" );
         }
+
+        common::ServiceLocator::Instance().UnregisterAll();
     }
 
     void Run()
@@ -204,6 +213,7 @@ private:
     boost::asio::io_service io_service_;
 
     boost::scoped_ptr< masterdb::ConnectionAcceptor > acceptor_;
+    masterdb::DbInMemory dbClient_;
 };
 
 } // anonymous namespace

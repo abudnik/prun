@@ -29,6 +29,7 @@ the License.
 #include <boost/graph/visitors.hpp>
 #include <iterator>
 #include "job_manager.h"
+#include "job_history.h"
 #include "common/log.h"
 #include "common/config.h"
 #include "common/helper.h"
@@ -81,7 +82,12 @@ Job *JobManager::CreateJob( const std::string &job_description ) const
     if ( !parser.ParseJob( job_description, ptree ) )
         return NULL;
 
-    return CreateJob( ptree );
+    Job *job = CreateJob( ptree );
+    if ( job )
+    {
+        job->SetDescription( job_description );
+    }
+    return job;
 }
 
 void JobManager::CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs )
@@ -156,6 +162,9 @@ void JobManager::PushJob( JobPtr &job )
 {
     PLOG( "push job" );
     jobs_->PushJob( job, numJobGroups_++ );
+
+    IJobEventReceiver *jobEventReceiver = common::ServiceLocator::Instance().Get< IJobEventReceiver >();
+    jobEventReceiver->OnJobAdd( job );
 
     IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
     scheduler->OnNewJob();

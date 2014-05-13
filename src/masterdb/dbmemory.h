@@ -32,17 +32,17 @@ namespace masterdb {
 
 class DbInMemory : public IDAO
 {
-typedef std::map< int64_t, std::string > IdToString;
-typedef std::pair< int64_t, std::string > PairType;
+typedef std::map< std::string, std::string > SSTable;
+typedef std::pair< std::string, std::string > PairType;
 
 public:
     // IDAO
-    virtual bool Put( int64_t key, const std::string &value );
-    virtual bool Get( int64_t key, std::string &value );
-    virtual bool Delete( int64_t key );
+    virtual bool Put( const std::string &key, const std::string &value );
+    virtual bool Get( const std::string &key, std::string &value );
+    virtual bool Delete( const std::string &key );
 
 private:
-    IdToString idToString_;
+    SSTable idToString_;
 };
 
 } // namespace masterdb

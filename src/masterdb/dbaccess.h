@@ -31,9 +31,10 @@ namespace masterdb {
 
 struct IDAO // Data Access Object
 {
-    virtual bool Put( int64_t key, const std::string &value ) = 0;
-    virtual bool Get( int64_t key, std::string &value ) = 0;
-    virtual bool Delete( int64_t key ) = 0;
+    virtual ~IDAO() {}
+    virtual bool Put( const std::string &key, const std::string &value ) = 0;
+    virtual bool Get( const std::string &key, std::string &value ) = 0;
+    virtual bool Delete( const std::string &key ) = 0;
 };
 
 } // namespace masterdb
