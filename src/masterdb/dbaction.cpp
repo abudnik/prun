@@ -27,7 +27,7 @@ the License.
 
 namespace masterdb {
 
-bool DbPut::Execute( const DbRequest &request )
+bool DbPut::Execute( const DbRequest &request, std::string &response )
 {
     const DbRequest::ArgList &args = request.GetArgs();
     if ( args.size() < 1 )
@@ -45,6 +45,32 @@ bool DbPut::Execute( const DbRequest &request )
 
     IDAO *dbClient = common::ServiceLocator::Instance().Get< IDAO >();
     return dbClient->Put( key, request.GetData() );
+}
+
+bool DbDelete::Execute( const DbRequest &request, std::string &response )
+{
+    const DbRequest::ArgList &args = request.GetArgs();
+    if ( args.size() < 1 )
+    {
+        PLOG_ERR( "DbPut::Execute: missing key" );
+        return false;
+    }
+
+    const std::string &key = *args.begin();
+    if ( key.empty() )
+    {
+        PLOG_ERR( "DbPut::Execute: empty key" );
+        return false;
+    }
+
+    IDAO *dbClient = common::ServiceLocator::Instance().Get< IDAO >();
+    return dbClient->Delete( key );
+}
+
+bool DbGet::Execute( const DbRequest &request, std::string &response )
+{
+    IDAO *dbClient = common::ServiceLocator::Instance().Get< IDAO >();
+    return dbClient->Get( response );
 }
 
 } // namespace masterdb

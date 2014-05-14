@@ -45,13 +45,17 @@ public:
     virtual void OnJobAdd( const JobPtr &job );
     virtual void OnJobDelete( int64_t jobId );
 
+    void GetJobs();
+
     void OnAddCompleted( const std::string &response );
     void OnDeleteCompleted( const std::string &response );
+    void OnGetCompleted( const std::string &response );
 
 private:
     IHistoryChannel *channel_;
     IHistoryChannel::Callback addCallback_;
     IHistoryChannel::Callback deleteCallback_;
+    IHistoryChannel::Callback getCallback_;
 };
 
 } // namespace master

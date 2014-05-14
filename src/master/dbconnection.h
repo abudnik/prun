@@ -25,6 +25,8 @@ the License.
 
 #include <boost/asio.hpp>
 #include <boost/function.hpp>
+#include <boost/thread/mutex.hpp>
+#include "common/request.h"
 
 using boost::asio::ip::tcp;
 
@@ -40,21 +42,29 @@ struct IHistoryChannel
 
 class DbHistoryConnection: public IHistoryChannel
 {
+    typedef boost::array< char, 2048 > BufferType;
+
 public:
     DbHistoryConnection( boost::asio::io_service &io_service )
     : io_service_( io_service ), socket_( io_service ),
-     established_( false )
-    {}
+     established_( false ), response_( true )
+    {
+        memset( buffer_.c_array(), 0, buffer_.size() );
+    }
 
     // IHistoryChannel
     virtual void Send( const std::string &request, Callback &callback );
 
     bool Connect( const std::string &host, unsigned short port );
+    void Shutdown();
 
 private:
     boost::asio::io_service &io_service_;
     tcp::socket socket_;
     bool established_;
+    common::Request< BufferType > response_;
+    BufferType buffer_;
+    boost::mutex mut_;
 };
 
 } // namespace master

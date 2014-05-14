@@ -218,14 +218,16 @@ public:
         jobManager_->SetMasterId( masterId_ ).SetExeDir( exeDir_ ).SetTimeoutManager( timeoutManager_.get() );
         serviceLocator.Register( (master::IJobManager*)jobManager_.get() );
 
-        dbConnection_.reset( new master::DbHistoryConnection( io_service_db_ ) );
-        dbConnection_->Connect( masterdb, master::MASTERDB_PORT );
-
-        jobHistory_.reset( new master::JobHistory( (master::IHistoryChannel*)&dbConnection_ ) );
-        serviceLocator.Register( (master::IJobEventReceiver*)jobHistory_.get() );
-
         scheduler_.reset( new master::Scheduler );
         serviceLocator.Register( (master::IScheduler*)scheduler_.get() );
+
+        dbConnection_.reset( new master::DbHistoryConnection( io_service_db_ ) );
+        jobHistory_.reset( new master::JobHistory( (master::IHistoryChannel*)dbConnection_.get() ) );
+        serviceLocator.Register( (master::IJobEventReceiver*)jobHistory_.get() );
+        if ( dbConnection_->Connect( masterdb, master::MASTERDB_PORT ) )
+        {
+            jobHistory_->GetJobs();
+        }
 
         timeoutManager_->Start();
         worker_threads_.create_thread(
@@ -325,6 +327,9 @@ public:
 
         if ( commandSender_ )
             commandSender_->Stop();
+
+        // disconnect from masterdb
+        dbConnection_->Shutdown();
 
         // stop thread pool
         worker_threads_.join_all();

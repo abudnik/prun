@@ -31,6 +31,48 @@ void DbHistoryConnection::Send( const std::string &request, Callback &callback )
 {
     if ( !established_ )
         return;
+
+    boost::mutex::scoped_lock scoped_lock( mut_ );
+
+    try
+    {
+        boost::asio::write( socket_, boost::asio::buffer( request ), boost::asio::transfer_all() );
+
+        boost::system::error_code error;
+        bool firstRead = true;
+        while( true )
+        {
+            size_t bytes_transferred = socket_.read_some( boost::asio::buffer( buffer_ ), error );
+            if ( !bytes_transferred )
+            {
+                PLOG_ERR( "DbHistoryConnection::Send: read_some failed, error=" << error.message() );
+                break;
+            }
+
+            if ( firstRead )
+            {
+                int ret = response_.OnFirstRead( buffer_, bytes_transferred );
+                firstRead = ( ret == 0 );
+            }
+            if ( !firstRead )
+            {
+                response_.OnRead( buffer_, bytes_transferred );
+
+                if ( response_.IsReadCompleted() )
+                {
+                    callback( response_.GetString() );
+                    break;
+                }
+            }
+        }
+    }
+    catch( boost::system::system_error &e )
+    {
+        PLOG_ERR( "DbHistoryConnection::Send() failed: " << e.what() );
+        established_ = false;
+    }
+
+    response_.Reset();
 }
 
 bool DbHistoryConnection::Connect( const std::string &host, unsigned short port )
@@ -66,7 +108,20 @@ bool DbHistoryConnection::Connect( const std::string &host, unsigned short port 
         return false;
     }
 
+    established_ = true;
     return true;
+}
+
+void DbHistoryConnection::Shutdown()
+{
+    if ( established_ )
+    {
+        established_ = false;
+        boost::system::error_code error;
+        socket_.shutdown( boost::asio::ip::tcp::socket::shutdown_both, error );
+        error.clear();
+        socket_.close( error );
+    }
 }
 
 } // namespace master

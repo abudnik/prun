@@ -21,6 +21,7 @@ the License.
 */
 
 #include "dbmemory.h"
+#include "common/log.h"
 
 
 namespace masterdb {
@@ -30,20 +31,19 @@ bool DbInMemory::Put( const std::string &key, const std::string &value )
     return idToString_.insert( PairType( key, value ) ).second;
 }
 
-bool DbInMemory::Get( const std::string &key, std::string &value )
-{
-    SSTable::const_iterator it = idToString_.find( key );
-    if ( it != idToString_.end() )
-    {
-        value = it->second;
-        return true;
-    }
-    return false;
-}
-
 bool DbInMemory::Delete( const std::string &key )
 {
     return idToString_.erase( key ) > 0;
+}
+
+bool DbInMemory::Get( std::string &jobs )
+{
+    SSTable::const_iterator it = idToString_.begin();
+    for( ; it != idToString_.end(); ++it )
+    {
+        jobs += it->first + '\n' + it->second + '\n';
+    }
+    return true;
 }
 
 } // namespace masterdb

@@ -30,28 +30,75 @@ JobHistory::JobHistory( IHistoryChannel *channel )
 {
     addCallback_ = boost::bind( &JobHistory::OnAddCompleted, this, _1 );
     deleteCallback_ = boost::bind( &JobHistory::OnDeleteCompleted, this, _1 );
+    getCallback_ = boost::bind( &JobHistory::OnGetCompleted, this, _1 );
 }
 
 void JobHistory::OnJobAdd( const JobPtr &job )
 {
     std::string request( "PUT " );
     request += boost::lexical_cast<std::string>( job->GetJobId() );
-    request += "$";
+    request += '$';
     request += job->GetDescription();
+    request.insert( 0, boost::lexical_cast<std::string>( request.size() ) + '\n' );
 
     channel_->Send( request, addCallback_ );
 }
 
 void JobHistory::OnAddCompleted( const std::string &response )
 {
+    //PLOG( "OnAddCompleted : " << response );
 }
 
 void JobHistory::OnJobDelete( int64_t jobId )
 {
+    std::string request( "DELETE " );
+    request += boost::lexical_cast<std::string>( jobId );
+    request += '$';
+    request.insert( 0, boost::lexical_cast<std::string>( request.size() ) + '\n' );
+
+    channel_->Send( request, deleteCallback_ );
 }
 
 void JobHistory::OnDeleteCompleted( const std::string &response )
 {
+    //PLOG( "OnDeleteCompleted : " << response );
+}
+
+void JobHistory::GetJobs()
+{
+    std::string request( "GET $" );
+    request.insert( 0, boost::lexical_cast<std::string>( request.size() ) + '\n' );
+
+    channel_->Send( request, getCallback_ );
+}
+
+void JobHistory::OnGetCompleted( const std::string &response )
+{
+    //PLOG( "OnGetCompleted : " << response );
+    size_t offset = 1; // skip newline after header
+    unsigned line = 0;
+    std::string jobId, jobDescription;
+    while( true )
+    {
+        size_t pos = response.find( '\n', offset );
+        if ( pos == std::string::npos )
+            break;
+
+        if ( line % 2 )
+        {
+            jobDescription = std::string( response, offset, pos - offset );
+
+            PLOG( "jobId = " << jobId );
+            PLOG( "jobDescr = " << jobDescription );
+        }
+        else
+        {
+            jobId = std::string( response, offset, pos - offset );
+        }
+
+        offset = pos + 1;
+        ++line;
+    }
 }
 
 } // namespace master

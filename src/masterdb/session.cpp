@@ -32,12 +32,13 @@ void BoostSession::Start()
 {
     while( ReadRequest() )
     {
-        HandleRequest( request_ );
+        bool result = HandleRequest( request_ );
 
-        if ( !WriteResponse() )
+        if ( !WriteResponse( result ) )
             break;
 
-        request_.Reset( false );
+        request_.Reset();
+        response_.clear();
     }
 }
 
@@ -72,7 +73,6 @@ bool BoostSession::ReadRequest()
             if ( !firstRead )
             {
                 request_.OnRead( buffer_, bytes_transferred );
-
                 if ( request_.IsReadCompleted() )
                     break;
             }
@@ -87,8 +87,24 @@ bool BoostSession::ReadRequest()
     return true;
 }
 
-bool BoostSession::WriteResponse()
+bool BoostSession::WriteResponse( bool result )
 {
+    if ( response_.empty() )
+    {
+        response_ = result ? '1' : '0';
+    }
+    response_.insert( 0, boost::lexical_cast<std::string>( response_.size() ) + '\n' );
+
+    try
+    {
+        boost::asio::write( socket_, boost::asio::buffer( response_ ), boost::asio::transfer_all() );
+    }
+    catch( boost::system::system_error &e )
+    {
+        PLOG_ERR( "BoostSession::WriteResponse() failed: " << e.what() );
+        return false;
+    }
+
     return true;
 }
 

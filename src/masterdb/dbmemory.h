@@ -38,8 +38,8 @@ typedef std::pair< std::string, std::string > PairType;
 public:
     // IDAO
     virtual bool Put( const std::string &key, const std::string &value );
-    virtual bool Get( const std::string &key, std::string &value );
     virtual bool Delete( const std::string &key );
+    virtual bool Get( std::string &jobs );
 
 private:
     SSTable idToString_;

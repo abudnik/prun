@@ -32,13 +32,25 @@ class DbAction
 {
 public:
     virtual ~DbAction() {}
-    virtual bool Execute( const DbRequest &request ) = 0;
+    virtual bool Execute( const DbRequest &request, std::string &response ) = 0;
 };
 
 class DbPut : public DbAction
 {
 public:
-    virtual bool Execute( const DbRequest &request );
+    virtual bool Execute( const DbRequest &request, std::string &response );
+};
+
+class DbDelete : public DbAction
+{
+public:
+    virtual bool Execute( const DbRequest &request, std::string &response );
+};
+
+class DbGet : public DbAction
+{
+public:
+    virtual bool Execute( const DbRequest &request, std::string &response );
 };
 
 class DbActionCreator
@@ -46,8 +58,12 @@ class DbActionCreator
 public:
     virtual DbAction *Create( const std::string &taskType )
     {
-        if ( taskType == "put" )
+        if ( taskType == "PUT" )
             return new DbPut();
+        if ( taskType == "DELETE" )
+            return new DbDelete();
+        if ( taskType == "GET" )
+            return new DbGet();
         return NULL;
     }
 };

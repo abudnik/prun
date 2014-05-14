@@ -39,7 +39,7 @@ public:
 public:
     bool ParseRequest( const std::string &request )
     {
-        size_t offset = 0;
+        size_t offset = 1; // skip newline after header
         return ReadType( request, offset ) && ReadArgs( request, offset ) && ReadData( request, offset );
     }
 
@@ -70,7 +70,7 @@ private:
                 return false;
             }
         }
-        type_ = std::string( request, offset, request.size() - i );
+        type_ = std::string( request, offset, i - 1 );
         offset = ++i;
         return !type_.empty() && ( c == ' ' );
     }
@@ -86,12 +86,12 @@ private:
             c = request[i];
             if ( c == '&' )
             {
-                args_.push_back( std::string( request, pos, request.size() - i ) );
-                pos = i;
+                args_.push_back( std::string( request, pos, i - pos ) );
+                pos = i + 1;
             }
             if ( c == '$' )
             {
-                args_.push_back( std::string( request, pos, request.size() - i ) );
+                args_.push_back( std::string( request, pos, i - pos ) );
                 break;
             }
             if ( !isalnum( c ) )

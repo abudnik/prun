@@ -42,21 +42,19 @@ protected:
     bool HandleRequest( T &request )
     {
         dbrequest_.Reset();
+        response_.clear();
 
         const std::string &req = request.GetString();
         if ( dbrequest_.ParseRequest( req ) )
         {
             PLOG( dbrequest_.GetType() );
-            PLOG( dbrequest_.GetArgs().size() );
-            PLOG( dbrequest_.GetData() );
-
             DbActionCreator actionCreator;
             boost::scoped_ptr< DbAction > action(
                 actionCreator.Create( dbrequest_.GetType() )
             );
             if ( action )
             {
-                return action->Execute( dbrequest_ );
+                return action->Execute( dbrequest_, response_ );
             }
             else
             {
@@ -72,6 +70,9 @@ protected:
         return false;
     }
 
+protected:
+    std::string response_;
+
 private:
     DbRequest dbrequest_;
 };
@@ -84,8 +85,10 @@ public:
 public:
     BoostSession( boost::asio::io_service &io_service )
     : socket_( io_service ),
-     request_( false )
-    {}
+     request_( true )
+    {
+        memset( buffer_.c_array(), 0, buffer_.size() );
+    }
 
     void Start();
 
@@ -95,14 +98,13 @@ public:
 
 private:
     bool ReadRequest();
-    bool WriteResponse();
+    bool WriteResponse( bool result );
 
 protected:
     tcp::socket socket_;
     BufferType buffer_;
     common::Request< BufferType > request_;
     char readStatus_;
-    std::string response_;
 };
 
 class ConnectionAcceptor
