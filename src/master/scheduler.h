@@ -126,7 +126,7 @@ private:
     void StopWorkers( int64_t jobId );
     void StopWorker( const std::string &hostIP ) const;
 
-    bool CanTakeNewJob() const;
+    bool CanTakeNewJob();
     bool CanAddTaskToWorker( const WorkerJob &workerJob, const WorkerJob &workerPlannedJob,
                              int64_t jobId, const JobPtr &job ) const;
 

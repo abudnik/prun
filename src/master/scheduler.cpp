@@ -720,8 +720,10 @@ void Scheduler::StopWorker( const std::string &hostIP ) const
     }
 }
 
-bool Scheduler::CanTakeNewJob() const
+bool Scheduler::CanTakeNewJob()
 {
+    boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+
     IPToNodeState::const_iterator it = nodeState_.begin();
     for( ; it != nodeState_.end(); ++it )
     {
