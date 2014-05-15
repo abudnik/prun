@@ -113,8 +113,6 @@ public:
     const TaskList &GetNeedReschedule() const { return needReschedule_; }
     ScheduledJobs &GetScheduledJobs() { return jobs_; }
 
-    void Shutdown();
-
 private:
     void UpdateNodePriority( const std::string &ip, NodeState *nodeState );
 

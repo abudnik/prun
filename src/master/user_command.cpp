@@ -80,9 +80,9 @@ bool UserCommand::RunJob( std::ifstream &file, const std::string &jobAlias, std:
         if ( job )
         {
             job->SetAlias( jobAlias );
-            PrintJobInfo( job, result );
             // add job to job queue
             jobManager->PushJob( job );
+            PrintJobInfo( job, result );
         }
     }
     catch( std::exception &e )

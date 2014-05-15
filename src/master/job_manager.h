@@ -50,6 +50,7 @@ struct IJobManager
     virtual void CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs ) = 0;
     virtual void PushJob( JobPtr &job ) = 0;
     virtual void PushJobs( std::list< JobPtr > &jobs ) = 0;
+    virtual void PushJobFromHistory( int64_t jobId, const std::string &jobDescription ) = 0;
 
     virtual bool GetJobById( int64_t jobId, JobPtr &job ) = 0;
     virtual bool DeleteJob( int64_t jobId ) = 0;
@@ -72,6 +73,7 @@ public:
     virtual void CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs );
     virtual void PushJob( JobPtr &job );
     virtual void PushJobs( std::list< JobPtr > &jobs );
+    virtual void PushJobFromHistory( int64_t jobId, const std::string &jobDescription );
 
     virtual bool GetJobById( int64_t jobId, JobPtr &job );
     virtual bool DeleteJob( int64_t jobId );
@@ -108,6 +110,7 @@ private:
     std::string exeDir_, jobsDir_;
     std::string masterId_;
     int64_t numJobGroups_;
+    int64_t jobId_;
 };
 
 } // namespace master

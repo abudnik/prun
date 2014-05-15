@@ -87,16 +87,14 @@ public:
      priority_( priority ), numDepends_( 0 ), maxFailedNodes_( maxFailedNodes ),
      numExec_( numExec ), maxClusterCPU_( maxClusterCPU ), maxCPU_( maxCPU ),
      timeout_( timeout ), queueTimeout_( queueTimeout ), taskTimeout_( taskTimeout ),
-     flags_( 0 ), groupId_( -1 )
+     flags_( 0 ), id_( -1 ), groupId_( -1 )
     {
         if ( noReschedule )
             flags_ |= JOB_FLAG_NO_RESCHEDULE;
         if ( exclusive )
             flags_ |= JOB_FLAG_EXCLUSIVE;
 
-        static int64_t numJobs;
         scriptLength_ = script_.size();
-        id_ = numJobs++;
     }
 
     void ReleaseJobGroup();
@@ -128,6 +126,7 @@ public:
     void SetDescription( const std::string &description ) { description_ = description; }
     void SetNumPlannedExec( int val ) { numPlannedExec_ = val; }
     void SetNumDepends( int val ) { numDepends_ = val; }
+    void SetJobId( int64_t val ) { id_ = val; }
     void SetGroupId( int64_t val ) { groupId_ = val; }
     void SetJobVertex( const JobVertex &vertex ) { graphVertex_ = vertex; }
     void SetJobGroup( boost::shared_ptr< JobGroup > &jobGroup ) { jobGroup_ = jobGroup; }

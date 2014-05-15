@@ -22,6 +22,9 @@ the License.
 
 #include <boost/lexical_cast.hpp>
 #include "job_history.h"
+#include "job_manager.h"
+#include "common/service_locator.h"
+
 
 namespace master {
 
@@ -87,9 +90,12 @@ void JobHistory::OnGetCompleted( const std::string &response )
         if ( line % 2 )
         {
             jobDescription = std::string( response, offset, pos - offset );
+            //PLOG( "jobId = " << jobId );
+            //PLOG( "jobDescr = " << jobDescription );
 
-            PLOG( "jobId = " << jobId );
-            PLOG( "jobDescr = " << jobDescription );
+            int64_t id = boost::lexical_cast<int64_t>( jobId );
+            IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+            jobManager->PushJobFromHistory( id, jobDescription );
         }
         else
         {
@@ -99,6 +105,8 @@ void JobHistory::OnGetCompleted( const std::string &response )
         offset = pos + 1;
         ++line;
     }
+
+    PLOG( "JobHistory::OnGetCompleted: " << line / 2 << " jobs are loaded from history" );
 }
 
 } // namespace master

@@ -1,5 +1,6 @@
 #include "master/command.h"
 #include "master/timeout_manager.h"
+#include "master/job_history.h"
 
 using namespace std;
 
@@ -18,6 +19,12 @@ struct MockTimeoutManager : ITimeoutManager
     virtual void PushJob( int64_t jobId, int jobTimeout ) {}
     virtual void PushTask( const WorkerTask &task, const std::string &hostIP, int timeout ) {}
     virtual void PushCommand( CommandPtr &command, const std::string &hostIP, int delay ) {}
+};
+
+struct MockJobHistory : IJobEventReceiver
+{
+    virtual void OnJobAdd( const JobPtr &job ) {}
+    virtual void OnJobDelete( int64_t jobId ) {}
 };
 
 } // namespace master

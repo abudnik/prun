@@ -224,6 +224,7 @@ struct JobManagerEnvironment
         mgr.SetTimeoutManager( &timeoutManager );
         common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
         serviceLocator.Register( (master::IScheduler*)&sched );
+        serviceLocator.Register( (master::IJobEventReceiver*)&jobHistory );
     }
 
     ~JobManagerEnvironment()
@@ -232,6 +233,7 @@ struct JobManagerEnvironment
     }
 
     MockTimeoutManager timeoutManager;
+    MockJobHistory jobHistory;
     JobManager mgr;
     Scheduler sched;
 };
@@ -528,6 +530,7 @@ struct SchedulerEnvironment
         common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
         serviceLocator.Register( (master::IScheduler*)&sched );
         serviceLocator.Register( (master::IJobManager*)&jobMgr );
+        serviceLocator.Register( (master::IJobEventReceiver*)&jobHistory );
         serviceLocator.Register( (master::IWorkerManager*)&workerMgr );
     }
 
@@ -538,6 +541,7 @@ struct SchedulerEnvironment
 
     MockTimeoutManager timeoutMgr;
     JobManager jobMgr;
+    MockJobHistory jobHistory;
     WorkerManager workerMgr;
     Scheduler sched;
 };
@@ -1749,6 +1753,7 @@ BOOST_AUTO_TEST_CASE( jobs_removal )
         int priority = i % 10;
         JobPtr job( new Job( "", "python", priority, 1, 1, 1, 1,
                              1, 1, 1, false, false ) );
+        job->SetJobId( i );
         jobs.push_back( job );
         Add( job, i + 1 );
     }

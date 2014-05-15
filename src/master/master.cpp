@@ -341,9 +341,6 @@ public:
         if ( workerManager_ )
             workerManager_->Shutdown();
 
-        if ( scheduler_ )
-            scheduler_->Shutdown();
-
         common::ServiceLocator::Instance().UnregisterAll();
     }
 

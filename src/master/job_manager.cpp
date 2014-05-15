@@ -72,7 +72,8 @@ bool JDLJason::ParseJob( const std::string &job_description, boost::property_tre
 JobManager::JobManager()
 : jobs_( new JobQueueImpl ),
  timeoutManager_( NULL ),
- numJobGroups_( 0 )
+ numJobGroups_( 0 ),
+ jobId_( 0 )
 {}
 
 Job *JobManager::CreateJob( const std::string &job_description ) const
@@ -161,6 +162,7 @@ void JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
 void JobManager::PushJob( JobPtr &job )
 {
     PLOG( "push job" );
+    job->SetJobId( jobId_++ );
     jobs_->PushJob( job, numJobGroups_++ );
 
     IJobEventReceiver *jobEventReceiver = common::ServiceLocator::Instance().Get< IJobEventReceiver >();
@@ -174,16 +176,40 @@ void JobManager::PushJob( JobPtr &job )
 void JobManager::PushJobs( std::list< JobPtr > &jobs )
 {
     PLOG( "push jobs" );
+    std::list< JobPtr >::iterator it = jobs.begin();
+    for( ; it != jobs.end(); ++it )
+    {
+        JobPtr &job = *it;
+        job->SetJobId( jobId_++ );
+    }
     jobs_->PushJobs( jobs, numJobGroups_++ );
 
     IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
     scheduler->OnNewJob();
 
-    std::list< JobPtr >::const_iterator it = jobs.begin();
+    it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
         const JobPtr &job = *it;
         timeoutManager_->PushJobQueue( job->GetJobId(), job->GetQueueTimeout() );
+    }
+}
+
+void JobManager::PushJobFromHistory( int64_t jobId, const std::string &jobDescription )
+{
+    JobPtr job( CreateJob( jobDescription ) );
+    if ( job )
+    {
+        if ( jobId >= jobId_ )
+        {
+            jobId_ = jobId + 1;
+        }
+        job->SetJobId( jobId );
+        jobs_->PushJob( job, numJobGroups_++ );
+
+        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        scheduler->OnNewJob();
+        timeoutManager_->PushJobQueue( jobId, job->GetQueueTimeout() );
     }
 }
 

@@ -791,9 +791,4 @@ void Scheduler::Accept( SchedulerVisitor *visitor )
     visitor->Visit( *this );
 }
 
-void Scheduler::Shutdown()
-{
-    jobs_.Clear();
-}
-
 } // namespace master
