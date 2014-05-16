@@ -23,7 +23,6 @@ set(COMMON_DIR ${SRC_DIR}/common)
 
 CHECK_INCLUDE_FILES ("sys/prctl.h" HAVE_SYS_PRCTL_H)
 CHECK_INCLUDE_FILES ("execinfo.h" HAVE_EXEC_INFO_H)
-CONFIGURE_FILE(${COMMON_DIR}/configure.h.in ${COMMON_DIR}/configure.h)
 
 set(SRC_COMMON_CPP log.cpp daemon.cpp config.cpp protocol.cpp json_rpc.cpp uuid.cpp)
 foreach(cpp ${SRC_COMMON_CPP})
@@ -70,15 +69,52 @@ target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
 
 set(APP_NAME pmasterdb)
 
+find_path(LevelDB_INCLUDE_PATH NAMES leveldb/db.h HINTS
+   /usr/include
+   /usr/local/include
+   $ENV{LEVELDB}
+   $ENV{LEVELDB}/include
+   leveldb/include
+)
+find_library(LevelDB_LIBRARY NAMES libleveldb.a HINTS
+   /usr/lib
+   /usr/local/lib
+   $ENV{LEVELDB}
+   $ENV{LEVELDB}/lib
+   leveldb
+)
+
+if(LevelDB_INCLUDE_PATH AND LevelDB_LIBRARY)
+  set(LevelDB_FOUND TRUE)
+endif(LevelDB_INCLUDE_PATH AND LevelDB_LIBRARY)
+
+if(LevelDB_FOUND)
+   include_directories ( ${LevelDB_INCLUDE_PATH} )
+   set(HAVE_LEVELDB_H TRUE)
+else(LevelDB_FOUND)
+   message("LevelDB not found!")
+endif(LevelDB_FOUND)
+
 set(MASTERDB_DIR ${SRC_DIR}/masterdb)
 
-set(SRC_MASTERDB_CPP defines.cpp session.cpp dbaction.cpp dbmemory.cpp masterdb.cpp)
+set(SRC_MASTERDB_CPP defines.cpp session.cpp dbaction.cpp masterdb.cpp)
+
+if(LevelDB_FOUND)
+  list(APPEND SRC_MASTERDB_CPP dblevel.cpp)
+else(LevelDB_FOUND)
+  list(APPEND SRC_MASTERDB_CPP dbmemory.cpp)
+endif(LevelDB_FOUND)
+
 foreach(cpp ${SRC_MASTERDB_CPP})
   list(APPEND SRC_MASTERDB ${MASTERDB_DIR}/${cpp} )
 endforeach(cpp)
 
 add_executable( ${APP_NAME} ${SRC_MASTERDB} )
-target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
+if(LevelDB_FOUND)
+  target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} ${LevelDB_LIBRARY} -lrt -rdynamic )
+else(LevelDB_FOUND)
+  target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
+endif(LevelDB_FOUND)
 
 
 if (Test)
@@ -116,3 +152,6 @@ if (Test)
   add_executable( ${APP_NAME} ${SRC_TEST_LOAD} )
   target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lboost_unit_test_framework -lrt -rdynamic )
 endif()
+
+
+CONFIGURE_FILE(${COMMON_DIR}/configure.h.in ${COMMON_DIR}/configure.h)

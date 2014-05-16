@@ -20,20 +20,19 @@ the License.
 ===========================================================================
 */
 
-#ifndef __DB_MEMORY_H
-#define __DB_MEMORY_H
+#ifndef __DB_LEVEL_H
+#define __DB_LEVEL_H
 
-#include <map>
-#include <utility> // pair
+#include <boost/scoped_ptr.hpp>
+#include "leveldb/db.h"
 #include "dbaccess.h"
 
 
 namespace masterdb {
 
-class DbInMemory : public IDAO
+class DbLevel : public IDAO
 {
-typedef std::map< std::string, std::string > SSTable;
-typedef std::pair< std::string, std::string > PairType;
+    typedef boost::scoped_ptr< leveldb::DB > DbPtr;
 
 public:
     // IDAO
@@ -43,7 +42,7 @@ public:
     virtual bool Get( std::string &jobs );
 
 private:
-    SSTable idToString_;
+    DbPtr pDB;
 };
 
 } // namespace masterdb

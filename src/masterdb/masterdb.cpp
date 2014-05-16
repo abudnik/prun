@@ -31,11 +31,16 @@ the License.
 #include "common/log.h"
 #include "common/daemon.h"
 #include "common/config.h"
+#include "common/configure.h"
 #include "common/pidfile.h"
 #include "common/service_locator.h"
 #include "session.h"
 #include "defines.h"
+#ifdef HAVE_LEVELDB_H
+#include "dblevel.h"
+#else
 #include "dbmemory.h"
+#endif
 #ifdef HAVE_EXEC_INFO_H
 #include "common/stack.h"
 #endif
@@ -143,8 +148,9 @@ public:
         }
 
         // initialize main components
-        common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
+        dbClient_.Initialize( exeDir_ );
 
+        common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
         serviceLocator.Register( (masterdb::IDAO*)&dbClient_ );
 
         acceptor_.reset( new masterdb::ConnectionAcceptor( io_service_, masterdb::MASTERDB_PORT ) );
@@ -213,7 +219,12 @@ private:
     boost::asio::io_service io_service_;
 
     boost::scoped_ptr< masterdb::ConnectionAcceptor > acceptor_;
+
+#ifdef HAVE_LEVELDB_H
+    masterdb::DbLevel dbClient_;
+#else
     masterdb::DbInMemory dbClient_;
+#endif
 };
 
 } // anonymous namespace

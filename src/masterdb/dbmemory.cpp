@@ -26,6 +26,8 @@ the License.
 
 namespace masterdb {
 
+void DbInMemory::Initialize( const std::string &exeDir ) {}
+
 bool DbInMemory::Put( const std::string &key, const std::string &value )
 {
     return idToString_.insert( PairType( key, value ) ).second;

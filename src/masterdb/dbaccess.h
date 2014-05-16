@@ -32,6 +32,8 @@ namespace masterdb {
 struct IDAO // Data Access Object
 {
     virtual ~IDAO() {}
+    virtual void Initialize( const std::string &exeDir ) = 0;
+
     virtual bool Put( const std::string &key, const std::string &value ) = 0;
     virtual bool Delete( const std::string &key ) = 0;
     virtual bool Get( std::string &jobs ) = 0;
