@@ -724,12 +724,11 @@ bool Scheduler::CanTakeNewJob()
 {
     boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
 
-    IPToNodeState::const_iterator it = nodeState_.begin();
-    for( ; it != nodeState_.end(); ++it )
+    NodePriorityQueue::right_map::const_iterator it = nodePriority_.right.begin();
+    if ( it != nodePriority_.right.end() )
     {
-        const NodeState &nodeState = it->second;
-        if ( nodeState.GetNumFreeCPU() > 0 )
-            return true;
+        const NodeState &nodeState = *(it->first);
+        return nodeState.GetNumFreeCPU() > 0;
     }
 
     return false;
