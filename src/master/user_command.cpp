@@ -99,7 +99,7 @@ bool UserCommand::RunMetaJob( std::ifstream &file, std::string &result ) const
     {
         std::string metaDescr, line;
         while( getline( file, line ) )
-            metaDescr += line + '\n';
+            metaDescr += line;
 
         std::list< JobPtr > jobs;
         IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();

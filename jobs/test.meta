@@ -1,6 +1,10 @@
-test.job test3.job
-test2.job test3.job
-test3.job test4.job
-test3.job test5.job
-test4.job test6.job
-test5.job test6.job
+{
+    "graph" : [
+    ["test.job",  "test3.job"],
+    ["test2.job", "test3.job"],
+    ["test3.job", "test4.job"],
+    ["test3.job", "test5.job"],
+    ["test4.job", "test6.job"],
+    ["test5.job", "test6.job"]
+    ]
+}

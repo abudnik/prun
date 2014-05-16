@@ -47,7 +47,7 @@ struct ITimeoutManager;
 struct IJobManager
 {
     virtual Job *CreateJob( const std::string &job_description ) const = 0;
-    virtual void CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs ) = 0;
+    virtual bool CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs ) = 0;
     virtual void PushJob( JobPtr &job ) = 0;
     virtual void PushJobs( std::list< JobPtr > &jobs ) = 0;
     virtual void PushJobFromHistory( int64_t jobId, const std::string &jobDescription ) = 0;
@@ -70,7 +70,7 @@ public:
 
     // IJobManager
     virtual Job *CreateJob( const std::string &job_description ) const;
-    virtual void CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs );
+    virtual bool CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs );
     virtual void PushJob( JobPtr &job );
     virtual void PushJobs( std::list< JobPtr > &jobs );
     virtual void PushJobFromHistory( int64_t jobId, const std::string &jobDescription );
@@ -100,7 +100,7 @@ private:
     void ReadHosts( Job *job, const boost::property_tree::ptree &ptree ) const;
     void ReadGroups( Job *job, const boost::property_tree::ptree &ptree ) const;
 
-    bool PrepareJobGraph( std::istringstream &ss,
+    bool PrepareJobGraph( const boost::property_tree::ptree &ptree,
                           std::map< std::string, int > &jobFileToIndex,
                           boost::shared_ptr< JobGroup > &jobGroup ) const;
 

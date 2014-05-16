@@ -91,72 +91,99 @@ Job *JobManager::CreateJob( const std::string &job_description ) const
     return job;
 }
 
-void JobManager::CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs )
+bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs )
 {
-    std::istringstream ss( meta_description );
-    std::string line;
-    typedef std::set< std::string > StringSet;
-    StringSet jobFiles;
+    boost::property_tree::ptree ptree;
+    JDLJason parser;
+    if ( !parser.ParseJob( meta_description, ptree ) )
+        return false;
 
-    // read job description file pathes
-    std::copy( std::istream_iterator<std::string>( ss ),
-               std::istream_iterator<std::string>(),
-               std::inserter< std::set< std::string > >( jobFiles, jobFiles.begin() ) );
-
-    int index = 0;
-    std::map< std::string, int > jobFileToIndex;
-
-    IJobGroupEventReceiverPtr evReceiverPtr = static_cast< IJobGroupEventReceiver * >( this );
-    boost::shared_ptr< JobGroup > jobGroup( new JobGroup( evReceiverPtr ) );
-    std::vector< JobWeakPtr > &indexToJob = jobGroup->GetIndexToJob();
-
-    // parse job files 
-    bool succeeded = true;
-    StringSet::const_iterator it = jobFiles.begin();
-    for( ; it != jobFiles.end(); ++it )
+    try
     {
-        // read job description from file
-        std::string filePath = *it;
-        if ( filePath[0] != '/' )
+        typedef std::set< std::string > StringSet;
+        StringSet jobFiles;
+
+        // read job description file pathes
+        BOOST_FOREACH( const boost::property_tree::ptree::value_type &adjList,
+                       ptree.get_child( "graph" ) )
         {
-            filePath = jobsDir_ + '/' + filePath;
+            BOOST_FOREACH( const boost::property_tree::ptree::value_type &item,
+                           adjList.second )
+            {
+                std::string job = item.second.get_value< std::string >();
+                jobFiles.insert( job );
+            }
         }
 
-        std::ifstream file( filePath.c_str() );
-        if ( !file.is_open() )
-        {
-            PLOG_ERR( "CreateMetaJob: couldn't open " << filePath );
-            succeeded = false;
-            break;
-        }
-        std::string jobDescr;
-        while( getline( file, line ) )
-            jobDescr += line;
+        int index = 0;
+        std::map< std::string, int > jobFileToIndex;
 
-        Job *job = CreateJob( jobDescr );
-        if ( job )
+        IJobGroupEventReceiverPtr evReceiverPtr = static_cast< IJobGroupEventReceiver * >( this );
+        boost::shared_ptr< JobGroup > jobGroup( new JobGroup( evReceiverPtr ) );
+        std::vector< JobWeakPtr > &indexToJob = jobGroup->GetIndexToJob();
+
+        // parse job files 
+        bool succeeded = true;
+        StringSet::const_iterator it = jobFiles.begin();
+        for( ; it != jobFiles.end(); ++it )
         {
-            JobPtr jobPtr( job );
-            jobFileToIndex[ *it ] = index++;
-            indexToJob.push_back( jobPtr );
-            jobs.push_back( jobPtr );
+            // read job description from file
+            std::string filePath = *it;
+            if ( filePath[0] != '/' )
+            {
+                filePath = jobsDir_ + '/' + filePath;
+            }
+
+            std::ifstream file( filePath.c_str() );
+            if ( !file.is_open() )
+            {
+                PLOG_ERR( "CreateMetaJob: couldn't open " << filePath );
+                succeeded = false;
+                break;
+            }
+            std::string jobDescr, line;
+            while( getline( file, line ) )
+                jobDescr += line;
+
+            Job *job = CreateJob( jobDescr );
+            if ( job )
+            {
+                if ( !index ) // first job must contain meta job description
+                {
+                    job->SetDescription( meta_description );
+                }
+
+                JobPtr jobPtr( job );
+                jobFileToIndex[ *it ] = index++;
+                indexToJob.push_back( jobPtr );
+                jobs.push_back( jobPtr );
+            }
+            else
+            {
+                PLOG_ERR( "JobManager::CreateMetaJob: CreateJob failed, job=" << *it );
+                succeeded = false;
+                break;
+            }
         }
-        else
+
+        if ( succeeded )
         {
-            PLOG_ERR( "JobManager::CreateMetaJob: CreateJob failed, job=" << *it );
-            succeeded = false;
-            break;
+            succeeded = PrepareJobGraph( ptree, jobFileToIndex, jobGroup );
         }
+
+        if ( !succeeded )
+        {
+            jobs.clear();
+        }
+
+        return succeeded;
     }
-    if ( succeeded )
+    catch( std::exception &e )
     {
-        succeeded = PrepareJobGraph( ss, jobFileToIndex, jobGroup );
+        PLOG_ERR( "JobManager::CreateMetaJob exception: " << e.what() );
     }
 
-    if ( !succeeded )
-    {
-        jobs.clear();
-    }
+    return false;
 }
 
 void JobManager::PushJob( JobPtr &job )
@@ -175,6 +202,9 @@ void JobManager::PushJob( JobPtr &job )
 
 void JobManager::PushJobs( std::list< JobPtr > &jobs )
 {
+    if ( jobs.empty() )
+        return;
+
     PLOG( "push jobs" );
     std::list< JobPtr >::iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
@@ -183,6 +213,9 @@ void JobManager::PushJobs( std::list< JobPtr > &jobs )
         job->SetJobId( jobId_++ );
     }
     jobs_->PushJobs( jobs, numJobGroups_++ );
+
+    IJobEventReceiver *jobEventReceiver = common::ServiceLocator::Instance().Get< IJobEventReceiver >();
+    jobEventReceiver->OnJobAdd( *jobs.begin() ); // first job must contain meta job description
 
     IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
     scheduler->OnNewJob();
@@ -197,19 +230,57 @@ void JobManager::PushJobs( std::list< JobPtr > &jobs )
 
 void JobManager::PushJobFromHistory( int64_t jobId, const std::string &jobDescription )
 {
-    JobPtr job( CreateJob( jobDescription ) );
-    if ( job )
-    {
-        if ( jobId >= jobId_ )
-        {
-            jobId_ = jobId + 1;
-        }
-        job->SetJobId( jobId );
-        jobs_->PushJob( job, numJobGroups_++ );
+    boost::property_tree::ptree ptree;
+    JDLJason parser;
+    if ( !parser.ParseJob( jobDescription, ptree ) )
+        return;
 
-        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
-        scheduler->OnNewJob();
-        timeoutManager_->PushJobQueue( jobId, job->GetQueueTimeout() );
+    if ( ptree.count( "graph" ) > 0 )
+    {
+        std::list< JobPtr > jobs;
+        if ( CreateMetaJob( jobDescription, jobs ) && !jobs.empty() )
+        {
+            PLOG( "push jobs from history" );
+            std::list< JobPtr >::iterator it = jobs.begin();
+            for( ; it != jobs.end(); ++it )
+            {
+                if ( jobId >= jobId_ + 1 )
+                {
+                    jobId_ = jobId + 1;
+                }
+                JobPtr &job = *it;
+                job->SetJobId( jobId++ );
+            }
+            jobs_->PushJobs( jobs, numJobGroups_++ );
+
+            IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+            scheduler->OnNewJob();
+
+            it = jobs.begin();
+            for( ; it != jobs.end(); ++it )
+            {
+                const JobPtr &job = *it;
+                timeoutManager_->PushJobQueue( job->GetJobId(), job->GetQueueTimeout() );
+            }
+        }
+    }
+    else
+    {
+        JobPtr job( CreateJob( jobDescription ) );
+        if ( job )
+        {
+            PLOG( "push job from history" );
+            if ( jobId >= jobId_ )
+            {
+                jobId_ = jobId + 1;
+            }
+            job->SetJobId( jobId );
+            jobs_->PushJob( job, numJobGroups_++ );
+
+            IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+            scheduler->OnNewJob();
+            timeoutManager_->PushJobQueue( jobId, job->GetQueueTimeout() );
+        }
     }
 }
 
@@ -373,7 +444,7 @@ void JobManager::ReadGroups( Job *job, const boost::property_tree::ptree &ptree 
     }
 }
 
-bool JobManager::PrepareJobGraph( std::istringstream &ss,
+bool JobManager::PrepareJobGraph( const boost::property_tree::ptree &ptree,
                                   std::map< std::string, int > &jobFileToIndex,
                                   boost::shared_ptr< JobGroup > &jobGroup ) const
 {
@@ -381,44 +452,38 @@ bool JobManager::PrepareJobGraph( std::istringstream &ss,
 
     // create graph
     JobGraph &graph = jobGroup->GetGraph();
+    unsigned pairNum = 1;
 
-    ss.clear();
-    ss.seekg( 0, ss.beg );
-    unsigned int lineNum = 1;
-    std::string line;
-    std::vector< std::string > jobFiles;
-    while( std::getline( ss, line ) )
+    BOOST_FOREACH( const boost::property_tree::ptree::value_type &adjList,
+                   ptree.get_child( "graph" ) )
     {
-        std::istringstream ss2( line );
-        std::copy( std::istream_iterator<std::string>( ss2 ),
-                   std::istream_iterator<std::string>(),
-                   std::back_inserter( jobFiles ) );
+        int v1, v2;
+        int numIter = 0;
 
-        if ( jobFiles.size() < 2 )
+        BOOST_FOREACH( const boost::property_tree::ptree::value_type &item,
+                       adjList.second )
         {
-            PLOG_ERR( "JobManager::PrepareJobGraph: invalid jobs adjacency list, line=" << lineNum );
+            std::string job = item.second.get_value< std::string >();
+
+            if ( numIter++ )
+            {
+                v2 = jobFileToIndex[ job ];
+                add_edge( v1, v2, graph );
+                v1 = v2;
+            }
+            else
+            {
+                v1 = jobFileToIndex[ job ];
+            }
+        }
+
+        if ( numIter < 2 )
+        {
+            PLOG_ERR( "JobManager::PrepareJobGraph: invalid jobs adjacency list, pair " << pairNum );
             return false;
         }
 
-        int v1, v2;
-
-        std::vector< std::string >::const_iterator first = jobFiles.begin();
-        std::vector< std::string >::const_iterator second = first + 1;
-
-        v1 = jobFileToIndex[*first];
-
-        for( ; second != jobFiles.end(); ++second )
-        {
-            v2 = jobFileToIndex[*second];
-
-            add_edge( v1, v2, graph );
-
-            v1 = v2;
-            first = second;
-        }
-
-        jobFiles.clear();
-        ++lineNum;
+        ++pairNum;
     }
 
     // validate graph
