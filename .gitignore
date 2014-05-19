@@ -1,5 +1,6 @@
 *~
 src/common/configure.h
+db
 CMakeFiles
 Makefile
 *.a
