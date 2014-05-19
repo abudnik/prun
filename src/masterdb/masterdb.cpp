@@ -260,7 +260,7 @@ int main( int argc, char* argv[], char **envp )
 
         if ( vm.count( "s" ) )
         {
-            return common::StopDaemon( "pmaster" );
+            return common::StopDaemon( "pmasterdb" );
         }
 
         if ( vm.count( "d" ) )
