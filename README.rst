@@ -14,6 +14,11 @@ Where to find complete Prun documentation?
 This README is just a fast "quick start" document. You can find more detailed
 documentation at doc/README
 
+PRUN simplified architecture
+----------------------------
+
+.. image:: arch.png
+
 Building
 --------
 
