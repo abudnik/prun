@@ -72,7 +72,6 @@ void SigHandler( int s )
             PLOG_ERR( "Signal '" << strsignal( s ) << "'" );
 #endif
             ::exit( 1 );
-            break;
         }
 
         default:
@@ -151,7 +150,7 @@ public:
         dbClient_.Initialize( exeDir_ );
 
         common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
-        serviceLocator.Register( (masterdb::IDAO*)&dbClient_ );
+        serviceLocator.Register( static_cast< masterdb::IDAO* >( &dbClient_ ) );
 
         acceptor_.reset( new masterdb::ConnectionAcceptor( io_service_, masterdb::MASTERDB_PORT ) );
 
@@ -229,7 +228,7 @@ private:
 
 } // anonymous namespace
 
-int main( int argc, char* argv[], char **envp )
+int main( int argc, char* argv[] )
 {
     try
     {

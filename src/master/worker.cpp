@@ -140,7 +140,7 @@ int WorkerJob::GetTotalNumTasks() const
     for( ; it != jobs_.end(); ++it )
     {
         const Tasks &tasks = it->second;
-        num += (int)tasks.size();
+        num += static_cast<int>( tasks.size() );
     }
     return num;
 }
@@ -151,7 +151,7 @@ int WorkerJob::GetNumTasks( int64_t jobId ) const
     if ( it != jobs_.end() )
     {
         const Tasks &tasks = it->second;
-        return (int)tasks.size();
+        return static_cast<int>( tasks.size() );
     }
     return 0;
 }
@@ -302,7 +302,7 @@ int WorkerList::GetNumWorkers( int stateMask ) const
     WorkerContainer::const_iterator it = workers_.begin();
     for( ; it != workers_.end(); ++it )
     {
-        int state = (int)(*it)->GetState();
+        int state = static_cast<int>( (*it)->GetState() );
         if ( state & stateMask )
         {
             ++num;
@@ -317,7 +317,7 @@ int WorkerList::GetNumCPU( int stateMask ) const
     WorkerContainer::const_iterator it = workers_.begin();
     for( ; it != workers_.end(); ++it )
     {
-        int state = (int)(*it)->GetState();
+        int state = static_cast<int>( (*it)->GetState() );
         if ( state & stateMask )
         {
             num += (*it)->GetNumCPU();

@@ -897,7 +897,6 @@ void SigHandler( int s )
             PLOG_ERR( "Signal '" << strsignal( s ) << "'" );
 #endif
             ::exit( 1 );
-            break;
         }
 
         default:
@@ -1036,7 +1035,8 @@ public:
         work_exec_.reset( new boost::asio::io_service::work( io_service_exec_ ) );
 
         commDescrPool_.reset( new CommDescrPool( numRequestThread_, &io_service_exec_,
-                                                 (char*)mappedRegion_->get_address() ) );
+                                                 static_cast<char*>( mappedRegion_->get_address() ) )
+        );
         execContext_->SetCommDescrPool( commDescrPool_ );
 
         for( unsigned int i = 0; i < numExecThread; ++i )
@@ -1229,7 +1229,7 @@ private:
 
 } // namespace worker
 
-int main( int argc, char* argv[], char **envp )
+int main( int argc, char* argv[] )
 {
     try
     {

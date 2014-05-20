@@ -371,8 +371,8 @@ protected:
             }
 
             gettimeofday( &tvEnd, NULL );
-            int64_t elapsed = (int64_t)( tvEnd.tv_sec - tvStart.tv_sec ) * 1000 +
-                                       ( tvEnd.tv_usec - tvStart.tv_usec ) / 1000;
+            int64_t elapsed = static_cast<int64_t>( ( tvEnd.tv_sec - tvStart.tv_sec ) * 1000 +
+                                                    ( tvEnd.tv_usec - tvStart.tv_usec ) / 1000 );
             job_->SetExecTime( elapsed );
 
             if ( !succeded )
@@ -452,7 +452,7 @@ protected:
             const boost::shared_ptr< boost::interprocess::mapped_region > &mappedRegion(
                 execContext_->GetMappedRegion()
             );
-            scriptAddr = (const char*)mappedRegion->get_address() + offset;
+            scriptAddr = static_cast< const char* >( mappedRegion->get_address() ) + offset;
             bytesToWrite = job_->GetScriptLength();
         }
 
@@ -1077,7 +1077,6 @@ void SigHandler( int s )
             PLOG_ERR( "Signal '" << strsignal( s ) << "'" );
 #endif
             ::exit( 1 );
-            break;
         }
 
         default:
@@ -1317,7 +1316,7 @@ private:
         {
             if ( uid_ )
             {
-                ret = chown( fifoName.c_str(), uid_, (gid_t)-1 );
+                ret = chown( fifoName.c_str(), uid_, static_cast<gid_t>( -1 ) );
                 if ( ret == -1 )
                     PLOG_ERR( "CreateFifo: chown failed " << strerror(errno) );
             }
@@ -1444,7 +1443,7 @@ private:
 } // namespace worker
 
 
-int main( int argc, char* argv[], char **envp )
+int main( int argc, char* argv[] )
 {
     SetupSignalHandlers();
     SetupSignalMask();

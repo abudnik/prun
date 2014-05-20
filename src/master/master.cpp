@@ -117,7 +117,6 @@ void SigHandler( int s )
             PLOG_ERR( "Signal '" << strsignal( s ) << "'" );
 #endif
             ::exit( 1 );
-            break;
         }
 
         default:
@@ -209,21 +208,21 @@ public:
         common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
 
         workerManager_.reset( new master::WorkerManager );
-        serviceLocator.Register( (master::IWorkerManager*)workerManager_.get() );
+        serviceLocator.Register( static_cast< master::IWorkerManager* >( workerManager_.get() ) );
         InitWorkerManager( workerManager_, exeDir_, cfgPath_ );
 
         timeoutManager_.reset( new master::TimeoutManager( io_service_timeout_ ) );
 
         jobManager_.reset( new master::JobManager );
         jobManager_->SetMasterId( masterId_ ).SetExeDir( exeDir_ ).SetTimeoutManager( timeoutManager_.get() );
-        serviceLocator.Register( (master::IJobManager*)jobManager_.get() );
+        serviceLocator.Register( static_cast< master::IJobManager* >( jobManager_.get() ) );
 
         scheduler_.reset( new master::Scheduler );
-        serviceLocator.Register( (master::IScheduler*)scheduler_.get() );
+        serviceLocator.Register( static_cast< master::IScheduler* >( scheduler_.get() ) );
 
         dbConnection_.reset( new master::DbHistoryConnection( io_service_db_ ) );
-        jobHistory_.reset( new master::JobHistory( (master::IHistoryChannel*)dbConnection_.get() ) );
-        serviceLocator.Register( (master::IJobEventReceiver*)jobHistory_.get() );
+        jobHistory_.reset( new master::JobHistory( dbConnection_.get() ) );
+        serviceLocator.Register( static_cast< master::IJobEventReceiver* >( jobHistory_.get() ) );
         if ( dbConnection_->Connect( masterdb, master::MASTERDB_PORT ) )
         {
             jobHistory_->GetJobs();
@@ -414,7 +413,7 @@ private:
 
 } // anonymous namespace
 
-int main( int argc, char* argv[], char **envp )
+int main( int argc, char* argv[] )
 {
     try
     {
