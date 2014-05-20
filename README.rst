@@ -1,21 +1,12 @@
 PRUN: Parallel task executor and job scheduler in a high-availability computing clusters
 ----------------------------------------------------------------------------------------
 
-Prun is an open-source cluster job scheduler and parallel task executor system.
-Prun can be compiled and used on *nix-like operating systems, but currently
-it has been tested only under Linux and FreeBSD.
-
-Like other full-featured batch systems, Prun provides a job queueing mechanism,
-job scheduling, priority scheme, resource monitoring and resource management.
-
-Prun consists of Worker and Master components. Users submit their jobs to Master,
-while Master places them into a queue, chooses when and where to run the jobs
-based upon a policy, carefully monitors their progress and provides failover
-facilities by detecting hardware/software faults, and immediately restarting the
-application on another system without requiring administrative intervention.
-Worker provides job execution and is fully controlled by a Master. Each Worker
-instance, which is running across different cluster nodes, may start, monitor
-and stop jobs assigned by a Master.
+PRUN is a high-throughput computing (HTC) software framework for coarse-grained
+distributed parallelization of computationally intensive tasks.
+It provides a queueing mechanism, scheduling, priority scheme, execution and
+failover of short-term or long-term tasks on the computer cluster.
+Prun can be compiled and used on Unix-like operating systems, including Linux
+and *BSD.
 
 Where to find complete Prun documentation?
 -------------------------------------------
@@ -35,6 +26,7 @@ Build requirements:
 Additional requirements:
 
 - python 2.6/3.x (for command-line admin tool & other purposes)
+- LevelDB (for serialization of submitted tasks)
 
 For running jobs written in Ruby, JavaScript or Java, requirements are as follows:
 
@@ -79,9 +71,10 @@ Installation
 If you are installing Prun the proper way for a production system, we have a script
 doing this for Ubuntu and Debian systems (upstart) or SysV-init compatible systems::
 
-> cd ~/prun                # cd to the directory containing prun
-> utils/install_master.sh  # install Master
-> utils/install_worker.sh  # install Worker
+> cd ~/prun                  # cd to the directory containing prun
+> utils/install_master.sh    # install Master
+> utils/install_masterdb.sh  # install Master's database server
+> utils/install_worker.sh    # install Worker
 
 The script will ask you a few questions and will setup everything you need
 to run Master/Worker properly as a background daemon that will start again on
@@ -93,14 +86,14 @@ You'll be able to stop and start Master/Worker using the script named
 Job submitting
 --------------
 
-Here's a simple example of external sort application. Let's assume that we have
-network-shared directory named 'data', which is read/write available from any node
-in a cluster. So we need parallelize somehow sorting of a big text file.
+Here's a simple example of external sort task. Let's assume that we have
+network-shared directory named 'data', which is read/write available from any
+node in a cluster. So we need parallelize sorting of a big text file.
 
-It is possible to sort a separate small parts of a file in parallel. This small
-parts are called chunks. We can submit a job that sorts chunks from Master to
-Workers. Here's a simple shell script (see jobs/example/sort_chunk.sh) that does
-it properly::
+One solution is to sort a separate small pieces of a file and then merge them into
+one big sorted file. Small pieces of a file are called chunks. We can submit a job
+that sorts chunks from Master to Workers. Here's a simple shell script (see
+jobs/example/sort_chunk.sh) that does it properly::
 
   echo "Sorting chunk process started"
   echo "taskId="$taskId", numTasks="$numTasks", jobId="$jobId
@@ -136,11 +129,11 @@ detailed description)::
       "no_reschedule" : false
   }
 
-In a few words this job should be executed 16 times, using only one CPU of a
+In a few words this job should be executed 16 times, using exactly one CPU of a
 Worker node and should be done within 1800 seconds. It means that if we have
-16 Worker nodes, each worker node will sort one of sixteen chunks of the input
-big file. Even if we have only one worker, chunk sorting job will be executed
-sixteen times.
+16 Worker nodes (computers/CPUs), each worker node will sort one of sixteen
+chunks of the input big file. Even if we have only one worker, chunk sorting
+job will be executed sixteen times.
 
 After sorting chunks, this chunks could be merged together in one big output file.
 Here's a simple shell script (see jobs/example/sort_merge.sh) which does
@@ -177,11 +170,12 @@ And merge job description (see jobs/sort_merge.job)::
 
 We want to run merging job strictly after completion of all chunk sorting jobs.
 It is possible to describe job dependencies in a directed acyclic graph. Prun
-takes that job dependencies from the .meta file, which is written in tsort
-format (man tsort). Here's a simple job dependency between two jobs (see
-jobs/external_sort.meta)::
+takes that job dependencies from the .meta file. Here's a simple job dependency
+between two jobs (see jobs/external_sort.meta)::
 
-  sort_chunk.job sort_merge.job
+  {
+      "graph" : [["sort_chunk.job", "sort_merge.job"]]
+  }
 
 Ok, we are almost done. We are having everything that is needed for sorting
 the big file: running Workers across cluster nodes, one running Master process,
@@ -189,7 +183,7 @@ jobs and job descriptions, shared directory containing the input file
 (data/input.txt). Lets submit job using command-line tool::
 
 > cd ~/prun                        # cd to the directory containing prun
-> python admin.py master_hostname  # run admin tool, connect to host with Master
+> python admin.py master_hostname  # run admin tool, connect to Master host
 > run external_sort.meta           # submit a meta job
 
 License

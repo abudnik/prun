@@ -101,7 +101,7 @@ Master process, the value of "jobId" parameter for newly running tasks may be
 equal to such one "jobId" value of previously running jobs.
 
 Each running job returns its completion status to a supervising Worker process.
-If job is written in one of supported script languages (e.g Python or Ruby),
+If job is written in one of supported script languages (e.g. Python or Ruby),
 then it should throw an exception to return its negative completion status,
 while returning positive completion status doesn't require any additional action.
 Note that shell scripts or running binary executables must return its exit code
@@ -116,9 +116,9 @@ that job to any other node as it mentioned above in the job description section.
 
 Job dependency graph is a directed acyclic graph (DAG) representing dependencies
 of several jobs towards each other. It is also called "metajob" in context of
-Prun. Master takes that job dependencies from the .meta file, which is written
-in tsort format (man tsort). Master expects that .meta files are in the
-"prun/jobs" directory.
+Prun. Master takes that job dependencies from the .meta file, that is written in
+JSON format and describes job dependency graph via adjacency list.
+Master expects that .meta files are in the "prun/jobs" directory.
 
                         Workers and worker groups management
 --------------------------------------------------------------------------------
@@ -217,10 +217,31 @@ Setting this parameter value to true leads to using of IPv6 protocol. Note,
 that all Workers must have the same value of "ipv6" settings in their config
 files as the Master's "ipv6" value.
 
+- masterdb
+IP or hostname of masterdb service
+
+                             Masterdb configuration
+--------------------------------------------------------------------------------
+
+Masterdb's configuration described in the "prun/masterdb.cfg" file. This file is
+a set of key-value pairs, written in JSON format. Settings description:
+
+- pidfile
+Name of a pidfile. Masterdb writes its PID into this file during initialization
+phase. It is necessary for recognition of silent Masterdb failures.
+
+- db_path
+Path to the jobs database directory. Used in configuration with LevelDB library.
+
+- ipv6
+Setting this parameter value to true leads to using of IPv6 protocol. Note, that
+Masterdb must have the same value of "ipv6" settings as the Master's "ipv6".
+
                              Network configuration
 --------------------------------------------------------------------------------
 
 Master listen ports: 5557 (tcp), 5553(udp)
+Masterdb listen ports: 5559 (tcp)
 Worker listen ports: 5555 (tcp), 5556(tcp), 5554(udp)
 
                                  Logs
