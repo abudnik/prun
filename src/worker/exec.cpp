@@ -279,6 +279,7 @@ public:
         job_ = job;
 
         pid_t pid = DoFork();
+        // TODO: pid < 0 case (ulimit for unprivileged)
         if ( pid > 0 )
             return;
 
