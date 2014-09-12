@@ -209,6 +209,7 @@ void GetterBoost::HandleRead( const boost::system::error_code& error, size_t byt
             {
                 OnCompletion( false, 0, 0 );
             }
+            WaitClientDisconnect();
         }
     }
     else
@@ -216,6 +217,20 @@ void GetterBoost::HandleRead( const boost::system::error_code& error, size_t byt
         PLOG_WRN( "GetterBoost::HandleRead error=" << error.message() );
         getter_->OnGetTaskResult( false, 0, 0, workerTask_, hostIP_ );
     }
+}
+
+void GetterBoost::WaitClientDisconnect()
+{
+    socket_.async_read_some( boost::asio::buffer( buffer_ ),
+                             boost::bind( &GetterBoost::HandleLastRead, shared_from_this(),
+                                          boost::asio::placeholders::error,
+                                          boost::asio::placeholders::bytes_transferred ) );
+}
+
+void GetterBoost::HandleLastRead( const boost::system::error_code& error, size_t bytes_transferred )
+{
+    // if not yet disconnected from opposite side
+    if ( !error ) WaitClientDisconnect();
 }
 
 bool GetterBoost::HandleResponse()

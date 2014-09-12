@@ -210,6 +210,7 @@ void RpcBoost::HandleRead( const boost::system::error_code& error, size_t bytes_
             {
                 OnCompletion( false, 0 );
             }
+            WaitClientDisconnect();
         }
     }
     else
@@ -217,6 +218,20 @@ void RpcBoost::HandleRead( const boost::system::error_code& error, size_t bytes_
         PLOG_WRN( "RpcBoost::HandleRead error=" << error.message() );
         OnCompletion( false, 0 );
     }
+}
+
+void RpcBoost::WaitClientDisconnect()
+{
+    socket_.async_read_some( boost::asio::buffer( buffer_ ),
+                             boost::bind( &RpcBoost::HandleLastRead, shared_from_this(),
+                                          boost::asio::placeholders::error,
+                                          boost::asio::placeholders::bytes_transferred ) );
+}
+
+void RpcBoost::HandleLastRead( const boost::system::error_code& error, size_t bytes_transferred )
+{
+    // if not yet disconnected from opposite side
+    if ( !error ) WaitClientDisconnect();
 }
 
 bool RpcBoost::HandleResponse()

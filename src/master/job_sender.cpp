@@ -181,12 +181,28 @@ void SenderBoost::HandleRead( const boost::system::error_code &error, size_t byt
     {
         bool success = ( response_ == '1' );
         OnCompletion( success );
+        WaitClientDisconnect();
     }
     else
     {
         PLOG_WRN( "SenderBoost::HandleRead error=" << error.message() );
         OnCompletion( false );
     }
+}
+
+void SenderBoost::WaitClientDisconnect()
+{
+    boost::asio::async_read( socket_,
+                             boost::asio::buffer( &response_, sizeof( response_ ) ),
+                             boost::bind( &SenderBoost::HandleLastRead, shared_from_this(),
+                                          boost::asio::placeholders::error,
+                                          boost::asio::placeholders::bytes_transferred ) );
+}
+
+void SenderBoost::HandleLastRead( const boost::system::error_code& error, size_t bytes_transferred )
+{
+    // if not yet disconnected from opposite side
+    if ( !error ) WaitClientDisconnect();
 }
 
 void SenderBoost::OnCompletion( bool success )
@@ -201,12 +217,6 @@ void SenderBoost::OnCompletion( bool success )
 
     sender_->OnJobSendCompletion( success, workerJob_, hostIP_, job_ );
 }
-
-
-    struct IsBlank
-    {
-        bool operator () ( char c ) { return true; }
-    };
 
 void SenderBoost::MakeRequest()
 {

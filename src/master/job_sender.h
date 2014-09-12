@@ -91,6 +91,9 @@ private:
 
     void HandleRead( const boost::system::error_code &error, size_t bytes_transferred );
 
+    void WaitClientDisconnect();
+    void HandleLastRead( const boost::system::error_code &error, size_t bytes_transferred );
+
     void OnCompletion( bool success );
 
 private:
