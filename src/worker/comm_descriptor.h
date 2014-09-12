@@ -32,7 +32,7 @@ the License.
 #include "common/config.h"
 #include "common.h"
 
-using boost::asio::ip::tcp;
+using boost::asio::local::stream_protocol;
 
 namespace worker {
 
@@ -64,7 +64,7 @@ struct CommDescr
 
     unsigned int shmemBlockId;
     char *shmemAddr;
-    boost::shared_ptr< tcp::socket > socket;
+    boost::shared_ptr< stream_protocol::socket > socket;
     bool used;
 };
 
@@ -90,21 +90,8 @@ public:
             boost::system::error_code ec;
 
             // open socket to pyexec
-            tcp::resolver resolver( *io_service );
-
-            common::Config &cfg = common::Config::Instance();
-            bool ipv6 = cfg.Get<bool>( "ipv6" );
-
-            tcp::resolver::query query( ipv6 ? tcp::v6() : tcp::v4(), "localhost", boost::lexical_cast<std::string>( DEFAULT_PREXEC_PORT ) );
-            tcp::resolver::iterator iterator = resolver.resolve( query, ec ), end;
-            if ( ec || iterator == end )
-            {
-                PLOG_ERR( "CommDescrPool() address not resolved: 'localhost'" );
-                exit( 1 );
-            }
-
-            commDescr.socket = boost::shared_ptr< tcp::socket >( new tcp::socket( *io_service ) );
-            commDescr.socket->connect( *iterator, ec );
+            commDescr.socket = boost::shared_ptr< stream_protocol::socket >( new stream_protocol::socket( *io_service ) );
+            commDescr.socket->connect( stream_protocol::endpoint( UDS_NAME ) );
             if ( ec )
             {
                 PLOG_ERR( "CommDescrPool(): socket_.connect() failed " << ec.message() );
@@ -162,7 +149,7 @@ public:
             {
                 CommDescr &descr = *it;
                 boost::system::error_code error;
-                descr.socket->shutdown( tcp::socket::shutdown_both, error );
+                descr.socket->shutdown( stream_protocol::socket::shutdown_both, error );
                 descr.socket->close( error );
             }
             commDescr_.clear();

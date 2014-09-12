@@ -28,12 +28,12 @@ extern unsigned int SHMEM_BLOCK_SIZE;
 extern unsigned int MAX_SCRIPT_SIZE;
 
 extern unsigned short DEFAULT_PORT;
-extern unsigned short DEFAULT_PREXEC_PORT;
 extern unsigned short DEFAULT_UDP_PORT;
 extern unsigned short DEFAULT_MASTER_UDP_PORT;
 
 extern const char SHMEM_NAME[];
 extern const char FIFO_NAME[];
+extern const char UDS_NAME[];
 
 extern const char NODE_SCRIPT_NAME_PY[];
 extern const char NODE_SCRIPT_NAME_JAVA[];

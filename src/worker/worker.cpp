@@ -58,6 +58,7 @@ the License.
 
 using namespace std;
 using boost::asio::ip::tcp;
+using boost::asio::local::stream_protocol;
 
 namespace worker {
 
@@ -216,7 +217,7 @@ private:
     }
 
 private:
-    tcp::socket *socket_;
+    stream_protocol::socket *socket_;
     BufferType buffer_;
     boost::property_tree::ptree responsePtree_;
     common::Request< BufferType > response_;

@@ -51,7 +51,7 @@ the License.
 #endif
 
 using namespace std;
-using boost::asio::ip::tcp;
+using boost::asio::local::stream_protocol;
 
 namespace worker {
 
@@ -886,7 +886,7 @@ public:
                                               boost::asio::placeholders::bytes_transferred ) );
     }
 
-    tcp::socket &GetSocket()
+    stream_protocol::socket &GetSocket()
     {
         return socket_;
     }
@@ -930,8 +930,8 @@ protected:
             {
                 socket_.async_read_some( boost::asio::buffer( buffer_ ),
                                          boost::bind( &SessionBoost::HandleRead, shared_from_this(),
-                                                    boost::asio::placeholders::error,
-                                                    boost::asio::placeholders::bytes_transferred ) );
+                                                      boost::asio::placeholders::error,
+                                                      boost::asio::placeholders::bytes_transferred ) );
             }
             else
             {
@@ -969,7 +969,7 @@ protected:
     }
 
 protected:
-    tcp::socket socket_;
+    stream_protocol::socket socket_;
     BufferType buffer_;
     common::Request< BufferType > request_;
     std::string response_;
@@ -979,29 +979,32 @@ protected:
 class ConnectionAcceptor
 {
     typedef boost::shared_ptr< SessionBoost > session_ptr;
+    typedef boost::shared_ptr< stream_protocol::acceptor > acceptor_ptr;
 
 public:
-    ConnectionAcceptor( boost::asio::io_service &io_service, unsigned short port,
+    ConnectionAcceptor( boost::asio::io_service &io_service,
+                        uid_t uid,
                         ExecContextPtr &execContext )
     : io_service_( io_service ),
-     acceptor_( io_service ),
      execContext_( execContext )
     {
         try
         {
-            common::Config &cfg = common::Config::Instance();
-            bool ipv6 = cfg.Get<bool>( "ipv6" );
+            unlink( UDS_NAME );
+            stream_protocol::endpoint endpoint( UDS_NAME );
+            acceptor_ = acceptor_ptr( new stream_protocol::acceptor( io_service, endpoint ) );
 
-            tcp::endpoint endpoint( ipv6 ? tcp::v6() : tcp::v4(), port );
-            acceptor_.open( endpoint.protocol() );
-            acceptor_.set_option( tcp::acceptor::reuse_address( true ) );
-            acceptor_.set_option( tcp::no_delay( true ) );
-            acceptor_.bind( endpoint );
-            acceptor_.listen();
+            if ( uid )
+            {
+                int ret = chown( UDS_NAME, uid, static_cast<gid_t>( -1 ) );
+                if ( ret == -1 )
+                    PLOG_ERR( "ConnectionAcceptor: chown failed " << strerror(errno) );
+            }
         }
         catch( std::exception &e )
         {
             PLOG_ERR( "ConnectionAcceptor: " << e.what() );
+            ::exit( 1 );
         }
 
         StartAccept();
@@ -1011,9 +1014,9 @@ private:
     void StartAccept()
     {
         session_ptr session( new SessionBoost( io_service_, execContext_ ) );
-        acceptor_.async_accept( session->GetSocket(),
-                                boost::bind( &ConnectionAcceptor::HandleAccept, this,
-                                             session, boost::asio::placeholders::error ) );
+        acceptor_->async_accept( session->GetSocket(),
+                                 boost::bind( &ConnectionAcceptor::HandleAccept, this,
+                                              session, boost::asio::placeholders::error ) );
     }
 
     void HandleAccept( session_ptr session, const boost::system::error_code &error )
@@ -1032,7 +1035,7 @@ private:
 
 private:
     boost::asio::io_service &io_service_;
-    tcp::acceptor acceptor_;
+    acceptor_ptr acceptor_;
     ExecContextPtr execContext_;
 };
 
@@ -1252,7 +1255,7 @@ public:
         
         // start accepting connections
         acceptor_.reset(
-            new ConnectionAcceptor( io_service_, DEFAULT_PREXEC_PORT, execContext_ )
+            new ConnectionAcceptor( io_service_, uid_, execContext_ )
         );
 
         // create thread pool
@@ -1404,6 +1407,8 @@ private:
                 threadParams.writeFifo.clear();
             }
         }
+
+        unlink( UDS_NAME );
     }
 
     void SetupPrExecIPC()

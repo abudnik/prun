@@ -242,7 +242,7 @@ Masterdb must have the same value of "ipv6" settings as the Master's "ipv6".
 
 Master listen ports: 5557 (tcp), 5553(udp)
 Masterdb listen ports: 5559 (tcp)
-Worker listen ports: 5555 (tcp), 5556(tcp), 5554(udp)
+Worker listen ports: 5555 (tcp), 5554(udp)
 
                                  Logs
 --------------------------------------------------------------------------------
