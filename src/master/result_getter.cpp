@@ -127,6 +127,9 @@ void GetterBoost::HandleConnect( const boost::system::error_code &error )
 {
     if ( !error )
     {
+        boost::system::error_code ec;
+        socket_.set_option( tcp::no_delay( true ), ec );
+
         MakeRequest();
 
         boost::asio::async_read( socket_,
