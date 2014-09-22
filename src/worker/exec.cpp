@@ -279,8 +279,7 @@ public:
         job_ = job;
 
         pid_t pid = DoFork();
-        // TODO: pid < 0 case (ulimit for unprivileged)
-        if ( pid > 0 )
+        if ( pid != 0 )
             return;
 
         string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
@@ -414,6 +413,7 @@ protected:
         else
         {
             PLOG_ERR( "ScriptExec::DoFork: fork() failed " << strerror(errno) );
+            job_->OnError( NODE_FATAL );
         }
 
         return pid;
@@ -611,7 +611,7 @@ public:
         job_ = job;
 
         pid_t pid = DoFork();
-        if ( pid > 0 )
+        if ( pid != 0 )
             return;
 
         string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
