@@ -56,7 +56,7 @@ using boost::asio::local::stream_protocol;
 namespace worker {
 
 bool g_isFork;
-PidContainer g_childProcesses;
+int g_processCompletionPipe;
 
 
 struct ThreadParams
@@ -91,6 +91,11 @@ public:
         return mappedRegion_;
     }
 
+    PidContainer &GetChildProcesses() { return childProcesses_; }
+
+    boost::mutex &GetProcessCompletionMutex() { return processCompletionMutex_; }
+    boost::condition_variable &GetProcessCompletionCondition() { return processCompletionCondition_; }
+
 private:
     ExecTable execTable_;
     ThreadInfo threadInfo_;
@@ -99,6 +104,11 @@ private:
     std::string resourcesDir_;
 
     boost::shared_ptr< boost::interprocess::mapped_region > mappedRegion_;
+
+    PidContainer childProcesses_;
+
+    boost::mutex processCompletionMutex_;
+    boost::condition_variable processCompletionCondition_;
 
     friend class ExecApplication;
 };
@@ -142,7 +152,7 @@ public:
         {
             pid_t pid = execInfo.pid_;
 
-            if ( g_childProcesses.Delete( pid ) )
+            if ( execContext_->GetChildProcesses().Find( pid ) )
             {
                 int ret = kill( pid, SIGTERM );
                 if ( ret != -1 )
@@ -309,7 +319,7 @@ public:
 
         ExecTable &execTable = execContext_->GetExecTable();
         if ( execTable.Delete( job_->GetJobId(), job_->GetTaskId(), job_->GetMasterId() ) &&
-             g_childProcesses.Delete( pid ) )
+             execContext_->GetChildProcesses().Find( pid ) )
         {
             int ret = kill( pid, SIGTERM );
             if ( ret == -1 )
@@ -346,7 +356,7 @@ protected:
 
         if ( pid > 0 )
         {
-            g_childProcesses.Add( pid );
+            execContext_->GetChildProcesses().Add( pid );
 
             ThreadInfo &threadInfo = execContext_->GetThreadInfo();
             ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
@@ -367,7 +377,7 @@ protected:
             bool succeded = WriteScript( threadParams.writeFifoFD );
             if ( succeded )
             {
-                succeded = ReadCompletionStatus( threadParams.readFifoFD );
+                succeded = ReadCompletionStatus( threadParams.readFifoFD, pid );
             }
 
             gettimeofday( &tvEnd, NULL );
@@ -503,23 +513,41 @@ protected:
         return false;
     }
 
-    bool ReadCompletionStatus( int fifo )
+    bool ReadCompletionStatus( int fifo, pid_t pid )
     {
+        int timeout = job_->GetTimeout();
+        if ( timeout > 0 )
+        {
+            timeout *= 1000;
+            const boost::system_time deadline = boost::get_system_time() + boost::posix_time::milliseconds( timeout );
+
+            boost::unique_lock< boost::mutex > lock( execContext_->GetProcessCompletionMutex() );
+            while( execContext_->GetChildProcesses().Find( pid ) )
+            {
+                if ( !execContext_->GetProcessCompletionCondition().timed_wait( lock, deadline ) )
+                    break; // deadline reached
+            }
+        }
+        else
+        {
+            boost::unique_lock< boost::mutex > lock( execContext_->GetProcessCompletionMutex() );
+            while( execContext_->GetChildProcesses().Find( pid ) )
+            {
+                execContext_->GetProcessCompletionCondition().wait( lock );
+            }
+        }
+
+        int errCode = NODE_FATAL;
+
         pollfd pfd[1];
         pfd[0].fd = fifo;
         pfd[0].events = POLLIN;
 
-        int timeout = job_->GetTimeout();
-        if ( timeout > 0 )
-            timeout *= 1000;
-
-        int errCode = NODE_FATAL;
-        char buf[32];
-        memset( buf, 0, sizeof( buf ) );
-
-        int ret = poll( pfd, 1, timeout );
+        int ret = poll( pfd, 1, 0 );
         if ( ret > 0 )
         {
+            char buf[32];
+            memset( buf, 0, sizeof( buf ) );
             ret = read( fifo, &buf, sizeof( buf ) );
             if ( ret > 0 )
             {
@@ -1056,7 +1084,7 @@ void SigHandler( int s )
                 int status;
                 pid_t pid = waitpid( -1, &status, WNOHANG );
                 if ( pid > 0 )
-                    worker::g_childProcesses.Delete( pid );
+                    write( worker::g_processCompletionPipe, &pid, sizeof( pid ) );
                 else
                     break;
             }
@@ -1125,6 +1153,17 @@ void UnblockSighandlerMask()
     sigemptyset( &sigset );
     sigaddset( &sigset, SIGCHLD );
     pthread_sigmask( SIG_UNBLOCK, &sigset, NULL );
+}
+
+void ReadProcessCompletionPIDs( const worker::ExecContextPtr &spExecContext, int processCompletionPipe )
+{
+    pid_t pid;
+    while( read( processCompletionPipe, &pid, sizeof( pid ) ) != -1 )
+    {
+        spExecContext->GetChildProcesses().Delete( pid );
+        boost::unique_lock< boost::mutex > lock( spExecContext->GetProcessCompletionMutex() );
+        spExecContext->GetProcessCompletionCondition().notify_all();
+    }
 }
 
 void SetupLanguageRuntime( const worker::ExecContextPtr &execContext )
@@ -1229,10 +1268,12 @@ public:
      isDaemon_( isDaemon ),
      uid_( uid ),
      numThread_( numThread ),
+     processCompletionPipe_( -1 ),
      execContext_( new ExecContext )
     {
         execContext_->SetExeDir( exeDir );
         execContext_->SetResourcesDir( resourcesDir );
+        g_processCompletionPipe = -1;
     }
 
     void Initialize()
@@ -1252,7 +1293,9 @@ public:
         SetupLanguageRuntime( execContext_ );
 
         SetupPrExecIPC();
-        
+
+        InitProcessCompletionPipe();
+
         // start accepting connections
         acceptor_.reset(
             new ConnectionAcceptor( io_service_, uid_, execContext_ )
@@ -1268,6 +1311,10 @@ public:
             OnThreadCreate( thread );
         }
 
+        worker_threads_.create_thread(
+            boost::bind( ReadProcessCompletionPIDs, execContext_, processCompletionPipe_ )
+        );
+
         // signal parent process to say that PrExec has been initialized
         kill( getppid(), SIGUSR1 );
 
@@ -1282,6 +1329,8 @@ public:
         execTable.Clear();
 
         CleanupThreads();
+
+        CloseProcessCompletionPipe();
 
         worker_threads_.join_all();
     }
@@ -1428,11 +1477,35 @@ private:
         }
     }
 
+    void InitProcessCompletionPipe()
+    {
+        int pipefd[2];
+        if ( pipe( pipefd ) != -1 )
+        {
+            processCompletionPipe_ = pipefd[0];
+            g_processCompletionPipe = pipefd[1];
+        }
+        else
+        {
+            PLOG_ERR( "InitProcessCompletionPipe: pipe creation failed " << strerror(errno) );
+        }
+    }
+
+    void CloseProcessCompletionPipe()
+    {
+        if ( processCompletionPipe_ != -1 )
+            close( processCompletionPipe_ );
+
+        if ( g_processCompletionPipe != -1 )
+            close( g_processCompletionPipe );
+    }
+
 private:
     string cfgDir_;
     bool isDaemon_;
     uid_t uid_;
     unsigned int numThread_;
+    int processCompletionPipe_;
 
     boost::thread_group worker_threads_;
 

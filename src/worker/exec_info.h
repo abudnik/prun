@@ -166,6 +166,13 @@ public:
         return false;
     }
 
+    bool Find( pid_t pid )
+    {
+        boost::unique_lock< boost::mutex > lock( mut_ );
+        std::multiset< pid_t >::iterator it = pids_.find( pid );
+        return it != pids_.end();
+    }
+
 private:
     std::multiset< pid_t > pids_;
     boost::mutex mut_;
