@@ -35,7 +35,7 @@ using boost::asio::ip::tcp;
 
 namespace master {
 
-class ResultGetter : common::Observer
+class ResultGetter : common::IObserver
 {
 public:
     ResultGetter()
@@ -51,6 +51,7 @@ public:
     virtual void OnGetTaskResult( bool success, int errCode, int64_t execTime, const WorkerTask &workerTask, const std::string &hostIP );
 
 private:
+    // common::IObserver
     virtual void NotifyObserver( int event );
 
     virtual void GetTaskResult( const WorkerTask &workerTask, const std::string &hostIP ) = 0;

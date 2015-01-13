@@ -36,7 +36,7 @@ using boost::asio::ip::tcp;
 
 namespace master {
 
-class JobSender : common::Observer
+class JobSender : common::IObserver
 {
 public:
     JobSender( TimeoutManager *timeoutManager )
@@ -53,6 +53,7 @@ public:
     virtual void OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const JobPtr &job );
 
 private:
+    // common::IObserver
     virtual void NotifyObserver( int event );
 
     virtual void SendJob( const WorkerJob &workerJob, const std::string &hostIP, JobPtr &job ) = 0;

@@ -30,17 +30,16 @@ the License.
 
 namespace common {
 
-class Observer
+struct IObserver
 {
-public:
     virtual void NotifyObserver( int event ) = 0;
-    virtual ~Observer() {}
+    virtual ~IObserver() {}
 };
 
 struct IObservable
 {
-    virtual void Subscribe( Observer *observer, int event = 0 ) = 0;
-    virtual void Unsubscribe( Observer *observer, int event = 0 ) = 0;
+    virtual void Subscribe( IObserver *observer, int event = 0 ) = 0;
+    virtual void Unsubscribe( IObserver *observer, int event = 0 ) = 0;
     virtual void NotifyAll( int event = 0 ) = 0;
 };
 
@@ -98,17 +97,17 @@ template< typename LockPolicy = NullLockPolicy >
 class Observable : private LockPolicy,
                    virtual public IObservable
 {
-    typedef std::set<Observer *> Container;
+    typedef std::set<IObserver *> Container;
     typedef std::map< int, Container > EventToContainer;
 
 public:
-    virtual void Subscribe( Observer *observer, int event = 0 )
+    virtual void Subscribe( IObserver *observer, int event = 0 )
     {
         typename LockPolicy::UniqueLock lock( this );
         observers_[ event ].insert( observer );
     }
 
-    virtual void Unsubscribe( Observer *observer, int event = 0 )
+    virtual void Unsubscribe( IObserver *observer, int event = 0 )
     {
         typename LockPolicy::UniqueLock lock( this );
         EventToContainer::iterator it = observers_.find( event );
@@ -128,7 +127,7 @@ public:
         Container::iterator it_ob = it->second.begin();
         for( ; it_ob != it->second.end(); ++it_ob )
         {
-            Observer *observer = *it_ob;
+            IObserver *observer = *it_ob;
             observer->NotifyObserver( event );
         }
     }

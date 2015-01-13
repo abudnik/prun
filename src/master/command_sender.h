@@ -36,7 +36,7 @@ using boost::asio::ip::tcp;
 
 namespace master {
 
-class CommandSender : common::Observer
+class CommandSender : common::IObserver
 {
 public:
     CommandSender( TimeoutManager *timeoutManager )
@@ -53,6 +53,7 @@ public:
     virtual void OnSendCommand( bool success, int errCode, CommandPtr &command, const std::string &hostIP );
 
 private:
+    // common::IObserver
     virtual void NotifyObserver( int event );
 
     virtual void SendCommand( CommandPtr &command, const std::string &hostIP ) = 0;
