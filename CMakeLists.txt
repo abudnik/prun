@@ -9,9 +9,9 @@ find_package(Boost 1.47.0 COMPONENTS system thread program_options filesystem RE
 include_directories( ${Boost_INCLUDE_DIR} )
 
 if (Release)
-  set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-long-long -pedantic -pthread -g -O3")
+  set(CMAKE_CXX_FLAGS "-std=c++0x -Wall -Wextra -Wno-unused-parameter -Wno-long-long -pedantic -pthread -g -O3")
 else()
-  set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-long-long -pedantic -pthread -g -O0")
+  set(CMAKE_CXX_FLAGS "-std=c++0x -Wall -Wextra -Wno-unused-parameter -Wno-long-long -pedantic -pthread -g -O0")
   add_definitions( -D_DEBUG )
 endif()
 

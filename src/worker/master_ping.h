@@ -73,7 +73,7 @@ private:
     void HandleRead( const boost::system::error_code& error, size_t bytes_transferred );
 
 private:
-    boost::array< char, 32 * 1024 > buffer_;
+    std::array< char, 32 * 1024 > buffer_;
     udp::socket socket_;
     udp::endpoint remote_endpoint_;
     unsigned short master_ping_port_;

@@ -54,7 +54,7 @@ public:
         socket_.open( ipv6 ? udp::v6() : udp::v4() );
         socket_.bind( udp::endpoint( ipv6 ? udp::v6() : udp::v4(), master_ping_port ) );
 
-        memset( buffer_.c_array(), 0, buffer_.size() );
+        buffer_.fill( 0 );
     }
 
     virtual void Start();
@@ -64,7 +64,7 @@ private:
     void HandleRead( const boost::system::error_code& error, size_t bytes_transferred );
 
 private:
-    boost::array< char, 32 * 1024 > buffer_;
+    std::array< char, 32 * 1024 > buffer_;
     udp::socket socket_;
     udp::endpoint remote_endpoint_;
 };

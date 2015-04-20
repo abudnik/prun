@@ -127,7 +127,7 @@ public:
 
 class AdminSession : public boost::enable_shared_from_this< AdminSession >
 {
-    typedef boost::array< char, 32 * 1024 > BufferType;
+    typedef std::array< char, 32 * 1024 > BufferType;
 
 public:
     AdminSession( boost::asio::io_service &io_service,
