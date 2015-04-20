@@ -102,7 +102,7 @@ void SigHandler( int s )
         case SIGABRT:
         case SIGFPE:
         case SIGBUS:
-        case SIGSEGV: 
+        case SIGSEGV:
         case SIGILL:
         case SIGSYS:
         case SIGXCPU:
@@ -194,6 +194,7 @@ public:
         {
             cfg.ParseConfig( "", cfgPath_.c_str() );
         }
+        ApplyDefaults( cfg );
 
         unsigned int numHeartbeatThread = 1;
         unsigned int numPingReceiverThread = cfg.Get<unsigned int>( "num_ping_receiver_thread" );
@@ -203,6 +204,7 @@ public:
         unsigned int numPingThread = numHeartbeatThread + numPingReceiverThread;
 
         std::string masterdb = cfg.Get<std::string>( "masterdb" );
+        const unsigned short masterdb_port = cfg.Get<unsigned short>( "masterdb_port" );
 
         // initialize main components
         common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
@@ -223,7 +225,7 @@ public:
         dbConnection_.reset( new master::DbHistoryConnection( io_service_db_ ) );
         jobHistory_.reset( new master::JobHistory( dbConnection_.get() ) );
         serviceLocator.Register( static_cast< master::IJobEventReceiver* >( jobHistory_.get() ) );
-        if ( dbConnection_->Connect( masterdb, master::MASTERDB_PORT ) )
+        if ( dbConnection_->Connect( masterdb, masterdb_port ) )
         {
             jobHistory_->GetJobs();
         }
@@ -367,7 +369,7 @@ public:
             int sig;
             sigemptyset( &waitset );
             sigaddset( &waitset, SIGTERM );
-			sigprocmask( SIG_BLOCK, &waitset, NULL );
+            sigprocmask( SIG_BLOCK, &waitset, NULL );
             while( 1 )
             {
                 int ret = sigwait( &waitset, &sig );
@@ -378,6 +380,16 @@ public:
                 PLOG_ERR( "main(): sigwait failed: " << strerror(ret) );
             }
         }
+    }
+
+private:
+    void ApplyDefaults( common::Config &cfg ) const
+    {
+        cfg.Insert( "node_port", master::NODE_PORT );
+        cfg.Insert( "node_ping_port", master::NODE_UDP_PORT );
+        cfg.Insert( "master_ping_port", master::MASTER_UDP_PORT );
+        cfg.Insert( "master_admin_port", master::MASTER_ADMIN_PORT );
+        cfg.Insert( "masterdb_port", master::MASTERDB_PORT );
     }
 
 private:
@@ -423,7 +435,7 @@ int main( int argc, char* argv[] )
 
         // parse input command line options
         namespace po = boost::program_options;
-        
+
         po::options_description descr;
 
         descr.add_options()
@@ -431,7 +443,7 @@ int main( int argc, char* argv[] )
             ("d", "Run as a daemon")
             ("s", "Stop daemon")
             ("c", po::value<std::string>(), "Config file path");
-        
+
         po::variables_map vm;
         po::store( po::parse_command_line( argc, argv, descr ), vm );
         po::notify( vm );

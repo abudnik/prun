@@ -26,9 +26,9 @@ the License.
 #include "worker_manager.h"
 #include "job_manager.h"
 #include "common/log.h"
+#include "common/config.h"
 #include "common/protocol.h"
 #include "common/service_locator.h"
-#include "defines.h"
 
 namespace master {
 
@@ -114,9 +114,12 @@ void CommandSenderBoost::OnSendCommand( bool success, int errCode, CommandPtr &c
 
 void RpcBoost::SendCommand()
 {
+    const common::Config &cfg = common::Config::Instance();
+    const unsigned short node_port = cfg.Get<unsigned short>( "node_port" );
+
     tcp::endpoint nodeEndpoint(
         boost::asio::ip::address::from_string( hostIP_ ),
-        NODE_PORT
+        node_port
     );
 
     socket_.async_connect( nodeEndpoint,

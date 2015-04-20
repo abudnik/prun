@@ -25,9 +25,9 @@ the License.
 #include "scheduler.h"
 #include "job_manager.h"
 #include "common/log.h"
+#include "common/config.h"
 #include "common/protocol.h"
 #include "common/service_locator.h"
-#include "defines.h"
 
 namespace master {
 
@@ -131,9 +131,12 @@ void JobSenderBoost::OnJobSendCompletion( bool success, const WorkerJob &workerJ
 
 void SenderBoost::Send()
 {
+    const common::Config &cfg = common::Config::Instance();
+    const unsigned short node_port = cfg.Get<unsigned short>( "node_port" );
+
     tcp::endpoint nodeEndpoint(
         boost::asio::ip::address::from_string( hostIP_ ),
-        NODE_PORT
+        node_port
     );
 
     socket_.async_connect( nodeEndpoint,

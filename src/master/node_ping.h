@@ -25,7 +25,6 @@ the License.
 
 #include <boost/asio.hpp>
 #include "common/config.h"
-#include "defines.h"
 
 namespace master {
 
@@ -48,11 +47,12 @@ public:
     PingReceiverBoost( boost::asio::io_service &io_service )
     : socket_( io_service )
     {
-        common::Config &cfg = common::Config::Instance();
-        bool ipv6 = cfg.Get<bool>( "ipv6" );
+        const common::Config &cfg = common::Config::Instance();
+        const bool ipv6 = cfg.Get<bool>( "ipv6" );
+        const unsigned short master_ping_port = cfg.Get<unsigned short>( "master_ping_port" );
 
         socket_.open( ipv6 ? udp::v6() : udp::v4() );
-        socket_.bind( udp::endpoint( ipv6 ? udp::v6() : udp::v4(), master::MASTER_UDP_PORT ) );
+        socket_.bind( udp::endpoint( ipv6 ? udp::v6() : udp::v4(), master_ping_port ) );
 
         memset( buffer_.c_array(), 0, buffer_.size() );
     }

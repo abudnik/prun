@@ -345,9 +345,12 @@ class ExecuteTask : public Action
         );
         boost::asio::io_service *io_service = commDescrPool->GetIoService();
 
+        const common::Config &cfg = common::Config::Instance();
+        const unsigned short master_ping_port = cfg.Get<unsigned short>( "master_ping_port" );
+
         using boost::asio::ip::udp;
         boost::asio::ip::address address( boost::asio::ip::address::from_string( job->GetMasterIP() ) );
-        udp::endpoint master_endpoint( address, DEFAULT_MASTER_UDP_PORT );
+        udp::endpoint master_endpoint( address, master_ping_port );
         udp::socket socket( *io_service, udp::endpoint( master_endpoint.protocol(), 0 ) );
 
         common::Marshaller marshaller;
@@ -883,7 +886,7 @@ void SigHandler( int s )
         case SIGABRT:
         case SIGFPE:
         case SIGBUS:
-        case SIGSEGV: 
+        case SIGSEGV:
         case SIGILL:
         case SIGSYS:
         case SIGXCPU:
@@ -1011,6 +1014,7 @@ public:
         {
             cfg.ParseConfig( "", cfgDir_.c_str() );
         }
+        ApplyDefaults( cfg );
 
         JobCompletionTable::Instance();
 
@@ -1049,12 +1053,13 @@ public:
 
         // start acceptor
         requestSem_.reset( new common::Semaphore( numRequestThread_ ) );
+        const unsigned short port = cfg.Get<unsigned short>( "port" );
         acceptor_.reset(
-            new ConnectionAcceptor( io_service_, DEFAULT_PORT, requestSem_, execContext_ )
+            new ConnectionAcceptor( io_service_, port, requestSem_, execContext_ )
         );
 
         // create master ping handlers
-        int completionPingDelay = common::Config::Instance().Get<int>( "completion_ping_delay" );
+        const int completionPingDelay = cfg.Get<int>( "completion_ping_delay" );
         completionPing_.reset( new JobCompletionPingerBoost( io_service_ping_, completionPingDelay ) );
         completionPing_->StartPing();
 
@@ -1128,6 +1133,13 @@ public:
     }
 
 private:
+    void ApplyDefaults( common::Config &cfg ) const
+    {
+        cfg.Insert( "port", DEFAULT_PORT );
+        cfg.Insert( "ping_port", DEFAULT_UDP_PORT );
+        cfg.Insert( "master_ping_port", DEFAULT_MASTER_UDP_PORT );
+    }
+
     void RunPrExecProcess()
     {
         pid_t pid = fork();
@@ -1242,7 +1254,7 @@ int main( int argc, char* argv[] )
 
         // parse input command line options
         namespace po = boost::program_options;
-        
+
         po::options_description descr;
 
         descr.add_options()

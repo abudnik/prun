@@ -31,7 +31,7 @@ the License.
 #include <boost/thread.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
-#include <boost/interprocess/mapped_region.hpp> 
+#include <boost/interprocess/mapped_region.hpp>
 #include <unistd.h>
 #include <csignal>
 #include <sys/wait.h>
@@ -1094,7 +1094,7 @@ void SigHandler( int s )
         case SIGABRT:
         case SIGFPE:
         case SIGBUS:
-        case SIGSEGV: 
+        case SIGSEGV:
         case SIGILL:
         case SIGSYS:
         case SIGXCPU:
@@ -1341,13 +1341,13 @@ public:
 
         if ( isDaemon_ )
         {
-			PLOG( "started" );
+            PLOG( "started" );
         }
 
-		sigset_t waitset;
-		int sig;
-		sigemptyset( &waitset );
-		sigaddset( &waitset, SIGTERM );
+        sigset_t waitset;
+        int sig;
+        sigemptyset( &waitset );
+        sigaddset( &waitset, SIGTERM );
         while( 1 )
         {
             int ret = sigwait( &waitset, &sig );
@@ -1462,7 +1462,7 @@ private:
 
     void SetupPrExecIPC()
     {
-        namespace ipc = boost::interprocess; 
+        namespace ipc = boost::interprocess;
 
         try
         {
@@ -1539,7 +1539,7 @@ int main( int argc, char* argv[] )
 
         // parse input command line options
         namespace po = boost::program_options;
-        
+
         po::options_description descr;
 
         descr.add_options()
@@ -1549,7 +1549,7 @@ int main( int argc, char* argv[] )
             ("u", po::value<uid_t>(), "Start as a specific non-root user")
             ("c", po::value<std::string>(), "Config file path")
             ("r", po::value<std::string>(), "Path to resources");
-        
+
         po::variables_map vm;
         po::store( po::parse_command_line( argc, argv, descr ), vm );
         po::notify( vm );

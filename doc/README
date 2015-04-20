@@ -161,6 +161,12 @@ connects to Worker to get job completion status.
 - ipv6
 Setting this parameter value to true leads to using of IPv6 protocol.
 
+- port (optional, default = 5555)
+
+- ping_port (optional, default = 5554)
+
+- master_ping_port (optional, default = 5553)
+
                              Master configuration
 --------------------------------------------------------------------------------
 
@@ -220,6 +226,16 @@ files as the Master's "ipv6" value.
 - masterdb
 IP or hostname of masterdb service
 
+- node_port (optional, default = 5555)
+
+- node_ping_port (optional, default = 5554)
+
+- master_ping_port (optional, default = 5553)
+
+- master_admin_port (optional, default = 5557)
+
+- masterdb_port (optional, default = 5559)
+
                              Masterdb configuration
 --------------------------------------------------------------------------------
 
@@ -237,12 +253,14 @@ Path to the jobs database directory. Used in configuration with LevelDB library.
 Setting this parameter value to true leads to using of IPv6 protocol. Note, that
 Masterdb must have the same value of "ipv6" settings as the Master's "ipv6".
 
+- port (optional, default = 5559)
+
                              Network configuration
 --------------------------------------------------------------------------------
 
-Master listen ports: 5557 (tcp), 5553(udp)
-Masterdb listen ports: 5559 (tcp)
-Worker listen ports: 5555 (tcp), 5554(udp)
+Master default listen ports: 5557 (tcp), 5553(udp)
+Masterdb default listen ports: 5559 (tcp)
+Worker default listen ports: 5555 (tcp), 5554(udp)
 
                                  Logs
 --------------------------------------------------------------------------------

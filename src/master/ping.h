@@ -28,7 +28,6 @@ the License.
 #include "common/helper.h"
 #include "common/protocol.h"
 #include "common/config.h"
-#include "defines.h"
 #include "worker.h"
 
 namespace master {
@@ -86,13 +85,14 @@ public:
      socket_( io_service ),
      resolver_( io_service )
     {
-        common::Config &cfg = common::Config::Instance();
-        bool ipv6 = cfg.Get<bool>( "ipv6" );
+        const common::Config &cfg = common::Config::Instance();
+        const bool ipv6 = cfg.Get<bool>( "ipv6" );
+        const unsigned short node_ping_port = cfg.Get<unsigned short>( "node_ping_port" );
 
         socket_.open( ipv6 ? udp::v6() : udp::v4() );
 
         std::ostringstream ss;
-        ss << master::NODE_UDP_PORT;
+        ss << node_ping_port;
         port_ = ss.str();
     }
 

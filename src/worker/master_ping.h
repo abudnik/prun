@@ -57,11 +57,13 @@ public:
     MasterPingBoost( boost::asio::io_service &io_service )
     : socket_( io_service )
     {
-        common::Config &cfg = common::Config::Instance();
-        bool ipv6 = cfg.Get<bool>( "ipv6" );
+        const common::Config &cfg = common::Config::Instance();
+        const bool ipv6 = cfg.Get<bool>( "ipv6" );
+        const unsigned short port = cfg.Get<unsigned short>( "ping_port" );
+        master_ping_port_ = cfg.Get<unsigned short>( "master_ping_port" );
 
         socket_.open( ipv6 ? udp::v6() : udp::v4() );
-        socket_.bind( udp::endpoint( ipv6 ? udp::v6() : udp::v4(), DEFAULT_UDP_PORT ) );
+        socket_.bind( udp::endpoint( ipv6 ? udp::v6() : udp::v4(), port ) );
     }
 
     virtual void Start();
@@ -74,6 +76,7 @@ private:
     boost::array< char, 32 * 1024 > buffer_;
     udp::socket socket_;
     udp::endpoint remote_endpoint_;
+    unsigned short master_ping_port_;
 };
 
 } // namespace worker

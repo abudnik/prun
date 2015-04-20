@@ -75,8 +75,9 @@ public:
      io_service_( io_service ),
      socket_( io_service )
     {
-        common::Config &cfg = common::Config::Instance();
-        bool ipv6 = cfg.Get<bool>( "ipv6" );
+        const common::Config &cfg = common::Config::Instance();
+        const bool ipv6 = cfg.Get<bool>( "ipv6" );
+        master_ping_port_ = cfg.Get<unsigned short>( "master_ping_port" );
         socket_.open( ipv6 ? udp::v6() : udp::v4() );
     }
 
@@ -88,6 +89,7 @@ private:
 private:
     boost::asio::io_service &io_service_;
     udp::socket socket_;
+    unsigned short master_ping_port_;
 };
 
 } // namespace worker

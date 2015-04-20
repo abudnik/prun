@@ -71,7 +71,7 @@ void JobCompletionPingerBoost::PingMaster( const JobDescriptor &descr )
     PLOG( msg );
 
     boost::asio::ip::address address( boost::asio::ip::address::from_string( descr.masterIP ) );
-    udp::endpoint master_endpoint( address, DEFAULT_MASTER_UDP_PORT );
+    udp::endpoint master_endpoint( address, master_ping_port_ );
     try
     {
         socket_.send_to( boost::asio::buffer( msg ), master_endpoint );

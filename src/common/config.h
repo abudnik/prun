@@ -32,9 +32,16 @@ class Config
 {
 public:
     template<typename T>
-    T Get( const char *key )
+    T Get( const char *key ) const
     {
         return ptree_.get<T>( key );
+    }
+
+    template<typename T>
+    void Insert( const char *key, T val )
+    {
+        if (!ptree_.get_optional<T>(key))
+            ptree_.put<T>( key, val );
     }
 
     bool ParseConfig( const char *cfgPath, const char *cfgName );

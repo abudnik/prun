@@ -57,7 +57,7 @@ void SigHandler( int s )
         case SIGABRT:
         case SIGFPE:
         case SIGBUS:
-        case SIGSEGV: 
+        case SIGSEGV:
         case SIGILL:
         case SIGSYS:
         case SIGXCPU:
@@ -145,6 +145,7 @@ public:
         {
             cfg.ParseConfig( "", cfgPath_.c_str() );
         }
+        ApplyDefaults( cfg );
 
         // initialize main components
         dbClient_.Initialize( exeDir_ );
@@ -152,7 +153,8 @@ public:
         common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
         serviceLocator.Register( static_cast< masterdb::IDAO* >( &dbClient_ ) );
 
-        acceptor_.reset( new masterdb::ConnectionAcceptor( io_service_, masterdb::MASTERDB_PORT ) );
+        const unsigned short port = cfg.Get<unsigned short>( "port" );
+        acceptor_.reset( new masterdb::ConnectionAcceptor( io_service_, port ) );
 
         workerThread_.reset(
             new boost::thread( boost::bind( &ThreadFun, &io_service_ ) )
@@ -196,7 +198,7 @@ public:
             int sig;
             sigemptyset( &waitset );
             sigaddset( &waitset, SIGTERM );
-			sigprocmask( SIG_BLOCK, &waitset, NULL );
+            sigprocmask( SIG_BLOCK, &waitset, NULL );
             while( 1 )
             {
                 int ret = sigwait( &waitset, &sig );
@@ -207,6 +209,12 @@ public:
                 PLOG_ERR( "main(): sigwait failed: " << strerror(ret) );
             }
         }
+    }
+
+private:
+    void ApplyDefaults( common::Config &cfg ) const
+    {
+        cfg.Insert( "port", masterdb::MASTERDB_PORT );
     }
 
 private:
@@ -238,7 +246,7 @@ int main( int argc, char* argv[] )
 
         // parse input command line options
         namespace po = boost::program_options;
-        
+
         po::options_description descr;
 
         descr.add_options()
@@ -246,7 +254,7 @@ int main( int argc, char* argv[] )
             ("d", "Run as a daemon")
             ("s", "Stop daemon")
             ("c", po::value<std::string>(), "Config file path");
-        
+
         po::variables_map vm;
         po::store( po::parse_command_line( argc, argv, descr ), vm );
         po::notify( vm );
