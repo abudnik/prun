@@ -26,7 +26,7 @@ the License.
 #include <stdint.h> // int64_t
 #include <list>
 #include <boost/function.hpp>
-#include <boost/thread.hpp>
+#include <thread>
 
 
 namespace worker {
@@ -55,13 +55,13 @@ class ExecTable
 public:
     void Add( const ExecInfo &execInfo )
     {
-        boost::unique_lock< boost::mutex > lock( mut_ );
+        std::unique_lock< std::mutex > lock( mut_ );
         table_.push_back( execInfo );
     }
 
     bool Delete( int64_t jobId, int taskId, const std::string &masterId )
     {
-        boost::unique_lock< boost::mutex > lock( mut_ );
+        std::unique_lock< std::mutex > lock( mut_ );
         Container::iterator it = table_.begin();
         for( ; it != table_.end(); ++it )
         {
@@ -80,7 +80,7 @@ public:
     template< typename ArgContainer >
     void Get( ArgContainer &table )
     {
-        boost::unique_lock< boost::mutex > lock( mut_ );
+        std::unique_lock< std::mutex > lock( mut_ );
         Container::iterator it = table_.begin();
         for( ; it != table_.end(); ++it )
         {
@@ -90,7 +90,7 @@ public:
 
     bool Contains( int64_t jobId, int taskId, const std::string &masterId )
     {
-        boost::unique_lock< boost::mutex > lock( mut_ );
+        std::unique_lock< std::mutex > lock( mut_ );
         Container::const_iterator it = table_.begin();
         for( ; it != table_.end(); ++it )
         {
@@ -105,7 +105,7 @@ public:
 
     bool Find( int64_t jobId, int taskId, const std::string &masterId, ExecInfo &info )
     {
-        boost::unique_lock< boost::mutex > lock( mut_ );
+        std::unique_lock< std::mutex > lock( mut_ );
         Container::const_iterator it = table_.begin();
         for( ; it != table_.end(); ++it )
         {
@@ -123,7 +123,7 @@ public:
 
     void Clear()
     {
-        boost::unique_lock< boost::mutex > lock( mut_ );
+        std::unique_lock< std::mutex > lock( mut_ );
         Container table( table_ );
         lock.unlock();
 
@@ -142,7 +142,7 @@ public:
 
 private:
     Container table_;
-    boost::mutex mut_;
+    std::mutex mut_;
 };
 
 class PidContainer
@@ -150,13 +150,13 @@ class PidContainer
 public:
     void Add( pid_t pid )
     {
-        boost::unique_lock< boost::mutex > lock( mut_ );
+        std::unique_lock< std::mutex > lock( mut_ );
         pids_.insert( pid );
     }
 
     bool Delete( pid_t pid )
     {
-        boost::unique_lock< boost::mutex > lock( mut_ );
+        std::unique_lock< std::mutex > lock( mut_ );
         std::multiset< pid_t >::iterator it = pids_.find( pid );
         if ( it != pids_.end() )
         {
@@ -168,14 +168,14 @@ public:
 
     bool Find( pid_t pid )
     {
-        boost::unique_lock< boost::mutex > lock( mut_ );
+        std::unique_lock< std::mutex > lock( mut_ );
         std::multiset< pid_t >::iterator it = pids_.find( pid );
         return it != pids_.end();
     }
 
 private:
     std::multiset< pid_t > pids_;
-    boost::mutex mut_;
+    std::mutex mut_;
 };
 
 } // namespace worker

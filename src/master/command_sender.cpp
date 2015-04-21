@@ -45,7 +45,7 @@ void CommandSender::Run()
     {
         if ( !getCommand )
         {
-            boost::unique_lock< boost::mutex > lock( awakeMut_ );
+            std::unique_lock< std::mutex > lock( awakeMut_ );
             if ( !newCommandAvailable_ )
                 awakeCond_.wait( lock );
             newCommandAvailable_ = false;
@@ -63,13 +63,13 @@ void CommandSender::Run()
 void CommandSender::Stop()
 {
     stopped_ = true;
-    boost::unique_lock< boost::mutex > lock( awakeMut_ );
+    std::unique_lock< std::mutex > lock( awakeMut_ );
     awakeCond_.notify_all();
 }
 
 void CommandSender::NotifyObserver( int event )
 {
-    boost::unique_lock< boost::mutex > lock( awakeMut_ );
+    std::unique_lock< std::mutex > lock( awakeMut_ );
     newCommandAvailable_ = true;
     awakeCond_.notify_all();
 }
@@ -304,7 +304,7 @@ bool RpcBoost::HandleResponse()
 void RpcBoost::OnCompletion( bool success, int errCode )
 {
     {
-        boost::mutex::scoped_lock scoped_lock( completionMut_ );
+        std::unique_lock< std::mutex > lock( completionMut_ );
         if ( completed_ )
             return;
         else

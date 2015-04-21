@@ -24,8 +24,8 @@ the License.
 #define __COMMAND_SENDER_H
 
 #include <boost/asio.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition.hpp>
+#include <mutex>
+#include <condition_variable>
 #include "common/observer.h"
 #include "common/helper.h"
 #include "common/request.h"
@@ -61,14 +61,14 @@ private:
 private:
     bool stopped_;
     TimeoutManager *timeoutManager_;
-    boost::mutex awakeMut_;
-    boost::condition_variable awakeCond_;
+    std::mutex awakeMut_;
+    std::condition_variable awakeCond_;
     bool newCommandAvailable_;
 };
 
 class RpcBoost : public boost::enable_shared_from_this< RpcBoost >
 {
-    typedef boost::array< char, 32 * 1024 > BufferType;
+    typedef std::array< char, 32 * 1024 > BufferType;
 
 public:
     typedef boost::shared_ptr< RpcBoost > sender_ptr;
@@ -113,7 +113,7 @@ private:
     CommandPtr command_;
     std::string hostIP_;
     bool completed_;
-    boost::mutex completionMut_;
+    std::mutex completionMut_;
 };
 
 class CommandSenderBoost : public CommandSender

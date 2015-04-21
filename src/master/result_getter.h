@@ -24,8 +24,8 @@ the License.
 #define __RESULT_GETTER_H
 
 #include <boost/asio.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition.hpp>
+#include <mutex>
+#include <condition_variable>
 #include "common/observer.h"
 #include "common/helper.h"
 #include "common/request.h"
@@ -59,14 +59,14 @@ private:
 private:
     bool stopped_;
 
-    boost::mutex awakeMut_;
-    boost::condition_variable awakeCond_;
+    std::mutex awakeMut_;
+    std::condition_variable awakeCond_;
     bool newJobAvailable_;
 };
 
 class GetterBoost : public boost::enable_shared_from_this< GetterBoost >
 {
-    typedef boost::array< char, 32 * 1024 > BufferType;
+    typedef std::array< char, 32 * 1024 > BufferType;
 
 public:
     typedef boost::shared_ptr< GetterBoost > getter_ptr;
@@ -111,7 +111,7 @@ private:
     WorkerTask workerTask_;
     std::string hostIP_;
     bool completed_;
-    boost::mutex completionMut_;
+    std::mutex completionMut_;
 };
 
 class ResultGetterBoost : public ResultGetter

@@ -21,7 +21,6 @@ the License.
 */
 
 #include <boost/bind.hpp>
-#include <boost/thread.hpp>
 #include <stdint.h> // boost/atomic/atomic.hpp:202:16: error: ‘uintptr_t’ was not declared in this scope
 #include "ping.h"
 #include "common/log.h"

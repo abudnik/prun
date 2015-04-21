@@ -28,7 +28,7 @@ the License.
 #include <list>
 #include <boost/bimap/bimap.hpp>
 #include <boost/bimap/multiset_of.hpp>
-#include <boost/thread/mutex.hpp>
+#include <mutex>
 #include "common/observer.h"
 #include "worker.h"
 #include "job.h"
@@ -136,13 +136,13 @@ private:
     IPToNodeState nodeState_;
     NodePriorityQueue nodePriority_;
     FailedWorkers failedWorkers_;
-    boost::mutex workersMut_;
+    std::mutex workersMut_;
 
     ScheduledJobs jobs_;
     JobIdToTasks tasksToSend_;
     TaskList needReschedule_;
     JobIdToExecCnt simultExecCnt_;
-    boost::mutex jobsMut_;
+    std::mutex jobsMut_;
 };
 
 } // namespace master

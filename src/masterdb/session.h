@@ -80,14 +80,14 @@ private:
 class BoostSession : public Session
 {
 public:
-    typedef boost::array< char, 32 * 1024 > BufferType;
+    typedef std::array< char, 32 * 1024 > BufferType;
 
 public:
     BoostSession( boost::asio::io_service &io_service )
     : socket_( io_service ),
      request_( true )
     {
-        memset( buffer_.c_array(), 0, buffer_.size() );
+        buffer_.fill( 0 );
     }
 
     void Start();

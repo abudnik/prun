@@ -110,7 +110,7 @@ class NoAction : public Action
 
 class PrExecConnection
 {
-    typedef boost::array< char, 2048 > BufferType;
+    typedef std::array< char, 2048 > BufferType;
 
 public:
     typedef PrExecConnection *connection_ptr;
@@ -131,7 +131,7 @@ public:
         {
             CommDescr &commDescr = commDescrPool->GetCommDescr();
             socket_ = commDescr.socket.get();
-            memset( buffer_.c_array(), 0, buffer_.size() );
+            buffer_.fill( 0 );
             return true;
         }
         else
@@ -654,7 +654,7 @@ protected:
 class BoostSession : public Session, public boost::enable_shared_from_this< BoostSession >
 {
 public:
-    typedef boost::array< char, 32 * 1024 > BufferType;
+    typedef std::array< char, 32 * 1024 > BufferType;
 
 public:
     BoostSession( boost::asio::io_service &io_service,

@@ -25,8 +25,8 @@ the License.
 
 #include <list>
 #include <vector>
+#include <mutex>
 #include <boost/weak_ptr.hpp>
-#include <boost/thread/recursive_mutex.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
@@ -239,7 +239,7 @@ private:
     JobList jobs_;
     JobSet delayedJobs_; // jobs with unresolved dependencies
     IdToJob idToJob_;
-    boost::recursive_mutex jobsMut_;
+    std::recursive_mutex jobsMut_;
 };
 
 } // namespace master

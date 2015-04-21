@@ -42,7 +42,7 @@ Scheduler::Scheduler()
 void Scheduler::OnHostAppearance( WorkerPtr &worker )
 {
     {
-        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+        std::unique_lock< std::mutex > lock( workersMut_ );
         nodeState_[ worker->GetIP() ].SetWorker( worker );
         typedef NodePriorityQueue::value_type value_type;
         nodePriority_.insert( value_type( worker->GetIP(), &nodeState_[ worker->GetIP() ] ) );
@@ -53,7 +53,7 @@ void Scheduler::OnHostAppearance( WorkerPtr &worker )
 void Scheduler::DeleteWorker( const std::string &host )
 {
     {
-        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+        std::unique_lock< std::mutex > lock( workersMut_ );
 
         IPToNodeState::iterator it = nodeState_.begin();
         for( ; it != nodeState_.end(); )
@@ -85,7 +85,7 @@ void Scheduler::DeleteWorker( const std::string &host )
 
 void Scheduler::OnChangedWorkerState( std::vector< WorkerPtr > &workers )
 {
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+    std::unique_lock< std::mutex > lock( workersMut_ );
 
     std::vector< WorkerPtr >::iterator it = workers.begin();
     for( ; it != workers.end(); ++it )
@@ -114,9 +114,9 @@ void Scheduler::OnChangedWorkerState( std::vector< WorkerPtr > &workers )
 
                 if ( RescheduleJob( workerJob ) )
                 {
-                    scoped_lock.unlock();
+                    lock.unlock();
                     NotifyAll();
-                    scoped_lock.lock();
+                    lock.lock();
                 }
             }
             else
@@ -161,7 +161,7 @@ void Scheduler::PlanJobExecution()
 
     int64_t jobId = job->GetJobId();
     {
-        boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+        std::unique_lock< std::mutex > lock( jobsMut_ );
 
         std::set< int > &tasks = tasksToSend_[ jobId ];
         for( int taskId = 0; taskId < numExec; ++taskId )
@@ -183,7 +183,7 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
 
     std::set<int64_t>::const_iterator it = jobs.begin();
 
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    std::unique_lock< std::mutex > lock( jobsMut_ );
 
     for( ; it != jobs.end(); ++it )
     {
@@ -342,11 +342,11 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
 
 bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, JobPtr &job )
 {
-    boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+    std::unique_lock< std::mutex > lock_w( workersMut_ );
 
     NodePriorityQueue::right_map::iterator it = nodePriority_.right.begin();
 
-    boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+    std::unique_lock< std::mutex > lock_j( jobsMut_ );
 
     for( ; it != nodePriority_.right.end(); ++it )
     {
@@ -373,8 +373,8 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, JobPtr
 
     // if there is any worker available, but all queued jobs are
     // sended to workers, then take next job from job mgr queue
-    scoped_lock_j.unlock();
-    scoped_lock_w.unlock();
+    lock_j.unlock();
+    lock_w.unlock();
     PlanJobExecution();
 
     return false;
@@ -393,10 +393,10 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
             PLOG( "Scheduler::OnTaskSendCompletion: job sending failed."
                   " jobId=" << workerJob.GetJobId() << ", ip=" << hostIP );
 
-            boost::mutex::scoped_lock scoped_lock( workersMut_ );
+            std::unique_lock< std::mutex > lock( workersMut_ );
             {
                 JobPtr j;
-                boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+                std::unique_lock< std::mutex > lock_j( jobsMut_ );
                 if ( !jobs_.FindJobByJobId( workerJob.GetJobId(), j ) )
                     return;
             }
@@ -437,8 +437,8 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
         if ( !workerManager->GetWorkerByIP( hostIP, w ) )
             return;
 
-        boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
-        boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+        std::unique_lock< std::mutex > lock_w( workersMut_ );
+        std::unique_lock< std::mutex > lock_j( jobsMut_ );
 
         {
             JobPtr j;
@@ -480,10 +480,10 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
         if ( !workerManager->GetWorkerByIP( hostIP, w ) )
             return;
 
-        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+        std::unique_lock< std::mutex > lock_w( workersMut_ );
         {
             JobPtr j;
-            boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+            std::unique_lock< std::mutex > lock_j( jobsMut_ );
             if ( !jobs_.FindJobByJobId( workerTask.GetJobId(), j ) )
                 return;
         }
@@ -532,7 +532,7 @@ void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &
 
     bool hasTask = false;
     {
-        boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+        std::unique_lock< std::mutex > lock_w( workersMut_ );
         hasTask = workerJob.HasTask( workerTask.GetJobId(), workerTask.GetTaskId() );
     }
 
@@ -554,8 +554,8 @@ void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &
 void Scheduler::OnJobTimeout( int64_t jobId )
 {
     {
-        boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
-        boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+        std::unique_lock< std::mutex > lock_w( workersMut_ );
+        std::unique_lock< std::mutex > lock_j( jobsMut_ );
 
         {
             JobPtr j;
@@ -577,7 +577,7 @@ void Scheduler::StopJobGroup( int64_t groupId )
 {
     std::list< JobPtr > jobs;
     {
-        boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+        std::unique_lock< std::mutex > lock_j( jobsMut_ );
         jobs_.GetJobGroup( groupId, jobs );
     }
     std::list< JobPtr >::const_iterator it = jobs.begin();
@@ -592,7 +592,7 @@ void Scheduler::StopAllJobs()
 {
     ScheduledJobs::JobQueue jobs;
     {
-        boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+        std::unique_lock< std::mutex > lock_j( jobsMut_ );
         jobs = jobs_.GetJobQueue();
     }
     ScheduledJobs::JobQueue::const_iterator it = jobs.begin();
@@ -606,7 +606,7 @@ void Scheduler::StopAllJobs()
     {
         IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
 
-        boost::mutex::scoped_lock scoped_lock( workersMut_ );
+        std::unique_lock< std::mutex > lock_w( workersMut_ );
         IPToNodeState::const_iterator it = nodeState_.begin();
         for( ; it != nodeState_.end(); ++it )
         {
@@ -624,7 +624,7 @@ void Scheduler::StopPreviousJobs()
 {
     IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
 
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+    std::unique_lock< std::mutex > lock_w( workersMut_ );
     IPToNodeState::const_iterator it = nodeState_.begin();
     for( ; it != nodeState_.end(); ++it )
     {
@@ -722,7 +722,7 @@ void Scheduler::StopWorker( const std::string &hostIP ) const
 
 bool Scheduler::CanTakeNewJob()
 {
-    boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
+    std::unique_lock< std::mutex > lock_w( workersMut_ );
 
     NodePriorityQueue::right_map::const_iterator it = nodePriority_.right.begin();
     if ( it != nodePriority_.right.end() )
@@ -786,8 +786,8 @@ int Scheduler::GetNumPlannedExec( const JobPtr &job ) const
 
 void Scheduler::Accept( SchedulerVisitor *visitor )
 {
-    boost::mutex::scoped_lock scoped_lock_w( workersMut_ );
-    boost::mutex::scoped_lock scoped_lock_j( jobsMut_ );
+    std::unique_lock< std::mutex > lock_w( workersMut_ );
+    std::unique_lock< std::mutex > lock_j( jobsMut_ );
 
     visitor->Visit( *this );
 }

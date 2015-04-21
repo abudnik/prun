@@ -24,6 +24,8 @@ the License.
 
 #include <iostream>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/bind.hpp>
@@ -93,8 +95,8 @@ public:
 
     PidContainer &GetChildProcesses() { return childProcesses_; }
 
-    boost::mutex &GetProcessCompletionMutex() { return processCompletionMutex_; }
-    boost::condition_variable &GetProcessCompletionCondition() { return processCompletionCondition_; }
+    std::mutex &GetProcessCompletionMutex() { return processCompletionMutex_; }
+    std::condition_variable &GetProcessCompletionCondition() { return processCompletionCondition_; }
 
 private:
     ExecTable execTable_;
@@ -107,8 +109,8 @@ private:
 
     PidContainer childProcesses_;
 
-    boost::mutex processCompletionMutex_;
-    boost::condition_variable processCompletionCondition_;
+    std::mutex processCompletionMutex_;
+    std::condition_variable processCompletionCondition_;
 
     friend class ExecApplication;
 };
@@ -519,18 +521,17 @@ protected:
         if ( timeout > 0 )
         {
             timeout *= 1000;
-            const boost::system_time deadline = boost::get_system_time() + boost::posix_time::milliseconds( timeout );
 
-            boost::unique_lock< boost::mutex > lock( execContext_->GetProcessCompletionMutex() );
+            std::unique_lock< std::mutex > lock( execContext_->GetProcessCompletionMutex() );
             while( execContext_->GetChildProcesses().Find( pid ) )
             {
-                if ( !execContext_->GetProcessCompletionCondition().timed_wait( lock, deadline ) )
+                if ( execContext_->GetProcessCompletionCondition().wait_for( lock, std::chrono::milliseconds( timeout ) ) == std::cv_status::timeout )
                     break; // deadline reached
             }
         }
         else
         {
-            boost::unique_lock< boost::mutex > lock( execContext_->GetProcessCompletionMutex() );
+            std::unique_lock< std::mutex > lock( execContext_->GetProcessCompletionMutex() );
             while( execContext_->GetChildProcesses().Find( pid ) )
             {
                 execContext_->GetProcessCompletionCondition().wait( lock );
@@ -891,7 +892,7 @@ protected:
 
 class SessionBoost : public Session, public boost::enable_shared_from_this< SessionBoost >
 {
-    typedef boost::array< char, 2048 > BufferType;
+    typedef std::array< char, 2048 > BufferType;
 
 public:
     SessionBoost( boost::asio::io_service &io_service,
@@ -907,7 +908,7 @@ public:
 
     void Start()
     {
-        memset( buffer_.c_array(), 0, buffer_.size() );
+        buffer_.fill( 0 );
         socket_.async_read_some( boost::asio::buffer( buffer_ ),
                                  boost::bind( &SessionBoost::FirstRead, shared_from_this(),
                                               boost::asio::placeholders::error,
@@ -1161,7 +1162,7 @@ void ReadProcessCompletionPIDs( const worker::ExecContextPtr &spExecContext, int
     while( read( processCompletionPipe, &pid, sizeof( pid ) ) != -1 )
     {
         spExecContext->GetChildProcesses().Delete( pid );
-        boost::unique_lock< boost::mutex > lock( spExecContext->GetProcessCompletionMutex() );
+        std::unique_lock< std::mutex > lock( spExecContext->GetProcessCompletionMutex() );
         spExecContext->GetProcessCompletionCondition().notify_all();
     }
 }

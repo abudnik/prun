@@ -46,7 +46,7 @@ void ResultGetter::Run()
     {
         if ( !getTask )
         {
-            boost::unique_lock< boost::mutex > lock( awakeMut_ );
+            std::unique_lock< std::mutex > lock( awakeMut_ );
             if ( !newJobAvailable_ )
                 awakeCond_.wait( lock );
             newJobAvailable_ = false;
@@ -64,13 +64,13 @@ void ResultGetter::Run()
 void ResultGetter::Stop()
 {
     stopped_ = true;
-    boost::unique_lock< boost::mutex > lock( awakeMut_ );
+    std::unique_lock< std::mutex > lock( awakeMut_ );
     awakeCond_.notify_all();
 }
 
 void ResultGetter::NotifyObserver( int event )
 {
-    boost::unique_lock< boost::mutex > lock( awakeMut_ );
+    std::unique_lock< std::mutex > lock( awakeMut_ );
     newJobAvailable_ = true;
     awakeCond_.notify_all();
 }
@@ -304,7 +304,7 @@ bool GetterBoost::HandleResponse()
 void GetterBoost::OnCompletion( bool success, int errCode, int64_t execTime )
 {
     {
-        boost::mutex::scoped_lock scoped_lock( completionMut_ );
+        std::unique_lock< std::mutex > lock( completionMut_ );
         if ( completed_ )
             return;
         else

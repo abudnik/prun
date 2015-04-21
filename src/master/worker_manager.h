@@ -26,7 +26,7 @@ the License.
 #include <list>
 #include <queue>
 #include <utility> // pair
-#include <boost/thread/mutex.hpp>
+#include <mutex>
 #include "common/observer.h"
 #include "worker.h"
 #include "command.h"
@@ -67,7 +67,7 @@ public:
     template< typename Container >
     void GetWorkers( Container &workers ) const
     {
-        boost::mutex::scoped_lock scoped_lock( GetWorkersMutex() );
+        std::unique_lock< std::mutex > lock( GetWorkersMutex() );
 
         const GrpNameToWorkerList &workerGroups = GetWorkerGroups();
         GrpNameToWorkerList::const_iterator it = workerGroups.begin();
@@ -86,7 +86,7 @@ public:
     template< typename Container >
     void GetWorkers( Container &workers, const std::string &groupName ) const
     {
-        boost::mutex::scoped_lock scoped_lock( GetWorkersMutex() );
+        std::unique_lock< std::mutex > lock( GetWorkersMutex() );
 
         const GrpNameToWorkerList &workerGroups = GetWorkerGroups();
         GrpNameToWorkerList::const_iterator it = workerGroups.find( groupName );
@@ -104,7 +104,7 @@ public:
 
 protected:
     virtual const GrpNameToWorkerList &GetWorkerGroups() const = 0;
-    virtual boost::mutex &GetWorkersMutex() const = 0;
+    virtual std::mutex &GetWorkersMutex() const = 0;
 };
 
 class WorkerManager : public IWorkerManager,
@@ -144,22 +144,22 @@ public:
 
 private:
     virtual const GrpNameToWorkerList &GetWorkerGroups() const { return workerGroups_; }
-    virtual boost::mutex &GetWorkersMutex() const { return workersMut_; }
+    virtual std::mutex &GetWorkersMutex() const { return workersMut_; }
 
 private:
     std::string cfgDir_;
 
     GrpNameToWorkerList workerGroups_;
     std::set< std::string > workerHosts_;
-    mutable boost::mutex workersMut_;
+    mutable std::mutex workersMut_;
 
     typedef std::pair< WorkerTask, std::string > PairTypeAW;
     std::queue< PairTypeAW > achievedWorkers_;
-    boost::mutex achievedMut_;
+    std::mutex achievedMut_;
 
     typedef std::pair< CommandPtr, std::string > PairTypeC;
     std::queue< PairTypeC > commands_;
-    boost::mutex commandsMut_;
+    std::mutex commandsMut_;
 };
 
 bool ReadHosts( const char *filePath, std::list< std::string > &hosts );

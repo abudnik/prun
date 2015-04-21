@@ -32,7 +32,7 @@ void DbHistoryConnection::Send( const std::string &request, Callback &callback )
     if ( !established_ )
         return;
 
-    boost::mutex::scoped_lock scoped_lock( mut_ );
+    std::unique_lock< std::mutex > lock( mut_ );
 
     try
     {

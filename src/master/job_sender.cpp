@@ -45,7 +45,7 @@ void JobSender::Run()
     {
         if ( !getTask )
         {
-            boost::unique_lock< boost::mutex > lock( awakeMut_ );
+            std::unique_lock< std::mutex > lock( awakeMut_ );
             if ( !newJobAvailable_ )
                 awakeCond_.wait( lock );
             newJobAvailable_ = false;
@@ -64,13 +64,13 @@ void JobSender::Run()
 void JobSender::Stop()
 {
     stopped_ = true;
-    boost::unique_lock< boost::mutex > lock( awakeMut_ );
+    std::unique_lock< std::mutex > lock( awakeMut_ );
     awakeCond_.notify_all();
 }
 
 void JobSender::NotifyObserver( int event )
 {
-    boost::unique_lock< boost::mutex > lock( awakeMut_ );
+    std::unique_lock< std::mutex > lock( awakeMut_ );
     newJobAvailable_ = true;
     awakeCond_.notify_all();
 }
@@ -214,7 +214,7 @@ void SenderBoost::HandleLastRead( const boost::system::error_code& error, size_t
 void SenderBoost::OnCompletion( bool success )
 {
     {
-        boost::mutex::scoped_lock scoped_lock( completionMut_ );
+        std::unique_lock< std::mutex > lock( completionMut_ );
         if ( completed_ )
             return;
         else

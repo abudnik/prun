@@ -40,7 +40,7 @@ void WorkerManager::AddWorkerGroup( const std::string &groupName, std::list< std
 
 void WorkerManager::AddWorkerHost( const std::string &groupName, const std::string &host )
 {
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+    std::unique_lock< std::mutex > lock( workersMut_ );
 
     if ( workerHosts_.find( host ) != workerHosts_.end() )
     {
@@ -55,7 +55,7 @@ void WorkerManager::AddWorkerHost( const std::string &groupName, const std::stri
 
 void WorkerManager::DeleteWorkerGroup( const std::string &groupName )
 {
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+    std::unique_lock< std::mutex > lock( workersMut_ );
 
     GrpNameToWorkerList::iterator it = workerGroups_.find( groupName );
     if ( it != workerGroups_.end() )
@@ -76,7 +76,7 @@ void WorkerManager::DeleteWorkerGroup( const std::string &groupName )
 
 void WorkerManager::DeleteWorkerHost( const std::string &host )
 {
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+    std::unique_lock< std::mutex > lock( workersMut_ );
 
     GrpNameToWorkerList::iterator it = workerGroups_.begin();
     for( ; it != workerGroups_.end(); ++it )
@@ -92,7 +92,7 @@ void WorkerManager::CheckDropedPingResponses()
 {
     std::vector< WorkerPtr > changedWorkers;
 
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+    std::unique_lock< std::mutex > lock( workersMut_ );
 
     GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
     for( ; it != workerGroups_.end(); ++it )
@@ -124,7 +124,7 @@ void WorkerManager::CheckDropedPingResponses()
         }
     }
 
-    scoped_lock.unlock();
+    lock.unlock();
 
     if ( !changedWorkers.empty() )
     {
@@ -169,7 +169,7 @@ void WorkerManager::OnNodeTaskCompletion( const std::string &hostIP, int64_t job
     PairTypeAW worker( WorkerTask( jobId, taskId ), hostIP );
 
     {
-        boost::mutex::scoped_lock scoped_lock( achievedMut_ );
+        std::unique_lock< std::mutex > lock( achievedMut_ );
         achievedWorkers_.push( worker );
     }
     NotifyAll( eTaskCompletion );
@@ -180,7 +180,7 @@ bool WorkerManager::GetAchievedTask( WorkerTask &worker, std::string &hostIP )
     if ( achievedWorkers_.empty() )
         return false;
 
-    boost::mutex::scoped_lock scoped_lock( achievedMut_ );
+    std::unique_lock< std::mutex > lock( achievedMut_ );
     if ( achievedWorkers_.empty() )
         return false;
 
@@ -198,7 +198,7 @@ void WorkerManager::AddCommand( CommandPtr &command, const std::string &hostIP )
     PairTypeC workerCommand( command, hostIP );
 
     {
-        boost::mutex::scoped_lock scoped_lock( commandsMut_ );
+        std::unique_lock< std::mutex > lock( commandsMut_ );
         commands_.push( workerCommand );
     }
     NotifyAll( eCommand );
@@ -209,7 +209,7 @@ bool WorkerManager::GetCommand( CommandPtr &command, std::string &hostIP )
     if ( commands_.empty() )
         return false;
 
-    boost::mutex::scoped_lock scoped_lock( commandsMut_ );
+    std::unique_lock< std::mutex > lock( commandsMut_ );
     if ( commands_.empty() )
         return false;
 
@@ -222,7 +222,7 @@ bool WorkerManager::GetCommand( CommandPtr &command, std::string &hostIP )
 
 void WorkerManager::SetWorkerIP( WorkerPtr &worker, const std::string &ip )
 {
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+    std::unique_lock< std::mutex > lock( workersMut_ );
 
     GrpNameToWorkerList::iterator it = workerGroups_.begin();
     for( ; it != workerGroups_.end(); ++it )
@@ -234,7 +234,7 @@ void WorkerManager::SetWorkerIP( WorkerPtr &worker, const std::string &ip )
 
 bool WorkerManager::GetWorkerByIP( const std::string &ip, WorkerPtr &worker ) const
 {
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+    std::unique_lock< std::mutex > lock( workersMut_ );
 
     GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
     for( ; it != workerGroups_.end(); ++it )
@@ -251,7 +251,7 @@ int WorkerManager::GetTotalWorkers() const
 {
     int total = 0;
 
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+    std::unique_lock< std::mutex > lock( workersMut_ );
 
     GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
     for( ; it != workerGroups_.end(); ++it )
@@ -266,7 +266,7 @@ int WorkerManager::GetTotalCPU() const
 {
     int total = 0;
 
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+    std::unique_lock< std::mutex > lock( workersMut_ );
 
     GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
     for( ; it != workerGroups_.end(); ++it )
@@ -284,7 +284,7 @@ void WorkerManager::Initialize( const std::string &cfgDir )
 
 void WorkerManager::Shutdown()
 {
-    boost::mutex::scoped_lock scoped_lock( workersMut_ );
+    std::unique_lock< std::mutex > lock( workersMut_ );
 
     GrpNameToWorkerList::iterator it = workerGroups_.begin();
     for( ; it != workerGroups_.end(); ++it )

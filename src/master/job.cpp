@@ -77,7 +77,7 @@ bool Job::IsGroupPermitted( const std::string &group ) const
 
 void JobQueueImpl::PushJob( JobPtr &job, int64_t groupId )
 {
-    boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
+    std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
     job->SetGroupId( groupId );
     idToJob_[ job->GetJobId() ] = job;
     jobs_.push_back( job );
@@ -86,7 +86,7 @@ void JobQueueImpl::PushJob( JobPtr &job, int64_t groupId )
 
 void JobQueueImpl::PushJobs( std::list< JobPtr > &jobs, int64_t groupId )
 {
-    boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
+    std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
     std::list< JobPtr >::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
@@ -107,7 +107,7 @@ void JobQueueImpl::PushJobs( std::list< JobPtr > &jobs, int64_t groupId )
 
 bool JobQueueImpl::GetJobById( int64_t jobId, JobPtr &job )
 {
-    boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
+    std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
     IdToJob::const_iterator it = idToJob_.find( jobId );
     if ( it != idToJob_.end() )
     {
@@ -119,7 +119,7 @@ bool JobQueueImpl::GetJobById( int64_t jobId, JobPtr &job )
 
 bool JobQueueImpl::DeleteJob( int64_t jobId )
 {
-    boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
+    std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
 
     IdToJob::iterator it = idToJob_.find( jobId );
     if ( it == idToJob_.end() )
@@ -170,7 +170,7 @@ bool JobQueueImpl::DeleteJobGroup( int64_t groupId )
     JobList jobs;
     bool deleted = false;
     {
-        boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
+        std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
         JobList::const_iterator it = jobs_.begin();
         for( ; it != jobs_.end(); ++it )
         {
@@ -202,7 +202,7 @@ void JobQueueImpl::Clear()
 {
     JobList jobs;
     {
-        boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
+        std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
         jobs = jobs_;
         jobs.insert( jobs.end(), delayedJobs_.begin(), delayedJobs_.end() );
         // std::copy( delayedJobs.begin(), delayedJobs.end(), std::back_inserter( jobs ) ); // less effective
@@ -218,7 +218,7 @@ void JobQueueImpl::Clear()
 
 bool JobQueueImpl::PopJob( JobPtr &job )
 {
-    boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
+    std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
     if ( !jobs_.empty() )
     {
         job = jobs_.front();
@@ -232,7 +232,7 @@ bool JobQueueImpl::PopJob( JobPtr &job )
 
 void JobQueueImpl::OnJobDependenciesResolved( const JobPtr &job )
 {
-    boost::unique_lock< boost::recursive_mutex > scoped_lock( jobsMut_ );
+    std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
     JobSet::iterator it = delayedJobs_.find( job );
     if ( it != delayedJobs_.end() )
     {

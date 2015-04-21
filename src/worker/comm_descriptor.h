@@ -104,7 +104,7 @@ public:
 
     CommDescr &GetCommDescr()
     {
-        boost::unique_lock< boost::mutex > lock( commDescrMut_ );
+        std::unique_lock< std::mutex > lock( commDescrMut_ );
         ThreadComm &threadComm = commParams_[ std::this_thread::get_id() ];
         return commDescr_[ threadComm.connectId ];
     }
@@ -113,7 +113,7 @@ public:
     {
         sem_->Wait();
 
-        boost::unique_lock< boost::mutex > lock( commDescrMut_ );
+        std::unique_lock< std::mutex > lock( commDescrMut_ );
 
         for( size_t i = 0; i < commDescr_.size(); ++i )
         {
@@ -132,7 +132,7 @@ public:
     void FreeCommDescr()
     {
         {
-            boost::unique_lock< boost::mutex > lock( commDescrMut_ );
+            std::unique_lock< std::mutex > lock( commDescrMut_ );
             ThreadComm &threadComm = commParams_[ std::this_thread::get_id() ];
             commDescr_[ threadComm.connectId ].used = false;
             threadComm.connectId = -1;
@@ -143,7 +143,7 @@ public:
     void Shutdown()
     {
         {
-            boost::unique_lock< boost::mutex > lock( commDescrMut_ );
+            std::unique_lock< std::mutex > lock( commDescrMut_ );
             std::vector< CommDescr >::iterator it = commDescr_.begin();
             for( ; it != commDescr_.end(); ++it )
             {
@@ -162,13 +162,13 @@ public:
 private:
     void AddCommDescr( const CommDescr &descr )
     {
-        boost::unique_lock< boost::mutex > lock( commDescrMut_ );
+        std::unique_lock< std::mutex > lock( commDescrMut_ );
         commDescr_.push_back( descr );
     }
 
 private:
     std::vector< CommDescr > commDescr_;
-    boost::mutex commDescrMut_;
+    std::mutex commDescrMut_;
 
     CommParams commParams_;
     boost::scoped_ptr< common::Semaphore > sem_;

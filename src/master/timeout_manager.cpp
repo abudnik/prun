@@ -77,7 +77,7 @@ void TimeoutManager::Run()
 void TimeoutManager::CheckTimeouts()
 {
     namespace pt = boost::posix_time;
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    std::unique_lock< std::mutex > lock( jobsMut_ );
     TimeToCallback::iterator it = jobs_.begin();
     const pt::ptime now = pt::second_clock::local_time();
     for( ; it != jobs_.end(); )
@@ -107,7 +107,7 @@ void TimeoutManager::PushJobQueue( int64_t jobId, int queueTimeout )
         boost::bind( &JobQueueTimeoutHandler::HandleTimeout, handlerQueue )
     );
 
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    std::unique_lock< std::mutex > lock( jobsMut_ );
     jobs_.insert( std::pair< pt::ptime, Callback >(
                       deadlineQueue,
                       callbackQueue
@@ -130,7 +130,7 @@ void TimeoutManager::PushJob( int64_t jobId, int jobTimeout )
         boost::bind( &JobTimeoutHandler::HandleTimeout, handler )
     );
 
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    std::unique_lock< std::mutex >lock( jobsMut_ );
     jobs_.insert( std::pair< pt::ptime, Callback >(
                       deadline,
                       callback
@@ -154,7 +154,7 @@ void TimeoutManager::PushTask( const WorkerTask &task, const std::string &hostIP
         boost::bind( &TaskTimeoutHandler::HandleTimeout, handler )
     );
 
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    std::unique_lock< std::mutex > lock( jobsMut_ );
     jobs_.insert( std::pair< pt::ptime, Callback >(
                       deadline,
                       callback
@@ -178,7 +178,7 @@ void TimeoutManager::PushCommand( CommandPtr &command, const std::string &hostIP
         boost::bind( &StopTaskTimeoutHandler::HandleTimeout, handler )
     );
 
-    boost::mutex::scoped_lock scoped_lock( jobsMut_ );
+    std::unique_lock< std::mutex > lock( jobsMut_ );
     jobs_.insert( std::pair< pt::ptime, Callback >(
                       deadline,
                       callback

@@ -23,8 +23,8 @@ the License.
 #ifndef __HELPER_H
 #define __HELPER_H
 
-#include <boost/thread/condition.hpp>
-#include <boost/thread/mutex.hpp>
+#include <condition_variable>
+#include <mutex>
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/binary_from_base64.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
@@ -41,14 +41,14 @@ public:
 
     void Notify()
     {
-        boost::mutex::scoped_lock lock( mutex_ );
+        std::unique_lock< std::mutex > lock( mutex_ );
         ++count_;
         condition_.notify_one();
     }
 
     void Wait()
     {
-        boost::mutex::scoped_lock lock( mutex_ );
+        std::unique_lock< std::mutex > lock( mutex_ );
         while( !count_ )
             condition_.wait( lock );
         --count_;
@@ -56,14 +56,14 @@ public:
 
     void Reset()
     {
-        boost::mutex::scoped_lock lock( mutex_ );
+        std::unique_lock< std::mutex > lock( mutex_ );
         count_ = initCount_;
         condition_.notify_all();
     }
 
 private:
-    boost::mutex mutex_;
-    boost::condition_variable condition_;
+    std::mutex mutex_;
+    std::condition_variable condition_;
     unsigned int count_, initCount_;
 };
 
@@ -72,20 +72,19 @@ class SyncTimer
 public:
     void StopWaiting()
     {
-        boost::mutex::scoped_lock lock( mutex_ );
+        std::unique_lock< std::mutex > lock( mutex_ );
         condition_.notify_one();
     }
 
     bool Wait( int millisec )
     {
-        boost::mutex::scoped_lock lock( mutex_ );
-        const boost::system_time timeout = boost::get_system_time() + boost::posix_time::milliseconds( millisec );
-        return !condition_.timed_wait( lock, timeout );
+        std::unique_lock< std::mutex > lock( mutex_ );
+        return condition_.wait_for( lock, std::chrono::milliseconds( millisec ) ) == std::cv_status::timeout;
     }
 
 private:
-    boost::mutex mutex_;
-    boost::condition_variable condition_;
+    std::mutex mutex_;
+    std::condition_variable condition_;
 };
 
 template< typename T >

@@ -24,8 +24,8 @@ the License.
 #define __JOB_SENDER_H
 
 #include <boost/asio.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition.hpp>
+#include <mutex>
+#include <condition_variable>
 #include "common/observer.h"
 #include "common/helper.h"
 #include "job.h"
@@ -61,8 +61,8 @@ private:
 private:
     bool stopped_;
     TimeoutManager *timeoutManager_;
-    boost::mutex awakeMut_;
-    boost::condition_variable awakeCond_;
+    std::mutex awakeMut_;
+    std::condition_variable awakeCond_;
     bool newJobAvailable_;
 };
 
@@ -106,7 +106,7 @@ private:
     std::string hostIP_;
     JobPtr job_;
     bool completed_;
-    boost::mutex completionMut_;
+    std::mutex completionMut_;
 };
 
 class JobSenderBoost : public JobSender

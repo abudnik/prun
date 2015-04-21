@@ -26,7 +26,7 @@ the License.
 #include <boost/asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/function.hpp>
-#include <boost/thread/mutex.hpp>
+#include <mutex>
 #include "common/helper.h"
 #include "worker.h"
 #include "command.h"
@@ -100,7 +100,7 @@ private:
     bool stopped_;
     common::SyncTimer timer_;
     TimeToCallback jobs_;
-    boost::mutex jobsMut_;
+    std::mutex jobsMut_;
 };
 
 } // namespace master
