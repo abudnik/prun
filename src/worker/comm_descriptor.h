@@ -23,7 +23,7 @@ the License.
 #ifndef __COMM_DESCRIPTOR_H
 #define __COMM_DESCRIPTOR_H
 
-#include <boost/thread.hpp>
+#include <thread>
 #include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/interprocess/sync/interprocess_semaphore.hpp>
@@ -70,7 +70,7 @@ struct CommDescr
 
 class CommDescrPool
 {
-    typedef std::map< boost::thread::id, ThreadComm > CommParams;
+    typedef std::map< std::thread::id, ThreadComm > CommParams;
 
 public:
     CommDescrPool( unsigned int numJobThreads, boost::asio::io_service *io_service, char *shmemAddr )
@@ -105,7 +105,7 @@ public:
     CommDescr &GetCommDescr()
     {
         boost::unique_lock< boost::mutex > lock( commDescrMut_ );
-        ThreadComm &threadComm = commParams_[ boost::this_thread::get_id() ];
+        ThreadComm &threadComm = commParams_[ std::this_thread::get_id() ];
         return commDescr_[ threadComm.connectId ];
     }
 
@@ -120,7 +120,7 @@ public:
             if ( !commDescr_[i].used )
             {
                 commDescr_[i].used = true;
-                ThreadComm &threadComm = commParams_[ boost::this_thread::get_id() ];
+                ThreadComm &threadComm = commParams_[ std::this_thread::get_id() ];
                 threadComm.connectId = i;
                 return true;
             }
@@ -133,7 +133,7 @@ public:
     {
         {
             boost::unique_lock< boost::mutex > lock( commDescrMut_ );
-            ThreadComm &threadComm = commParams_[ boost::this_thread::get_id() ];
+            ThreadComm &threadComm = commParams_[ std::this_thread::get_id() ];
             commDescr_[ threadComm.connectId ].used = false;
             threadComm.connectId = -1;
         }

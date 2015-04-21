@@ -22,8 +22,8 @@ the License.
 
 #include <iostream>
 #include <list>
+#include <thread>
 #include <boost/asio.hpp>
-#include <boost/thread.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
 #include <csignal>
@@ -231,9 +231,7 @@ public:
         }
 
         timeoutManager_->Start();
-        worker_threads_.create_thread(
-            boost::bind( &ThreadFun, &io_service_timeout_ )
-        );
+        worker_threads_.push_back( std::thread( ThreadFun, &io_service_timeout_ ) );
 
         // start ping from nodes receiver threads
         pingReceiver_.reset( new master::PingReceiverBoost( io_service_ping_ ) );
@@ -248,9 +246,7 @@ public:
         // create thread pool for pingers
         for( unsigned int i = 0; i < numPingThread; ++i )
         {
-            worker_threads_.create_thread(
-                boost::bind( &ThreadFun, &io_service_ping_ )
-            );
+            worker_threads_.push_back( std::thread( ThreadFun, &io_service_ping_ ) );
         }
 
         // start job sender thread
@@ -264,9 +260,7 @@ public:
         // create thread pool for job senders
         for( unsigned int i = 0; i < numJobSendThread; ++i )
         {
-            worker_threads_.create_thread(
-                boost::bind( &ThreadFun, &io_service_senders_ )
-            );
+            worker_threads_.push_back( std::thread( ThreadFun, &io_service_senders_ ) );
         }
 
         // start result getter
@@ -277,9 +271,7 @@ public:
         // create thread pool for job result getters
         for( unsigned int i = 0; i < numResultGetterThread; ++i )
         {
-            worker_threads_.create_thread(
-                boost::bind( &ThreadFun, &io_service_getters_ )
-            );
+            worker_threads_.push_back( std::thread( ThreadFun, &io_service_getters_ ) );
         }
 
         // start command sender
@@ -293,16 +285,12 @@ public:
         // create thread pool for command senders
         for( unsigned int i = 0; i < numCommandSendThread; ++i )
         {
-            worker_threads_.create_thread(
-                boost::bind( &ThreadFun, &io_service_command_send_ )
-            );
+            worker_threads_.push_back( std::thread( ThreadFun, &io_service_command_send_ ) );
         }
 
         // create thread for admin connections
         adminConnection_.reset( new master::AdminConnection( io_service_admin_ ) );
-        worker_threads_.create_thread(
-            boost::bind( &ThreadFun, &io_service_admin_ )
-        );
+        worker_threads_.push_back( std::thread( ThreadFun, &io_service_admin_ ) );
     }
 
     void Shutdown()
@@ -333,7 +321,8 @@ public:
         dbConnection_->Shutdown();
 
         // stop thread pool
-        worker_threads_.join_all();
+        for( auto &t : worker_threads_ )
+            t.join();
 
         // shutdown managers
         if ( jobManager_ )
@@ -398,7 +387,7 @@ private:
     bool isDaemon_;
     std::string masterId_;
 
-    boost::thread_group worker_threads_;
+    std::vector<std::thread> worker_threads_;
 
     boost::asio::io_service io_service_timeout_;
     boost::asio::io_service io_service_ping_;

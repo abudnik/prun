@@ -23,11 +23,11 @@ the License.
 #define BOOST_SPIRIT_THREADSAFE
 
 #include <iostream>
+#include <thread>
 #include <boost/program_options.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
-#include <boost/thread.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -1031,9 +1031,7 @@ public:
         // create thread pool
         for( unsigned int i = 0; i < numThread_; ++i )
         {
-            worker_threads_.create_thread(
-                boost::bind( &ThreadFun, &io_service_ )
-            );
+            worker_threads_.push_back( std::thread( ThreadFun, &io_service_ ) );
         }
 
         // create pool for execute task actions
@@ -1046,9 +1044,7 @@ public:
 
         for( unsigned int i = 0; i < numExecThread; ++i )
         {
-            worker_threads_.create_thread(
-                boost::bind( &ThreadFun, &io_service_exec_ )
-            );
+            worker_threads_.push_back( std::thread( ThreadFun, &io_service_exec_ ) );
         }
 
         // start acceptor
@@ -1072,9 +1068,7 @@ public:
         unsigned int numPingThread = 2;
         for( unsigned int i = 0; i < numPingThread; ++i )
         {
-            worker_threads_.create_thread(
-                boost::bind( &ThreadFun, &io_service_ping_ )
-            );
+            worker_threads_.push_back( std::thread( ThreadFun, &io_service_ping_ ) );
         }
     }
 
@@ -1094,7 +1088,8 @@ public:
 
         requestSem_->Reset();
 
-        worker_threads_.join_all();
+        for( auto &t : worker_threads_ )
+            t.join();
     }
 
     void Run()
@@ -1217,7 +1212,7 @@ private:
     unsigned int numRequestThread_;
     unsigned int numThread_;
 
-    boost::thread_group worker_threads_;
+    std::vector<std::thread> worker_threads_;
 
     boost::asio::io_service io_service_;
     boost::asio::io_service io_service_exec_;

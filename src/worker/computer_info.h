@@ -24,7 +24,7 @@ the License.
 #define __COMPUTER_INFO_H
 
 #include <unistd.h>
-#include <boost/thread.hpp>
+#include <thread>
 
 namespace worker {
 
@@ -32,7 +32,7 @@ class ComputerInfo
 {
     ComputerInfo()
     {
-        numCPU_ = boost::thread::hardware_concurrency();
+        numCPU_ = std::thread::hardware_concurrency();
 
         long pages = sysconf( _SC_PHYS_PAGES );
         long page_size = sysconf( _SC_PAGE_SIZE );

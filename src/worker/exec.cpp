@@ -23,12 +23,12 @@ the License.
 #define BOOST_SPIRIT_THREADSAFE
 
 #include <iostream>
+#include <thread>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
-#include <boost/thread.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -66,7 +66,7 @@ struct ThreadParams
     ExecInfo execInfo;
 };
 
-typedef std::map< boost::thread::id, ThreadParams > ThreadInfo;
+typedef std::map< std::thread::id, ThreadParams > ThreadInfo;
 
 class ExecContext
 {
@@ -299,7 +299,7 @@ public:
         string jobId = boost::lexical_cast<std::string>( job->GetJobId() );
 
         ThreadInfo &threadInfo = execContext_->GetThreadInfo();
-        const ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+        const ThreadParams &threadParams = threadInfo[ std::this_thread::get_id() ];
 
         int ret = execl( exePath_.c_str(), job->GetScriptLanguage().c_str(),
                          nodePath_.c_str(),
@@ -359,7 +359,7 @@ protected:
             execContext_->GetChildProcesses().Add( pid );
 
             ThreadInfo &threadInfo = execContext_->GetThreadInfo();
-            ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+            ThreadParams &threadParams = threadInfo[ std::this_thread::get_id() ];
 
             ExecTable &execTable = execContext_->GetExecTable();
 
@@ -586,7 +586,7 @@ private:
     void FlushFifo()
     {
         ThreadInfo &threadInfo = execContext_->GetThreadInfo();
-        const ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+        const ThreadParams &threadParams = threadInfo[ std::this_thread::get_id() ];
         worker::FlushFifo( threadParams.readFifoFD );
         worker::FlushFifo( threadParams.writeFifoFD );
     }
@@ -649,7 +649,7 @@ public:
         string jobId = boost::lexical_cast<std::string>( job->GetJobId() );
 
         ThreadInfo &threadInfo = execContext_->GetThreadInfo();
-        const ThreadParams &threadParams = threadInfo[ boost::this_thread::get_id() ];
+        const ThreadParams &threadParams = threadInfo[ std::this_thread::get_id() ];
 
         int ret = execl( exePath_.c_str(), job->GetScriptLanguage().c_str(),
                          "-cp", nodePath_.c_str(),
@@ -1305,15 +1305,11 @@ public:
 
         for( unsigned int i = 0; i < numThread_; ++i )
         {
-            boost::thread *thread = worker_threads_.create_thread(
-                boost::bind( &ThreadFun, &io_service_ )
-            );
-            OnThreadCreate( thread );
+            worker_threads_.push_back( std::thread( ThreadFun, &io_service_ ) );
+            OnThreadCreate( &worker_threads_.back() );
         }
 
-        worker_threads_.create_thread(
-            boost::bind( ReadProcessCompletionPIDs, execContext_, processCompletionPipe_ )
-        );
+        worker_threads_.push_back( std::thread( ReadProcessCompletionPIDs, execContext_, processCompletionPipe_ ) );
 
         // signal parent process to say that PrExec has been initialized
         kill( getppid(), SIGUSR1 );
@@ -1332,7 +1328,8 @@ public:
 
         CloseProcessCompletionPipe();
 
-        worker_threads_.join_all();
+        for( auto &t : worker_threads_ )
+            t.join();
     }
 
     void Run()
@@ -1388,7 +1385,7 @@ private:
         return -1;
     }
 
-    void OnThreadCreate( const boost::thread *thread )
+    void OnThreadCreate( const std::thread *thread )
     {
         static int threadCnt = 0;
 
@@ -1507,7 +1504,7 @@ private:
     unsigned int numThread_;
     int processCompletionPipe_;
 
-    boost::thread_group worker_threads_;
+    std::vector<std::thread> worker_threads_;
 
     boost::asio::io_service io_service_;
 
