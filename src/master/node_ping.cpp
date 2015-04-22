@@ -21,7 +21,6 @@ the License.
 */
 
 #include <boost/bind.hpp>
-#include <boost/scoped_ptr.hpp>
 #include "node_ping.h"
 #include "common/log.h"
 #include "common/protocol.h"
@@ -43,7 +42,7 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
     }
 
     common::ProtocolCreator protocolCreator;
-    boost::scoped_ptr< common::Protocol > parser(
+    std::unique_ptr< common::Protocol > parser(
         protocolCreator.Create( protocol, version )
     );
     if ( !parser )

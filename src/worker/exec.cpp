@@ -865,7 +865,7 @@ private:
     void Execute( JobExec &job )
     {
         ExecCreator execCreator;
-        boost::scoped_ptr< ScriptExec > scriptExec(
+        std::unique_ptr< ScriptExec > scriptExec(
             execCreator.Create( job.GetScriptLanguage() )
         );
         if ( scriptExec )

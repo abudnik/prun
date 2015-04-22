@@ -23,7 +23,6 @@ the License.
 #include <iostream>
 #include <boost/asio.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/scoped_ptr.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
 #include <csignal>
@@ -222,10 +221,10 @@ private:
     std::string cfgPath_;
     bool isDaemon_;
 
-    boost::scoped_ptr< boost::thread > workerThread_;
+    std::unique_ptr< boost::thread > workerThread_;
     boost::asio::io_service io_service_;
 
-    boost::scoped_ptr< masterdb::ConnectionAcceptor > acceptor_;
+    std::unique_ptr< masterdb::ConnectionAcceptor > acceptor_;
 
 #ifdef HAVE_LEVELDB_H
     masterdb::DbLevel dbClient_;

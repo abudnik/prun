@@ -73,7 +73,7 @@ bool DbLevel::Delete( const std::string &key )
 
 bool DbLevel::Get( std::string &jobs )
 {
-    boost::scoped_ptr< leveldb::Iterator > it( pDB->NewIterator( leveldb::ReadOptions() ) );
+    std::unique_ptr< leveldb::Iterator > it( pDB->NewIterator( leveldb::ReadOptions() ) );
     for( it->SeekToFirst(); it->Valid(); it->Next() )
     {
         jobs += it->key().ToString() + '\n' + it->value().ToString() + '\n';

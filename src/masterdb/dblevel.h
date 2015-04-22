@@ -23,7 +23,6 @@ the License.
 #ifndef __DB_LEVEL_H
 #define __DB_LEVEL_H
 
-#include <boost/scoped_ptr.hpp>
 #include "leveldb/db.h"
 #include "dbaccess.h"
 
@@ -32,7 +31,7 @@ namespace masterdb {
 
 class DbLevel : public IDAO
 {
-    typedef boost::scoped_ptr< leveldb::DB > DbPtr;
+    typedef std::unique_ptr< leveldb::DB > DbPtr;
 
 public:
     // IDAO

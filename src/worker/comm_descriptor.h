@@ -170,7 +170,7 @@ private:
     std::mutex commDescrMut_;
 
     CommParams commParams_;
-    boost::scoped_ptr< common::Semaphore > sem_;
+    std::unique_ptr< common::Semaphore > sem_;
     boost::asio::io_service *io_service_;
 };
 

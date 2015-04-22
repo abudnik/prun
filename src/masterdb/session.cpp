@@ -21,7 +21,6 @@ the License.
 */
 
 #include <boost/bind.hpp>
-#include <boost/scoped_ptr.hpp>
 #include "session.h"
 #include "common/protocol.h"
 #include "common/config.h"

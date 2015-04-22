@@ -621,7 +621,7 @@ protected:
             job_->SetMasterIP( masterIP_ );
 
             ActionCreator actionCreator;
-            boost::scoped_ptr< Action > action(
+            std::unique_ptr< Action > action(
                 actionCreator.Create( job_->GetTaskType() )
             );
             if ( action )

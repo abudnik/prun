@@ -63,7 +63,7 @@ public:
         }
 
         common::ProtocolCreator protocolCreator;
-        boost::scoped_ptr< common::Protocol > parser(
+        std::unique_ptr< common::Protocol > parser(
             protocolCreator.Create( protocol, version )
         );
         if ( !parser )

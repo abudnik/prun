@@ -21,7 +21,6 @@ the License.
 */
 
 #include <boost/bind.hpp>
-#include <boost/scoped_ptr.hpp>
 #include "result_getter.h"
 #include "worker_manager.h"
 #include "job_manager.h"
@@ -252,7 +251,7 @@ bool GetterBoost::HandleResponse()
     }
 
     common::ProtocolCreator protocolCreator;
-    boost::scoped_ptr< common::Protocol > parser(
+    std::unique_ptr< common::Protocol > parser(
         protocolCreator.Create( protocol, version )
     );
     if ( !parser )
