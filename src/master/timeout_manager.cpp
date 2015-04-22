@@ -20,7 +20,6 @@ the License.
 ===========================================================================
 */
 
-#include <boost/bind.hpp>
 #include "timeout_manager.h"
 #include "scheduler.h"
 #include "job_manager.h"

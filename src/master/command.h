@@ -25,8 +25,6 @@ the License.
 
 #include <sstream>
 #include <list>
-#include <boost/shared_ptr.hpp>
-#include <boost/bind.hpp>
 
 namespace master {
 

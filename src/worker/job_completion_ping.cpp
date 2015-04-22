@@ -21,7 +21,6 @@ the License.
 */
 
 #include <boost/bind.hpp>
-#include <boost/thread.hpp>
 #include "job_completion_ping.h"
 #include "common/log.h"
 

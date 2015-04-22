@@ -28,7 +28,6 @@ the License.
 #include <mutex>
 #include <memory>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/bind.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <stdint.h> // int64_t
 
