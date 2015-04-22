@@ -26,7 +26,6 @@ the License.
 #include <sstream>
 #include <list>
 #include <boost/shared_ptr.hpp>
-#include <boost/function.hpp>
 #include <boost/bind.hpp>
 
 namespace master {
@@ -63,7 +62,7 @@ public:
     template< typename T >
     void SetCallback( T &obj, void (T::*f)( int errCode, const std::string &hostIP ) )
     {
-        callback_ = boost::bind( f, obj, _1, _2 );
+        callback_ = std::bind( f, obj, std::placeholders::_1, std::placeholders::_2 );
     }
 
     void OnExec( int errCode, const std::string &hostIP )
@@ -83,7 +82,7 @@ protected:
     Params params_;
 
 private:
-    boost::function< void (int, const std::string &) > callback_;
+    std::function< void (int, const std::string &) > callback_;
 };
 
 typedef std::shared_ptr< Command > CommandPtr;

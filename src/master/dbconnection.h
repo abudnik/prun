@@ -24,7 +24,6 @@ the License.
 #define __DB_CONNECTION_H
 
 #include <boost/asio.hpp>
-#include <boost/function.hpp>
 #include <mutex>
 #include "common/request.h"
 
@@ -35,7 +34,7 @@ namespace master {
 
 struct IHistoryChannel
 {
-    typedef boost::function< void (const std::string &response) > Callback;
+    typedef std::function< void (const std::string &response) > Callback;
 
     virtual void Send( const std::string &request, Callback &callback ) = 0;
 };

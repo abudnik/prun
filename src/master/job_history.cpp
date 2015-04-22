@@ -31,9 +31,9 @@ namespace master {
 JobHistory::JobHistory( IHistoryChannel *channel )
 : channel_( channel )
 {
-    addCallback_ = boost::bind( &JobHistory::OnAddCompleted, this, _1 );
-    deleteCallback_ = boost::bind( &JobHistory::OnDeleteCompleted, this, _1 );
-    getCallback_ = boost::bind( &JobHistory::OnGetCompleted, this, _1 );
+    addCallback_ = std::bind( &JobHistory::OnAddCompleted, this, std::placeholders::_1 );
+    deleteCallback_ = std::bind( &JobHistory::OnDeleteCompleted, this, std::placeholders::_1 );
+    getCallback_ = std::bind( &JobHistory::OnGetCompleted, this, std::placeholders::_1 );
 }
 
 void JobHistory::OnJobAdd( const JobPtr &job )

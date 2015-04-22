@@ -25,7 +25,6 @@ the License.
 
 #include <boost/asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/function.hpp>
 #include <mutex>
 #include "common/helper.h"
 #include "worker.h"
@@ -47,7 +46,7 @@ struct ITimeoutManager
 
 class TimeoutManager : public ITimeoutManager
 {
-    typedef boost::function< void () > Callback;
+    typedef std::function< void () > Callback;
     typedef std::multimap< boost::posix_time::ptime,
                            Callback > TimeToCallback;
 

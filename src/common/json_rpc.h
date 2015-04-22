@@ -26,7 +26,6 @@ the License.
 #include <string>
 #include <map>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/function.hpp>
 
 #define JSON_RPC_PARSER_ERROR     -32700
 #define JSON_RPC_INVALID_REQUEST  -32600

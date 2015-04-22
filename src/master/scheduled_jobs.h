@@ -123,7 +123,7 @@ public:
     template< typename T >
     void SetOnRemoveCallback( T *obj, void (T::*f)( int64_t jobId ) )
     {
-        onRemoveCallback_ = boost::bind( f, obj, _1 );
+        onRemoveCallback_ = std::bind( f, obj, std::placeholders::_1 );
     }
 
     void RemoveJob( int64_t jobId, const char *completionStatus )
@@ -180,7 +180,7 @@ private:
 private:
     JobQueue jobs_;
     IdToJobExec jobExecutions_; // job_id -> num job remaining executions (== 0, if job execution completed)
-    boost::function< void (int64_t) > onRemoveCallback_;
+    std::function< void (int64_t) > onRemoveCallback_;
 };
 
 } // namespace master

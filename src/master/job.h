@@ -28,7 +28,6 @@ the License.
 #include <mutex>
 #include <memory>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <stdint.h> // int64_t
@@ -140,7 +139,7 @@ public:
     template< typename T, typename U >
     void SetCallback( T *obj, void (U::*f)( const std::string &method, const boost::property_tree::ptree &params ) )
     {
-        callback_ = boost::bind( f, obj->shared_from_this(), _1, _2 );
+        callback_ = std::bind( f, obj->shared_from_this(), std::placeholders::_1, std::placeholders::_2 );
     }
 
     void RunCallback( const std::string &method, const boost::property_tree::ptree &params ) const
@@ -174,7 +173,7 @@ private:
 
     JobVertex graphVertex_;
     std::shared_ptr< JobGroup > jobGroup_;
-    boost::function< void (const std::string &method, const boost::property_tree::ptree &params) > callback_;
+    std::function< void (const std::string &method, const boost::property_tree::ptree &params) > callback_;
 };
 
 struct JobComparatorPriority

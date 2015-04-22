@@ -104,7 +104,7 @@ void TimeoutManager::PushJobQueue( int64_t jobId, int queueTimeout )
     std::shared_ptr< JobQueueTimeoutHandler > handlerQueue( new JobQueueTimeoutHandler );
     handlerQueue->jobId_ = jobId;
     Callback callbackQueue(
-        boost::bind( &JobQueueTimeoutHandler::HandleTimeout, handlerQueue )
+        std::bind( &JobQueueTimeoutHandler::HandleTimeout, handlerQueue )
     );
 
     std::unique_lock< std::mutex > lock( jobsMut_ );
@@ -127,7 +127,7 @@ void TimeoutManager::PushJob( int64_t jobId, int jobTimeout )
     std::shared_ptr< JobTimeoutHandler > handler( new JobTimeoutHandler );
     handler->jobId_ = jobId;
     Callback callback(
-        boost::bind( &JobTimeoutHandler::HandleTimeout, handler )
+        std::bind( &JobTimeoutHandler::HandleTimeout, handler )
     );
 
     std::unique_lock< std::mutex >lock( jobsMut_ );
@@ -151,7 +151,7 @@ void TimeoutManager::PushTask( const WorkerTask &task, const std::string &hostIP
     handler->workerTask_ = task;
     handler->hostIP_ = hostIP;
     Callback callback(
-        boost::bind( &TaskTimeoutHandler::HandleTimeout, handler )
+        std::bind( &TaskTimeoutHandler::HandleTimeout, handler )
     );
 
     std::unique_lock< std::mutex > lock( jobsMut_ );
@@ -175,7 +175,7 @@ void TimeoutManager::PushCommand( CommandPtr &command, const std::string &hostIP
     handler->command_ = command;
     handler->hostIP_ = hostIP;
     Callback callback(
-        boost::bind( &StopTaskTimeoutHandler::HandleTimeout, handler )
+        std::bind( &StopTaskTimeoutHandler::HandleTimeout, handler )
     );
 
     std::unique_lock< std::mutex > lock( jobsMut_ );

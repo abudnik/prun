@@ -25,7 +25,6 @@ the License.
 
 #include <stdint.h> // int64_t
 #include <list>
-#include <boost/function.hpp>
 #include <thread>
 
 
@@ -37,7 +36,7 @@ struct ExecInfo
     int taskId_;
     std::string masterId_;
     pid_t pid_; // used in pyexec
-    boost::function< void () > callback_;
+    std::function< void () > callback_;
 
     bool operator == ( const ExecInfo &execInfo ) const
     {

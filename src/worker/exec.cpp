@@ -372,7 +372,7 @@ protected:
 
             threadParams.execInfo = execInfo; // copy without callback
 
-            execInfo.callback_ = boost::bind( &ScriptExec::Cancel, execInfo, execContext_ );
+            execInfo.callback_ = std::bind( &ScriptExec::Cancel, execInfo, execContext_ );
             execTable.Add( execInfo );
 
             bool succeded = WriteScript( threadParams.writeFifoFD );
