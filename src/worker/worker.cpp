@@ -299,7 +299,7 @@ class ExecuteTask : public Action
             pendingTable.Add( execInfo );
 
             io_service->post( boost::bind( &ExecuteTask::DoSend,
-                                           std::shared_ptr< ExecuteTask >( new ExecuteTask ),
+                                           std::make_shared< ExecuteTask >(),
                                            std::shared_ptr< JobExec >( job ), *it,
                                            ExecContextPtr( execContext ) ) );
         }

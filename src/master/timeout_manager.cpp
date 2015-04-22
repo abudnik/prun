@@ -101,7 +101,7 @@ void TimeoutManager::PushJobQueue( int64_t jobId, int queueTimeout )
     const pt::ptime now = pt::second_clock::local_time();
     const pt::ptime deadlineQueue = now + pt::seconds( queueTimeout );
 
-    std::shared_ptr< JobQueueTimeoutHandler > handlerQueue( new JobQueueTimeoutHandler );
+    auto handlerQueue = std::make_shared< JobQueueTimeoutHandler >();
     handlerQueue->jobId_ = jobId;
     Callback callbackQueue(
         std::bind( &JobQueueTimeoutHandler::HandleTimeout, handlerQueue )
@@ -124,7 +124,7 @@ void TimeoutManager::PushJob( int64_t jobId, int jobTimeout )
     const pt::ptime now = pt::second_clock::local_time();
     const pt::ptime deadline = now + pt::seconds( jobTimeout );
 
-    std::shared_ptr< JobTimeoutHandler > handler( new JobTimeoutHandler );
+    auto handler = std::make_shared< JobTimeoutHandler >();
     handler->jobId_ = jobId;
     Callback callback(
         std::bind( &JobTimeoutHandler::HandleTimeout, handler )
@@ -147,7 +147,7 @@ void TimeoutManager::PushTask( const WorkerTask &task, const std::string &hostIP
     const pt::ptime now = pt::second_clock::local_time();
     const pt::ptime deadline = now + pt::seconds( timeout );
 
-    std::shared_ptr< TaskTimeoutHandler > handler( new TaskTimeoutHandler );
+    auto handler = std::make_shared< TaskTimeoutHandler >();
     handler->workerTask_ = task;
     handler->hostIP_ = hostIP;
     Callback callback(
@@ -171,7 +171,7 @@ void TimeoutManager::PushCommand( CommandPtr &command, const std::string &hostIP
     const pt::ptime now = pt::second_clock::local_time();
     const pt::ptime deadline = now + pt::seconds( delay );
 
-    std::shared_ptr< StopTaskTimeoutHandler > handler( new StopTaskTimeoutHandler );
+    auto handler = std::make_shared< StopTaskTimeoutHandler >();
     handler->command_ = command;
     handler->hostIP_ = hostIP;
     Callback callback(
