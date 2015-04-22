@@ -27,7 +27,6 @@ the License.
 #include <boost/foreach.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/bind.hpp>
-#include <boost/enable_shared_from_this.hpp>
 #include "admin.h"
 #include "user_command.h"
 #include "job_manager.h"

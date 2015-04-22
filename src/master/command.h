@@ -86,7 +86,7 @@ private:
     boost::function< void (int, const std::string &) > callback_;
 };
 
-typedef boost::shared_ptr< Command > CommandPtr;
+typedef std::shared_ptr< Command > CommandPtr;
 
 } // namespace master
 

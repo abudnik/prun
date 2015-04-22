@@ -27,8 +27,8 @@ the License.
 #include <map>
 #include <set>
 #include <string>
+#include <memory>
 #include <stdint.h> // int64_t
-#include <boost/shared_ptr.hpp>
 
 namespace master {
 
@@ -153,7 +153,7 @@ private:
     int numPingResponse_;
 };
 
-typedef boost::shared_ptr< Worker > WorkerPtr;
+typedef std::shared_ptr< Worker > WorkerPtr;
 typedef std::map< std::string, WorkerPtr > IPToWorker;
 
 class WorkerList

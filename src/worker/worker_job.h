@@ -63,7 +63,7 @@ protected:
     friend class RequestParser;
 };
 
-typedef boost::shared_ptr< Job > JobPtr;
+typedef std::shared_ptr< Job > JobPtr;
 
 class JobExec : public Job
 {

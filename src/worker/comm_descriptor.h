@@ -64,7 +64,7 @@ struct CommDescr
 
     unsigned int shmemBlockId;
     char *shmemAddr;
-    boost::shared_ptr< stream_protocol::socket > socket;
+    std::shared_ptr< stream_protocol::socket > socket;
     bool used;
 };
 
@@ -90,7 +90,7 @@ public:
             boost::system::error_code ec;
 
             // open socket to pyexec
-            commDescr.socket = boost::shared_ptr< stream_protocol::socket >( new stream_protocol::socket( *io_service ) );
+            commDescr.socket = std::shared_ptr< stream_protocol::socket >( new stream_protocol::socket( *io_service ) );
             commDescr.socket->connect( stream_protocol::endpoint( UDS_NAME ) );
             if ( ec )
             {

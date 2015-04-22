@@ -30,7 +30,6 @@ the License.
 #include <boost/filesystem.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
-#include <boost/enable_shared_from_this.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -76,7 +75,7 @@ private:
     void SetExeDir( const std::string &dir ) { exeDir_ = dir; }
     void SetResourcesDir( const std::string &dir ) { resourcesDir_ = dir; }
 
-    void SetMappedRegion( boost::shared_ptr< boost::interprocess::mapped_region > &mappedRegion )
+    void SetMappedRegion( std::shared_ptr< boost::interprocess::mapped_region > &mappedRegion )
     {
         mappedRegion_ = mappedRegion;
     }
@@ -88,7 +87,7 @@ public:
     const std::string &GetExeDir() const { return exeDir_; }
     const std::string &GetResourcesDir() const { return resourcesDir_; }
 
-    const boost::shared_ptr< boost::interprocess::mapped_region > &GetMappedRegion() const
+    const std::shared_ptr< boost::interprocess::mapped_region > &GetMappedRegion() const
     {
         return mappedRegion_;
     }
@@ -105,7 +104,7 @@ private:
     std::string exeDir_;
     std::string resourcesDir_;
 
-    boost::shared_ptr< boost::interprocess::mapped_region > mappedRegion_;
+    std::shared_ptr< boost::interprocess::mapped_region > mappedRegion_;
 
     PidContainer childProcesses_;
 
@@ -115,7 +114,7 @@ private:
     friend class ExecApplication;
 };
 
-typedef boost::shared_ptr< ExecContext > ExecContextPtr;
+typedef std::shared_ptr< ExecContext > ExecContextPtr;
 
 
 void FlushFifo( int fifo )
@@ -462,7 +461,7 @@ protected:
         {
             // read script from shared memory
             size_t offset = job_->GetCommId() * SHMEM_BLOCK_SIZE;
-            const boost::shared_ptr< boost::interprocess::mapped_region > &mappedRegion(
+            const std::shared_ptr< boost::interprocess::mapped_region > &mappedRegion(
                 execContext_->GetMappedRegion()
             );
             scriptAddr = static_cast< const char* >( mappedRegion->get_address() ) + offset;
@@ -890,7 +889,8 @@ protected:
     ExecContextPtr execContext_;
 };
 
-class SessionBoost : public Session, public boost::enable_shared_from_this< SessionBoost >
+class SessionBoost : public Session, public std::enable_shared_from_this
+                     < SessionBoost >
 {
     typedef std::array< char, 2048 > BufferType;
 
@@ -1007,8 +1007,8 @@ protected:
 
 class ConnectionAcceptor
 {
-    typedef boost::shared_ptr< SessionBoost > session_ptr;
-    typedef boost::shared_ptr< stream_protocol::acceptor > acceptor_ptr;
+    typedef std::shared_ptr< SessionBoost > session_ptr;
+    typedef std::shared_ptr< stream_protocol::acceptor > acceptor_ptr;
 
 public:
     ConnectionAcceptor( boost::asio::io_service &io_service,
@@ -1509,10 +1509,10 @@ private:
 
     boost::asio::io_service io_service_;
 
-    boost::shared_ptr< ConnectionAcceptor > acceptor_;
+    std::shared_ptr< ConnectionAcceptor > acceptor_;
 
-    boost::shared_ptr< boost::interprocess::shared_memory_object > sharedMemPool_;
-    boost::shared_ptr< boost::interprocess::mapped_region > mappedRegion_;
+    std::shared_ptr< boost::interprocess::shared_memory_object > sharedMemPool_;
+    std::shared_ptr< boost::interprocess::mapped_region > mappedRegion_;
 
     ExecContextPtr execContext_;
 };

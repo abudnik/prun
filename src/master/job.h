@@ -26,7 +26,7 @@ the License.
 #include <list>
 #include <vector>
 #include <mutex>
-#include <boost/weak_ptr.hpp>
+#include <memory>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
@@ -46,8 +46,8 @@ typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::bidirectionalS > 
 typedef boost::graph_traits<JobGraph>::vertex_descriptor JobVertex;
 
 class Job;
-typedef boost::weak_ptr< Job > JobWeakPtr;
-typedef boost::shared_ptr< Job > JobPtr;
+typedef std::weak_ptr< Job > JobWeakPtr;
+typedef std::shared_ptr< Job > JobPtr;
 
 struct IJobGroupEventReceiver
 {
@@ -129,7 +129,7 @@ public:
     void SetJobId( int64_t val ) { id_ = val; }
     void SetGroupId( int64_t val ) { groupId_ = val; }
     void SetJobVertex( const JobVertex &vertex ) { graphVertex_ = vertex; }
-    void SetJobGroup( boost::shared_ptr< JobGroup > &jobGroup ) { jobGroup_ = jobGroup; }
+    void SetJobGroup( std::shared_ptr< JobGroup > &jobGroup ) { jobGroup_ = jobGroup; }
 
     void AddHost( const std::string &host ) { hosts_.insert( host ); }
     bool IsHostPermitted( const std::string &host ) const;
@@ -173,7 +173,7 @@ private:
     std::set< std::string > groups_;
 
     JobVertex graphVertex_;
-    boost::shared_ptr< JobGroup > jobGroup_;
+    std::shared_ptr< JobGroup > jobGroup_;
     boost::function< void (const std::string &method, const boost::property_tree::ptree &params) > callback_;
 };
 

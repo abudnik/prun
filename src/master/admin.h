@@ -125,7 +125,7 @@ public:
 };
 
 
-class AdminSession : public boost::enable_shared_from_this< AdminSession >
+class AdminSession : public std::enable_shared_from_this< AdminSession >
 {
     typedef std::array< char, 32 * 1024 > BufferType;
 
@@ -162,7 +162,7 @@ private:
 
 class AdminConnection
 {
-    typedef boost::shared_ptr< AdminSession > session_ptr;
+    typedef std::shared_ptr< AdminSession > session_ptr;
 
 public:
     AdminConnection( boost::asio::io_service &io_service )

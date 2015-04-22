@@ -66,10 +66,10 @@ private:
     bool newJobAvailable_;
 };
 
-class SenderBoost : public boost::enable_shared_from_this< SenderBoost >
+class SenderBoost : public std::enable_shared_from_this< SenderBoost >
 {
 public:
-    typedef boost::shared_ptr< SenderBoost > sender_ptr;
+    typedef std::shared_ptr< SenderBoost > sender_ptr;
 
 public:
     SenderBoost( boost::asio::io_service &io_service,

@@ -64,12 +64,12 @@ private:
     bool newJobAvailable_;
 };
 
-class GetterBoost : public boost::enable_shared_from_this< GetterBoost >
+class GetterBoost : public std::enable_shared_from_this< GetterBoost >
 {
     typedef std::array< char, 32 * 1024 > BufferType;
 
 public:
-    typedef boost::shared_ptr< GetterBoost > getter_ptr;
+    typedef std::shared_ptr< GetterBoost > getter_ptr;
 
 public:
     GetterBoost( boost::asio::io_service &io_service,

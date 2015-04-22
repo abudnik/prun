@@ -119,7 +119,7 @@ bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
         std::map< std::string, int > jobFileToIndex;
 
         IJobGroupEventReceiverPtr evReceiverPtr = static_cast< IJobGroupEventReceiver * >( this );
-        boost::shared_ptr< JobGroup > jobGroup( new JobGroup( evReceiverPtr ) );
+        std::shared_ptr< JobGroup > jobGroup( new JobGroup( evReceiverPtr ) );
         std::vector< JobWeakPtr > &indexToJob = jobGroup->GetIndexToJob();
 
         // parse job files 
@@ -446,7 +446,7 @@ void JobManager::ReadGroups( Job *job, const boost::property_tree::ptree &ptree 
 
 bool JobManager::PrepareJobGraph( const boost::property_tree::ptree &ptree,
                                   std::map< std::string, int > &jobFileToIndex,
-                                  boost::shared_ptr< JobGroup > &jobGroup ) const
+                                  std::shared_ptr< JobGroup > &jobGroup ) const
 {
     using namespace boost;
 

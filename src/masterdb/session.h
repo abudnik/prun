@@ -109,7 +109,7 @@ protected:
 
 class ConnectionAcceptor
 {
-    typedef boost::shared_ptr< BoostSession > session_ptr;
+    typedef std::shared_ptr< BoostSession > session_ptr;
 
 public:
     ConnectionAcceptor( boost::asio::io_service &io_service, unsigned short port );

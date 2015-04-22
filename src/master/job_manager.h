@@ -102,10 +102,10 @@ private:
 
     bool PrepareJobGraph( const boost::property_tree::ptree &ptree,
                           std::map< std::string, int > &jobFileToIndex,
-                          boost::shared_ptr< JobGroup > &jobGroup ) const;
+                          std::shared_ptr< JobGroup > &jobGroup ) const;
 
 private:
-    boost::shared_ptr< JobQueue > jobs_;
+    std::shared_ptr< JobQueue > jobs_;
     ITimeoutManager *timeoutManager_;
     std::string exeDir_, jobsDir_;
     std::string masterId_;

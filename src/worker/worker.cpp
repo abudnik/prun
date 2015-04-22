@@ -27,7 +27,6 @@ the License.
 #include <boost/program_options.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
-#include <boost/enable_shared_from_this.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -68,7 +67,7 @@ pid_t g_prexecPid;
 class ExecContext
 {
 private:
-    void SetCommDescrPool( boost::shared_ptr< worker::CommDescrPool > &pool )
+    void SetCommDescrPool( std::shared_ptr< worker::CommDescrPool > &pool )
     {
         commDescrPool_ = pool;
     }
@@ -77,7 +76,7 @@ public:
     ExecTable &GetExecTable() { return execTable_; }
     ExecTable &GetPendingTable() { return pendingTable_; }
 
-    boost::shared_ptr< worker::CommDescrPool > &GetCommDescrPool()
+    std::shared_ptr< worker::CommDescrPool > &GetCommDescrPool()
     {
         return commDescrPool_;
     }
@@ -86,25 +85,25 @@ private:
     ExecTable execTable_;
     ExecTable pendingTable_;
 
-    boost::shared_ptr< worker::CommDescrPool > commDescrPool_;
+    std::shared_ptr< worker::CommDescrPool > commDescrPool_;
 
     friend class WorkerApplication;
 };
 
-typedef boost::shared_ptr< ExecContext > ExecContextPtr;
+typedef std::shared_ptr< ExecContext > ExecContextPtr;
 
 
 class Action
 {
 public:
-    virtual void Execute( const boost::shared_ptr< Job > &job,
+    virtual void Execute( const std::shared_ptr< Job > &job,
                           ExecContextPtr &execContext ) = 0;
     virtual ~Action() {}
 };
 
 class NoAction : public Action
 {
-    virtual void Execute( const boost::shared_ptr< Job > &job,
+    virtual void Execute( const std::shared_ptr< Job > &job,
                           ExecContextPtr &execContex ) {}
 };
 
@@ -124,7 +123,7 @@ public:
 
     bool Init()
     {
-        boost::shared_ptr< CommDescrPool > &commDescrPool(
+        std::shared_ptr< CommDescrPool > &commDescrPool(
             execContext_->GetCommDescrPool()
         );
         if ( commDescrPool->AllocCommDescr() )
@@ -145,7 +144,7 @@ public:
     {
         if ( socket_ )
         {
-            boost::shared_ptr< worker::CommDescrPool > &commDescrPool(
+            std::shared_ptr< worker::CommDescrPool > &commDescrPool(
                 execContext_->GetCommDescrPool()
             );
             commDescrPool->FreeCommDescr();
@@ -251,11 +250,11 @@ private:
 
 class ExecuteTask : public Action
 {
-    virtual void Execute( const boost::shared_ptr< Job > &j,
+    virtual void Execute( const std::shared_ptr< Job > &j,
                           ExecContextPtr &execContext )
     {
-        boost::shared_ptr< JobExec > job(
-            boost::dynamic_pointer_cast< JobExec >( j )
+        std::shared_ptr< JobExec > job(
+            std::dynamic_pointer_cast< JobExec >( j )
         );
 
         const JobExec::Tasks &tasks = job->GetTasks();
@@ -284,7 +283,7 @@ class ExecuteTask : public Action
             return;
         }
 
-        boost::shared_ptr< CommDescrPool > &commDescrPool(
+        std::shared_ptr< CommDescrPool > &commDescrPool(
             execContext->GetCommDescrPool()
         );
         boost::asio::io_service *io_service = commDescrPool->GetIoService();
@@ -300,13 +299,13 @@ class ExecuteTask : public Action
             pendingTable.Add( execInfo );
 
             io_service->post( boost::bind( &ExecuteTask::DoSend,
-                                           boost::shared_ptr< ExecuteTask >( new ExecuteTask ),
-                                           boost::shared_ptr< JobExec >( job ), *it,
+                                           std::shared_ptr< ExecuteTask >( new ExecuteTask ),
+                                           std::shared_ptr< JobExec >( job ), *it,
                                            ExecContextPtr( execContext ) ) );
         }
     }
 
-    void SaveCompletionResults( const boost::shared_ptr< JobExec > &job, int taskId, int64_t execTime ) const
+    void SaveCompletionResults( const std::shared_ptr< JobExec > &job, int taskId, int64_t execTime ) const
     {
         JobDescriptor descr;
         JobCompletionStat stat;
@@ -319,7 +318,7 @@ class ExecuteTask : public Action
         JobCompletionTable::Instance().Set( descr, stat );
     }
 
-    void SaveCompletionResults( const boost::shared_ptr< JobExec > &job ) const
+    void SaveCompletionResults( const std::shared_ptr< JobExec > &job ) const
     {
         JobDescriptor descr;
         JobCompletionStat stat;
@@ -337,10 +336,10 @@ class ExecuteTask : public Action
         }
     }
 
-    void NodeJobCompletionPing( const boost::shared_ptr< JobExec > &job, int taskId,
+    void NodeJobCompletionPing( const std::shared_ptr< JobExec > &job, int taskId,
                                 ExecContextPtr &execContext )
     {
-        boost::shared_ptr< CommDescrPool > &commDescrPool(
+        std::shared_ptr< CommDescrPool > &commDescrPool(
             execContext->GetCommDescrPool()
         );
         boost::asio::io_service *io_service = commDescrPool->GetIoService();
@@ -371,7 +370,7 @@ class ExecuteTask : public Action
         }
     }
 
-    bool ExpandFilePath( const boost::shared_ptr< JobExec > &job )
+    bool ExpandFilePath( const std::shared_ptr< JobExec > &job )
     {
         if ( job->GetScriptLength() > 0 )
             return true;
@@ -389,7 +388,7 @@ class ExecuteTask : public Action
     }
 
 public:
-    void DoSend( const boost::shared_ptr< JobExec > &job, int taskId,
+    void DoSend( const std::shared_ptr< JobExec > &job, int taskId,
                  ExecContextPtr &execContext )
     {
         PrExecConnection prExecConnection( execContext );
@@ -406,7 +405,7 @@ public:
         execTable.Add( execInfo );
 
         // write script into shared memory
-        boost::shared_ptr< CommDescrPool > &commDescrPool(
+        std::shared_ptr< CommDescrPool > &commDescrPool(
             execContext->GetCommDescrPool()
         );
         CommDescr &commDescr = commDescrPool->GetCommDescr();
@@ -473,11 +472,11 @@ public:
 
 class StopTask : public Action
 {
-    virtual void Execute( const boost::shared_ptr< Job > &j,
+    virtual void Execute( const std::shared_ptr< Job > &j,
                           ExecContextPtr &execContext )
     {
-        boost::shared_ptr< JobStopTask > job(
-            boost::dynamic_pointer_cast< JobStopTask >( j )
+        std::shared_ptr< JobStopTask > job(
+            std::dynamic_pointer_cast< JobStopTask >( j )
         );
 
         ExecTable &pendingTable = execContext->GetPendingTable();
@@ -518,11 +517,11 @@ class StopTask : public Action
 
 class StopPreviousJobs : public Action
 {
-    virtual void Execute( const boost::shared_ptr< Job > &j,
+    virtual void Execute( const std::shared_ptr< Job > &j,
                           ExecContextPtr &execContext )
     {
-        boost::shared_ptr< JobStopPreviousTask > job(
-            boost::dynamic_pointer_cast< JobStopPreviousTask >( j )
+        std::shared_ptr< JobStopPreviousTask > job(
+            std::dynamic_pointer_cast< JobStopPreviousTask >( j )
         );
 
         PrExecConnection prExecConnection( execContext );
@@ -548,11 +547,11 @@ class StopPreviousJobs : public Action
 
 class StopAllJobs : public Action
 {
-    virtual void Execute( const boost::shared_ptr< Job > &j,
+    virtual void Execute( const std::shared_ptr< Job > &j,
                           ExecContextPtr &execContext )
     {
-        boost::shared_ptr< JobStopAll > job(
-            boost::dynamic_pointer_cast< JobStopAll >( j )
+        std::shared_ptr< JobStopAll > job(
+            std::dynamic_pointer_cast< JobStopAll >( j )
         );
 
         ExecTable &pendingTable = execContext->GetPendingTable();
@@ -600,7 +599,7 @@ public:
 class Session
 {
 public:
-    Session( boost::shared_ptr< common::Semaphore > requestSem,
+    Session( std::shared_ptr< common::Semaphore > requestSem,
              ExecContextPtr &execContext )
     : requestSem_( requestSem ),
      execContext_( execContext )
@@ -645,20 +644,20 @@ protected:
     void SetMasterIP( const std::string &ip ) { masterIP_ = ip; }
 
 protected:
-    boost::shared_ptr< Job > job_;
+    std::shared_ptr< Job > job_;
     std::string masterIP_;
-    boost::shared_ptr< common::Semaphore > requestSem_;
+    std::shared_ptr< common::Semaphore > requestSem_;
     ExecContextPtr execContext_;
 };
 
-class BoostSession : public Session, public boost::enable_shared_from_this< BoostSession >
+class BoostSession : public Session, public std::enable_shared_from_this< BoostSession >
 {
 public:
     typedef std::array< char, 32 * 1024 > BufferType;
 
 public:
     BoostSession( boost::asio::io_service &io_service,
-                  boost::shared_ptr< common::Semaphore > &requestSem,
+                  std::shared_ptr< common::Semaphore > &requestSem,
                   ExecContextPtr &execContext )
     : Session( requestSem, execContext ),
      socket_( io_service ),
@@ -778,11 +777,11 @@ protected:
 
 class ConnectionAcceptor
 {
-    typedef boost::shared_ptr< BoostSession > session_ptr;
+    typedef std::shared_ptr< BoostSession > session_ptr;
 
 public:
     ConnectionAcceptor( boost::asio::io_service &io_service, unsigned short port,
-                        boost::shared_ptr< common::Semaphore > &requestSem,
+                        std::shared_ptr< common::Semaphore > &requestSem,
                         ExecContextPtr &execContext )
     : io_service_( io_service ),
      acceptor_( io_service ),
@@ -836,7 +835,7 @@ private:
 private:
     boost::asio::io_service &io_service_;
     tcp::acceptor acceptor_;
-    boost::shared_ptr< common::Semaphore > requestSem_;
+    std::shared_ptr< common::Semaphore > requestSem_;
     ExecContextPtr execContext_;
 };
 
@@ -1218,19 +1217,19 @@ private:
     boost::asio::io_service io_service_exec_;
     boost::asio::io_service io_service_ping_;
 
-    boost::shared_ptr<boost::asio::io_service::work> work_;
-    boost::shared_ptr<boost::asio::io_service::work> work_exec_;
+    std::shared_ptr<boost::asio::io_service::work> work_;
+    std::shared_ptr<boost::asio::io_service::work> work_exec_;
 
-    boost::shared_ptr< CommDescrPool > commDescrPool_;
+    std::shared_ptr< CommDescrPool > commDescrPool_;
 
-    boost::shared_ptr< common::Semaphore > requestSem_;
-    boost::shared_ptr< ConnectionAcceptor > acceptor_;
+    std::shared_ptr< common::Semaphore > requestSem_;
+    std::shared_ptr< ConnectionAcceptor > acceptor_;
 
-    boost::shared_ptr< JobCompletionPinger > completionPing_;
-    boost::shared_ptr< MasterPing > masterPing_;
+    std::shared_ptr< JobCompletionPinger > completionPing_;
+    std::shared_ptr< MasterPing > masterPing_;
 
-    boost::shared_ptr< boost::interprocess::shared_memory_object > sharedMemPool_;
-    boost::shared_ptr< boost::interprocess::mapped_region > mappedRegion_;
+    std::shared_ptr< boost::interprocess::shared_memory_object > sharedMemPool_;
+    std::shared_ptr< boost::interprocess::mapped_region > mappedRegion_;
 
     ExecContextPtr execContext_;
 };

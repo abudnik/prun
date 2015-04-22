@@ -57,7 +57,7 @@ using namespace std;
 
 namespace {
 
-void InitWorkerManager( boost::shared_ptr< master::WorkerManager > &mgr,
+void InitWorkerManager( std::shared_ptr< master::WorkerManager > &mgr,
                         const std::string &exeDir, const std::string &cfgPath )
 {
     string hostsDir, hostsPath;
@@ -397,19 +397,19 @@ private:
     boost::asio::io_service io_service_admin_;
     boost::asio::io_service io_service_db_;
 
-    boost::shared_ptr< master::JobManager > jobManager_;
-    boost::shared_ptr< master::JobHistory > jobHistory_;
-    boost::shared_ptr< master::DbHistoryConnection > dbConnection_;
-    boost::shared_ptr< master::WorkerManager > workerManager_;
-    boost::shared_ptr< master::Scheduler > scheduler_;
-    boost::shared_ptr< master::TimeoutManager > timeoutManager_;
+    std::shared_ptr< master::JobManager > jobManager_;
+    std::shared_ptr< master::JobHistory > jobHistory_;
+    std::shared_ptr< master::DbHistoryConnection > dbConnection_;
+    std::shared_ptr< master::WorkerManager > workerManager_;
+    std::shared_ptr< master::Scheduler > scheduler_;
+    std::shared_ptr< master::TimeoutManager > timeoutManager_;
 
-    boost::shared_ptr< master::PingReceiver > pingReceiver_;
-    boost::shared_ptr< master::Pinger > pinger_;
-    boost::shared_ptr< master::JobSender > jobSender_;
-    boost::shared_ptr< master::ResultGetter > resultGetter_;
-    boost::shared_ptr< master::CommandSender > commandSender_;
-    boost::shared_ptr< master::AdminConnection > adminConnection_;
+    std::shared_ptr< master::PingReceiver > pingReceiver_;
+    std::shared_ptr< master::Pinger > pinger_;
+    std::shared_ptr< master::JobSender > jobSender_;
+    std::shared_ptr< master::ResultGetter > resultGetter_;
+    std::shared_ptr< master::CommandSender > commandSender_;
+    std::shared_ptr< master::AdminConnection > adminConnection_;
 };
 
 } // anonymous namespace
