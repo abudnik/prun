@@ -62,7 +62,7 @@ void ShutdownLogger()
 void Print( char level, const char *msg )
 {
     char buf[32];
-    time_t tmNow( time( NULL ) );
+    time_t tmNow( time( nullptr ) );
 
     tm tmWhen;
     memset( &tmWhen, 0, sizeof( tmWhen ) );

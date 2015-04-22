@@ -64,7 +64,7 @@ public:
             return new DbDelete();
         if ( taskType == "GET" )
             return new DbGet();
-        return NULL;
+        return nullptr;
     }
 };
 

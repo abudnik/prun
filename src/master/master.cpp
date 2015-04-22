@@ -132,14 +132,14 @@ void SetupSignalHandlers()
     sigemptyset(&sigHandler.sa_mask);
     sigHandler.sa_flags = 0;
 
-    sigaction( SIGABRT, &sigHandler, NULL );
-    sigaction( SIGFPE,  &sigHandler, NULL );
-    sigaction( SIGBUS,  &sigHandler, NULL );
-    sigaction( SIGSEGV, &sigHandler, NULL );
-    sigaction( SIGILL,  &sigHandler, NULL );
-    sigaction( SIGSYS,  &sigHandler, NULL );
-    sigaction( SIGXCPU, &sigHandler, NULL );
-    sigaction( SIGXFSZ, &sigHandler, NULL );
+    sigaction( SIGABRT, &sigHandler, nullptr );
+    sigaction( SIGFPE,  &sigHandler, nullptr );
+    sigaction( SIGBUS,  &sigHandler, nullptr );
+    sigaction( SIGSEGV, &sigHandler, nullptr );
+    sigaction( SIGILL,  &sigHandler, nullptr );
+    sigaction( SIGSYS,  &sigHandler, nullptr );
+    sigaction( SIGXCPU, &sigHandler, nullptr );
+    sigaction( SIGXFSZ, &sigHandler, nullptr);
 }
 
 void AtExit()
@@ -358,7 +358,7 @@ public:
             int sig;
             sigemptyset( &waitset );
             sigaddset( &waitset, SIGTERM );
-            sigprocmask( SIG_BLOCK, &waitset, NULL );
+            sigprocmask( SIG_BLOCK, &waitset, nullptr );
             while( 1 )
             {
                 int ret = sigwait( &waitset, &sig );

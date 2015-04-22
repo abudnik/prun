@@ -37,7 +37,7 @@ void DbLevel::Initialize( const std::string &exeDir )
         dbDir = exeDir + '/' + dbDir;
     }
 
-    leveldb::DB *db = NULL;
+    leveldb::DB *db = nullptr;
     leveldb::Options options;
     options.create_if_missing = true;
     leveldb::Status status = leveldb::DB::Open( options, dbDir.c_str(), &db );

@@ -42,7 +42,7 @@ public:
             return new JobStopPreviousTask();
         if ( taskType == "stop_all" )
             return new JobStopAll();
-        return NULL;
+        return nullptr;
     }
 };
 

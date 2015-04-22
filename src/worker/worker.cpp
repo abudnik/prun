@@ -116,7 +116,7 @@ public:
 
 public:
     PrExecConnection( ExecContextPtr &execContext )
-    : socket_( NULL ),
+    : socket_( nullptr ),
      response_( true ),
      execContext_( execContext )
     {}
@@ -148,7 +148,7 @@ public:
                 execContext_->GetCommDescrPool()
             );
             commDescrPool->FreeCommDescr();
-            socket_ = NULL;
+            socket_ = nullptr;
         }
     }
 
@@ -592,7 +592,7 @@ public:
             return new StopPreviousJobs();
         if ( taskType == "stop_all" )
             return new StopAllJobs();
-        return NULL;
+        return nullptr;
     }
 };
 
@@ -915,16 +915,16 @@ void SetupSignalHandlers()
     sigemptyset(&sigHandler.sa_mask);
     sigHandler.sa_flags = 0;
 
-    sigaction( SIGCHLD, &sigHandler, NULL );
+    sigaction( SIGCHLD, &sigHandler, nullptr );
 
-    sigaction( SIGABRT, &sigHandler, NULL );
-    sigaction( SIGFPE,  &sigHandler, NULL );
-    sigaction( SIGBUS,  &sigHandler, NULL );
-    sigaction( SIGSEGV, &sigHandler, NULL );
-    sigaction( SIGILL,  &sigHandler, NULL );
-    sigaction( SIGSYS,  &sigHandler, NULL );
-    sigaction( SIGXCPU, &sigHandler, NULL );
-    sigaction( SIGXFSZ, &sigHandler, NULL );
+    sigaction( SIGABRT, &sigHandler, nullptr );
+    sigaction( SIGFPE,  &sigHandler, nullptr );
+    sigaction( SIGBUS,  &sigHandler, nullptr );
+    sigaction( SIGSEGV, &sigHandler, nullptr );
+    sigaction( SIGILL,  &sigHandler, nullptr );
+    sigaction( SIGSYS,  &sigHandler, nullptr );
+    sigaction( SIGXCPU, &sigHandler, nullptr );
+    sigaction( SIGXFSZ, &sigHandler, nullptr );
 }
 
 void SetupSignalMask()
@@ -935,7 +935,7 @@ void SetupSignalMask()
     sigaddset( &sigset, SIGHUP );
     sigaddset( &sigset, SIGCHLD );
     sigaddset( &sigset, SIGUSR1 );
-    sigprocmask( SIG_BLOCK, &sigset, NULL );
+    sigprocmask( SIG_BLOCK, &sigset, nullptr );
 }
 
 void UnblockSighandlerMask()
@@ -944,7 +944,7 @@ void UnblockSighandlerMask()
     // appropriate unblocking signals see in SetupSignalHandlers
     sigemptyset( &sigset );
     sigaddset( &sigset, SIGCHLD );
-    pthread_sigmask( SIG_UNBLOCK, &sigset, NULL );
+    pthread_sigmask( SIG_UNBLOCK, &sigset, nullptr );
 }
 
 void UserInteraction()
@@ -1159,7 +1159,7 @@ private:
                              !cfgDir_.empty() ? cfgDir_.c_str() : " ",
                              !resourcesDir_.empty() ? "--r" : " ",
                              !resourcesDir_.empty() ? resourcesDir_.c_str() : " ",
-                             NULL );
+                             nullptr );
 
             if ( ret < 0 )
             {

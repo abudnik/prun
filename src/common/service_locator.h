@@ -119,7 +119,7 @@ public:
             throw;
         }
 
-        return NULL;
+        return nullptr;
     }
 
     static ServiceLocator &Instance()

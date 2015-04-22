@@ -34,7 +34,7 @@ private:
 
 public:
     explicit Stack( size_t maxSize = MAX_SIZE )
-    : strings_( NULL )
+    : strings_( nullptr )
     {
         size_ = backtrace( array_, std::min( maxSize, sizeof(array_) / sizeof(void *) ) );
     }

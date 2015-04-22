@@ -71,7 +71,7 @@ bool JDLJason::ParseJob( const std::string &job_description, boost::property_tre
 
 JobManager::JobManager()
 : jobs_( new JobQueueImpl ),
- timeoutManager_( NULL ),
+ timeoutManager_( nullptr ),
  numJobGroups_( 0 ),
  jobId_( 0 )
 {}
@@ -81,7 +81,7 @@ Job *JobManager::CreateJob( const std::string &job_description ) const
     boost::property_tree::ptree ptree;
     JDLJason parser;
     if ( !parser.ParseJob( job_description, ptree ) )
-        return NULL;
+        return nullptr;
 
     Job *job = CreateJob( ptree );
     if ( job )
@@ -371,7 +371,7 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
         if ( fileName.empty() )
         {
             PLOG_ERR( "JobManager::CreateJob: empty script file name" );
-            return NULL;
+            return nullptr;
         }
         if ( fileName[0] != '/' )
         {
@@ -382,7 +382,7 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
 
         std::string script;
         if ( sendScript && !ReadScript( fileName, script ) )
-            return NULL;
+            return nullptr;
 
         std::string language = ptree.get<std::string>( "language" );
         int priority = ptree.get<int>( "priority" );
@@ -422,7 +422,7 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
     catch( std::exception &e )
     {
         PLOG_ERR( "JobManager::CreateJob exception: " << e.what() );
-        return NULL;
+        return nullptr;
     }
 }
 

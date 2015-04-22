@@ -169,7 +169,7 @@ public:
     {
         if ( protocol == "json" )
             return new ProtocolJson();
-        return NULL;
+        return nullptr;
     }
 };
 

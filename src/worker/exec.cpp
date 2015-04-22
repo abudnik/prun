@@ -306,7 +306,7 @@ public:
                          nodePath_.c_str(),
                          threadParams.readFifo.c_str(), threadParams.writeFifo.c_str(),
                          scriptLength.c_str(),
-                         taskId.c_str(), numTasks.c_str(), jobId.c_str(), NULL );
+                         taskId.c_str(), numTasks.c_str(), jobId.c_str(), nullptr );
         if ( ret < 0 )
         {
             PLOG_ERR( "ScriptExec::Execute: execl failed: " << strerror(errno) );
@@ -351,7 +351,7 @@ protected:
         FlushFifo();
 
         struct timeval tvStart, tvEnd;
-        gettimeofday( &tvStart, NULL );
+        gettimeofday( &tvStart, nullptr );
 
         pid_t pid = fork();
 
@@ -381,7 +381,7 @@ protected:
                 succeded = ReadCompletionStatus( threadParams.readFifoFD, pid );
             }
 
-            gettimeofday( &tvEnd, NULL );
+            gettimeofday( &tvEnd, nullptr );
             int64_t elapsed = static_cast<int64_t>( ( tvEnd.tv_sec - tvStart.tv_sec ) * 1000 +
                                                     ( tvEnd.tv_usec - tvStart.tv_usec ) / 1000 );
             job_->SetExecTime( elapsed );
@@ -399,7 +399,7 @@ protected:
             sigset_t sigset;
             sigemptyset( &sigset );
             sigaddset( &sigset, SIGTERM );
-            pthread_sigmask( SIG_UNBLOCK, &sigset, NULL );
+            pthread_sigmask( SIG_UNBLOCK, &sigset, nullptr );
 
             g_isFork = true;
             // linux-only. kill child process, if parent exits
@@ -433,7 +433,7 @@ protected:
     bool WriteScript( int fifo )
     {
         std::string scriptData;
-        const char *scriptAddr = NULL;
+        const char *scriptAddr = nullptr;
         unsigned int bytesToWrite = 0;
 
         if ( job_->IsFromFile() )
@@ -656,7 +656,7 @@ public:
                          "node",
                          threadParams.readFifo.c_str(), threadParams.writeFifo.c_str(),
                          scriptLength.c_str(),
-                         taskId.c_str(), numTasks.c_str(), jobId.c_str(), NULL );
+                         taskId.c_str(), numTasks.c_str(), jobId.c_str(), nullptr );
         if ( ret < 0 )
         {
             PLOG_ERR( "JavaExec::Execute: execl failed: " << strerror(errno) );
@@ -785,7 +785,7 @@ public:
             return new RubyExec();
         if ( language == "js" )
             return new JavaScriptExec();
-        return NULL;
+        return nullptr;
     }
 };
 
@@ -1125,16 +1125,16 @@ void SetupSignalHandlers()
     sigemptyset(&sigHandler.sa_mask);
     sigHandler.sa_flags = 0;
 
-    sigaction( SIGCHLD, &sigHandler, NULL );
+    sigaction( SIGCHLD, &sigHandler, nullptr );
 
-    sigaction( SIGABRT, &sigHandler, NULL );
-    sigaction( SIGFPE,  &sigHandler, NULL );
-    sigaction( SIGBUS,  &sigHandler, NULL );
-    sigaction( SIGSEGV, &sigHandler, NULL );
-    sigaction( SIGILL,  &sigHandler, NULL );
-    sigaction( SIGSYS,  &sigHandler, NULL );
-    sigaction( SIGXCPU, &sigHandler, NULL );
-    sigaction( SIGXFSZ, &sigHandler, NULL );
+    sigaction( SIGABRT, &sigHandler, nullptr );
+    sigaction( SIGFPE,  &sigHandler, nullptr );
+    sigaction( SIGBUS,  &sigHandler, nullptr );
+    sigaction( SIGSEGV, &sigHandler, nullptr );
+    sigaction( SIGILL,  &sigHandler, nullptr );
+    sigaction( SIGSYS,  &sigHandler, nullptr );
+    sigaction( SIGXCPU, &sigHandler, nullptr );
+    sigaction( SIGXFSZ, &sigHandler, nullptr );
 }
 
 void SetupSignalMask()
@@ -1144,7 +1144,7 @@ void SetupSignalMask()
     sigaddset( &sigset, SIGTERM );
     sigaddset( &sigset, SIGHUP );
     sigaddset( &sigset, SIGCHLD );
-    sigprocmask( SIG_BLOCK, &sigset, NULL );
+    sigprocmask( SIG_BLOCK, &sigset, nullptr );
 }
 
 void UnblockSighandlerMask()
@@ -1153,7 +1153,7 @@ void UnblockSighandlerMask()
     // appropriate unblocking signals see in SetupSignalHandlers
     sigemptyset( &sigset );
     sigaddset( &sigset, SIGCHLD );
-    pthread_sigmask( SIG_UNBLOCK, &sigset, NULL );
+    pthread_sigmask( SIG_UNBLOCK, &sigset, nullptr );
 }
 
 void ReadProcessCompletionPIDs( const worker::ExecContextPtr &spExecContext, int processCompletionPipe )
@@ -1194,7 +1194,7 @@ void SetupLanguageRuntime( const worker::ExecContextPtr &execContext )
         nodePath += std::string( "/" ) + worker::NODE_SCRIPT_NAME_JAVA;
         if ( access( javacPath.c_str(), F_OK ) != -1 )
         {
-            int ret = execl( javacPath.c_str(), "javac", nodePath.c_str(), NULL );
+            int ret = execl( javacPath.c_str(), "javac", nodePath.c_str(), nullptr );
             if ( ret < 0 )
             {
                 PLOG_WRN( "SetupLanguageRuntime: execl(javac) failed: " << strerror(errno) );

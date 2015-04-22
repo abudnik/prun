@@ -107,7 +107,7 @@ IJsonRpcHandler *JsonRpc::GetHandler( const std::string &method ) const
     it = cmdToHandler_.find( method );
     if ( it != cmdToHandler_.end() )
         return it->second;
-    return NULL;
+    return nullptr;
 }
 
 bool JsonRpc::ValidateJsonBraces( const std::string &json )
