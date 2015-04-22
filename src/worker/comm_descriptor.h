@@ -25,7 +25,6 @@ the License.
 
 #include <thread>
 #include <boost/asio.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/interprocess/sync/interprocess_semaphore.hpp>
 #include "common/log.h"
 #include "common/helper.h"

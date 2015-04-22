@@ -93,7 +93,7 @@ bool BoostSession::WriteResponse( bool result )
     {
         response_ = result ? '1' : '0';
     }
-    response_.insert( 0, boost::lexical_cast<std::string>( response_.size() ) + '\n' );
+    response_.insert( 0, std::to_string( response_.size() ) + '\n' );
 
     try
     {

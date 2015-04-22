@@ -20,7 +20,6 @@ the License.
 ===========================================================================
 */
 
-#include <boost/lexical_cast.hpp>
 #include "dbconnection.h"
 #include "common/config.h"
 #include "common/log.h"
@@ -85,7 +84,7 @@ bool DbHistoryConnection::Connect( const std::string &host, unsigned short port 
         common::Config &cfg = common::Config::Instance();
         bool ipv6 = cfg.Get<bool>( "ipv6" );
 
-        std::string sPort = boost::lexical_cast<std::string>( port );
+        std::string sPort = std::to_string( port );
 
         tcp::resolver::query query( ipv6 ? tcp::v6() : tcp::v4(), host, sPort );
         tcp::resolver::iterator iterator = resolver.resolve( query, ec ), end;

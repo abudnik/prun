@@ -1,7 +1,6 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Unit tests
 #include <boost/test/unit_test.hpp>
-#include <boost/lexical_cast.hpp>
 #include <vector>
 #include <list>
 #include "mock.h"
@@ -77,7 +76,7 @@ BOOST_AUTO_TEST_CASE( set_host_ip )
 
     for( size_t i = 0; i < workers.size(); ++i )
     {
-        string ip = "127.0.0." + boost::lexical_cast<string>( i + 1 );
+        string ip = "127.0.0." + std::to_string( i + 1 );
         SetWorkerIP( workers[i], ip );
 
         w.reset();
@@ -173,7 +172,7 @@ BOOST_AUTO_TEST_CASE( check_ping_response )
     {
         for( size_t i = 0; i < workers.size(); ++i )
         {
-            string ip = "127.0.0." + boost::lexical_cast<string>( i + 1 );
+            string ip = "127.0.0." + std::to_string( i + 1 );
             mgr.SetWorkerIP( workers[i], ip );
             mgr.OnNodePingResponse( ip, 2, 1024 );
         }
@@ -192,7 +191,7 @@ BOOST_AUTO_TEST_CASE( check_total_cpu )
     BOOST_CHECK_EQUAL( mgr.GetTotalCPU(), 0 );
     for( size_t i = 0; i < numWorkers; ++i )
     {
-        mgr.AddWorkerHost( "grp", string( "host" ) + boost::lexical_cast<string>( i + 1 ) );
+        mgr.AddWorkerHost( "grp", string( "host" ) + std::to_string( i + 1 ) );
     }
     BOOST_CHECK_EQUAL( mgr.GetTotalCPU(), 0 );
 
@@ -202,7 +201,7 @@ BOOST_AUTO_TEST_CASE( check_total_cpu )
     int numCPU = 0;
     for( size_t i = 0; i < workers.size(); ++i )
     {
-        string ip = "127.0.0." + boost::lexical_cast<string>( i + 1 );
+        string ip = "127.0.0." + std::to_string( i + 1 );
         mgr.SetWorkerIP( workers[i], ip );
         mgr.OnNodePingResponse( ip, i + 1, 1024 );
         numCPU += i + 1;

@@ -177,7 +177,7 @@ public:
             if ( FindFifo( execInfo, readFifo, writeFifo ) )
             {
                 // Stop ScriptExec::ReadCompletionStatus read waiting
-                std::string errCode = boost::lexical_cast<std::string>( NODE_JOB_TIMEOUT );
+                std::string errCode = std::to_string( NODE_JOB_TIMEOUT );
                 int ret = write( readFifo, errCode.c_str(), errCode.size() );
                 if ( ret == -1 )
                     PLOG( "StopTaskAction::StopTask: write fifo failed, err=" << strerror(errno) );
@@ -293,11 +293,11 @@ public:
         if ( pid != 0 )
             return;
 
-        string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
+        string scriptLength = std::to_string( job->GetScriptLength() );
 
-        string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
-        string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
-        string jobId = boost::lexical_cast<std::string>( job->GetJobId() );
+        string taskId = std::to_string( job->GetTaskId() );
+        string numTasks = std::to_string( job->GetNumTasks() );
+        string jobId = std::to_string( job->GetJobId() );
 
         ThreadInfo &threadInfo = execContext_->GetThreadInfo();
         const ThreadParams &threadParams = threadInfo[ std::this_thread::get_id() ];
@@ -642,11 +642,11 @@ public:
         if ( pid != 0 )
             return;
 
-        string scriptLength = boost::lexical_cast<std::string>( job->GetScriptLength() );
+        string scriptLength = std::to_string( job->GetScriptLength() );
 
-        string taskId = boost::lexical_cast<std::string>( job->GetTaskId() );
-        string numTasks = boost::lexical_cast<std::string>( job->GetNumTasks() );
-        string jobId = boost::lexical_cast<std::string>( job->GetJobId() );
+        string taskId = std::to_string( job->GetTaskId() );
+        string numTasks = std::to_string( job->GetNumTasks() );
+        string jobId = std::to_string( job->GetJobId() );
 
         ThreadInfo &threadInfo = execContext_->GetThreadInfo();
         const ThreadParams &threadParams = threadInfo[ std::this_thread::get_id() ];
@@ -856,7 +856,7 @@ protected:
 
         boost::property_tree::write_json( ss, ptree, false );
         size_t responseLength = ss.str().size();
-        response = boost::lexical_cast< std::string >( responseLength );
+        response = std::to_string( responseLength );
         response += '\n';
         response += ss.str();
     }

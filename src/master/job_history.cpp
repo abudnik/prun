@@ -39,10 +39,10 @@ JobHistory::JobHistory( IHistoryChannel *channel )
 void JobHistory::OnJobAdd( const JobPtr &job )
 {
     std::string request( "PUT " );
-    request += boost::lexical_cast<std::string>( job->GetJobId() );
+    request += std::to_string( job->GetJobId() );
     request += '$';
     request += job->GetDescription();
-    request.insert( 0, boost::lexical_cast<std::string>( request.size() ) + '\n' );
+    request.insert( 0, std::to_string( request.size() ) + '\n' );
 
     channel_->Send( request, addCallback_ );
 }
@@ -55,9 +55,9 @@ void JobHistory::OnAddCompleted( const std::string &response )
 void JobHistory::OnJobDelete( int64_t jobId )
 {
     std::string request( "DELETE " );
-    request += boost::lexical_cast<std::string>( jobId );
+    request += std::to_string( jobId );
     request += '$';
-    request.insert( 0, boost::lexical_cast<std::string>( request.size() ) + '\n' );
+    request.insert( 0, std::to_string( request.size() ) + '\n' );
 
     channel_->Send( request, deleteCallback_ );
 }
@@ -70,7 +70,7 @@ void JobHistory::OnDeleteCompleted( const std::string &response )
 void JobHistory::GetJobs()
 {
     std::string request( "GET $" );
-    request.insert( 0, boost::lexical_cast<std::string>( request.size() ) + '\n' );
+    request.insert( 0, std::to_string( request.size() ) + '\n' );
 
     channel_->Send( request, getCallback_ );
 }

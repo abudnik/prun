@@ -1,7 +1,6 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Load tests
 #include <boost/test/unit_test.hpp>
-#include <boost/lexical_cast.hpp>
 #include <vector>
 #include <list>
 #include "mock.h"
@@ -48,7 +47,7 @@ BOOST_AUTO_TEST_CASE( get_task )
 
     for( int i = 0; i < numHosts; ++i )
     {
-        workerMgr.AddWorkerHost( "grp", string( "host" ) + boost::lexical_cast<string>( i + 1 ) );
+        workerMgr.AddWorkerHost( "grp", string( "host" ) + std::to_string( i + 1 ) );
     }
 
     vector< WorkerPtr > workers;
@@ -58,7 +57,7 @@ BOOST_AUTO_TEST_CASE( get_task )
     for( int i = 0; i < numHosts; ++i )
     {
         string ip( "127.0.0." );
-        ip += boost::lexical_cast<string>( i + 1 );
+        ip += std::to_string( i + 1 );
         workerMgr.SetWorkerIP( workers[i], ip );
 
         int numCPU = i % 4 + 1;

@@ -1150,11 +1150,11 @@ private:
             exePath += "/prexec";
 
             int ret = execl( exePath.c_str(), "prexec", "--num_thread",
-                             ( boost::lexical_cast<std::string>( numRequestThread_ ) ).c_str(),
+                             ( std::to_string( numRequestThread_ ) ).c_str(),
                              "--exe_dir", exeDir_.c_str(),
                              isDaemon_ ? "--d" : " ",
                              uid_ != 0 ? "--u" : " ",
-                             uid_ != 0 ? ( boost::lexical_cast<std::string>( uid_ ) ).c_str() : " ",
+                             uid_ != 0 ? ( std::to_string( uid_ ) ).c_str() : " ",
                              !cfgDir_.empty() ? "--c" : " ",
                              !cfgDir_.empty() ? cfgDir_.c_str() : " ",
                              !resourcesDir_.empty() ? "--r" : " ",
