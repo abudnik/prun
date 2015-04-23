@@ -24,7 +24,7 @@ the License.
 #define __SERVICE_LOCATOR_H
 
 #include <typeinfo>
-#include <map>
+#include <unordered_map>
 #include <stdexcept>
 #include "common/log.h"
 
@@ -32,15 +32,7 @@ namespace common {
 
 class ServiceLocator
 {
-    struct TypeComparator
-    {
-        bool operator () ( const std::type_info *a, const std::type_info *b ) const
-        {
-            return a->before( *b );
-        }
-    };
-
-    typedef std::map< const std::type_info *, void *, TypeComparator > ServiceContainer;
+    typedef std::unordered_map< const std::type_info *, void * > ServiceContainer;
 
 public:
     template< typename T >

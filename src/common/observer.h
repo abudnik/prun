@@ -24,7 +24,7 @@ the License.
 #define __OBSERVER_H
 
 #include <set>
-#include <map>
+#include <unordered_map>
 #include <boost/thread/locks.hpp>  
 #include <boost/thread/shared_mutex.hpp> 
 
@@ -98,7 +98,7 @@ class Observable : private LockPolicy,
                    virtual public IObservable
 {
     typedef std::set<IObserver *> Container;
-    typedef std::map< int, Container > EventToContainer;
+    typedef std::unordered_map< int, Container > EventToContainer;
 
 public:
     virtual void Subscribe( IObserver *observer, int event = 0 )

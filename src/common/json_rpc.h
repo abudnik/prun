@@ -24,7 +24,7 @@ the License.
 #define __JSON_RPC_H
 
 #include <string>
-#include <map>
+#include <unordered_map>
 #include <boost/property_tree/ptree.hpp>
 
 #define JSON_RPC_PARSER_ERROR     -32700
@@ -64,8 +64,8 @@ private:
     IJsonRpcHandler *GetHandler( const std::string &method ) const;
 
 private:
-    std::map< std::string, IJsonRpcHandler * > cmdToHandler_;
-    std::map< int, std::string > errDescription_;
+    std::unordered_map< std::string, IJsonRpcHandler * > cmdToHandler_;
+    std::unordered_map< int, std::string > errDescription_;
 };
 
 } // namespace common
