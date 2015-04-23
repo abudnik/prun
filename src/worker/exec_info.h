@@ -121,7 +121,7 @@ public:
         lock.unlock();
 
         // run registered callbacks
-        for( const auto &execInfo : table_ )
+        for( const auto &execInfo : table )
         {
             if ( execInfo.callback_ )
                 execInfo.callback_();
