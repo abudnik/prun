@@ -205,7 +205,7 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
             workerJob.GetTasks( jobId, tasks );
             for( auto taskId : tasks )
             {
-                needReschedule_.push_back( WorkerTask( jobId, taskId ) );
+                needReschedule_.emplace_back( jobId, taskId );
                 found = true;
             }
         }

@@ -105,7 +105,7 @@ void WorkerJob::GetTasks( std::vector< WorkerTask > &tasks ) const
         for( ; it_tasks != t.end(); ++it_tasks )
         {
             int taskId = *it_tasks;
-            tasks.push_back( WorkerTask( it->first, taskId ) );
+            tasks.emplace_back( it->first, taskId );
         }
     }
 }
@@ -187,7 +187,7 @@ void WorkerJob::Reset()
 
 void WorkerList::AddWorker( Worker *worker )
 {
-    workers_.push_back( WorkerPtr( worker ) );
+    workers_.emplace_back( worker );
 }
 
 void WorkerList::DeleteWorker( const std::string &host )

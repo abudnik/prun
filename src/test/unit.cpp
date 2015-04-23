@@ -491,7 +491,7 @@ BOOST_AUTO_TEST_CASE( job_priority )
 
         for( int i = 0; i < numJobs; ++i )
         {
-            jobList.push_back( JobPtr( jobs[i] ) );
+            jobList.push_back( jobs[i] );
         }
 
         mgr.PushJobs( jobList );
