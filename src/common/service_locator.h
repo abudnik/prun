@@ -73,7 +73,7 @@ public:
         {
             const std::type_info &type = typeid( T );
 
-            ServiceContainer::iterator it = services_.find( &type );
+            auto it = services_.find( &type );
             if ( it != services_.end() )
             {
                 services_.erase( it );
@@ -105,7 +105,7 @@ public:
         {
             const std::type_info &type = typeid( T );
 
-            ServiceContainer::iterator it = services_.find( &type );
+            auto it = services_.find( &type );
             if ( it != services_.end() )
             {
                 return reinterpret_cast<T*>( it->second );

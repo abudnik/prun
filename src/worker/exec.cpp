@@ -204,10 +204,9 @@ private:
     {
         ThreadInfo &threadInfo = execContext_->GetThreadInfo();
 
-        ThreadInfo::const_iterator it = threadInfo.begin();
-        for( ; it != threadInfo.end(); ++it )
+        for( const auto &it : threadInfo )
         {
-            const ThreadParams &threadParams = it->second;
+            const ThreadParams &threadParams = it.second;
             if ( threadParams.execInfo == execInfo )
             {
                 readFifo = threadParams.readFifoFD;
@@ -235,10 +234,8 @@ public:
 
         std::list< ExecInfo > table;
         execTable.Get( table );
-        std::list< ExecInfo >::const_iterator it = table.begin();
-        for( ; it != table.end(); ++it )
+        for( const auto &execInfo : table )
         {
-            const ExecInfo &execInfo = *it;
             if ( execInfo.masterId_ != job.GetMasterId() )
             {
                 JobStopTask job( execInfo.jobId_, execInfo.taskId_, execInfo.masterId_ );
@@ -1423,12 +1420,9 @@ private:
     {
         ThreadInfo &threadInfo = execContext_->GetThreadInfo();
 
-        ThreadInfo::iterator it;
-        for( it = threadInfo.begin();
-             it != threadInfo.end();
-             ++it )
+        for( auto &it : threadInfo )
         {
-            ThreadParams &threadParams = it->second;
+            ThreadParams &threadParams = it.second;
 
             if ( threadParams.readFifoFD != -1 )
             {

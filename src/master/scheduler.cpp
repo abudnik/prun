@@ -55,8 +55,7 @@ void Scheduler::DeleteWorker( const std::string &host )
     {
         std::unique_lock< std::mutex > lock( workersMut_ );
 
-        IPToNodeState::iterator it = nodeState_.begin();
-        for( ; it != nodeState_.end(); )
+        for( auto it = nodeState_.begin(); it != nodeState_.end(); )
         {
             const NodeState &nodeState = it->second;
             const WorkerPtr &worker = nodeState.GetWorker();
@@ -87,15 +86,13 @@ void Scheduler::OnChangedWorkerState( std::vector< WorkerPtr > &workers )
 {
     std::unique_lock< std::mutex > lock( workersMut_ );
 
-    std::vector< WorkerPtr >::iterator it = workers.begin();
-    for( ; it != workers.end(); ++it )
+    for( auto &worker : workers )
     {
-        WorkerPtr &worker = *it;
         WorkerState state = worker->GetState();
 
         if ( state == WORKER_STATE_NOT_AVAIL )
         {
-            IPToNodeState::iterator it = nodeState_.find( worker->GetIP() );
+            auto it = nodeState_.find( worker->GetIP() );
             if ( it != nodeState_.end() )
             {
                 NodeState &nodeState = it->second;
@@ -181,13 +178,10 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
     std::set<int64_t> jobs;
     workerJob.GetJobs( jobs );
 
-    std::set<int64_t>::const_iterator it = jobs.begin();
-
     std::unique_lock< std::mutex > lock( jobsMut_ );
 
-    for( ; it != jobs.end(); ++it )
+    for( auto jobId : jobs )
     {
-        int64_t jobId = *it;
         JobPtr job;
         if ( jobs_.FindJobByJobId( jobId, job ) )
         {
@@ -209,10 +203,8 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
 
             WorkerJob::Tasks tasks;
             workerJob.GetTasks( jobId, tasks );
-            WorkerJob::Tasks::const_iterator it_task = tasks.begin();
-            for( ; it_task != tasks.end(); ++it_task )
+            for( auto taskId : tasks )
             {
-                int taskId = *it_task;
                 needReschedule_.push_back( WorkerTask( jobId, taskId ) );
                 found = true;
             }
@@ -230,8 +222,7 @@ bool Scheduler::GetReschedJobForWorker( const WorkerPtr &worker, WorkerJob &plan
     int64_t jobId;
     bool foundReschedJob = false;
 
-    TaskList::iterator it = needReschedule_.begin();
-    for( ; it != needReschedule_.end(); )
+    for( auto it = needReschedule_.begin(); it != needReschedule_.end(); )
     {
         if ( plannedJob.GetTotalNumTasks() >= numFreeCPU )
             break;
@@ -282,10 +273,9 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
     int64_t jobId = plannedJob.GetJobId();
 
     const ScheduledJobs::JobQueue &jobs = jobs_.GetJobQueue();
-    ScheduledJobs::JobQueue::const_iterator it = jobs.begin();
-    for( ; it != jobs.end(); ++it )
+    for( auto j_it = jobs.cbegin(); j_it != jobs.cend(); ++j_it )
     {
-        JobState &jobState = const_cast< JobState & >(*it);
+        JobState &jobState = const_cast< JobState & >(*j_it);
         if ( jobState.IsSendedCompletely() )
             continue;
 
@@ -302,7 +292,7 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
         if ( !CanAddTaskToWorker( worker->GetJob(), plannedJob, j->GetJobId(), j ) )
             continue;
 
-        JobIdToTasks::iterator it = tasksToSend_.find( j->GetJobId() );
+        auto it = tasksToSend_.find( j->GetJobId() );
         if ( it == tasksToSend_.end() )
             continue;
 
@@ -314,8 +304,7 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
                  !j->IsGroupPermitted( worker->GetGroup() ) )
                 continue;
 
-            std::set< int >::iterator it_task = tasks.begin();
-            for( ; it_task != tasks.end();  )
+            for( auto it_task = tasks.begin(); it_task != tasks.end(); )
             {
                 if ( plannedJob.GetTotalNumTasks() >= numFreeCPU ||
                      !CanAddTaskToWorker( worker->GetJob(), plannedJob, j->GetJobId(), j ) )
@@ -344,7 +333,7 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, JobPtr
 {
     std::unique_lock< std::mutex > lock_w( workersMut_ );
 
-    NodePriorityQueue::right_map::iterator it = nodePriority_.right.begin();
+    auto it = nodePriority_.right.begin();
 
     std::unique_lock< std::mutex > lock_j( jobsMut_ );
 
@@ -401,7 +390,7 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
                     return;
             }
 
-            IPToNodeState::iterator it = nodeState_.find( hostIP );
+            auto it = nodeState_.find( hostIP );
             if ( it == nodeState_.end() )
                 return;
 
@@ -455,7 +444,7 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
             return;
         }
 
-        IPToNodeState::iterator it = nodeState_.find( hostIP );
+        auto it = nodeState_.find( hostIP );
         if ( it == nodeState_.end() )
             return;
 
@@ -488,7 +477,7 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
                 return;
         }
 
-        IPToNodeState::iterator it = nodeState_.find( hostIP );
+        auto it = nodeState_.find( hostIP );
         if ( it == nodeState_.end() )
             return;
 
@@ -580,10 +569,8 @@ void Scheduler::StopJobGroup( int64_t groupId )
         std::unique_lock< std::mutex > lock_j( jobsMut_ );
         jobs_.GetJobGroup( groupId, jobs );
     }
-    std::list< JobPtr >::const_iterator it = jobs.begin();
-    for( ; it != jobs.end(); ++it )
+    for( const auto &job : jobs )
     {
-        const JobPtr &job = *it;
         StopJob( job->GetJobId() );
     }
 }
@@ -595,8 +582,7 @@ void Scheduler::StopAllJobs()
         std::unique_lock< std::mutex > lock_j( jobsMut_ );
         jobs = jobs_.GetJobQueue();
     }
-    ScheduledJobs::JobQueue::const_iterator it = jobs.begin();
-    for( ; it != jobs.end(); ++it )
+    for( auto it = jobs.cbegin(); it != jobs.cend(); ++it )
     {
         const JobPtr &job = (*it).GetJob();
         StopJob( job->GetJobId() );
@@ -607,8 +593,7 @@ void Scheduler::StopAllJobs()
         IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
 
         std::unique_lock< std::mutex > lock_w( workersMut_ );
-        IPToNodeState::const_iterator it = nodeState_.begin();
-        for( ; it != nodeState_.end(); ++it )
+        for( auto it = nodeState_.cbegin(); it != nodeState_.cend(); ++it )
         {
             const NodeState &nodeState = it->second;
             const WorkerPtr &worker = nodeState.GetWorker();
@@ -625,8 +610,7 @@ void Scheduler::StopPreviousJobs()
     IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
 
     std::unique_lock< std::mutex > lock_w( workersMut_ );
-    IPToNodeState::const_iterator it = nodeState_.begin();
-    for( ; it != nodeState_.end(); ++it )
+    for( auto it = nodeState_.cbegin(); it != nodeState_.cend(); ++it )
     {
         const NodeState &nodeState = it->second;
         const WorkerPtr &worker = nodeState.GetWorker();
@@ -651,8 +635,7 @@ void Scheduler::StopWorkers( int64_t jobId )
     {
         IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
 
-        IPToNodeState::iterator it = nodeState_.begin();
-        for( ; it != nodeState_.end(); ++it )
+        for( auto it = nodeState_.begin(); it != nodeState_.end(); ++it )
         {
             NodeState &nodeState = it->second;
             WorkerPtr &worker = nodeState.GetWorker();
@@ -663,12 +646,11 @@ void Scheduler::StopWorkers( int64_t jobId )
                 // send stop command to worker
                 WorkerJob::Tasks tasks;
                 workerJob.GetTasks( jobId, tasks );
-                WorkerJob::Tasks::const_iterator it_task = tasks.begin();
-                for( ; it_task != tasks.end(); ++it_task )
+                for( auto taskId : tasks )
                 {
                     StopTaskCommand *stopCommand = new StopTaskCommand();
                     stopCommand->SetParam( "job_id", jobId );
-                    stopCommand->SetParam( "task_id", *it_task );
+                    stopCommand->SetParam( "task_id", taskId );
                     CommandPtr commandPtr( stopCommand );
                     workerManager->AddCommand( commandPtr, worker->GetIP() );
                 }
@@ -682,8 +664,7 @@ void Scheduler::StopWorkers( int64_t jobId )
 
     tasksToSend_.erase( jobId );
     {
-        TaskList::iterator it = needReschedule_.begin();
-        for( ; it != needReschedule_.end(); )
+        for( auto it = needReschedule_.begin(); it != needReschedule_.end(); )
         {
             if ( it->GetJobId() == jobId )
             {
@@ -697,7 +678,7 @@ void Scheduler::StopWorkers( int64_t jobId )
 
 void Scheduler::StopWorker( const std::string &hostIP ) const
 {
-    IPToNodeState::const_iterator it = nodeState_.find( hostIP );
+    auto it = nodeState_.find( hostIP );
     if ( it == nodeState_.end() )
         return;
 
@@ -709,12 +690,11 @@ void Scheduler::StopWorker( const std::string &hostIP ) const
 
     std::vector< WorkerTask > tasks;
     workerJob.GetTasks( tasks );
-    std::vector< WorkerTask >::const_iterator it_task = tasks.begin();
-    for( ; it_task != tasks.end(); ++it_task )
+    for( const auto &workerTask : tasks )
     {
         StopTaskCommand *stopCommand = new StopTaskCommand();
-        stopCommand->SetParam( "job_id", it_task->GetJobId() );
-        stopCommand->SetParam( "task_id", it_task->GetTaskId() );
+        stopCommand->SetParam( "job_id", workerTask.GetJobId() );
+        stopCommand->SetParam( "task_id", workerTask.GetTaskId() );
         CommandPtr commandPtr( stopCommand );
         workerManager->AddCommand( commandPtr, worker->GetIP() );
     }
@@ -760,7 +740,7 @@ bool Scheduler::CanAddTaskToWorker( const WorkerJob &workerJob, const WorkerJob 
     // max cluster cpu limit case
     if ( job->GetMaxClusterCPU() > 0 )
     {
-        JobIdToExecCnt::const_iterator it = simultExecCnt_.find( jobId );
+        auto it = simultExecCnt_.find( jobId );
         if ( it != simultExecCnt_.end() )
         {
             const int numClusterCPU = (*it).second + workerPlannedJob.GetNumTasks( jobId );

@@ -287,12 +287,11 @@ class ExecuteTask : public Action
             execContext->GetCommDescrPool()
         );
         boost::asio::io_service *io_service = commDescrPool->GetIoService();
-        JobExec::Tasks::const_iterator it = tasks.begin();
-        for( ; it != tasks.end(); ++it )
+        for( auto taskId : tasks )
         {
             ExecInfo execInfo;
             execInfo.jobId_ = job->GetJobId();
-            execInfo.taskId_ = *it;
+            execInfo.taskId_ = taskId;
             execInfo.masterId_ = job->GetMasterId();
 
             ExecTable &pendingTable = execContext->GetPendingTable();
@@ -300,7 +299,7 @@ class ExecuteTask : public Action
 
             io_service->post( boost::bind( &ExecuteTask::DoSend,
                                            std::make_shared< ExecuteTask >(),
-                                           std::shared_ptr< JobExec >( job ), *it,
+                                           std::shared_ptr< JobExec >( job ), taskId,
                                            ExecContextPtr( execContext ) ) );
         }
     }
@@ -328,10 +327,9 @@ class ExecuteTask : public Action
         stat.errCode = job->GetErrorCode();
 
         const JobExec::Tasks &tasks = job->GetTasks();
-        JobExec::Tasks::const_iterator it = tasks.begin();
-        for( ; it != tasks.end(); ++it )
+        for( auto taskId : tasks )
         {
-            descr.taskId = *it;
+            descr.taskId = taskId;
             JobCompletionTable::Instance().Set( descr, stat );
         }
     }

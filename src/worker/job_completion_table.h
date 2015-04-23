@@ -92,10 +92,9 @@ public:
         if ( table_.empty() )
             return;
         boost::shared_lock< boost::shared_mutex > lock( tableMut_ );
-        Table::const_iterator it = table_.begin();
-        for( ; it != table_.end(); ++it )
+        for( const auto &it : table_ )
         {
-            descriptors.push_back( it->first );
+            descriptors.push_back( it.first );
         }
     }
 

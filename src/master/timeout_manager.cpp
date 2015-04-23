@@ -77,7 +77,7 @@ void TimeoutManager::CheckTimeouts()
 {
     namespace pt = boost::posix_time;
     std::unique_lock< std::mutex > lock( jobsMut_ );
-    TimeToCallback::iterator it = jobs_.begin();
+    auto it = jobs_.begin();
     const pt::ptime now = pt::second_clock::local_time();
     for( ; it != jobs_.end(); )
     {

@@ -31,10 +31,9 @@ namespace master {
 
 void WorkerManager::AddWorkerGroup( const std::string &groupName, std::list< std::string > &hosts )
 {
-    std::list< std::string >::const_iterator it = hosts.begin();
-    for( ; it != hosts.end(); ++it )
+    for( const std::string &host : hosts )
     {
-        AddWorkerHost( groupName, *it );
+        AddWorkerHost( groupName, host );
     }
 }
 
@@ -57,15 +56,14 @@ void WorkerManager::DeleteWorkerGroup( const std::string &groupName )
 {
     std::unique_lock< std::mutex > lock( workersMut_ );
 
-    GrpNameToWorkerList::iterator it = workerGroups_.find( groupName );
+    auto it = workerGroups_.find( groupName );
     if ( it != workerGroups_.end() )
     {
         WorkerList &workerList = it->second;
         const WorkerList::WorkerContainer &workers = workerList.GetWorkers();
-        WorkerList::WorkerContainer::const_iterator it_w = workers.begin();
-        for( ; it_w != workers.end(); ++it_w )
+        for( const auto &worker : workers )
         {
-            const std::string &host = (*it_w)->GetHost();
+            const std::string &host = worker->GetHost();
             workerHosts_.erase( host );
         }
 
@@ -78,8 +76,7 @@ void WorkerManager::DeleteWorkerHost( const std::string &host )
 {
     std::unique_lock< std::mutex > lock( workersMut_ );
 
-    GrpNameToWorkerList::iterator it = workerGroups_.begin();
-    for( ; it != workerGroups_.end(); ++it )
+    for( auto it = workerGroups_.begin(); it != workerGroups_.end(); ++it )
     {
         WorkerList &workerList = it->second;
         workerList.DeleteWorker( host );
@@ -94,16 +91,13 @@ void WorkerManager::CheckDropedPingResponses()
 
     std::unique_lock< std::mutex > lock( workersMut_ );
 
-    GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
-    for( ; it != workerGroups_.end(); ++it )
+    for( auto it_g = workerGroups_.cbegin(); it_g != workerGroups_.cend(); ++it_g )
     {
-        const WorkerList &workerList = it->second;
+        const WorkerList &workerList = it_g->second;
 
         const WorkerList::WorkerContainer &workers = workerList.GetWorkers();
-        WorkerList::WorkerContainer::const_iterator it = workers.begin();
-        for( ; it != workers.end(); ++it )
+        for( const auto &worker : workers )
         {
-            const WorkerPtr &worker = *it;
             WorkerState state = worker->GetState();
             if ( !worker->GetNumPingResponse() )
             {
@@ -224,8 +218,7 @@ void WorkerManager::SetWorkerIP( WorkerPtr &worker, const std::string &ip )
 {
     std::unique_lock< std::mutex > lock( workersMut_ );
 
-    GrpNameToWorkerList::iterator it = workerGroups_.begin();
-    for( ; it != workerGroups_.end(); ++it )
+    for( auto it = workerGroups_.begin(); it != workerGroups_.end(); ++it )
     {
         WorkerList &workerList = it->second;
         workerList.SetWorkerIP( worker, ip );
@@ -236,13 +229,11 @@ bool WorkerManager::GetWorkerByIP( const std::string &ip, WorkerPtr &worker ) co
 {
     std::unique_lock< std::mutex > lock( workersMut_ );
 
-    GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
-    for( ; it != workerGroups_.end(); ++it )
+    for( auto it = workerGroups_.cbegin(); it != workerGroups_.cend(); ++it )
     {
         const WorkerList &workerList = it->second;
         if ( workerList.GetWorkerByIP( ip, worker ) )
             return true;
-
     }
     return false;
 }
@@ -253,8 +244,7 @@ int WorkerManager::GetTotalWorkers() const
 
     std::unique_lock< std::mutex > lock( workersMut_ );
 
-    GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
-    for( ; it != workerGroups_.end(); ++it )
+    for( auto it = workerGroups_.cbegin(); it != workerGroups_.cend(); ++it )
     {
         const WorkerList &workerList = it->second;
         total += workerList.GetTotalWorkers();
@@ -268,8 +258,7 @@ int WorkerManager::GetTotalCPU() const
 
     std::unique_lock< std::mutex > lock( workersMut_ );
 
-    GrpNameToWorkerList::const_iterator it = workerGroups_.begin();
-    for( ; it != workerGroups_.end(); ++it )
+    for( auto it = workerGroups_.cbegin(); it != workerGroups_.cend(); ++it )
     {
         const WorkerList &workerList = it->second;
         total += workerList.GetTotalCPU();
@@ -286,8 +275,7 @@ void WorkerManager::Shutdown()
 {
     std::unique_lock< std::mutex > lock( workersMut_ );
 
-    GrpNameToWorkerList::iterator it = workerGroups_.begin();
-    for( ; it != workerGroups_.end(); ++it )
+    for( auto it = workerGroups_.begin(); it != workerGroups_.end(); ++it )
     {
         WorkerList &workerList = it->second;
         workerList.Clear();

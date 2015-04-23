@@ -124,8 +124,7 @@ bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
 
         // parse job files 
         bool succeeded = true;
-        StringSet::const_iterator it = jobFiles.begin();
-        for( ; it != jobFiles.end(); ++it )
+        for( auto it = jobFiles.cbegin(); it != jobFiles.cend(); ++it )
         {
             // read job description from file
             std::string filePath = *it;
@@ -206,10 +205,8 @@ void JobManager::PushJobs( std::list< JobPtr > &jobs )
         return;
 
     PLOG( "push jobs" );
-    std::list< JobPtr >::iterator it = jobs.begin();
-    for( ; it != jobs.end(); ++it )
+    for( auto &job : jobs )
     {
-        JobPtr &job = *it;
         job->SetJobId( jobId_++ );
     }
     jobs_->PushJobs( jobs, numJobGroups_++ );
@@ -220,10 +217,8 @@ void JobManager::PushJobs( std::list< JobPtr > &jobs )
     IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
     scheduler->OnNewJob();
 
-    it = jobs.begin();
-    for( ; it != jobs.end(); ++it )
+    for( auto &job : jobs )
     {
-        const JobPtr &job = *it;
         timeoutManager_->PushJobQueue( job->GetJobId(), job->GetQueueTimeout() );
     }
 }
@@ -241,14 +236,12 @@ void JobManager::PushJobFromHistory( int64_t jobId, const std::string &jobDescri
         if ( CreateMetaJob( jobDescription, jobs ) && !jobs.empty() )
         {
             PLOG( "push jobs from history" );
-            std::list< JobPtr >::iterator it = jobs.begin();
-            for( ; it != jobs.end(); ++it )
+            for( auto &job : jobs )
             {
                 if ( jobId >= jobId_ + 1 )
                 {
                     jobId_ = jobId + 1;
                 }
-                JobPtr &job = *it;
                 job->SetJobId( jobId++ );
             }
             jobs_->PushJobs( jobs, numJobGroups_++ );
@@ -256,10 +249,8 @@ void JobManager::PushJobFromHistory( int64_t jobId, const std::string &jobDescri
             IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
             scheduler->OnNewJob();
 
-            it = jobs.begin();
-            for( ; it != jobs.end(); ++it )
+            for( const auto &job : jobs )
             {
-                const JobPtr &job = *it;
                 timeoutManager_->PushJobQueue( job->GetJobId(), job->GetQueueTimeout() );
             }
         }

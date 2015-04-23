@@ -70,15 +70,13 @@ public:
         std::unique_lock< std::mutex > lock( GetWorkersMutex() );
 
         const GrpNameToWorkerList &workerGroups = GetWorkerGroups();
-        GrpNameToWorkerList::const_iterator it = workerGroups.begin();
-        for( ; it != workerGroups.end(); ++it )
+        for( auto it = workerGroups.cbegin(); it != workerGroups.cend(); ++it )
         {
             const WorkerList &workerList = it->second;
             const WorkerList::WorkerContainer &w = workerList.GetWorkers();
-            WorkerList::WorkerContainer::const_iterator w_it = w.begin();
-            for( ; w_it != w.end(); ++w_it )
+            for( const auto &worker : w )
             {
-                workers.push_back( *w_it );
+                workers.push_back( worker );
             }
         }
     }
@@ -89,15 +87,14 @@ public:
         std::unique_lock< std::mutex > lock( GetWorkersMutex() );
 
         const GrpNameToWorkerList &workerGroups = GetWorkerGroups();
-        GrpNameToWorkerList::const_iterator it = workerGroups.find( groupName );
+        auto it = workerGroups.find( groupName );
         if ( it != workerGroups.end() )
         {
             const WorkerList &workerList = it->second;
             const WorkerList::WorkerContainer &w = workerList.GetWorkers();
-            WorkerList::WorkerContainer::const_iterator w_it = w.begin();
-            for( ; w_it != w.end(); ++w_it )
+            for( const auto &worker : w )
             {
-                workers.push_back( *w_it );
+                workers.push_back( worker );
             }
         }
     }

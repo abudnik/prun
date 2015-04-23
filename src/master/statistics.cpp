@@ -74,8 +74,7 @@ void JobInfo::PrintJobInfo( std::string &info, Scheduler &scheduler, int64_t job
         int numWorkers = 0;
         int numCPU = 0;
         const Scheduler::IPToNodeState &nodeState = scheduler.GetNodeState();
-        Scheduler::IPToNodeState::const_iterator it = nodeState.begin();
-        for( ; it != nodeState.end(); ++it )
+        for( auto it = nodeState.cbegin(); it != nodeState.cend(); ++it )
         {
             const NodeState &nodeState = it->second;
             const WorkerPtr &worker = nodeState.GetWorker();
@@ -103,8 +102,7 @@ void AllJobInfo::Visit( Scheduler &scheduler )
     const ScheduledJobs &schedJobs = scheduler.GetScheduledJobs();
     const ScheduledJobs::JobQueue &jobs = schedJobs.GetJobQueue();
 
-    ScheduledJobs::JobQueue::const_iterator it = jobs.begin();
-    for( ; it != jobs.end(); ++it )
+    for( auto it = jobs.cbegin(); it != jobs.cend(); ++it )
     {
         const JobPtr &job = (*it).GetJob();
         std::string jobInfo;
@@ -136,8 +134,7 @@ void Statistics::Visit( Scheduler &scheduler )
 
     ss << "executing jobs: {";
     const ScheduledJobs::JobQueue &jobs = schedJobs.GetJobQueue();
-    ScheduledJobs::JobQueue::const_iterator it = jobs.begin();
-    for( ; it != jobs.end(); ++it )
+    for( auto it = jobs.cbegin(); it != jobs.cend(); ++it )
     {
         if ( it != jobs.begin() )
             ss << ", ";
@@ -156,8 +153,7 @@ int Statistics::GetNumBusyWorkers( Scheduler &scheduler ) const
     const Scheduler::IPToNodeState &nodeState = scheduler.GetNodeState();
 
     int num = 0;
-    Scheduler::IPToNodeState::const_iterator it = nodeState.begin();
-    for( ; it != nodeState.end(); ++it )
+    for( auto it = nodeState.cbegin(); it != nodeState.cend(); ++it )
     {
         const NodeState &nodeState = it->second;
         const WorkerPtr &worker = nodeState.GetWorker();
@@ -175,8 +171,7 @@ int Statistics::GetNumFreeWorkers( Scheduler &scheduler ) const
     const Scheduler::IPToNodeState &nodeState = scheduler.GetNodeState();
 
     int num = 0;
-    Scheduler::IPToNodeState::const_iterator it = nodeState.begin();
-    for( ; it != nodeState.end(); ++it )
+    for( auto it = nodeState.cbegin(); it != nodeState.cend(); ++it )
     {
         const NodeState &nodeState = it->second;
         const WorkerPtr &worker = nodeState.GetWorker();
@@ -194,8 +189,7 @@ int Statistics::GetNumBusyCPU( Scheduler &scheduler ) const
     const Scheduler::Scheduler::IPToNodeState &nodeState = scheduler.GetNodeState();
 
     int num = 0;
-    Scheduler::IPToNodeState::const_iterator it = nodeState.begin();
-    for( ; it != nodeState.end(); ++it )
+    for( auto it = nodeState.cbegin(); it != nodeState.cend(); ++it )
     {
         const NodeState &nodeState = it->second;
         const WorkerPtr &worker = nodeState.GetWorker();
@@ -215,15 +209,15 @@ void WorkerStatistics::Visit( Scheduler &scheduler )
 
     ss << "================" << std::endl;
 
-    Scheduler::IPToNodeState::const_iterator it, it_beg = nodeState.begin();
-    for( it = it_beg ; it != nodeState.end(); ++it )
+    auto it_beg = nodeState.cbegin();
+    for( auto n_it = it_beg ; n_it != nodeState.cend(); ++n_it )
     {
-        const NodeState &nodeState = it->second;
+        const NodeState &nodeState = n_it->second;
         const WorkerPtr &worker = nodeState.GetWorker();
         if ( !worker )
             continue;
 
-        if ( it != it_beg )
+        if ( n_it != it_beg )
             ss << "----------------" << std::endl;
 
         ss << "host = '" << worker->GetHost() << "', ip = " << worker->GetIP() << std::endl;
@@ -242,8 +236,7 @@ void WorkerStatistics::Visit( Scheduler &scheduler )
         ss << "tasks = {";
         std::vector< WorkerTask > tasks;
         workerJob.GetTasks( tasks );
-        std::vector< WorkerTask >::const_iterator it = tasks.begin();
-        for( ; it != tasks.end(); ++it )
+        for( auto it = tasks.cbegin(); it != tasks.cend(); ++it )
         {
             const WorkerTask &task = *it;
             if ( it != tasks.begin() )

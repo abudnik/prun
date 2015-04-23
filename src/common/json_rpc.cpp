@@ -40,10 +40,9 @@ JsonRpc::JsonRpc()
 
 JsonRpc::~JsonRpc()
 {
-    std::map< std::string, IJsonRpcHandler * >::iterator it = cmdToHandler_.begin();
-    for( ; it != cmdToHandler_.end(); ++it )
+    for( auto it : cmdToHandler_ )
     {
-        delete it->second;
+        delete it.second;
     }
 }
 
@@ -88,8 +87,7 @@ int JsonRpc::HandleRequest( const std::string &request, std::string &requestId, 
 
 bool JsonRpc::RegisterHandler( const std::string &method, IJsonRpcHandler *handler )
 {
-    std::map< std::string, IJsonRpcHandler * >::const_iterator it;
-    it = cmdToHandler_.find( method );
+    auto it = cmdToHandler_.find( method );
     if ( it != cmdToHandler_.end() )
     {
         PLOG_ERR( "JsonRpc::RegisterHandler: handler for method '" << method <<
@@ -103,8 +101,7 @@ bool JsonRpc::RegisterHandler( const std::string &method, IJsonRpcHandler *handl
 
 IJsonRpcHandler *JsonRpc::GetHandler( const std::string &method ) const
 {
-    std::map< std::string, IJsonRpcHandler * >::const_iterator it;
-    it = cmdToHandler_.find( method );
+    auto it = cmdToHandler_.find( method );
     if ( it != cmdToHandler_.end() )
         return it->second;
     return nullptr;
@@ -133,7 +130,7 @@ bool JsonRpc::ValidateJsonBraces( const std::string &json )
 
 bool JsonRpc::GetErrorDescription( int errCode, std::string &descr ) const
 {
-    std::map< int, std::string >::const_iterator it = errDescription_.find( errCode );
+    auto it = errDescription_.find( errCode );
     if ( it != errDescription_.end() )
     {
         descr = it->second;

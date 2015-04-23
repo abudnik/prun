@@ -40,10 +40,9 @@ void Pinger::PingWorkers()
     std::vector< WorkerPtr > workers;
     IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
     workerManager->GetWorkers( workers );
-    std::vector< WorkerPtr >::iterator it = workers.begin();
-    for( ; it != workers.end(); ++it )
+    for( auto &worker : workers )
     {
-        PingWorker( *it );
+        PingWorker( worker );
     }
     ++numPings_;
 }
@@ -81,7 +80,7 @@ void PingerBoost::StartPing()
 
 void PingerBoost::PingWorker( WorkerPtr &worker )
 {
-    EndpointMap::iterator it = endpoints_.find( worker->GetHost() );
+    auto it = endpoints_.find( worker->GetHost() );
     if ( it == endpoints_.end() )
     {
         common::Config &cfg = common::Config::Instance();

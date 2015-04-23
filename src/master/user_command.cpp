@@ -108,10 +108,9 @@ bool UserCommand::RunMetaJob( std::ifstream &file, std::string &result ) const
 
         std::ostringstream ss;
         ss << "----------------" << std::endl;
-        std::list< JobPtr >::const_iterator it = jobs.begin();
-        for( ; it != jobs.end(); ++it )
+        for( const auto &job : jobs )
         {
-            PrintJobInfo( *it, result );
+            PrintJobInfo( job, result );
             ss << result << std::endl;
         }
         ss << "----------------" << std::endl;
@@ -265,10 +264,8 @@ bool UserCommand::DeleteGroup( const std::string &group )
         workerManager->DeleteWorkerGroup( group );
 
         IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
-        std::vector< WorkerPtr >::const_iterator it = workers.begin();
-        for( ; it != workers.end(); ++it )
+        for( const auto &w : workers )
         {
-            const WorkerPtr &w = *it;
             scheduler->DeleteWorker( w->GetHost() );
         }
     }

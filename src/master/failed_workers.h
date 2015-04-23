@@ -40,18 +40,15 @@ public:
     {
         std::set<int64_t> jobs;
         workerJob.GetJobs( jobs );
-        std::set<int64_t>::const_iterator it = jobs.begin();
-        for( ; it != jobs.end(); ++it )
+        for( auto jobId : jobs )
         {
-            failedWorkers_[ *it ].insert( hostIP );
+            failedWorkers_[ jobId ].insert( hostIP );
         }
     }
 
     bool Delete( int64_t jobId )
     {
-        std::map< int64_t, std::set< std::string > >::iterator it_failed(
-            failedWorkers_.find( jobId )
-        );
+        auto it_failed = failedWorkers_.find( jobId );
         if ( it_failed != failedWorkers_.end() )
         {
             size_t numFailed = it_failed->second.size();
@@ -64,7 +61,7 @@ public:
 
     bool IsWorkerFailedJob( const std::string &hostIP, int64_t jobId ) const
     {
-        std::map< int64_t, std::set< std::string > >::const_iterator it = failedWorkers_.find( jobId );
+        auto it = failedWorkers_.find( jobId );
         if ( it == failedWorkers_.end() )
             return false;
 
@@ -74,7 +71,7 @@ public:
 
     size_t GetFailedNodesCnt( int64_t jobId ) const
     {
-        std::map< int64_t, std::set< std::string > >::const_iterator it = failedWorkers_.find( jobId );
+        auto it = failedWorkers_.find( jobId );
         if ( it == failedWorkers_.end() )
             return 0;
 

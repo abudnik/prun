@@ -559,7 +559,7 @@ BOOST_AUTO_TEST_CASE( host_appearance )
     workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
 
     const Scheduler::IPToNodeState &ipToNodeState = sched.GetNodeState();
-    Scheduler::IPToNodeState::const_iterator it = ipToNodeState.find( "127.0.0.1" );
+    auto it = ipToNodeState.find( "127.0.0.1" );
     BOOST_REQUIRE( it != ipToNodeState.end() );
     const NodeState &nodeState = it->second;
     BOOST_CHECK_EQUAL( nodeState.GetNumFreeCPU(), 2 );
@@ -837,7 +837,7 @@ BOOST_AUTO_TEST_CASE( task_completion )
     sched.OnTaskCompletion( 0, 10, tasks[0], hostIP ); // normal completion
 
     const Scheduler::IPToNodeState &ipToNodeState = sched.GetNodeState();
-    Scheduler::IPToNodeState::const_iterator it = ipToNodeState.find( "127.0.0.1" );
+    auto it = ipToNodeState.find( "127.0.0.1" );
     BOOST_REQUIRE( it != ipToNodeState.end() );
     const NodeState &nodeState = it->second;
     BOOST_CHECK_EQUAL( nodeState.GetNumFreeCPU(), 2 );

@@ -104,10 +104,9 @@ bool ProtocolJson::SendCommand( std::string &msg, const std::string &masterId, c
     {
         ptree.put( "master_id", masterId );
 
-        std::list< std::pair< std::string, std::string > >::const_iterator it = params.begin();
-        for( ; it != params.end(); ++it )
+        for( const auto &param : params )
         {
-            ptree.put( it->first, it->second );
+            ptree.put( param.first, param.second );
         }
         boost::property_tree::write_json( ss, ptree, false );
     }

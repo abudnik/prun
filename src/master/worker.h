@@ -176,13 +176,12 @@ public:
     template< class Container >
     void GetWorkerList( Container &workers, int stateMask ) const
     {
-        WorkerContainer::const_iterator it = workers_.begin();
-        for( ; it != workers_.end(); ++it )
+        for( const auto &worker : workers_ )
         {
-            int state = static_cast<int>( (*it)->GetState() );
+            int state = static_cast<int>( worker->GetState() );
             if ( state & stateMask )
             {
-                workers.push_back( *it );
+                workers.push_back( worker );
             }
         }
     }

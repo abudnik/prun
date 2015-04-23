@@ -69,7 +69,7 @@ public:
 
     void DecrementJobExecution( int64_t jobId, int numTasks )
     {
-        IdToJobExec::iterator it = jobExecutions_.find( jobId );
+        auto it = jobExecutions_.find( jobId );
         if ( it != jobExecutions_.end() )
         {
             const int numExecution = it->second - numTasks;
@@ -83,8 +83,7 @@ public:
 
     bool FindJobByJobId( int64_t jobId, JobPtr &job ) const
     {
-        JobQueue::const_iterator it = jobs_.begin();
-        for( ; it != jobs_.end(); ++it )
+        for( auto it = jobs_.cbegin(); it != jobs_.cend(); ++it )
         {
             const JobPtr &j = (*it).GetJob();
             if ( j->GetJobId() == jobId )
@@ -98,8 +97,7 @@ public:
 
     void GetJobGroup( int64_t groupId, std::list< JobPtr > &jobs ) const
     {
-        JobQueue::const_iterator it = jobs_.begin();
-        for( ; it != jobs_.end(); ++it )
+        for( auto it = jobs_.cbegin(); it != jobs_.cend(); ++it )
         {
             const JobPtr &job = (*it).GetJob();
             if ( job->GetGroupId() == groupId )
@@ -109,7 +107,7 @@ public:
 
     int GetNumExec( int64_t jobId ) const
     {
-        IdToJobExec::const_iterator it = jobExecutions_.find( jobId );
+        auto it = jobExecutions_.find( jobId );
         if ( it != jobExecutions_.end() )
         {
             return it->second;
@@ -132,8 +130,7 @@ public:
             onRemoveCallback_( jobId );
 
         jobExecutions_.erase( jobId );
-        JobQueue::iterator it = jobs_.begin();
-        for( ; it != jobs_.end(); ++it )
+        for( auto it = jobs_.begin(); it != jobs_.end(); ++it )
         {
             const JobPtr &job = (*it).GetJob();
             if ( job->GetJobId() == jobId )
@@ -151,8 +148,7 @@ public:
     void Clear()
     {
         JobQueue jobs( jobs_ );
-        JobQueue::const_iterator it = jobs.begin();
-        for( ; it != jobs.end(); ++it )
+        for( auto it = jobs_.cbegin(); it != jobs.cend(); ++it )
         {
             const JobPtr &job = (*it).GetJob();
             RemoveJob( job->GetJobId(), "timeout" );

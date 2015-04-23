@@ -61,8 +61,7 @@ public:
     bool Delete( int64_t jobId, int taskId, const std::string &masterId )
     {
         std::unique_lock< std::mutex > lock( mut_ );
-        Container::iterator it = table_.begin();
-        for( ; it != table_.end(); ++it )
+        for( auto it = table_.begin(); it != table_.end(); ++it )
         {
             const ExecInfo &execInfo = *it;
             if ( execInfo.jobId_ == jobId &&
@@ -80,20 +79,17 @@ public:
     void Get( ArgContainer &table )
     {
         std::unique_lock< std::mutex > lock( mut_ );
-        Container::iterator it = table_.begin();
-        for( ; it != table_.end(); ++it )
+        for( const auto &execInfo : table_ )
         {
-            table.push_back( *it );
+            table.push_back( execInfo );
         }
     }
 
     bool Contains( int64_t jobId, int taskId, const std::string &masterId )
     {
         std::unique_lock< std::mutex > lock( mut_ );
-        Container::const_iterator it = table_.begin();
-        for( ; it != table_.end(); ++it )
+        for( const auto &execInfo : table_ )
         {
-            const ExecInfo &execInfo = *it;
             if ( execInfo.jobId_ == jobId &&
                  execInfo.taskId_ == taskId &&
                  execInfo.masterId_ == masterId )
@@ -105,10 +101,8 @@ public:
     bool Find( int64_t jobId, int taskId, const std::string &masterId, ExecInfo &info )
     {
         std::unique_lock< std::mutex > lock( mut_ );
-        Container::const_iterator it = table_.begin();
-        for( ; it != table_.end(); ++it )
+        for( const auto &execInfo : table_ )
         {
-            const ExecInfo &execInfo = *it;
             if ( execInfo.jobId_ == jobId &&
                  execInfo.taskId_ == taskId &&
                  execInfo.masterId_ == masterId )
@@ -127,10 +121,8 @@ public:
         lock.unlock();
 
         // run registered callbacks
-        Container::iterator it = table.begin();
-        for( ; it != table.end(); ++it )
+        for( const auto &execInfo : table_ )
         {
-            const ExecInfo &execInfo = *it;
             if ( execInfo.callback_ )
                 execInfo.callback_();
         }
@@ -156,7 +148,7 @@ public:
     bool Delete( pid_t pid )
     {
         std::unique_lock< std::mutex > lock( mut_ );
-        std::multiset< pid_t >::iterator it = pids_.find( pid );
+        auto it = pids_.find( pid );
         if ( it != pids_.end() )
         {
             pids_.erase( it );
@@ -168,8 +160,7 @@ public:
     bool Find( pid_t pid )
     {
         std::unique_lock< std::mutex > lock( mut_ );
-        std::multiset< pid_t >::iterator it = pids_.find( pid );
-        return it != pids_.end();
+        return pids_.find( pid ) != pids_.end();
     }
 
 private:

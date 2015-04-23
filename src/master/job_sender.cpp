@@ -84,10 +84,8 @@ void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, c
     {
         WorkerJob::Tasks tasks;
         workerJob.GetTasks( workerJob.GetJobId(), tasks );
-        WorkerJob::Tasks::const_iterator it = tasks.begin();
-        for( ; it != tasks.end(); ++it )
+        for( auto taskId : tasks )
         {
-            int taskId = *it;
             if ( taskId == 0 )
             {
                 // First task send completion means that job execution started.

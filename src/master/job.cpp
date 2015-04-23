@@ -61,8 +61,7 @@ bool Job::IsHostPermitted( const std::string &host ) const
     if ( !hosts_.size() )
         return true;
 
-    std::set< std::string >::const_iterator it = hosts_.find( host );
-    return it != hosts_.end();
+    return hosts_.find( host ) != hosts_.end();
 }
 
 bool Job::IsGroupPermitted( const std::string &group ) const
@@ -70,8 +69,7 @@ bool Job::IsGroupPermitted( const std::string &group ) const
     if ( !groups_.size() )
         return true;
 
-    std::set< std::string >::const_iterator it = groups_.find( group );
-    return it != groups_.end();
+    return groups_.find( group ) != groups_.end();
 }
 
 
@@ -87,10 +85,8 @@ void JobQueueImpl::PushJob( JobPtr &job, int64_t groupId )
 void JobQueueImpl::PushJobs( std::list< JobPtr > &jobs, int64_t groupId )
 {
     std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
-    std::list< JobPtr >::const_iterator it = jobs.begin();
-    for( ; it != jobs.end(); ++it )
+    for( const auto &job : jobs )
     {
-        const JobPtr &job = *it;
         job->SetGroupId( groupId );
         idToJob_[ job->GetJobId() ] = job;
         if ( job->GetNumDepends() )
@@ -108,7 +104,7 @@ void JobQueueImpl::PushJobs( std::list< JobPtr > &jobs, int64_t groupId )
 bool JobQueueImpl::GetJobById( int64_t jobId, JobPtr &job )
 {
     std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
-    IdToJob::const_iterator it = idToJob_.find( jobId );
+    auto it = idToJob_.find( jobId );
     if ( it != idToJob_.end() )
     {
         job = it->second;
@@ -121,7 +117,7 @@ bool JobQueueImpl::DeleteJob( int64_t jobId )
 {
     std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
 
-    IdToJob::iterator it = idToJob_.find( jobId );
+    auto it = idToJob_.find( jobId );
     if ( it == idToJob_.end() )
         return false;
     JobPtr job( it->second );
@@ -129,17 +125,14 @@ bool JobQueueImpl::DeleteJob( int64_t jobId )
 
     OnJobDeletion( job );
 
+    for( auto it = jobs_.begin(); it != jobs_.end(); ++it )
     {
-        JobList::iterator it = jobs_.begin();
-        for( ; it != jobs_.end(); ++it )
+        const JobPtr &job = *it;
+        if ( job->GetJobId() == jobId )
         {
-            const JobPtr &job = *it;
-            if ( job->GetJobId() == jobId )
-            {
-                jobs_.erase( it );
-                std::make_heap( jobs_.begin(), jobs_.end(), JobComparatorPriority() );
-                return true;
-            }
+            jobs_.erase( it );
+            std::make_heap( jobs_.begin(), jobs_.end(), JobComparatorPriority() );
+            return true;
         }
     }
 
@@ -171,26 +164,20 @@ bool JobQueueImpl::DeleteJobGroup( int64_t groupId )
     bool deleted = false;
     {
         std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
-        JobList::const_iterator it = jobs_.begin();
-        for( ; it != jobs_.end(); ++it )
+        for( const auto &job : jobs_ )
         {
-            const JobPtr &job = *it;
             if ( job->GetGroupId() == groupId )
                 jobs.push_back( job );
         }
-        JobSet::const_iterator its = delayedJobs_.begin();
-        for( ; its != delayedJobs_.end(); ++its )
+        for( const auto &job : delayedJobs_ )
         {
-            const JobPtr &job = *its;
             if ( job->GetGroupId() == groupId )
                 jobs.push_back( job );
         }
     }
 
-    JobList::const_iterator it = jobs.begin();
-    for( ; it != jobs.end(); ++it )
+    for( const auto &job : jobs )
     {
-        const JobPtr &job = *it;
         if ( job->GetGroupId() == groupId )
             deleted = DeleteJob( job->GetJobId() );
     }
@@ -208,10 +195,8 @@ void JobQueueImpl::Clear()
         // std::copy( delayedJobs.begin(), delayedJobs.end(), std::back_inserter( jobs ) ); // less effective
     }
 
-    JobList::const_iterator it = jobs.begin();
-    for( ; it != jobs.end(); ++it )
+    for( const auto &job : jobs )
     {
-        const JobPtr &job = *it;
         DeleteJob( job->GetJobId() );
     }
 }
@@ -233,7 +218,7 @@ bool JobQueueImpl::PopJob( JobPtr &job )
 void JobQueueImpl::OnJobDependenciesResolved( const JobPtr &job )
 {
     std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
-    JobSet::iterator it = delayedJobs_.find( job );
+    auto it = delayedJobs_.find( job );
     if ( it != delayedJobs_.end() )
     {
         jobs_.push_back( job );

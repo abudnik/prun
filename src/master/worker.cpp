@@ -31,11 +31,11 @@ void WorkerJob::AddTask( int64_t jobId, int taskId )
 
 bool WorkerJob::DeleteTask( int64_t jobId, int taskId )
 {
-    JobIdToTasks::iterator it = jobs_.find( jobId );
+    auto it = jobs_.find( jobId );
     if ( it != jobs_.end() )
     {
         Tasks &tasks = it->second;
-        Tasks::iterator it_tasks = tasks.find( taskId );
+        auto it_tasks = tasks.find( taskId );
         if ( it_tasks != tasks.end() )
         {
             tasks.erase( it_tasks );
@@ -55,7 +55,7 @@ bool WorkerJob::DeleteTask( int64_t jobId, int taskId )
 
 bool WorkerJob::DeleteJob( int64_t jobId )
 {
-    JobIdToTasks::iterator it = jobs_.find( jobId );
+    auto it = jobs_.find( jobId );
     if ( it != jobs_.end() )
     {
         jobs_.erase( it );
@@ -70,11 +70,11 @@ bool WorkerJob::DeleteJob( int64_t jobId )
 
 bool WorkerJob::HasTask( int64_t jobId, int taskId ) const
 {
-    JobIdToTasks::const_iterator it = jobs_.find( jobId );
+    auto it = jobs_.find( jobId );
     if ( it != jobs_.end() )
     {
         const Tasks &tasks = it->second;
-        Tasks::const_iterator it_tasks = tasks.find( taskId );
+        auto it_tasks = tasks.find( taskId );
         return it_tasks != tasks.end();
     }
     return false;
@@ -87,7 +87,7 @@ bool WorkerJob::HasJob( int64_t jobId ) const
 
 bool WorkerJob::GetTasks( int64_t jobId, Tasks &tasks ) const
 {
-    JobIdToTasks::const_iterator it = jobs_.find( jobId );
+    auto it = jobs_.find( jobId );
     if ( it != jobs_.end() )
     {
         tasks = it->second;
@@ -98,8 +98,7 @@ bool WorkerJob::GetTasks( int64_t jobId, Tasks &tasks ) const
 
 void WorkerJob::GetTasks( std::vector< WorkerTask > &tasks ) const
 {
-    JobIdToTasks::const_iterator it = jobs_.begin();
-    for( ; it != jobs_.end(); ++it )
+    for( auto it = jobs_.cbegin(); it != jobs_.cend(); ++it )
     {
         const Tasks &t = it->second;
         Tasks::const_iterator it_tasks = t.begin();
@@ -113,8 +112,7 @@ void WorkerJob::GetTasks( std::vector< WorkerTask > &tasks ) const
 
 void WorkerJob::GetJobs( std::set<int64_t> &jobs ) const
 {
-    JobIdToTasks::const_iterator it = jobs_.begin();
-    for( ; it != jobs_.end(); ++it )
+    for( auto it = jobs_.cbegin(); it != jobs_.cend(); ++it )
     {
         jobs.insert( it->first );
     }
@@ -124,7 +122,7 @@ int64_t WorkerJob::GetJobId() const
 {
     if ( jobs_.empty() )
         return -1;
-    JobIdToTasks::const_iterator it = jobs_.begin();
+    auto it = jobs_.cbegin();
     return it->first;
 }
 
@@ -136,8 +134,7 @@ int WorkerJob::GetNumJobs() const
 int WorkerJob::GetTotalNumTasks() const
 {
     int num = 0;
-    JobIdToTasks::const_iterator it = jobs_.begin();
-    for( ; it != jobs_.end(); ++it )
+    for( auto it = jobs_.cbegin(); it != jobs_.cend(); ++it )
     {
         const Tasks &tasks = it->second;
         num += static_cast<int>( tasks.size() );
@@ -147,7 +144,7 @@ int WorkerJob::GetTotalNumTasks() const
 
 int WorkerJob::GetNumTasks( int64_t jobId ) const
 {
-    JobIdToTasks::const_iterator it = jobs_.find( jobId );
+    auto it = jobs_.find( jobId );
     if ( it != jobs_.end() )
     {
         const Tasks &tasks = it->second;
@@ -160,10 +157,8 @@ WorkerJob &WorkerJob::operator += ( const WorkerJob &workerJob )
 {
     std::vector< WorkerTask > tasks;
     workerJob.GetTasks( tasks );
-    std::vector< WorkerTask >::const_iterator it = tasks.begin();
-    for( ; it != tasks.end(); ++it )
+    for( const auto &task : tasks )
     {
-        const WorkerTask &task = *it;
         AddTask( task.GetJobId(), task.GetTaskId() );
     }
     if ( workerJob.IsExclusive() )
@@ -197,8 +192,7 @@ void WorkerList::AddWorker( Worker *worker )
 
 void WorkerList::DeleteWorker( const std::string &host )
 {
-    WorkerContainer::iterator it = workers_.begin();
-    for( ; it != workers_.end(); )
+    for( auto it = workers_.begin(); it != workers_.end(); )
     {
         WorkerPtr &w = *it;
         if ( w->GetHost() == host )
@@ -215,10 +209,8 @@ void WorkerList::DeleteWorker( const std::string &host )
 
 void WorkerList::Clear()
 {
-    WorkerContainer::iterator it = workers_.begin();
-    for( ; it != workers_.end(); ++it )
+    for( auto &w : workers_ )
     {
-        WorkerPtr &w = *it;
         w->SetState( WORKER_STATE_DISABLED );
     }
 
@@ -228,12 +220,11 @@ void WorkerList::Clear()
 
 bool WorkerList::GetWorker( const char *host, WorkerPtr &worker )
 {
-    WorkerContainer::iterator it = workers_.begin();
-    for( ; it != workers_.end(); ++it )
+    for( auto &w : workers_ )
     {
-        if ( (*it)->GetHost() == host )
+        if ( w->GetHost() == host )
         {
-            worker = *it;
+            worker = w;
             return true;
         }
     }
@@ -242,10 +233,9 @@ bool WorkerList::GetWorker( const char *host, WorkerPtr &worker )
 
 bool WorkerList::SetWorkerIP( WorkerPtr &worker, const std::string &ip )
 {
-    WorkerContainer::const_iterator it = workers_.begin();
-    for( ; it != workers_.end(); ++it )
+    for( const auto &w : workers_ )
     {
-        if ( worker == *it )
+        if ( worker == w )
         {
             worker->SetIP( ip );
             ipToWorker_[ip] = worker;
@@ -257,7 +247,7 @@ bool WorkerList::SetWorkerIP( WorkerPtr &worker, const std::string &ip )
 
 bool WorkerList::GetWorkerByIP( const std::string &ip, WorkerPtr &worker ) const
 {
-    IPToWorker::const_iterator it = ipToWorker_.find( ip );
+    auto it = ipToWorker_.find( ip );
     if ( it != ipToWorker_.end() )
     {
         worker = it->second;
@@ -269,10 +259,8 @@ bool WorkerList::GetWorkerByIP( const std::string &ip, WorkerPtr &worker ) const
 int WorkerList::GetTotalWorkers() const
 {
     int num = 0;
-    WorkerContainer::const_iterator it = workers_.begin();
-    for( ; it != workers_.end(); ++it )
+    for( const auto &worker : workers_ )
     {
-        const WorkerPtr &worker = *it;
         if ( worker->IsAvailable() )
         {
             ++num;
@@ -284,10 +272,8 @@ int WorkerList::GetTotalWorkers() const
 int WorkerList::GetTotalCPU() const
 {
     int num = 0;
-    WorkerContainer::const_iterator it = workers_.begin();
-    for( ; it != workers_.end(); ++it )
+    for( const auto &worker : workers_ )
     {
-        const WorkerPtr &worker = *it;
         if ( worker->IsAvailable() )
         {
             num += worker->GetNumCPU();
@@ -299,10 +285,9 @@ int WorkerList::GetTotalCPU() const
 int WorkerList::GetNumWorkers( int stateMask ) const
 {
     int num = 0;
-    WorkerContainer::const_iterator it = workers_.begin();
-    for( ; it != workers_.end(); ++it )
+    for( const auto &worker : workers_ )
     {
-        int state = static_cast<int>( (*it)->GetState() );
+        int state = static_cast<int>( worker->GetState() );
         if ( state & stateMask )
         {
             ++num;
@@ -314,13 +299,12 @@ int WorkerList::GetNumWorkers( int stateMask ) const
 int WorkerList::GetNumCPU( int stateMask ) const
 {
     int num = 0;
-    WorkerContainer::const_iterator it = workers_.begin();
-    for( ; it != workers_.end(); ++it )
+    for( const auto &worker : workers_ )
     {
-        int state = static_cast<int>( (*it)->GetState() );
+        int state = static_cast<int>( worker->GetState() );
         if ( state & stateMask )
         {
-            num += (*it)->GetNumCPU();
+            num += worker->GetNumCPU();
         }
     }
     return num;

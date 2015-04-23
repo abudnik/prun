@@ -110,7 +110,7 @@ public:
     virtual void Unsubscribe( IObserver *observer, int event = 0 )
     {
         typename LockPolicy::UniqueLock lock( this );
-        EventToContainer::iterator it = observers_.find( event );
+        auto it = observers_.find( event );
         if ( it != observers_.end() )
         {
             it->second.erase( observer );
@@ -120,14 +120,12 @@ public:
     virtual void NotifyAll( int event = 0 )
     {
         typename LockPolicy::SharedLock lock( this );
-        EventToContainer::iterator it = observers_.find( event );
+        auto it = observers_.find( event );
         if ( it == observers_.end() )
             return;
 
-        Container::iterator it_ob = it->second.begin();
-        for( ; it_ob != it->second.end(); ++it_ob )
+        for( auto observer : it->second )
         {
-            IObserver *observer = *it_ob;
             observer->NotifyObserver( event );
         }
     }

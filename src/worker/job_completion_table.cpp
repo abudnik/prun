@@ -40,7 +40,7 @@ void JobCompletionTable::Set( const JobDescriptor &descr, const JobCompletionSta
 bool JobCompletionTable::Get( const JobDescriptor &descr, JobCompletionStat &stat )
 {
     boost::shared_lock< boost::shared_mutex > lock( tableMut_ );
-    Table::const_iterator it = table_.find( descr );
+    auto it = table_.find( descr );
     if ( it != table_.end() )
     {
         stat = it->second;
@@ -62,8 +62,7 @@ bool JobCompletionTable::ErasePending( const JobDescriptor &descr )
     boost::upgrade_to_unique_lock< boost::shared_mutex > uniqueLock( lock );
 
     bool removed = false;
-    Table::iterator it = table_.begin();
-    for( ; it != table_.end(); )
+    for( auto it = table_.begin(); it != table_.end(); )
     {
         const JobDescriptor &d = it->first;
         if ( d.Equal( descr ) && ( d.masterId != descr.masterId ) )

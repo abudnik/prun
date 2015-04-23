@@ -143,10 +143,8 @@ public:
     {
         {
             std::unique_lock< std::mutex > lock( commDescrMut_ );
-            std::vector< CommDescr >::iterator it = commDescr_.begin();
-            for( ; it != commDescr_.end(); ++it )
+            for( auto &descr : commDescr_ )
             {
-                CommDescr &descr = *it;
                 boost::system::error_code error;
                 descr.socket->shutdown( stream_protocol::socket::shutdown_both, error );
                 descr.socket->close( error );
