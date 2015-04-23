@@ -149,7 +149,7 @@ void Scheduler::PlanJobExecution()
 {
     JobPtr job;
 
-    IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+    IJobManager *jobManager = common::GetService< IJobManager >();
     if ( !jobManager->PopJob( job ) )
         return;
 
@@ -375,7 +375,7 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
     {
         {
             WorkerPtr w;
-            IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+            IWorkerManager *workerManager = common::GetService< IWorkerManager >();
             if ( !workerManager->GetWorkerByIP( hostIP, w ) )
                 return;
 
@@ -422,7 +422,7 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
     if ( !errCode )
     {
         WorkerPtr w;
-        IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+        IWorkerManager *workerManager = common::GetService< IWorkerManager >();
         if ( !workerManager->GetWorkerByIP( hostIP, w ) )
             return;
 
@@ -465,7 +465,7 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
             return;
 
         WorkerPtr w;
-        IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+        IWorkerManager *workerManager = common::GetService< IWorkerManager >();
         if ( !workerManager->GetWorkerByIP( hostIP, w ) )
             return;
 
@@ -514,7 +514,7 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
 void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &hostIP )
 {
     WorkerPtr w;
-    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
     if ( !workerManager->GetWorkerByIP( hostIP, w ) )
         return;
     const WorkerJob &workerJob = w->GetJob();
@@ -590,7 +590,7 @@ void Scheduler::StopAllJobs()
 
     // send stop all command
     {
-        IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+        IWorkerManager *workerManager = common::GetService< IWorkerManager >();
 
         std::unique_lock< std::mutex > lock_w( workersMut_ );
         for( auto it = nodeState_.cbegin(); it != nodeState_.cend(); ++it )
@@ -607,7 +607,7 @@ void Scheduler::StopAllJobs()
 
 void Scheduler::StopPreviousJobs()
 {
-    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
 
     std::unique_lock< std::mutex > lock_w( workersMut_ );
     for( auto it = nodeState_.cbegin(); it != nodeState_.cend(); ++it )
@@ -626,14 +626,14 @@ void Scheduler::OnRemoveJob( int64_t jobId )
     simultExecCnt_.erase( jobId );
     failedWorkers_.Delete( jobId );
 
-    IJobEventReceiver *jobEventReceiver = common::ServiceLocator::Instance().Get< IJobEventReceiver >();
+    IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
     jobEventReceiver->OnJobDelete( jobId );
 }
 
 void Scheduler::StopWorkers( int64_t jobId )
 {
     {
-        IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+        IWorkerManager *workerManager = common::GetService< IWorkerManager >();
 
         for( auto it = nodeState_.begin(); it != nodeState_.end(); ++it )
         {
@@ -686,7 +686,7 @@ void Scheduler::StopWorker( const std::string &hostIP ) const
     const WorkerPtr &worker = nodeState.GetWorker();
     const WorkerJob &workerJob = worker->GetJob();
 
-    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
 
     std::vector< WorkerTask > tasks;
     workerJob.GetTasks( tasks );
@@ -757,7 +757,7 @@ int Scheduler::GetNumPlannedExec( const JobPtr &job ) const
     if ( job->GetNumExec() > 0 )
         return job->GetNumExec();
 
-    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
     int numExec = workerManager->GetTotalCPU();
     if ( numExec < 1 )
         numExec = 1;

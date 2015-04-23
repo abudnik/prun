@@ -43,7 +43,7 @@ bool DbPut::Execute( const DbRequest &request, std::string &response )
         return false;
     }
 
-    IDAO *dbClient = common::ServiceLocator::Instance().Get< IDAO >();
+    IDAO *dbClient = common::GetService< IDAO >();
     return dbClient->Put( key, request.GetData() );
 }
 
@@ -63,13 +63,13 @@ bool DbDelete::Execute( const DbRequest &request, std::string &response )
         return false;
     }
 
-    IDAO *dbClient = common::ServiceLocator::Instance().Get< IDAO >();
+    IDAO *dbClient = common::GetService< IDAO >();
     return dbClient->Delete( key );
 }
 
 bool DbGet::Execute( const DbRequest &request, std::string &response )
 {
-    IDAO *dbClient = common::ServiceLocator::Instance().Get< IDAO >();
+    IDAO *dbClient = common::GetService< IDAO >();
     return dbClient->Get( response );
 }
 

@@ -37,7 +37,7 @@ void ResultGetter::Run()
     WorkerTask workerTask;
     std::string hostIP;
 
-    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
     workerManager->Subscribe( this, WorkerManager::eTaskCompletion );
 
     bool getTask = false;
@@ -78,7 +78,7 @@ void ResultGetter::OnGetTaskResult( bool success, int errCode, int64_t execTime,
 {
     if ( !success ) // retrieving of job result from message failed
         errCode = -1;
-    IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+    IScheduler *scheduler = common::GetService< IScheduler >();
     scheduler->OnTaskCompletion( errCode, execTime, workerTask, hostIP );
 }
 
@@ -317,7 +317,7 @@ void GetterBoost::MakeRequest()
 {
     common::ProtocolJson protocol;
 
-    IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+    IJobManager *jobManager = common::GetService< IJobManager >();
     const std::string &masterId = jobManager->GetMasterId();
 
     common::Marshaller marshaller;

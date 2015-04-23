@@ -118,7 +118,7 @@ void Statistics::Visit( Scheduler &scheduler )
     const ScheduledJobs &schedJobs = scheduler.GetScheduledJobs();
     const FailedWorkers &failedWorkers = scheduler.GetFailedWorkers();
 
-    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
 
     ss << "================" << std::endl <<
         "busy workers = " << GetNumBusyWorkers( scheduler ) << std::endl <<

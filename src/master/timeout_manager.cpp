@@ -30,25 +30,25 @@ namespace master {
 
 void TimeoutManager::TaskTimeoutHandler::HandleTimeout()
 {
-    IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+    IScheduler *scheduler = common::GetService< IScheduler >();
     scheduler->OnTaskTimeout( workerTask_, hostIP_ );
 }
 
 void TimeoutManager::JobTimeoutHandler::HandleTimeout()
 {
-    IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+    IScheduler *scheduler = common::GetService< IScheduler >();
     scheduler->OnJobTimeout( jobId_ );
 }
 
 void TimeoutManager::JobQueueTimeoutHandler::HandleTimeout()
 {
-    IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+    IJobManager *jobManager = common::GetService< IJobManager >();
     jobManager->DeleteJob( jobId_ );
 }
 
 void TimeoutManager::StopTaskTimeoutHandler::HandleTimeout()
 {
-    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
     workerManager->AddCommand( command_, hostIP_ );
 }
 

@@ -45,7 +45,7 @@ int AdminCommand_Run::Execute( const boost::property_tree::ptree &params,
         filePath = params.get<std::string>( "file" );
         if ( filePath[0] != '/' )
         {
-            IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+            IJobManager *jobManager = common::GetService< IJobManager >();
             filePath = jobManager->GetJobsDir() + '/' + filePath;
         }
 
@@ -182,7 +182,7 @@ int AdminCommand_AddGroup::Execute( const boost::property_tree::ptree &params,
         filePath = params.get<std::string>( "file" );
         if ( filePath[0] != '/' )
         {
-            IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+            IWorkerManager *workerManager = common::GetService< IWorkerManager >();
             filePath = workerManager->GetConfigDir() + '/' + filePath;
         }
 

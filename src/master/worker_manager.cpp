@@ -122,7 +122,7 @@ void WorkerManager::CheckDropedPingResponses()
 
     if ( !changedWorkers.empty() )
     {
-        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        IScheduler *scheduler = common::GetService< IScheduler >();
         scheduler->OnChangedWorkerState( changedWorkers );
     }
 }
@@ -145,7 +145,7 @@ void WorkerManager::OnNodePingResponse( const std::string &hostIP, int numCPU, i
         {
             worker->SetNumCPU( numCPU );
             worker->SetMemorySize( memSizeMb );
-            IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+            IScheduler *scheduler = common::GetService< IScheduler >();
             scheduler->OnHostAppearance( worker );
         }
     }

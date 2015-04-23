@@ -38,7 +38,7 @@ void Pinger::Stop()
 void Pinger::PingWorkers()
 {
     std::vector< WorkerPtr > workers;
-    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
     workerManager->GetWorkers( workers );
     for( auto &worker : workers )
     {
@@ -62,14 +62,14 @@ void Pinger::CheckDropedPingResponses()
     if ( numPings_ < maxDroped_ + 1 )
         return;
 
-    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
     workerManager->CheckDropedPingResponses();
     numPings_ = 0;
 }
 
 void Pinger::OnWorkerIPResolve( WorkerPtr &worker, const std::string &ip )
 {
-    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
     workerManager->SetWorkerIP( worker, ip );
 }
 

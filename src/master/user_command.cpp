@@ -75,7 +75,7 @@ bool UserCommand::RunJob( std::ifstream &file, const std::string &jobAlias, std:
         while( std::getline( file, line ) )
             jobDescr += line;
 
-        IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+        IJobManager *jobManager = common::GetService< IJobManager >();
         JobPtr job( jobManager->CreateJob( jobDescr ) );
         if ( job )
         {
@@ -102,7 +102,7 @@ bool UserCommand::RunMetaJob( std::ifstream &file, std::string &result ) const
             metaDescr += line;
 
         std::list< JobPtr > jobs;
-        IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+        IJobManager *jobManager = common::GetService< IJobManager >();
         jobManager->CreateMetaJob( metaDescr, jobs );
         jobManager->PushJobs( jobs );
 
@@ -135,10 +135,10 @@ bool UserCommand::Stop( int64_t jobId )
 {
     try
     {
-        IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+        IJobManager *jobManager = common::GetService< IJobManager >();
         if ( !jobManager->DeleteJob( jobId ) )
         {
-            IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+            IScheduler *scheduler = common::GetService< IScheduler >();
             scheduler->StopJob( jobId );
         }
     }
@@ -154,9 +154,9 @@ bool UserCommand::StopGroup( int64_t groupId )
 {
     try
     {
-        IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+        IJobManager *jobManager = common::GetService< IJobManager >();
         jobManager->DeleteJobGroup( groupId );
-        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        IScheduler *scheduler = common::GetService< IScheduler >();
         scheduler->StopJobGroup( groupId );
     }
     catch( std::exception &e )
@@ -171,9 +171,9 @@ bool UserCommand::StopAll()
 {
     try
     {
-        IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+        IJobManager *jobManager = common::GetService< IJobManager >();
         jobManager->DeleteAllJobs();
-        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        IScheduler *scheduler = common::GetService< IScheduler >();
         scheduler->StopAllJobs();
     }
     catch( std::exception &e )
@@ -188,7 +188,7 @@ bool UserCommand::StopPreviousJobs()
 {
     try
     {
-        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        IScheduler *scheduler = common::GetService< IScheduler >();
         scheduler->StopPreviousJobs();
     }
     catch( std::exception &e )
@@ -203,7 +203,7 @@ bool UserCommand::AddWorkerHost( const std::string &groupName, const std::string
 {
     try
     {
-        IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+        IWorkerManager *workerManager = common::GetService< IWorkerManager >();
         workerManager->AddWorkerHost( groupName, host );
     }
     catch( std::exception &e )
@@ -218,10 +218,10 @@ bool UserCommand::DeleteHost( const std::string &host )
 {
     try
     {
-        IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+        IWorkerManager *workerManager = common::GetService< IWorkerManager >();
         workerManager->DeleteWorkerHost( host );
 
-        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        IScheduler *scheduler = common::GetService< IScheduler >();
         scheduler->DeleteWorker( host );
     }
     catch( std::exception &e )
@@ -240,7 +240,7 @@ bool UserCommand::AddGroup( const std::string &filePath, const std::string &file
         std::list< std::string > hosts;
         if ( ReadHosts( filePath.c_str(), hosts ) )
         {
-            IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+            IWorkerManager *workerManager = common::GetService< IWorkerManager >();
             workerManager->AddWorkerGroup( fileName, hosts );
         }
         else
@@ -259,11 +259,11 @@ bool UserCommand::DeleteGroup( const std::string &group )
     try
     {
         std::vector< WorkerPtr > workers;
-        IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+        IWorkerManager *workerManager = common::GetService< IWorkerManager >();
         workerManager->GetWorkers( workers, group );
         workerManager->DeleteWorkerGroup( group );
 
-        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        IScheduler *scheduler = common::GetService< IScheduler >();
         for( const auto &w : workers )
         {
             scheduler->DeleteWorker( w->GetHost() );
@@ -282,7 +282,7 @@ bool UserCommand::Info( int64_t jobId, std::string &result )
     try
     {
         JobInfo jobInfo( jobId );
-        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        IScheduler *scheduler = common::GetService< IScheduler >();
         scheduler->Accept( &jobInfo );
         jobInfo.GetInfo( result );
     }
@@ -300,7 +300,7 @@ bool UserCommand::GetStatistics( std::string &result )
     try
     {
         Statistics stat;
-        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        IScheduler *scheduler = common::GetService< IScheduler >();
         scheduler->Accept( &stat );
         stat.GetInfo( result );
     }
@@ -317,7 +317,7 @@ bool UserCommand::GetAllJobInfo( std::string &result )
     try
     {
         AllJobInfo jobInfo;
-        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        IScheduler *scheduler = common::GetService< IScheduler >();
         scheduler->Accept( &jobInfo );
         jobInfo.GetInfo( result );
     }
@@ -334,7 +334,7 @@ bool UserCommand::GetWorkersStatistics( std::string &result )
     try
     {
         WorkerStatistics stat;
-        IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+        IScheduler *scheduler = common::GetService< IScheduler >();
         scheduler->Accept( &stat );
         stat.GetInfo( result );
     }

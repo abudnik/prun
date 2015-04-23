@@ -37,7 +37,7 @@ void JobSender::Run()
     std::string hostIP;
     JobPtr job;
 
-    IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+    IScheduler *scheduler = common::GetService< IScheduler >();
     scheduler->Subscribe( this );
 
     bool getTask = false;
@@ -78,7 +78,7 @@ void JobSender::NotifyObserver( int event )
 void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const JobPtr &job )
 {
     PLOG("JobSender::OnJobSendCompletion "<<success);
-    IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+    IScheduler *scheduler = common::GetService< IScheduler >();
     scheduler->OnTaskSendCompletion( success, workerJob, hostIP );
     if ( success )
     {
@@ -227,7 +227,7 @@ void SenderBoost::MakeRequest()
     WorkerJob::Tasks tasks;
     workerJob_.GetTasks( workerJob_.GetJobId(), tasks );
 
-    IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+    IJobManager *jobManager = common::GetService< IJobManager >();
     const std::string &masterId = jobManager->GetMasterId();
 
     common::Marshaller marshaller;

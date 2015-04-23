@@ -70,7 +70,7 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
                 int numCPU;
                 int64_t memSizeMb;
                 demarshaller( "num_cpu", numCPU )( "mem_size", memSizeMb );
-                IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+                IWorkerManager *workerManager = common::GetService< IWorkerManager >();
                 workerManager->OnNodePingResponse( nodeIP, numCPU, memSizeMb );
             }
             catch( std::exception &e )
@@ -93,7 +93,7 @@ void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg
                 int64_t jobId;
                 int taskId;
                 demarshaller( "job_id", jobId )( "task_id", taskId );
-                IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+                IWorkerManager *workerManager = common::GetService< IWorkerManager >();
                 workerManager->OnNodeTaskCompletion( nodeIP, jobId, taskId );
             }
             catch( std::exception &e )

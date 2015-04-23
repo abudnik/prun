@@ -36,7 +36,7 @@ void CommandSender::Run()
     CommandPtr command;
     std::string hostIP;
 
-    IWorkerManager *workerManager = common::ServiceLocator::Instance().Get< IWorkerManager >();
+    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
     workerManager->Subscribe( this, WorkerManager::eCommand );
 
     bool getCommand = false;
@@ -318,7 +318,7 @@ void RpcBoost::MakeRequest()
 {
     common::ProtocolJson protocol;
 
-    IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+    IJobManager *jobManager = common::GetService< IJobManager >();
     const std::string &masterId = jobManager->GetMasterId();
 
     protocol.SendCommand( request_, masterId, command_->GetCommand(), command_->GetAllParams() );

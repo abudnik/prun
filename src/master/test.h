@@ -20,7 +20,7 @@ void TestSingleJob( const std::string &filePath )
     while( getline( file, line ) )
         jobDescr += line;
 
-    IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+    IJobManager *jobManager = common::GetService< IJobManager >();
     JobPtr job( jobManager->CreateJob( jobDescr ) );
     if ( job )
     {
@@ -43,7 +43,7 @@ void TestMetaJob( const std::string &filePath )
         metaDescr += line + '\n';
 
     std::list< JobPtr > jobs;
-    IJobManager *jobManager = common::ServiceLocator::Instance().Get< IJobManager >();
+    IJobManager *jobManager = common::GetService< IJobManager >();
     jobManager->CreateMetaJob( metaDescr, jobs );
     jobManager->PushJobs( jobs );
 }

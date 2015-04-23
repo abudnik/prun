@@ -463,7 +463,7 @@ int main( int argc, char* argv[] )
         app.Initialize();
 
 #ifdef _DEBUG
-        master::IJobManager *jobManager = common::ServiceLocator::Instance().Get< master::IJobManager >();
+        master::IJobManager *jobManager = common::GetService< master::IJobManager >();
         const std::string &jobsDir = jobManager->GetJobsDir();
         master::RunTests( jobsDir );
 #endif

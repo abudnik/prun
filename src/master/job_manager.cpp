@@ -191,10 +191,10 @@ void JobManager::PushJob( JobPtr &job )
     job->SetJobId( jobId_++ );
     jobs_->PushJob( job, numJobGroups_++ );
 
-    IJobEventReceiver *jobEventReceiver = common::ServiceLocator::Instance().Get< IJobEventReceiver >();
+    IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
     jobEventReceiver->OnJobAdd( job );
 
-    IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+    IScheduler *scheduler = common::GetService< IScheduler >();
     scheduler->OnNewJob();
     timeoutManager_->PushJobQueue( job->GetJobId(), job->GetQueueTimeout() );
 }
@@ -211,10 +211,10 @@ void JobManager::PushJobs( std::list< JobPtr > &jobs )
     }
     jobs_->PushJobs( jobs, numJobGroups_++ );
 
-    IJobEventReceiver *jobEventReceiver = common::ServiceLocator::Instance().Get< IJobEventReceiver >();
+    IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
     jobEventReceiver->OnJobAdd( *jobs.begin() ); // first job must contain meta job description
 
-    IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+    IScheduler *scheduler = common::GetService< IScheduler >();
     scheduler->OnNewJob();
 
     for( auto &job : jobs )
@@ -246,7 +246,7 @@ void JobManager::PushJobFromHistory( int64_t jobId, const std::string &jobDescri
             }
             jobs_->PushJobs( jobs, numJobGroups_++ );
 
-            IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+            IScheduler *scheduler = common::GetService< IScheduler >();
             scheduler->OnNewJob();
 
             for( const auto &job : jobs )
@@ -268,7 +268,7 @@ void JobManager::PushJobFromHistory( int64_t jobId, const std::string &jobDescri
             job->SetJobId( jobId );
             jobs_->PushJob( job, numJobGroups_++ );
 
-            IScheduler *scheduler = common::ServiceLocator::Instance().Get< IScheduler >();
+            IScheduler *scheduler = common::GetService< IScheduler >();
             scheduler->OnNewJob();
             timeoutManager_->PushJobQueue( jobId, job->GetQueueTimeout() );
         }

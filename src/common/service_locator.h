@@ -132,6 +132,12 @@ private:
     ServiceContainer services_;
 };
 
+template< typename T >
+inline T *GetService()
+{
+    return ServiceLocator::Instance().Get< T >();
+}
+
 } // namespace common
 
 #endif
