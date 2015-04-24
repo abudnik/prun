@@ -96,7 +96,7 @@ public:
     {
         try
         {
-            for( const auto &v : ptree_.get_child( name ) )
+            for( const Properties::value_type &v: ptree_.get_child( name ) )
             {
                 var.insert( v.second.get_value< T >() );
             }
