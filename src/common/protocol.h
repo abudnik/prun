@@ -55,10 +55,9 @@ public:
     Marshaller &operator ()( const char *name, const std::set<T> &var )
     {
         Properties child, element;
-        typename std::set<T>::const_iterator it = var.begin();
-        for( ; it != var.end(); ++it )
+        for( const auto &v : var )
         {
-            element.put_value( *it );
+            element.put_value( v );
             child.push_back( std::make_pair( "", element ) );
         }
         ptree_.add_child( name, child );
