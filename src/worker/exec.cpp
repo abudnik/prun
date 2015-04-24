@@ -887,8 +887,7 @@ protected:
     ExecContextPtr execContext_;
 };
 
-class SessionBoost : public Session, public boost::enable_shared_from_this
-                     < SessionBoost >
+class SessionBoost : public Session, public boost::enable_shared_from_this< SessionBoost >
 {
     typedef std::array< char, 2048 > BufferType;
 
@@ -1005,7 +1004,7 @@ protected:
 
 class ConnectionAcceptor
 {
-    typedef std::shared_ptr< SessionBoost > session_ptr;
+    typedef boost::shared_ptr< SessionBoost > session_ptr;
     typedef std::shared_ptr< stream_protocol::acceptor > acceptor_ptr;
 
 public:
