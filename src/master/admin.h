@@ -163,7 +163,7 @@ private:
 
 class AdminConnection
 {
-    typedef std::shared_ptr< AdminSession > session_ptr;
+    typedef boost::shared_ptr< AdminSession > session_ptr;
 
 public:
     AdminConnection( boost::asio::io_service &io_service )
