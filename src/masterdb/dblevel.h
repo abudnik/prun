@@ -23,6 +23,7 @@ the License.
 #ifndef __DB_LEVEL_H
 #define __DB_LEVEL_H
 
+#include <memory>
 #include "leveldb/db.h"
 #include "dbaccess.h"
 
