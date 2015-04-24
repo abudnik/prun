@@ -75,13 +75,12 @@ void TimeoutManager::Run()
 
 void TimeoutManager::CheckTimeouts()
 {
-    namespace pt = boost::posix_time;
     std::unique_lock< std::mutex > lock( jobsMut_ );
     auto it = jobs_.begin();
-    const pt::ptime now = pt::second_clock::local_time();
+    const auto now = std::chrono::system_clock::now();
     for( ; it != jobs_.end(); )
     {
-        const pt::ptime &jobSendTime = it->first;
+        const ptime &jobSendTime = it->first;
         if ( now < jobSendTime ) // skip earlier sended jobs
             break;
 
@@ -96,9 +95,8 @@ void TimeoutManager::PushJobQueue( int64_t jobId, int queueTimeout )
     if ( queueTimeout < 0 )
         return;
 
-    namespace pt = boost::posix_time;
-    const pt::ptime now = pt::second_clock::local_time();
-    const pt::ptime deadlineQueue = now + pt::seconds( queueTimeout );
+    const auto now = std::chrono::system_clock::now();
+    const auto deadlineQueue = now + std::chrono::seconds( queueTimeout );
 
     auto handlerQueue = std::make_shared< JobQueueTimeoutHandler >();
     handlerQueue->jobId_ = jobId;
@@ -107,7 +105,7 @@ void TimeoutManager::PushJobQueue( int64_t jobId, int queueTimeout )
     );
 
     std::unique_lock< std::mutex > lock( jobsMut_ );
-    jobs_.insert( std::pair< pt::ptime, Callback >(
+    jobs_.insert( std::pair< ptime, Callback >(
                       deadlineQueue,
                       callbackQueue
                 )
@@ -119,9 +117,8 @@ void TimeoutManager::PushJob( int64_t jobId, int jobTimeout )
     if ( jobTimeout < 0 )
         return;
 
-    namespace pt = boost::posix_time;
-    const pt::ptime now = pt::second_clock::local_time();
-    const pt::ptime deadline = now + pt::seconds( jobTimeout );
+    const auto now = std::chrono::system_clock::now();
+    const auto deadline = now + std::chrono::seconds( jobTimeout );
 
     auto handler = std::make_shared< JobTimeoutHandler >();
     handler->jobId_ = jobId;
@@ -130,7 +127,7 @@ void TimeoutManager::PushJob( int64_t jobId, int jobTimeout )
     );
 
     std::unique_lock< std::mutex >lock( jobsMut_ );
-    jobs_.insert( std::pair< pt::ptime, Callback >(
+    jobs_.insert( std::pair< ptime, Callback >(
                       deadline,
                       callback
                 )
@@ -142,9 +139,8 @@ void TimeoutManager::PushTask( const WorkerTask &task, const std::string &hostIP
     if ( timeout < 0 )
         return;
 
-    namespace pt = boost::posix_time;
-    const pt::ptime now = pt::second_clock::local_time();
-    const pt::ptime deadline = now + pt::seconds( timeout );
+    const auto now = std::chrono::system_clock::now();
+    const auto deadline = now + std::chrono::seconds( timeout );
 
     auto handler = std::make_shared< TaskTimeoutHandler >();
     handler->workerTask_ = task;
@@ -154,7 +150,7 @@ void TimeoutManager::PushTask( const WorkerTask &task, const std::string &hostIP
     );
 
     std::unique_lock< std::mutex > lock( jobsMut_ );
-    jobs_.insert( std::pair< pt::ptime, Callback >(
+    jobs_.insert( std::pair< ptime, Callback >(
                       deadline,
                       callback
                 )
@@ -166,9 +162,8 @@ void TimeoutManager::PushCommand( CommandPtr &command, const std::string &hostIP
     if ( delay < 0 )
         return;
 
-    namespace pt = boost::posix_time;
-    const pt::ptime now = pt::second_clock::local_time();
-    const pt::ptime deadline = now + pt::seconds( delay );
+    const auto now = std::chrono::system_clock::now();
+    const auto deadline = now + std::chrono::seconds( delay );
 
     auto handler = std::make_shared< StopTaskTimeoutHandler >();
     handler->command_ = command;
@@ -178,7 +173,7 @@ void TimeoutManager::PushCommand( CommandPtr &command, const std::string &hostIP
     );
 
     std::unique_lock< std::mutex > lock( jobsMut_ );
-    jobs_.insert( std::pair< pt::ptime, Callback >(
+    jobs_.insert( std::pair< ptime, Callback >(
                       deadline,
                       callback
                 )
