@@ -8,14 +8,14 @@ def RunManyJobs():
     task = ''
     for i in range(0, 500):
         task += 'run ' + jobPath + ';'
-    cmd = 'python admin.py -c "' + task + '"'
+    cmd = './prun -c "' + task + '"'
     os.system( cmd )
 
     jobPath = 'autotest/simple_many_cpu.job'
     task = ''
     for i in range(0, 500):
         task += 'run ' + jobPath + ';'
-    cmd = 'python admin.py -c "' + task + '"'
+    cmd = './prun -c "' + task + '"'
     os.system( cmd )
     
     # send many large source code files
@@ -23,7 +23,7 @@ def RunManyJobs():
     task = ''
     for i in range(0, 1):
         task += 'run ' + jobPath + ';'
-    cmd = 'python admin.py -c "' + task + '"'
+    cmd = './prun -c "' + task + '"'
     os.system( cmd )
 
     # run many medium jobs
@@ -31,7 +31,7 @@ def RunManyJobs():
     task = ''
     for i in range(0, 50):
         task += 'run ' + jobPath + ';'
-    cmd = 'python admin.py -c "' + task + '"'
+    cmd = './prun -c "' + task + '"'
     os.system( cmd )
 
     # run many heavy jobs
@@ -39,7 +39,7 @@ def RunManyJobs():
     task = ''
     for i in range(0, 10):
         task += 'run ' + jobPath + ';'
-    cmd = 'python admin.py -c "' + task + '"'
+    cmd = './prun -c "' + task + '"'
     os.system( cmd )
 
     # run many meta jobs
@@ -47,7 +47,7 @@ def RunManyJobs():
     task = ''
     for i in range(0, 50):
         task += 'run ' + jobPath + ';'
-    cmd = 'python admin.py -c "' + task + '"'
+    cmd = './prun -c "' + task + '"'
     os.system( cmd )
 
 def RunHeavyJobs():
@@ -56,48 +56,48 @@ def RunHeavyJobs():
     task = ''
     for i in range(0, 10):
         task += 'run ' + jobPath + ';'
-    cmd = 'python admin.py -c "' + task + '"'
+    cmd = './prun -c "' + task + '"'
     os.system( cmd )
 
 def AddExistingUser():
     task = ''
     for i in range(0, 100):
         task += 'add localhost groupx;'
-    cmd = 'python admin.py -c "' + task + '"'
+    cmd = './prun -c "' + task + '"'
     os.system( cmd )
 
 def StopAll():
-    cmd = 'python admin.py -c "stopall"'
+    cmd = './prun -c "stopall"'
     os.system( cmd )
 
 def DeleteGroup():
     task = 'deleteg groupx; deleteg hosts_group1'
-    cmd = 'python admin.py -c "' + task + '"'
+    cmd = './prun -c "' + task + '"'
     os.system( cmd )
 
 def AddGroup():
     task = 'addg hosts_group1'
-    cmd = 'python admin.py -c "' + task + '"'
+    cmd = './prun -c "' + task + '"'
     os.system( cmd )
 
 def JobInfo(jobId):
     task = 'info ' + str(jobId)
-    cmd = 'python admin.py -c "' + task + '"'
+    cmd = './prun -c "' + task + '"'
     os.system( cmd )
 
 def JobInfo(jobId):
     task = 'info ' + str(jobId)
-    cmd = 'python admin.py -c "' + task + '"'
+    cmd = './prun -c "' + task + '"'
     os.system( cmd )
 
 def StopJob(jobId):
     task = 'stop ' + str(jobId)
-    cmd = 'python admin.py -c "' + task + '"'
+    cmd = './prun -c "' + task + '"'
     os.system( cmd )
 
 def Stat():
     task = 'stat; jobs; ls;'
-    cmd = 'python admin.py -c "' + task + '"'
+    cmd = './prun -c "' + task + '"'
     os.system( cmd )
 
 
