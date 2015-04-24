@@ -27,6 +27,7 @@ the License.
 #include <boost/program_options.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
+#include <boost/make_shared.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
@@ -299,7 +300,7 @@ class ExecuteTask : public Action
             pendingTable.Add( execInfo );
 
             io_service->post( boost::bind( &ExecuteTask::DoSend,
-                                           std::make_shared< ExecuteTask >(),
+                                           boost::make_shared< ExecuteTask >(),
                                            std::shared_ptr< JobExec >( job ), taskId,
                                            ExecContextPtr( execContext ) ) );
         }
