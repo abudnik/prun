@@ -27,6 +27,7 @@ the License.
 #include <boost/program_options.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -648,7 +649,7 @@ protected:
     ExecContextPtr execContext_;
 };
 
-class BoostSession : public Session, public std::enable_shared_from_this< BoostSession >
+class BoostSession : public Session, public boost::enable_shared_from_this< BoostSession >
 {
 public:
     typedef std::array< char, 32 * 1024 > BufferType;

@@ -25,6 +25,7 @@ the License.
 
 #include <boost/asio.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include "common/json_rpc.h"
 #include "common/config.h"
 #include "common/log.h"
@@ -125,7 +126,7 @@ public:
 };
 
 
-class AdminSession : public std::enable_shared_from_this< AdminSession >
+class AdminSession : public boost::enable_shared_from_this< AdminSession >
 {
     typedef std::array< char, 32 * 1024 > BufferType;
 

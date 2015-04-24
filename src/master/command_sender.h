@@ -24,6 +24,7 @@ the License.
 #define __COMMAND_SENDER_H
 
 #include <boost/asio.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <mutex>
 #include <condition_variable>
 #include "common/observer.h"
@@ -66,12 +67,12 @@ private:
     bool newCommandAvailable_;
 };
 
-class RpcBoost : public std::enable_shared_from_this< RpcBoost >
+class RpcBoost : public boost::enable_shared_from_this< RpcBoost >
 {
     typedef std::array< char, 32 * 1024 > BufferType;
 
 public:
-    typedef std::shared_ptr< RpcBoost > sender_ptr;
+    typedef boost::shared_ptr< RpcBoost > sender_ptr;
 
 public:
     RpcBoost( boost::asio::io_service &io_service,

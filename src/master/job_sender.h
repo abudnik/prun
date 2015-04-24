@@ -24,6 +24,7 @@ the License.
 #define __JOB_SENDER_H
 
 #include <boost/asio.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <mutex>
 #include <condition_variable>
 #include "common/observer.h"
@@ -66,10 +67,10 @@ private:
     bool newJobAvailable_;
 };
 
-class SenderBoost : public std::enable_shared_from_this< SenderBoost >
+class SenderBoost : public boost::enable_shared_from_this< SenderBoost >
 {
 public:
-    typedef std::shared_ptr< SenderBoost > sender_ptr;
+    typedef boost::shared_ptr< SenderBoost > sender_ptr;
 
 public:
     SenderBoost( boost::asio::io_service &io_service,
