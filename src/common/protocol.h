@@ -28,7 +28,6 @@ the License.
 #include <list>
 #include <stdint.h>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/foreach.hpp>
 #include "log.h"
 
 namespace common {
@@ -98,8 +97,7 @@ public:
     {
         try
         {
-            BOOST_FOREACH( const Properties::value_type &v,
-                           ptree_.get_child( name ) )
+            for( const auto &v : ptree_.get_child( name ) )
             {
                 var.insert( v.second.get_value< T >() );
             }

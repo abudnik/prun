@@ -24,7 +24,6 @@ the License.
 
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/foreach.hpp>
 #include <boost/graph/depth_first_search.hpp>
 #include <boost/graph/visitors.hpp>
 #include <iterator>
@@ -104,11 +103,9 @@ bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
         StringSet jobFiles;
 
         // read job description file pathes
-        BOOST_FOREACH( const boost::property_tree::ptree::value_type &adjList,
-                       ptree.get_child( "graph" ) )
+        for( const auto &adjList : ptree.get_child( "graph" ) )
         {
-            BOOST_FOREACH( const boost::property_tree::ptree::value_type &item,
-                           adjList.second )
+            for( const auto &item : adjList.second )
             {
                 std::string job = item.second.get_value< std::string >();
                 jobFiles.insert( job );
@@ -419,8 +416,7 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
 
 void JobManager::ReadHosts( Job *job, const boost::property_tree::ptree &ptree ) const
 {
-    BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
-                   ptree.get_child( "hosts" ) )
+    for( const auto &v : ptree.get_child( "hosts" ) )
     {
         job->AddHost( v.second.get_value< std::string >() );
     }
@@ -428,8 +424,7 @@ void JobManager::ReadHosts( Job *job, const boost::property_tree::ptree &ptree )
 
 void JobManager::ReadGroups( Job *job, const boost::property_tree::ptree &ptree ) const
 {
-    BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
-                   ptree.get_child( "groups" ) )
+    for( const auto &v : ptree.get_child( "groups" ) )
     {
         job->AddGroup( v.second.get_value< std::string >() );
     }
@@ -445,14 +440,12 @@ bool JobManager::PrepareJobGraph( const boost::property_tree::ptree &ptree,
     JobGraph &graph = jobGroup->GetGraph();
     unsigned pairNum = 1;
 
-    BOOST_FOREACH( const boost::property_tree::ptree::value_type &adjList,
-                   ptree.get_child( "graph" ) )
+    for( const auto &adjList : ptree.get_child( "graph" ) )
     {
         int v1, v2;
         int numIter = 0;
 
-        BOOST_FOREACH( const boost::property_tree::ptree::value_type &item,
-                       adjList.second )
+        for( const auto &item : adjList.second )
         {
             std::string job = item.second.get_value< std::string >();
 

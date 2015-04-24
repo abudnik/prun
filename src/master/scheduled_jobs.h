@@ -64,7 +64,7 @@ public:
     void Add( JobPtr &job, int numExec )
     {
         jobExecutions_[ job->GetJobId() ] = numExec;
-        jobs_.insert( JobState( job ) );
+        jobs_.emplace( job );
     }
 
     void DecrementJobExecution( int64_t jobId, int numTasks )

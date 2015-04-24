@@ -24,7 +24,6 @@ the License.
 
 #include <sstream>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/foreach.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/bind.hpp>
 #include "admin.h"
@@ -131,8 +130,7 @@ int AdminCommand_AddHosts::Execute( const boost::property_tree::ptree &params,
     {
         int i = 0;
         std::string groupName, host;
-        BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
-                       params.get_child( "hosts" ) )
+        for( const auto &v : params.get_child( "hosts" ) )
         {
             if ( i++ % 2 > 0 )
             {
@@ -157,8 +155,7 @@ int AdminCommand_DeleteHosts::Execute( const boost::property_tree::ptree &params
     try
     {;
         std::string host;
-        BOOST_FOREACH( const boost::property_tree::ptree::value_type &v,
-                       params.get_child( "hosts" ) )
+        for( const auto &v : params.get_child( "hosts" ) )
         {
             host = v.second.get_value< std::string >();
             UserCommand().DeleteHost( host );
