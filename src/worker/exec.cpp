@@ -24,6 +24,7 @@ the License.
 
 #include <iostream>
 #include <thread>
+#include <array>
 #include <mutex>
 #include <condition_variable>
 #include <boost/program_options.hpp>

@@ -23,6 +23,7 @@ the License.
 #ifndef __ADMIN_H
 #define __ADMIN_H
 
+#include <array>
 #include <boost/asio.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/enable_shared_from_this.hpp>

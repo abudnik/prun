@@ -23,6 +23,7 @@ the License.
 #ifndef __MASTER_PING_H
 #define __MASTER_PING_H
 
+#include <array>
 #include <boost/asio.hpp>
 #include "common/protocol.h"
 #include "common/config.h"

@@ -24,6 +24,7 @@ the License.
 
 #include <iostream>
 #include <thread>
+#include <array>
 #include <boost/program_options.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>

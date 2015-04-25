@@ -23,6 +23,7 @@ the License.
 #ifndef __NODE_PING_H
 #define __NODE_PING_H
 
+#include <array>
 #include <boost/asio.hpp>
 #include "common/config.h"
 

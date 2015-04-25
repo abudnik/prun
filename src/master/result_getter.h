@@ -25,6 +25,7 @@ the License.
 
 #include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
+#include <array>
 #include <mutex>
 #include <condition_variable>
 #include "common/observer.h"

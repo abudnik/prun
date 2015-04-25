@@ -23,6 +23,7 @@ the License.
 #ifndef __DB_SESSION_H
 #define __DB_SESSION_H
 
+#include <array>
 #include <boost/asio.hpp>
 #include "common/log.h"
 #include "common/request.h"

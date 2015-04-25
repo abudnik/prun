@@ -24,6 +24,7 @@ the License.
 #define __DB_CONNECTION_H
 
 #include <boost/asio.hpp>
+#include <array>
 #include <mutex>
 #include "common/request.h"
 
