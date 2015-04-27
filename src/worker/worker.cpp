@@ -96,15 +96,15 @@ private:
 typedef std::shared_ptr< ExecContext > ExecContextPtr;
 
 
-class Action
+class IAction
 {
 public:
+    virtual ~IAction() {}
     virtual void Execute( const std::shared_ptr< Job > &job,
                           ExecContextPtr &execContext ) = 0;
-    virtual ~Action() {}
 };
 
-class NoAction : public Action
+class NoAction : public IAction
 {
     virtual void Execute( const std::shared_ptr< Job > &job,
                           ExecContextPtr &execContex ) {}
@@ -251,7 +251,7 @@ private:
 };
 
 
-class ExecuteTask : public Action
+class ExecuteTask : public IAction
 {
     virtual void Execute( const std::shared_ptr< Job > &j,
                           ExecContextPtr &execContext )
@@ -471,7 +471,7 @@ public:
     }
 };
 
-class StopTask : public Action
+class StopTask : public IAction
 {
     virtual void Execute( const std::shared_ptr< Job > &j,
                           ExecContextPtr &execContext )
@@ -516,7 +516,7 @@ class StopTask : public Action
     }
 };
 
-class StopPreviousJobs : public Action
+class StopPreviousJobs : public IAction
 {
     virtual void Execute( const std::shared_ptr< Job > &j,
                           ExecContextPtr &execContext )
@@ -546,7 +546,7 @@ class StopPreviousJobs : public Action
     }
 };
 
-class StopAllJobs : public Action
+class StopAllJobs : public IAction
 {
     virtual void Execute( const std::shared_ptr< Job > &j,
                           ExecContextPtr &execContext )
@@ -581,7 +581,7 @@ class StopAllJobs : public Action
 class ActionCreator
 {
 public:
-    virtual Action *Create( const std::string &taskType )
+    virtual IAction *Create( const std::string &taskType )
     {
         if ( taskType == "exec" )
             return new ExecuteTask();
@@ -622,7 +622,7 @@ protected:
             job_->SetMasterIP( masterIP_ );
 
             ActionCreator actionCreator;
-            std::unique_ptr< Action > action(
+            std::unique_ptr< IAction > action(
                 actionCreator.Create( job_->GetTaskType() )
             );
             if ( action )

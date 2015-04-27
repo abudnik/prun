@@ -69,7 +69,7 @@ bool JDLJason::ParseJob( const std::string &job_description, boost::property_tre
 }
 
 JobManager::JobManager()
-: jobs_( new JobQueueImpl ),
+: jobs_( new JobQueue ),
  timeoutManager_( nullptr ),
  numJobGroups_( 0 ),
  jobId_( 0 )

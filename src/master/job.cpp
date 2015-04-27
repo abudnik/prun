@@ -73,7 +73,7 @@ bool Job::IsGroupPermitted( const std::string &group ) const
 }
 
 
-void JobQueueImpl::PushJob( JobPtr &job, int64_t groupId )
+void JobQueue::PushJob( JobPtr &job, int64_t groupId )
 {
     std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
     job->SetGroupId( groupId );
@@ -82,7 +82,7 @@ void JobQueueImpl::PushJob( JobPtr &job, int64_t groupId )
     std::push_heap( jobs_.begin(), jobs_.end(), JobComparatorPriority() );
 }
 
-void JobQueueImpl::PushJobs( std::list< JobPtr > &jobs, int64_t groupId )
+void JobQueue::PushJobs( std::list< JobPtr > &jobs, int64_t groupId )
 {
     std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
     for( const auto &job : jobs )
@@ -101,7 +101,7 @@ void JobQueueImpl::PushJobs( std::list< JobPtr > &jobs, int64_t groupId )
     }
 }
 
-bool JobQueueImpl::GetJobById( int64_t jobId, JobPtr &job )
+bool JobQueue::GetJobById( int64_t jobId, JobPtr &job )
 {
     std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
     auto it = idToJob_.find( jobId );
@@ -113,7 +113,7 @@ bool JobQueueImpl::GetJobById( int64_t jobId, JobPtr &job )
     return false;
 }
 
-bool JobQueueImpl::DeleteJob( int64_t jobId )
+bool JobQueue::DeleteJob( int64_t jobId )
 {
     std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
 
@@ -140,7 +140,7 @@ bool JobQueueImpl::DeleteJob( int64_t jobId )
     return true;
 }
 
-void JobQueueImpl::OnJobDeletion( JobPtr &job ) const
+void JobQueue::OnJobDeletion( JobPtr &job ) const
 {
     std::ostringstream ss;
     ss << "================" << std::endl <<
@@ -158,7 +158,7 @@ void JobQueueImpl::OnJobDeletion( JobPtr &job ) const
     job->ReleaseJobGroup();
 }
 
-bool JobQueueImpl::DeleteJobGroup( int64_t groupId )
+bool JobQueue::DeleteJobGroup( int64_t groupId )
 {
     JobList jobs;
     bool deleted = false;
@@ -185,7 +185,7 @@ bool JobQueueImpl::DeleteJobGroup( int64_t groupId )
     return deleted;
 }
 
-void JobQueueImpl::Clear()
+void JobQueue::Clear()
 {
     JobList jobs;
     {
@@ -201,7 +201,7 @@ void JobQueueImpl::Clear()
     }
 }
 
-bool JobQueueImpl::PopJob( JobPtr &job )
+bool JobQueue::PopJob( JobPtr &job )
 {
     std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
     if ( !jobs_.empty() )
@@ -215,7 +215,7 @@ bool JobQueueImpl::PopJob( JobPtr &job )
     return false;
 }
 
-void JobQueueImpl::OnJobDependenciesResolved( const JobPtr &job )
+void JobQueue::OnJobDependenciesResolved( const JobPtr &job )
 {
     std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
     auto it = delayedJobs_.find( job );
@@ -227,7 +227,7 @@ void JobQueueImpl::OnJobDependenciesResolved( const JobPtr &job )
     }
     else
     {
-        PLOG_WRN( "JobQueueImpl::OnJobDependenciesResolved: unknown delayed job, jobId=" << job->GetJobId() );
+        PLOG_WRN( "JobQueue::OnJobDependenciesResolved: unknown delayed job, jobId=" << job->GetJobId() );
     }
 }
 

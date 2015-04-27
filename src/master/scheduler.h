@@ -40,7 +40,7 @@ the License.
 
 namespace master {
 
-class SchedulerVisitor;
+class ISchedulerVisitor;
 
 struct IScheduler : virtual public common::IObservable
 {
@@ -65,7 +65,7 @@ struct IScheduler : virtual public common::IObservable
     virtual void StopAllJobs() = 0;
     virtual void StopPreviousJobs() = 0;
 
-    virtual void Accept( SchedulerVisitor *visitor ) = 0;
+    virtual void Accept( ISchedulerVisitor *visitor ) = 0;
 };
 
 using namespace boost::bimaps;
@@ -106,7 +106,7 @@ public:
     virtual void StopAllJobs();
     virtual void StopPreviousJobs();
 
-    virtual void Accept( SchedulerVisitor *visitor );
+    virtual void Accept( ISchedulerVisitor *visitor );
 
     const IPToNodeState &GetNodeState() const { return nodeState_; }
     const FailedWorkers &GetFailedWorkers() const { return failedWorkers_; }

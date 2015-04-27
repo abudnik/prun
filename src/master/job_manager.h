@@ -105,7 +105,7 @@ private:
                           std::shared_ptr< JobGroup > &jobGroup ) const;
 
 private:
-    std::shared_ptr< JobQueue > jobs_;
+    std::shared_ptr< IJobQueue > jobs_;
     ITimeoutManager *timeoutManager_;
     std::string exeDir_, jobsDir_;
     std::string masterId_;

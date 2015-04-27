@@ -50,7 +50,7 @@ protected:
         {
             PLOG( dbrequest_.GetType() );
             DbActionCreator actionCreator;
-            std::unique_ptr< DbAction > action(
+            std::unique_ptr< IDbAction > action(
                 actionCreator.Create( dbrequest_.GetType() )
             );
             if ( action )

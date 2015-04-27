@@ -27,10 +27,10 @@ the License.
 
 namespace master {
 
-class SchedulerVisitor
+class ISchedulerVisitor
 {
 public:
-    virtual ~SchedulerVisitor() {}
+    virtual ~ISchedulerVisitor() {}
     virtual void Visit( Scheduler &scheduler ) = 0;
 };
 
@@ -43,7 +43,7 @@ protected:
     std::string info_;
 };
 
-class JobInfo : public SchedulerVisitor, public InfoGetter
+class JobInfo : public ISchedulerVisitor, public InfoGetter
 {
 public:
     JobInfo( int64_t jobId )
@@ -58,13 +58,13 @@ private:
     int64_t jobId_;
 };
 
-class AllJobInfo : public SchedulerVisitor, public InfoGetter
+class AllJobInfo : public ISchedulerVisitor, public InfoGetter
 {
 public:
     virtual void Visit( Scheduler &scheduler );
 };
 
-class Statistics : public SchedulerVisitor, public InfoGetter
+class Statistics : public ISchedulerVisitor, public InfoGetter
 {
 public:
     virtual void Visit( Scheduler &scheduler );
@@ -75,7 +75,7 @@ private:
     int GetNumBusyCPU( Scheduler &scheduler ) const;
 };
 
-class WorkerStatistics : public SchedulerVisitor, public InfoGetter
+class WorkerStatistics : public ISchedulerVisitor, public InfoGetter
 {
 public:
     virtual void Visit( Scheduler &scheduler );

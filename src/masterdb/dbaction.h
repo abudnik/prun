@@ -28,26 +28,26 @@ the License.
 
 namespace masterdb {
 
-class DbAction
+class IDbAction
 {
 public:
-    virtual ~DbAction() {}
+    virtual ~IDbAction() {}
     virtual bool Execute( const DbRequest &request, std::string &response ) = 0;
 };
 
-class DbPut : public DbAction
+class DbPut : public IDbAction
 {
 public:
     virtual bool Execute( const DbRequest &request, std::string &response );
 };
 
-class DbDelete : public DbAction
+class DbDelete : public IDbAction
 {
 public:
     virtual bool Execute( const DbRequest &request, std::string &response );
 };
 
-class DbGet : public DbAction
+class DbGet : public IDbAction
 {
 public:
     virtual bool Execute( const DbRequest &request, std::string &response );
@@ -56,7 +56,7 @@ public:
 class DbActionCreator
 {
 public:
-    virtual DbAction *Create( const std::string &taskType )
+    virtual IDbAction *Create( const std::string &taskType )
     {
         if ( taskType == "PUT" )
             return new DbPut();

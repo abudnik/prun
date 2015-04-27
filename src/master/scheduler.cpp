@@ -764,7 +764,7 @@ int Scheduler::GetNumPlannedExec( const JobPtr &job ) const
     return numExec;
 }
 
-void Scheduler::Accept( SchedulerVisitor *visitor )
+void Scheduler::Accept( ISchedulerVisitor *visitor )
 {
     std::unique_lock< std::mutex > lock_w( workersMut_ );
     std::unique_lock< std::mutex > lock_j( jobsMut_ );

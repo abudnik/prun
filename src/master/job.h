@@ -191,10 +191,10 @@ struct JobComparatorPriority
 };
 
 
-class JobQueue
+class IJobQueue
 {
 public:
-    virtual ~JobQueue() {}
+    virtual ~IJobQueue() {}
 
     virtual void PushJob( JobPtr &job, int64_t groupId ) = 0;
     virtual void PushJobs( std::list< JobPtr > &jobs, int64_t groupId ) = 0;
@@ -210,7 +210,7 @@ public:
     virtual void Clear() = 0;
 };
 
-class JobQueueImpl : public JobQueue
+class JobQueue : public IJobQueue
 {
     typedef std::map< int64_t, JobPtr > IdToJob;
     typedef std::vector< JobPtr > JobList;
