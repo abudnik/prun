@@ -112,7 +112,6 @@ bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
             }
         }
 
-        int index = 0;
         std::map< std::string, int > jobFileToIndex;
 
         IJobGroupEventReceiverPtr evReceiverPtr = static_cast< IJobGroupEventReceiver * >( this );
@@ -144,13 +143,13 @@ bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
             Job *job = CreateJob( jobDescr );
             if ( job )
             {
-                if ( !index ) // first job must contain meta job description
+                if ( jobs.empty() ) // first job must contain meta job description
                 {
                     job->SetDescription( meta_description );
                 }
 
                 JobPtr jobPtr( job );
-                jobFileToIndex[ *it ] = index++;
+                jobFileToIndex[ *it ] = jobs.size();
                 indexToJob.push_back( jobPtr );
                 jobs.push_back( jobPtr );
             }
