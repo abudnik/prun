@@ -135,7 +135,7 @@ public:
                           std::string &header, std::string &body );
 
 protected:
-    void AddHeader( std::string &msg );
+    std::string CreateHeader( const std::string &msg ) const;
 
 private:
     virtual const char *GetProtocolType() const = 0;

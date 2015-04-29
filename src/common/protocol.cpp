@@ -30,17 +30,15 @@ the License.
 namespace common {
 
 
-void Protocol::AddHeader( std::string &msg )
+std::string Protocol::CreateHeader( const std::string &msg ) const
 {
     std::string header( GetProtocolType() );
     header += '\n';
     header += GetProtocolVersion();
     header += '\n';
 
-    size_t size = header.size() + msg.size();
-    std::ostringstream ss;
-    ss << size << '\n' << header;
-    msg.insert( 0, ss.str() );
+    const size_t size = header.size() + msg.size();
+    return std::to_string( size ) + '\n' + header;
 }
 
 bool Protocol::ParseMsg( const std::string &msg, std::string &protocol, int &version,
@@ -75,7 +73,7 @@ bool ProtocolJson::Serialize( std::string &msg, const char *method, const Marsha
     }
     msg = std::string( "{\"type\":\"" ) + std::string( method ) + std::string( "\"}\n" );
     msg += ss.str();
-    AddHeader( msg );
+    msg = CreateHeader( msg ) + msg;
     return true;
 }
 
@@ -117,7 +115,7 @@ bool ProtocolJson::SendCommand( std::string &msg, const std::string &masterId, c
     }
     msg = std::string( "{\"type\":\"" ) + command + std::string( "\"}\n" );
     msg += ss.str();
-    AddHeader( msg );
+    msg = CreateHeader( msg ) + msg;
     return true;
 }
 
