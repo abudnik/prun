@@ -260,7 +260,7 @@ def ParseOpt( argv ):
             MASTER_HOST = arg
             break
     except getopt.GetoptError:
-        print( 'usage: admin.py [-c|--command <command>] [<master_host>]' )
+        print( 'usage: prun [-c|--command <command>] [<master_host>]' )
         sys.exit( 1 )
 
 def ExecCommand( master, cmd ):
