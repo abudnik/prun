@@ -30,7 +30,7 @@ using namespace common;
 namespace qi = boost::spirit::qi;
 
 template< typename Iterator, typename Field >
-struct CronFieldGrammar : qi::grammar< Iterator >
+class CronFieldGrammar : public qi::grammar< Iterator >
 {
 public:
     CronFieldGrammar( Field &field )
@@ -50,6 +50,7 @@ public:
         single_value = value_ [boost::bind(&Field::AddValue, &field_, _1)];
     }
 
+private:
     // NB: if amount of OnEvent() methods below exceeds reasonable limit, then move them to special Handler object
     void OnBeginRange( size_t val )
     {
@@ -67,6 +68,7 @@ public:
         field_.AddPeriod( begin_range_, end_range_, val );
     }
 
+private:
     Field &field_;
     qi::rule<Iterator> root, star, range, single_value;
     qi::uint_parser<unsigned char, 10, 1, 2> value_;
