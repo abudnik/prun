@@ -188,7 +188,7 @@ jobs and job descriptions, shared directory containing the input file
 (data/input.txt). Lets submit job using command-line tool::
 
 > cd ~/prun                        # cd to the directory containing prun
-> python admin.py master_hostname  # run admin tool, connect to Master host
+> ./prun master_hostname      # run admin tool, connect to Master host
 > run external_sort.meta           # submit a meta job
 
 License
