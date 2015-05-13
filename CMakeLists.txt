@@ -24,7 +24,7 @@ set(COMMON_DIR ${SRC_DIR}/common)
 CHECK_INCLUDE_FILES ("sys/prctl.h" HAVE_SYS_PRCTL_H)
 CHECK_INCLUDE_FILES ("execinfo.h" HAVE_EXEC_INFO_H)
 
-set(SRC_COMMON_CPP log.cpp daemon.cpp config.cpp protocol.cpp json_rpc.cpp uuid.cpp)
+set(SRC_COMMON_CPP log.cpp daemon.cpp config.cpp protocol.cpp json_rpc.cpp uuid.cpp cron.cpp)
 foreach(cpp ${SRC_COMMON_CPP})
   list(APPEND SRC_COMMON ${COMMON_DIR}/${cpp} )
 endforeach(cpp)
