@@ -210,19 +210,19 @@ CronJob::ptime CronJob::Next( CronJob::ptime now ) const
     }
 
     std::function< bool( int, int, int ) > DayPredicate;
-    if ( day_month_.All() && day_week_.All() )
+    if ( day_month_.HasAll() && day_week_.HasAll() )
     {
         DayPredicate = [this] ( int year, int month, int day ) -> bool
             { return !day_month_.Has( day ) && !day_week_.Has( GetDayOfWeek( year, month, day ) ); };
     }
     else
-    if ( day_month_.All() )
+    if ( day_month_.HasAll() )
     {
         DayPredicate = [this] ( int year, int month, int day ) -> bool
             { return !day_week_.Has( GetDayOfWeek( year, month, day ) ); };
     }
     else
-    if ( day_week_.All() )
+    if ( day_week_.HasAll() )
     {
         DayPredicate = [this] ( int year, int month, int day ) -> bool
             { return !day_month_.Has( day ); };

@@ -119,7 +119,7 @@ public:
         return time_val_.test( pos );
     }
 
-    bool All() const
+    bool HasAll() const
     {
         return time_val_.all();
     }
