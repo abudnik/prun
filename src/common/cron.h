@@ -166,10 +166,14 @@ class CronJob
 public:
     typedef std::string::const_iterator Iterator;
 
+    CronJob();
+
     bool Parse( const std::string &cmd ); // NB: may throw an exception
 
     typedef std::chrono::system_clock::time_point ptime;
     ptime Next( ptime now ) const;
+
+    operator bool () const;
 
 private:
     CronMinutes minute_;
@@ -177,6 +181,7 @@ private:
     CronDays day_month_;
     CronMonths month_;
     CronDaysOfWeek day_week_;
+    bool valid_;
 };
 
 } // namespace common

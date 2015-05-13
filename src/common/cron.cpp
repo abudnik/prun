@@ -125,7 +125,11 @@ static int GetDayOfWeek( int year, int month, int day )
     return localtime( &t )->tm_wday;
 }
 
-bool CronJob::Parse( const std::string &cmd ) // NB: may throw an exception
+CronJob::CronJob()
+: valid_( false )
+{}
+
+bool CronJob::Parse( const std::string &cmd )
 {
     //PLOG( "CronJob::Parse: " << cmd );
 
@@ -143,12 +147,14 @@ bool CronJob::Parse( const std::string &cmd ) // NB: may throw an exception
     if ( !ParseField( day_week_, it_beg, cmd, 5 ) )
         return false;
 
-    if ( it_beg != it_end )
+    valid_ = ( it_beg == it_end );
+
+    if ( !valid_ )
     {
         PLOG_ERR( "CronJob::Parse: failed parse crontab at symbol " << std::distance( cmd.cbegin(), it_beg ) <<
                   ": cmd='" << cmd << '\'' );
     }
-    return it_beg == it_end;
+    return valid_;
 }
 
 CronJob::ptime CronJob::Next( CronJob::ptime now ) const
@@ -249,4 +255,9 @@ CronJob::ptime CronJob::Next( CronJob::ptime now ) const
 
     t = CreateDateTime( year, month, day, hour, minute );
     return std::chrono::system_clock::from_time_t( t );
+}
+
+CronJob::operator bool () const
+{
+    return valid_;
 }
