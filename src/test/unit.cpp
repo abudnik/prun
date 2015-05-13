@@ -9,6 +9,7 @@
 #include "master/job_manager.h"
 #include "master/scheduler.h"
 #include "common/service_locator.h"
+#include "common/cron.h"
 
 using namespace std;
 using namespace master;
@@ -17,3 +18,4 @@ using namespace master;
 #include "unit_job_manager.h"
 #include "unit_scheduler.h"
 #include "unit_scheduled_jobs.h"
+#include "unit_cron.h"
