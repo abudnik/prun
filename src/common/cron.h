@@ -27,6 +27,7 @@ the License.
 #include <bitset>
 #include <chrono>
 #include <stdexcept>
+#include <cstring>
 #include "log.h"
 
 
@@ -146,7 +147,19 @@ typedef CronField<1, 31> CronDays;
 typedef CronField<1, 12> CronMonths;
 typedef CronField<0, 6> CronDaysOfWeek;
 
-time_t CreateDateTime( int year, int month, int day, int hour, int minute );
+inline time_t CreateDateTime( int year, int month, int day, int hour, int minute )
+{
+    tm current;
+    memset( &current, 0, sizeof( current ) );
+
+    current.tm_year = year - 1900;
+    current.tm_mon = month - 1;
+    current.tm_mday = day;
+    current.tm_hour = hour;
+    current.tm_min = minute;
+
+    return mktime( &current );
+}
 
 class CronJob
 {

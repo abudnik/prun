@@ -125,20 +125,6 @@ static int GetDayOfWeek( int year, int month, int day )
     return localtime( &t )->tm_wday;
 }
 
-time_t CreateDateTime( int year, int month, int day, int hour, int minute )
-{
-    tm current;
-    memset( &current, 0, sizeof( current ) );
-
-    current.tm_year = year - 1900;
-    current.tm_mon = month - 1;
-    current.tm_mday = day;
-    current.tm_hour = hour;
-    current.tm_min = minute;
-
-    return mktime( &current );
-}
-
 bool CronJob::Parse( const std::string &cmd ) // NB: may throw an exception
 {
     //PLOG( "CronJob::Parse: " << cmd );
