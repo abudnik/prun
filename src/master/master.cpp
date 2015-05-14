@@ -45,6 +45,7 @@ the License.
 #include "result_getter.h"
 #include "command_sender.h"
 #include "timeout_manager.h"
+#include "cron_manager.h"
 #include "admin.h"
 #include "defines.h"
 #include "test.h"
@@ -215,6 +216,9 @@ public:
 
         timeoutManager_.reset( new master::TimeoutManager( io_service_timeout_ ) );
 
+        cronManager_.reset( new master::CronManager( io_service_cron_ ) );
+        serviceLocator.Register( static_cast< master::ICronManager* >( cronManager_.get() ) );
+
         jobManager_.reset( new master::JobManager );
         jobManager_->SetMasterId( masterId_ ).SetExeDir( exeDir_ ).SetTimeoutManager( timeoutManager_.get() );
         serviceLocator.Register( static_cast< master::IJobManager* >( jobManager_.get() ) );
@@ -232,6 +236,9 @@ public:
 
         timeoutManager_->Start();
         worker_threads_.push_back( std::thread( ThreadFun, &io_service_timeout_ ) );
+
+        cronManager_->Start();
+        worker_threads_.push_back( std::thread( ThreadFun, &io_service_cron_ ) );
 
         // start ping from nodes receiver threads
         pingReceiver_.reset( new master::PingReceiverBoost( io_service_ping_ ) );
@@ -304,6 +311,9 @@ public:
 
         if ( timeoutManager_ )
             timeoutManager_->Stop();
+
+        if ( cronManager_ )
+            cronManager_->Stop();
 
         if ( pinger_ )
             pinger_->Stop();
@@ -390,6 +400,7 @@ private:
     std::vector<std::thread> worker_threads_;
 
     boost::asio::io_service io_service_timeout_;
+    boost::asio::io_service io_service_cron_;
     boost::asio::io_service io_service_ping_;
     boost::asio::io_service io_service_senders_;
     boost::asio::io_service io_service_getters_;
@@ -403,6 +414,7 @@ private:
     std::shared_ptr< master::WorkerManager > workerManager_;
     std::shared_ptr< master::Scheduler > scheduler_;
     std::shared_ptr< master::TimeoutManager > timeoutManager_;
+    std::shared_ptr< master::CronManager > cronManager_;
 
     std::shared_ptr< master::PingReceiver > pingReceiver_;
     std::shared_ptr< master::Pinger > pinger_;

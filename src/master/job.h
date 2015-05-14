@@ -30,6 +30,7 @@ the License.
 #include <boost/property_tree/ptree.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <stdint.h> // int64_t
+#include "common/cron.h"
 
 namespace master {
 
@@ -47,6 +48,9 @@ class Job;
 typedef std::weak_ptr< Job > JobWeakPtr;
 typedef std::shared_ptr< Job > JobPtr;
 
+class JobGroup;
+typedef std::shared_ptr< JobGroup > JobGroupPtr;
+
 struct IJobGroupEventReceiver
 {
     virtual void OnJobDependenciesResolved( const JobPtr &job ) = 0;
@@ -61,16 +65,24 @@ public:
 public:
     JobGroup( IJobGroupEventReceiverPtr &evReceiver );
 
-    void OnJobCompletion( const JobVertex &vertex );
+    bool OnJobCompletion( const JobVertex &vertex );
 
     JobGraph &GetGraph() { return graph_; }
 
     std::vector< JobWeakPtr > &GetIndexToJob() { return indexToJob_; }
 
+    const std::string &GetDescription() const { return description_; }
+    void SetDescription( const std::string &description ) { description_ = description; }
+
+    common::CronJob &GetCron() { return cron_; }
+
 private:
     JobGraph graph_;
     std::vector< JobWeakPtr > indexToJob_;
     IJobGroupEventReceiverPtr eventReceiver_;
+    size_t numCompleted_;
+    std::string description_;
+    common::CronJob cron_;
 };
 
 class Job
@@ -95,7 +107,7 @@ public:
         scriptLength_ = script_.size();
     }
 
-    void ReleaseJobGroup();
+    bool ReleaseJobGroup();
 
     const std::string &GetScript() const { return script_; }
     const std::string &GetScriptLanguage() const { return scriptLanguage_; }
@@ -118,6 +130,8 @@ public:
     bool IsExclusive() const { return flags_ & JOB_FLAG_EXCLUSIVE; }
     int64_t GetJobId() const { return id_; }
     int64_t GetGroupId() const { return groupId_; }
+    common::CronJob &GetCron() { return cron_; }
+    JobGroupPtr GetJobGroup() { return jobGroup_; }
 
     void SetFilePath( const std::string &filePath ) { filePath_ = filePath; }
     void SetAlias( const std::string &alias ) { alias_ = alias; }
@@ -127,7 +141,7 @@ public:
     void SetJobId( int64_t val ) { id_ = val; }
     void SetGroupId( int64_t val ) { groupId_ = val; }
     void SetJobVertex( const JobVertex &vertex ) { graphVertex_ = vertex; }
-    void SetJobGroup( std::shared_ptr< JobGroup > &jobGroup ) { jobGroup_ = jobGroup; }
+    void SetJobGroup( const JobGroupPtr &jobGroup ) { jobGroup_ = jobGroup; }
 
     void AddHost( const std::string &host ) { hosts_.insert( host ); }
     bool IsHostPermitted( const std::string &host ) const;
@@ -169,9 +183,10 @@ private:
 
     std::set< std::string > hosts_;
     std::set< std::string > groups_;
+    common::CronJob cron_;
 
     JobVertex graphVertex_;
-    std::shared_ptr< JobGroup > jobGroup_;
+    JobGroupPtr jobGroup_;
     std::function< void (const std::string &method, const boost::property_tree::ptree &params) > callback_;
 };
 

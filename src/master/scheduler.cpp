@@ -191,7 +191,7 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
             if ( failedNodesCnt >= static_cast<size_t>( job->GetMaxFailedNodes() ) )
             {
                 StopWorkers( jobId );
-                jobs_.RemoveJob( jobId, "max failed nodes limit exceeded" );
+                jobs_.RemoveJob( jobId, false, "max failed nodes limit exceeded" );
                 continue;
             }
 
@@ -552,7 +552,7 @@ void Scheduler::OnJobTimeout( int64_t jobId )
                 return;
         }
         StopWorkers( jobId );
-        jobs_.RemoveJob( jobId, "timeout" );
+        jobs_.RemoveJob( jobId, false, "timeout" );
     }
     NotifyAll();
 }

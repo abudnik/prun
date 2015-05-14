@@ -26,6 +26,8 @@ the License.
 #include <set>
 #include <map>
 #include "job.h"
+#include "cron_manager.h"
+#include "common/service_locator.h"
 #include "common/log.h"
 
 namespace master {
@@ -76,7 +78,7 @@ public:
             it->second = numExecution;
             if ( numExecution < 1 )
             {
-                RemoveJob( jobId, "success" );
+                RemoveJob( jobId, true, "success" );
             }
         }
     }
@@ -124,7 +126,7 @@ public:
         onRemoveCallback_ = std::bind( f, obj, std::placeholders::_1 );
     }
 
-    void RemoveJob( int64_t jobId, const char *completionStatus )
+    void RemoveJob( int64_t jobId, bool success, const char *completionStatus )
     {
         if ( onRemoveCallback_ )
             onRemoveCallback_( jobId );
@@ -136,7 +138,25 @@ public:
             if ( job->GetJobId() == jobId )
             {
                 RunJobCallback( job, completionStatus );
-                job->ReleaseJobGroup();
+
+                if ( job->GetJobGroup() )
+                {
+                    const bool lastJobInGroup = job->ReleaseJobGroup();
+                    if ( lastJobInGroup && success && job->GetCron() )
+                    {
+                        ICronManager *cronManager = common::GetService< ICronManager >();
+                        cronManager->PushMetaJob( job->GetJobGroup(), true );
+                    }
+                }
+                else
+                {
+                    if ( success && job->GetCron() )
+                    {
+                        ICronManager *cronManager = common::GetService< ICronManager >();
+                        cronManager->PushJob( job, true );
+                    }
+                }
+
                 jobs_.erase( it );
                 return;
             }
@@ -151,7 +171,7 @@ public:
         for( auto it = jobs_.cbegin(); it != jobs.cend(); ++it )
         {
             const JobPtr &job = (*it).GetJob();
-            RemoveJob( job->GetJobId(), "timeout" );
+            RemoveJob( job->GetJobId(), false, "timeout" );
         }
     }
 

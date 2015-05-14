@@ -26,10 +26,11 @@ the License.
 namespace master {
 
 JobGroup::JobGroup( IJobGroupEventReceiverPtr &evReceiver )
-: eventReceiver_( evReceiver )
+: eventReceiver_( evReceiver ),
+ numCompleted_( 0 )
 {}
 
-void JobGroup::OnJobCompletion( const JobVertex &vertex )
+bool JobGroup::OnJobCompletion( const JobVertex &vertex )
 {
     using namespace boost;
 
@@ -45,15 +46,17 @@ void JobGroup::OnJobCompletion( const JobVertex &vertex )
             if ( numDeps < 2 )
             {
                 eventReceiver_->OnJobDependenciesResolved( job );
+                ++numCompleted_;
             }
         }
     }
+
+    return numCompleted_ == indexToJob_.size();
 }
 
-void Job::ReleaseJobGroup()
+bool Job::ReleaseJobGroup()
 {
-    if ( jobGroup_ )
-        jobGroup_->OnJobCompletion( graphVertex_ );
+    return jobGroup_ && jobGroup_->OnJobCompletion( graphVertex_ );
 }
 
 bool Job::IsHostPermitted( const std::string &host ) const

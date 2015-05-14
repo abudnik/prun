@@ -102,7 +102,7 @@ private:
 
     bool PrepareJobGraph( const boost::property_tree::ptree &ptree,
                           std::map< std::string, int > &jobFileToIndex,
-                          std::shared_ptr< JobGroup > &jobGroup ) const;
+                          const JobGroupPtr &jobGroup ) const;
 
 private:
     std::shared_ptr< IJobQueue > jobs_;

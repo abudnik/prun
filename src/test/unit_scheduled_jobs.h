@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE( jobs_removal )
     vector< JobPtr >::const_iterator it = jobs.begin();
     for( ; it != jobs.end(); ++it )
     {
-        RemoveJob( (*it)->GetJobId(), "test" );
+        RemoveJob( (*it)->GetJobId(), false, "failure" );
         JobPtr j;
         BOOST_CHECK_EQUAL( FindJobByJobId( (*it)->GetJobId(), j ), false );
     }

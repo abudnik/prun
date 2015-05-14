@@ -24,6 +24,7 @@ the License.
 #include "user_command.h"
 #include "job_manager.h"
 #include "worker_manager.h"
+#include "cron_manager.h"
 #include "scheduler.h"
 #include "statistics.h"
 #include "common/log.h"
@@ -80,9 +81,18 @@ bool UserCommand::RunJob( std::ifstream &file, const std::string &jobAlias, std:
         if ( job )
         {
             job->SetAlias( jobAlias );
-            // add job to job queue
-            jobManager->PushJob( job );
-            PrintJobInfo( job, result );
+
+            if ( job->GetCron() )
+            {
+                ICronManager *cronManager = common::GetService< ICronManager >();
+                cronManager->PushJob( job, false );
+            }
+            else
+            {
+                // add job to job queue
+                jobManager->PushJob( job );
+                PrintJobInfo( job, result );
+            }
         }
     }
     catch( std::exception &e )
@@ -103,18 +113,32 @@ bool UserCommand::RunMetaJob( std::ifstream &file, std::string &result ) const
 
         std::list< JobPtr > jobs;
         IJobManager *jobManager = common::GetService< IJobManager >();
-        jobManager->CreateMetaJob( metaDescr, jobs );
-        jobManager->PushJobs( jobs );
+        if ( !jobManager->CreateMetaJob( metaDescr, jobs ) )
+            return false;
 
-        std::ostringstream ss;
-        ss << "----------------" << std::endl;
-        for( const auto &job : jobs )
+        if ( !jobs.empty() )
         {
-            PrintJobInfo( job, result );
-            ss << result << std::endl;
+            auto jobGroup = jobs.front()->GetJobGroup();
+            if ( jobGroup->GetCron() )
+            {
+                ICronManager *cronManager = common::GetService< ICronManager >();
+                cronManager->PushMetaJob( jobGroup, false );
+            }
+            else
+            {
+                jobManager->PushJobs( jobs );
+
+                std::ostringstream ss;
+                ss << "----------------" << std::endl;
+                for( const auto &job : jobs )
+                {
+                    PrintJobInfo( job, result );
+                    ss << result << std::endl;
+                }
+                ss << "----------------" << std::endl;
+                result = ss.str();
+            }
         }
-        ss << "----------------" << std::endl;
-        result = ss.str();
     }
     catch( std::exception &e )
     {

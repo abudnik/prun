@@ -118,6 +118,14 @@ bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
         auto jobGroup = std::make_shared< JobGroup >( evReceiverPtr );
         std::vector< JobWeakPtr > &indexToJob = jobGroup->GetIndexToJob();
 
+        if ( ptree.count( "cron" ) > 0 )
+        {
+            std::string cron_description = ptree.get<std::string>( "cron" );
+            if ( !jobGroup->GetCron().Parse( cron_description ) )
+                throw std::logic_error( std::string( "cron parse failed: " ) + cron_description );
+            jobGroup->SetDescription( meta_description );
+        }
+
         // parse job files 
         bool succeeded = true;
         for( auto it = jobFiles.cbegin(); it != jobFiles.cend(); ++it )
@@ -208,7 +216,7 @@ void JobManager::PushJobs( std::list< JobPtr > &jobs )
     jobs_->PushJobs( jobs, numJobGroups_++ );
 
     IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
-    jobEventReceiver->OnJobAdd( *jobs.begin() ); // first job must contain meta job description
+    jobEventReceiver->OnJobAdd( *jobs.begin() ); // first job has meta job description
 
     IScheduler *scheduler = common::GetService< IScheduler >();
     scheduler->OnNewJob();
@@ -238,7 +246,7 @@ void JobManager::PushJobFromHistory( int64_t jobId, const std::string &jobDescri
                 {
                     jobId_ = jobId + 1;
                 }
-                job->SetJobId( jobId++ );
+                job->SetJobId( jobId < 0 ? jobId_++ : jobId++ );
             }
             jobs_->PushJobs( jobs, numJobGroups_++ );
 
@@ -261,7 +269,7 @@ void JobManager::PushJobFromHistory( int64_t jobId, const std::string &jobDescri
             {
                 jobId_ = jobId + 1;
             }
-            job->SetJobId( jobId );
+            job->SetJobId( jobId < 0 ? jobId_++ : jobId++ );
             jobs_->PushJob( job, numJobGroups_++ );
 
             IScheduler *scheduler = common::GetService< IScheduler >();
@@ -352,6 +360,8 @@ bool JobManager::ReadScript( const std::string &filePath, std::string &script ) 
 
 Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
 {
+    Job *job = nullptr;
+
     try
     {
         std::string fileName = ptree.get<std::string>( "script" );
@@ -386,11 +396,11 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
         if ( taskTimeout < 0 )
             taskTimeout = -1;
 
-        Job *job = new Job( script, language,
-                            priority, maxFailedNodes,
-                            numExec, maxClusterCPU, maxCPU,
-                            timeout, queueTimeout, taskTimeout,
-                            exclusive, noReschedule );
+        job = new Job( script, language,
+                       priority, maxFailedNodes,
+                       numExec, maxClusterCPU, maxCPU,
+                       timeout, queueTimeout, taskTimeout,
+                       exclusive, noReschedule );
 
         job->SetFilePath( fileName );
 
@@ -404,13 +414,22 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
             ReadGroups( job, ptree );
         }
 
+        if ( ptree.count( "cron" ) > 0 )
+        {
+            std::string cron_description = ptree.get<std::string>( "cron" );
+            if ( !job->GetCron().Parse( cron_description ) )
+                throw std::logic_error( std::string( "cron parse failed: " ) + cron_description );
+        }
+
         return job;
     }
     catch( std::exception &e )
     {
         PLOG_ERR( "JobManager::CreateJob exception: " << e.what() );
-        return nullptr;
     }
+
+    delete job;
+    return nullptr;
 }
 
 void JobManager::ReadHosts( Job *job, const boost::property_tree::ptree &ptree ) const
@@ -431,7 +450,7 @@ void JobManager::ReadGroups( Job *job, const boost::property_tree::ptree &ptree 
 
 bool JobManager::PrepareJobGraph( const boost::property_tree::ptree &ptree,
                                   std::map< std::string, int > &jobFileToIndex,
-                                  std::shared_ptr< JobGroup > &jobGroup ) const
+                                  const JobGroupPtr &jobGroup ) const
 {
     using namespace boost;
 
