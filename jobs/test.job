@@ -8,8 +8,8 @@
     "task_timeout" : 15,
     "max_failed_nodes" : 10,
     "num_execution" : 1,
-    "max_cluster_cpu" : -1,
-    "max_cpu" : 1,
+    "max_cluster_instances" : -1,
+    "max_worker_instances" : 1,
     "exclusive" : false,
     "no_reschedule" : false
 }

@@ -723,28 +723,28 @@ bool Scheduler::CanAddTaskToWorker( const WorkerJob &workerJob, const WorkerJob 
         if ( workerJob.GetNumJobs() > 1 )
             return false;
 
-        int64_t id = workerJob.GetJobId();
+        const int64_t id = workerJob.GetJobId();
         if ( id != -1 && id != jobId )
             return false;
     }
 
-    // max cpu host limit case
-    const int maxCPU = job->GetMaxCPU();
-    if ( maxCPU > 0 )
+    // max instances of simultaneously running tasks per host case
+    const int maxWorkerInstances = job->GetMaxWorkerInstances();
+    if ( maxWorkerInstances > 0 )
     {
-        int numTasks = workerJob.GetNumTasks( jobId ) + workerPlannedJob.GetNumTasks( jobId );
-        if ( numTasks >= maxCPU )
+        const int numTasks = workerJob.GetNumTasks( jobId ) + workerPlannedJob.GetNumTasks( jobId );
+        if ( numTasks >= maxWorkerInstances )
             return false;
     }
 
-    // max cluster cpu limit case
-    if ( job->GetMaxClusterCPU() > 0 )
+    // max cluster instances limit case
+    if ( job->GetMaxClusterInstances() > 0 )
     {
         auto it = simultExecCnt_.find( jobId );
         if ( it != simultExecCnt_.end() )
         {
-            const int numClusterCPU = (*it).second + workerPlannedJob.GetNumTasks( jobId );
-            if ( numClusterCPU >= job->GetMaxClusterCPU() )
+            const int numClusterInstances = (*it).second + workerPlannedJob.GetNumTasks( jobId );
+            if ( numClusterInstances >= job->GetMaxClusterInstances() )
                 return false;
         }
     }

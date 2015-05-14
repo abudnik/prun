@@ -88,8 +88,8 @@ BOOST_AUTO_TEST_CASE( on_new_job )
                       "\"task_timeout\" : 15,"
                       "\"max_failed_nodes\" : 10,"
                       "\"num_execution\" : 1,"
-                      "\"max_cluster_cpu\" : -1,"
-                      "\"max_cpu\" : 1,"
+                      "\"max_cluster_instances\" : -1,"
+                      "\"max_worker_instances\" : 1,"
                       "\"exclusive\" : false,"
                       "\"no_reschedule\" : false}" ) );
         BOOST_REQUIRE( job );
@@ -121,8 +121,8 @@ BOOST_AUTO_TEST_CASE( get_task_to_send )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -166,8 +166,8 @@ BOOST_AUTO_TEST_CASE( get_task_to_send_multiple )
                       "\"task_timeout\" : 15,"
                       "\"max_failed_nodes\" : 10,"
                       "\"num_execution\" : 1,"
-                      "\"max_cluster_cpu\" : -1,"
-                      "\"max_cpu\" : 1,"
+                      "\"max_cluster_instances\" : -1,"
+                      "\"max_worker_instances\" : 1,"
                       "\"exclusive\" : false,"
                       "\"no_reschedule\" : false}" ) );
         BOOST_REQUIRE( job );
@@ -206,8 +206,8 @@ BOOST_AUTO_TEST_CASE( task_send_completion )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -252,8 +252,8 @@ BOOST_AUTO_TEST_CASE( task_completion_failure )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -297,8 +297,8 @@ BOOST_AUTO_TEST_CASE( task_completion )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -352,8 +352,8 @@ BOOST_AUTO_TEST_CASE( task_completion_reschedule )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -411,8 +411,8 @@ BOOST_AUTO_TEST_CASE( task_completion_reschedule_exclusive )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : true,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -448,8 +448,8 @@ BOOST_AUTO_TEST_CASE( task_completion_reschedule_exclusive )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 10,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -493,8 +493,8 @@ BOOST_AUTO_TEST_CASE( task_completion_no_reschedule )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : true}" ) );
     BOOST_REQUIRE( job );
@@ -546,8 +546,8 @@ BOOST_AUTO_TEST_CASE( task_completion_max_failed_nodes )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 2,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -601,8 +601,8 @@ BOOST_AUTO_TEST_CASE( task_completion_num_executions )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 5,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -633,7 +633,7 @@ BOOST_AUTO_TEST_CASE( task_completion_num_executions )
     BOOST_CHECK_EQUAL( sched.GetScheduledJobs().GetNumJobs(), 0 );
 }
 
-BOOST_AUTO_TEST_CASE( task_completion_max_cluster_cpu )
+BOOST_AUTO_TEST_CASE( task_completion_max_cluster_instances )
 {
     workerMgr.AddWorkerHost( "grp", "host1" );
     workerMgr.AddWorkerHost( "grp", "host2" );
@@ -661,8 +661,8 @@ BOOST_AUTO_TEST_CASE( task_completion_max_cluster_cpu )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 10,"
-                  "\"max_cluster_cpu\" : 5,"
-                  "\"max_cpu\" : 4,"
+                  "\"max_cluster_instances\" : 5,"
+                  "\"max_worker_instances\" : 4,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -691,7 +691,7 @@ BOOST_AUTO_TEST_CASE( task_completion_max_cluster_cpu )
     BOOST_CHECK_EQUAL( tasks.size(), maxClusterCPU - numCPU );
 }
 
-BOOST_AUTO_TEST_CASE( task_completion_max_cpu )
+BOOST_AUTO_TEST_CASE( task_completion_max_worker_instances )
 {
     workerMgr.AddWorkerHost( "grp", "host1" );
 
@@ -714,8 +714,8 @@ BOOST_AUTO_TEST_CASE( task_completion_max_cpu )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 5,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 4,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 4,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -757,8 +757,8 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive ) // 1st job - exclusive, 2nd jo
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : true,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -781,8 +781,8 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive ) // 1st job - exclusive, 2nd jo
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -815,8 +815,8 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive2 ) // 1st job - not exclusive, 2
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -839,8 +839,8 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive2 ) // 1st job - not exclusive, 2
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : true,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -873,8 +873,8 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive3 ) // 1st _completed_ job - excl
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : true,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -907,8 +907,8 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive3 ) // 1st _completed_ job - excl
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : true,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -945,8 +945,8 @@ BOOST_AUTO_TEST_CASE( task_completion_delete_worker )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -990,8 +990,8 @@ BOOST_AUTO_TEST_CASE( on_task_timeout )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -1037,8 +1037,8 @@ BOOST_AUTO_TEST_CASE( on_task_timeout_after_completion )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -1089,8 +1089,8 @@ BOOST_AUTO_TEST_CASE( on_job_timeout )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -1129,8 +1129,8 @@ BOOST_AUTO_TEST_CASE( stop_job )
                   "\"task_timeout\" : 15,"
                   "\"max_failed_nodes\" : 10,"
                   "\"num_execution\" : 1,"
-                  "\"max_cluster_cpu\" : -1,"
-                  "\"max_cpu\" : 1,"
+                  "\"max_cluster_instances\" : -1,"
+                  "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
                   "\"no_reschedule\" : false}" ) );
     BOOST_REQUIRE( job );
@@ -1173,8 +1173,8 @@ BOOST_AUTO_TEST_CASE( stop_all_jobs )
                       "\"task_timeout\" : 15,"
                       "\"max_failed_nodes\" : 10,"
                       "\"num_execution\" : 1,"
-                      "\"max_cluster_cpu\" : -1,"
-                      "\"max_cpu\" : 1,"
+                      "\"max_cluster_instances\" : -1,"
+                      "\"max_worker_instances\" : 1,"
                       "\"exclusive\" : false,"
                       "\"no_reschedule\" : false}" ) );
         BOOST_REQUIRE( job );

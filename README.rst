@@ -25,7 +25,7 @@ Building
 Build requirements:
 
 - cmake 2.6 (or higher)
-- GCC 3.x (or higher) or Clang
+- GCC 4.6 (or higher) or Clang
 - boost 1.47 (or higher)
 
 Additional requirements:
@@ -128,8 +128,8 @@ detailed description)::
       "task_timeout" : 300,
       "max_failed_nodes" : 10,
       "num_execution" : 16,
-      "max_cluster_cpu" : -1,
-      "max_cpu" : 1,
+      "max_cluster_instances" : -1,
+      "max_worker_instances" : 1,
       "exclusive" : false,
       "no_reschedule" : false
   }
@@ -167,8 +167,8 @@ And merge job description (see jobs/sort_merge.job)::
       "task_timeout" : 1800,
       "max_failed_nodes" : 10,
       "num_execution" : 1,
-      "max_cluster_cpu" : -1,
-      "max_cpu" : 1,
+      "max_cluster_instances" : -1,
+      "max_worker_instances" : 1,
       "exclusive" : false,
       "no_reschedule" : false
   }

@@ -54,11 +54,11 @@ Maximum number of failed nodes whereupon job will be stopped on all workers.
 Integer number of planned job executions. If the value is negative, then the
 number of planned job executions equals to the total number of cluster CPUs.
 
-- max_cluster_cpu
+- max_cluster_instances
 Maximum number of simultaneously running instances of the job in the cluster.
 Negative value means no limits.
 
-- max_cpu
+- max_worker_instances
 Maximum number of simultaneously running instances of the job in the single
 worker machine. Negative value means no limits.
 
@@ -86,7 +86,7 @@ section. Master expects that script files are in the "prun/jobs" directory.
 
 Master will execute a job multiple times across cluster machines. Each
 particularly running job is called a "task". So the "job" is a set of "tasks".
-Number of tasks depends on job properties "num_execution", "max_cluster_cpu"
+Number of tasks depends on job properties "num_execution", "max_cluster_instances"
 and the total number of cluster CPUs (for more detailed information see job
 description section).
 When Worker starts your script (aka "task"), it passes three input parameters:

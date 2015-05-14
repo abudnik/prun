@@ -90,12 +90,12 @@ class Job
 public:
     Job( const std::string &script, const std::string &scriptLanguage,
          int priority, int maxFailedNodes, int numExec,
-         int maxClusterCPU, int maxCPU,
+         int maxClusterInstances, int maxWorkerInstances,
          int timeout, int queueTimeout, int taskTimeout,
          bool exclusive, bool noReschedule )
     : script_( script ), scriptLanguage_( scriptLanguage ),
      priority_( priority ), numDepends_( 0 ), maxFailedNodes_( maxFailedNodes ),
-     numExec_( numExec ), maxClusterCPU_( maxClusterCPU ), maxCPU_( maxCPU ),
+     numExec_( numExec ), maxClusterInstances_( maxClusterInstances ), maxWorkerInstances_( maxWorkerInstances ),
      timeout_( timeout ), queueTimeout_( queueTimeout ), taskTimeout_( taskTimeout ),
      flags_( 0 ), id_( -1 ), groupId_( -1 )
     {
@@ -121,8 +121,8 @@ public:
     int GetNumPlannedExec() const { return numPlannedExec_; }
     int GetMaxFailedNodes() const { return maxFailedNodes_; }
     int GetNumExec() const { return numExec_; }
-    int GetMaxClusterCPU() const { return maxClusterCPU_; }
-    int GetMaxCPU() const { return maxCPU_; }
+    int GetMaxClusterInstances() const { return maxClusterInstances_; }
+    int GetMaxWorkerInstances() const { return maxWorkerInstances_; }
     int GetTimeout() const { return timeout_; }
     int GetQueueTimeout() const { return queueTimeout_; }
     int GetTaskTimeout() const { return taskTimeout_; }
@@ -174,8 +174,8 @@ private:
     int numPlannedExec_;
     int maxFailedNodes_;
     int numExec_;
-    int maxClusterCPU_;
-    int maxCPU_;
+    int maxClusterInstances_;
+    int maxWorkerInstances_;
     int timeout_, queueTimeout_, taskTimeout_;
     int flags_;
     int64_t id_;
