@@ -404,6 +404,18 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
 
         job->SetFilePath( fileName );
 
+        if ( ptree.count( "exec_unit_type" ) > 0 )
+        {
+            std::string value = ptree.get<std::string>( "exec_unit_type" );
+            if ( value == "cpu" )
+                job->SetExecUnitType( ExecUnitType::CPU );
+            else
+            if ( value == "host" )
+                job->SetExecUnitType( ExecUnitType::HOST );
+            else
+                throw std::logic_error( std::string( "unknown exec_unit_type: " ) + value );
+        }
+
         if ( ptree.count( "hosts" ) > 0 )
         {
             ReadHosts( job, ptree );

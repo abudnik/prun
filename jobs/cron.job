@@ -12,5 +12,6 @@
     "max_worker_instances" : 1,
     "exclusive" : true,
     "no_reschedule" : true,
+    "exec_unit_type" : "host",
     "cron" : "* * * * *"
 }

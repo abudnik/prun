@@ -40,6 +40,12 @@ enum JobFlag
     JOB_FLAG_EXCLUSIVE = 2
 };
 
+enum class ExecUnitType
+{
+    CPU = 1,
+    HOST = 2
+};
+
 typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::bidirectionalS > JobGraph;
 
 typedef boost::graph_traits<JobGraph>::vertex_descriptor JobVertex;
@@ -97,7 +103,7 @@ public:
      priority_( priority ), numDepends_( 0 ), maxFailedNodes_( maxFailedNodes ),
      numExec_( numExec ), maxClusterInstances_( maxClusterInstances ), maxWorkerInstances_( maxWorkerInstances ),
      timeout_( timeout ), queueTimeout_( queueTimeout ), taskTimeout_( taskTimeout ),
-     flags_( 0 ), id_( -1 ), groupId_( -1 )
+     flags_( 0 ), execUnitType_( ExecUnitType::CPU ), id_( -1 ), groupId_( -1 )
     {
         if ( noReschedule )
             flags_ |= JOB_FLAG_NO_RESCHEDULE;
@@ -128,6 +134,7 @@ public:
     int GetTaskTimeout() const { return taskTimeout_; }
     bool IsNoReschedule() const { return flags_ & JOB_FLAG_NO_RESCHEDULE; }
     bool IsExclusive() const { return flags_ & JOB_FLAG_EXCLUSIVE; }
+    ExecUnitType GetExecUnitType() const { return execUnitType_; }
     int64_t GetJobId() const { return id_; }
     int64_t GetGroupId() const { return groupId_; }
     common::CronJob &GetCron() { return cron_; }
@@ -138,6 +145,7 @@ public:
     void SetDescription( const std::string &description ) { description_ = description; }
     void SetNumPlannedExec( int val ) { numPlannedExec_ = val; }
     void SetNumDepends( int val ) { numDepends_ = val; }
+    void SetExecUnitType( ExecUnitType type ) { execUnitType_ = type; }
     void SetJobId( int64_t val ) { id_ = val; }
     void SetGroupId( int64_t val ) { groupId_ = val; }
     void SetJobVertex( const JobVertex &vertex ) { graphVertex_ = vertex; }
@@ -178,6 +186,7 @@ private:
     int maxWorkerInstances_;
     int timeout_, queueTimeout_, taskTimeout_;
     int flags_;
+    ExecUnitType execUnitType_;
     int64_t id_;
     int64_t groupId_;
 
