@@ -187,13 +187,16 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
         {
             simultExecCnt_[ jobId ] -= workerJob.GetNumTasks( jobId );
 
-            size_t failedNodesCnt = failedWorkers_.GetFailedNodesCnt( jobId );
-            if ( failedNodesCnt >= static_cast<size_t>( job->GetMaxFailedNodes() ) )
-            {
-                StopWorkers( jobId );
-                jobs_.RemoveJob( jobId, false, "max failed nodes limit exceeded" );
-                continue;
-            }
+            if ( job->GetMaxFailedNodes() >= 0 )
+	    {
+		    const size_t failedNodesCnt = failedWorkers_.GetFailedNodesCnt( jobId );
+		    if ( failedNodesCnt >= static_cast<size_t>( job->GetMaxFailedNodes() ) )
+		    {
+			    StopWorkers( jobId );
+			    jobs_.RemoveJob( jobId, false, "max failed nodes limit exceeded" );
+			    continue;
+		    }
+	    }
 
             if ( job->IsNoReschedule() )
             {

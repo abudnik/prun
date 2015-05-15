@@ -49,6 +49,7 @@ NOTE: Negative timeout value means infinite timeout.
 
 - max_failed_nodes
 Maximum number of failed nodes whereupon job will be stopped on all workers.
+Negative value means no limits.
 
 - num_execution
 Integer number of planned job executions. If the value is negative, then the
