@@ -53,9 +53,12 @@ Negative value means no limits.
 
 - num_execution
 Integer number of planned job executions.
-If the value is negative, then the number of planned job executions equals to
-the total number of cluster CPUs (default) or worker hosts. See exec_unit_type
-for more information about execution unit types.
+If the value is negative:
+a) if exec_unit_type is "cpu" (default) then the number of planned job executions
+equals to the total number of cluster CPUs.
+b) otherwise, if hosts list is not empty, then the number of planned job
+executions equals to the size of hosts list, otherwise it equals to the number of
+total available worker hosts.
 
 - max_cluster_instances
 Maximum number of simultaneously running instances of the job in the cluster.
@@ -76,6 +79,7 @@ free worker, otherwise job won't be reassigned.
 The value of this parameter jointly used with num_execution parameter.
 If the value is "cpu", then cluster unit is a set of CPUs.
 If the value is "host" then cluster unit is a single cluster host (worker).
+If exec_unit_type is not explicitly defined, then its value is "cpu".
 
 - hosts (optional)
 List of hosts that are allowed to execute job. Empty list means no limits.

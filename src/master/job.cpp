@@ -67,6 +67,11 @@ bool Job::IsHostPermitted( const std::string &host ) const
     return hosts_.find( host ) != hosts_.end();
 }
 
+size_t Job::GetNumPermittedHosts() const
+{
+    return hosts_.size();
+}
+
 bool Job::IsGroupPermitted( const std::string &group ) const
 {
     if ( !groups_.size() )

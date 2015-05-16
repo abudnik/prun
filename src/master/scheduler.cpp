@@ -767,9 +767,17 @@ int Scheduler::GetNumPlannedExec( const JobPtr &job ) const
     {
         numExec = workerManager->GetTotalCPU();
     }
-    else
+    else // ExecUnitType::HOST
     {
-        numExec = workerManager->GetTotalWorkers();
+        const size_t numHosts = job->GetNumPermittedHosts();
+        if ( !numHosts )
+        {
+            numExec = workerManager->GetTotalWorkers();
+        }
+        else
+        {
+            numExec = numHosts;
+        }
     }
     if ( numExec < 1 )
         numExec = 1;

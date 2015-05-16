@@ -153,6 +153,7 @@ public:
 
     void AddHost( const std::string &host ) { hosts_.insert( host ); }
     bool IsHostPermitted( const std::string &host ) const;
+    size_t GetNumPermittedHosts() const;
 
     void AddGroup( const std::string &group ) { groups_.insert( group ); }
     bool IsGroupPermitted( const std::string &group ) const;
