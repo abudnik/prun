@@ -302,7 +302,6 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
         std::set< int > &tasks = it->second;
         if ( !tasks.empty() )
         {
-            job = const_cast<JobPtr &>( j );
             if ( !j->IsHostPermitted( worker->GetHost() ) ||
                  !j->IsGroupPermitted( worker->GetGroup() ) )
                 continue;
@@ -325,6 +324,7 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
                     break;
                 }
             }
+            job = const_cast<JobPtr &>( j );
             break;
         }
     }
@@ -624,13 +624,34 @@ void Scheduler::StopPreviousJobs()
     }
 }
 
-void Scheduler::OnRemoveJob( int64_t jobId )
+void Scheduler::OnRemoveJob( int64_t jobId, const JobPtr &job, bool success )
 {
     simultExecCnt_.erase( jobId );
     failedWorkers_.Delete( jobId );
 
     IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
     jobEventReceiver->OnJobDelete( jobId );
+
+    if ( job )
+    {
+        if ( job->GetJobGroup() )
+        {
+            const bool lastJobInGroup = job->ReleaseJobGroup();
+            if ( lastJobInGroup && success && job->GetCron() )
+            {
+                ICronManager *cronManager = common::GetService< ICronManager >();
+                cronManager->PushMetaJob( job->GetJobGroup(), true );
+            }
+        }
+        else
+        {
+            if ( success && job->GetCron() )
+            {
+                ICronManager *cronManager = common::GetService< ICronManager >();
+                cronManager->PushJob( job, true );
+            }
+        }
+    }
 }
 
 void Scheduler::StopWorkers( int64_t jobId )

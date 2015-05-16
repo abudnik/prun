@@ -121,16 +121,13 @@ public:
     const JobQueue &GetJobQueue() const { return jobs_; }
 
     template< typename T >
-    void SetOnRemoveCallback( T *obj, void (T::*f)( int64_t jobId ) )
+    void SetOnRemoveCallback( T *obj, void (T::*f)( int64_t jobId, const JobPtr &job, bool success ) )
     {
-        onRemoveCallback_ = std::bind( f, obj, std::placeholders::_1 );
+        onRemoveCallback_ = std::bind( f, obj, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 );
     }
 
     void RemoveJob( int64_t jobId, bool success, const char *completionStatus )
     {
-        if ( onRemoveCallback_ )
-            onRemoveCallback_( jobId );
-
         jobExecutions_.erase( jobId );
         for( auto it = jobs_.begin(); it != jobs_.end(); ++it )
         {
@@ -139,28 +136,16 @@ public:
             {
                 RunJobCallback( job, completionStatus );
 
-                if ( job->GetJobGroup() )
-                {
-                    const bool lastJobInGroup = job->ReleaseJobGroup();
-                    if ( lastJobInGroup && success && job->GetCron() )
-                    {
-                        ICronManager *cronManager = common::GetService< ICronManager >();
-                        cronManager->PushMetaJob( job->GetJobGroup(), true );
-                    }
-                }
-                else
-                {
-                    if ( success && job->GetCron() )
-                    {
-                        ICronManager *cronManager = common::GetService< ICronManager >();
-                        cronManager->PushJob( job, true );
-                    }
-                }
+                if ( onRemoveCallback_ )
+                    onRemoveCallback_( jobId, job, success );
 
                 jobs_.erase( it );
                 return;
             }
         }
+
+        if ( onRemoveCallback_ )
+            onRemoveCallback_( jobId, nullptr, success );
 
         PLOG( "ScheduledJobs::RemoveJob: job not found for jobId=" << jobId );
     }
@@ -196,7 +181,7 @@ private:
 private:
     JobQueue jobs_;
     IdToJobExec jobExecutions_; // job_id -> num job remaining executions (== 0, if job execution completed)
-    std::function< void (int64_t) > onRemoveCallback_;
+    std::function< void (int64_t, const JobPtr &, bool) > onRemoveCallback_;
 };
 
 } // namespace master

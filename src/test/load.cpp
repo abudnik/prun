@@ -26,6 +26,7 @@ struct SchedulerEnvironment
         serviceLocator.Register( (master::IScheduler*)&sched );
         serviceLocator.Register( (master::IJobManager*)&jobMgr );
         serviceLocator.Register( (master::IWorkerManager*)&workerMgr );
+        serviceLocator.Register( (master::IJobEventReceiver*)&jobHistory );
     }
 
     ~SchedulerEnvironment()
@@ -34,6 +35,7 @@ struct SchedulerEnvironment
     }
 
     MockTimeoutManager timeoutMgr;
+    MockJobHistory jobHistory;
     JobManager jobMgr;
     WorkerManager workerMgr;
     Scheduler sched;
