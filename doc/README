@@ -75,11 +75,14 @@ Exclusive job couldn't be executed simultaneously with any other job.
 If the value is false, then master reassigns job from failed worker to any other
 free worker, otherwise job won't be reassigned.
 
+- max_exec_at_worker (optional)
+Maximum number of job execution at a single worker.
+Negative value means no limits (default).
+
 - exec_unit_type (optional)
 The value of this parameter jointly used with num_execution parameter.
-If the value is "cpu", then cluster unit is a set of CPUs.
-If the value is "host" then cluster unit is a single cluster host (worker).
-If exec_unit_type is not explicitly defined, then its value is "cpu".
+If the value is "cpu", then cluster unit is a set of CPUs (default).
+If the value is "host" then cluster unit is a single cluster worker.
 
 - hosts (optional)
 List of hosts that are allowed to execute job. Empty list means no limits.

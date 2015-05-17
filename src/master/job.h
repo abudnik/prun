@@ -102,6 +102,7 @@ public:
     : script_( script ), scriptLanguage_( scriptLanguage ),
      priority_( priority ), numDepends_( 0 ), maxFailedNodes_( maxFailedNodes ),
      numExec_( numExec ), maxClusterInstances_( maxClusterInstances ), maxWorkerInstances_( maxWorkerInstances ),
+     maxExecAtWorker_( -1 ),
      timeout_( timeout ), queueTimeout_( queueTimeout ), taskTimeout_( taskTimeout ),
      flags_( 0 ), execUnitType_( ExecUnitType::CPU ), id_( -1 ), groupId_( -1 )
     {
@@ -129,6 +130,7 @@ public:
     int GetNumExec() const { return numExec_; }
     int GetMaxClusterInstances() const { return maxClusterInstances_; }
     int GetMaxWorkerInstances() const { return maxWorkerInstances_; }
+    int GetMaxExecAtWorker() const { return maxExecAtWorker_; }
     int GetTimeout() const { return timeout_; }
     int GetQueueTimeout() const { return queueTimeout_; }
     int GetTaskTimeout() const { return taskTimeout_; }
@@ -143,6 +145,7 @@ public:
     void SetFilePath( const std::string &filePath ) { filePath_ = filePath; }
     void SetAlias( const std::string &alias ) { alias_ = alias; }
     void SetDescription( const std::string &description ) { description_ = description; }
+    void SetMaxExecAtWorker( int val ) { maxExecAtWorker_ = val; }
     void SetNumPlannedExec( int val ) { numPlannedExec_ = val; }
     void SetNumDepends( int val ) { numDepends_ = val; }
     void SetExecUnitType( ExecUnitType type ) { execUnitType_ = type; }
@@ -185,6 +188,7 @@ private:
     int numExec_;
     int maxClusterInstances_;
     int maxWorkerInstances_;
+    int maxExecAtWorker_;
     int timeout_, queueTimeout_, taskTimeout_;
     int flags_;
     ExecUnitType execUnitType_;

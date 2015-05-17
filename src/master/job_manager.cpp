@@ -404,6 +404,12 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
 
         job->SetFilePath( fileName );
 
+        if ( ptree.count( "max_exec_at_worker" ) > 0 )
+        {
+            int value = ptree.get<int>( "max_exec_at_worker" );
+            job->SetMaxExecAtWorker( value );
+        }
+
         if ( ptree.count( "exec_unit_type" ) > 0 )
         {
             std::string value = ptree.get<std::string>( "exec_unit_type" );

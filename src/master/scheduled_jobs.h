@@ -85,6 +85,7 @@ public:
 
     bool FindJobByJobId( int64_t jobId, JobPtr &job ) const
     {
+        // TODO: use fixed-size array of rb-trees to handle both priorities & job lookup
         for( auto it = jobs_.cbegin(); it != jobs_.cend(); ++it )
         {
             const JobPtr &j = (*it).GetJob();
@@ -182,6 +183,46 @@ private:
     JobQueue jobs_;
     IdToJobExec jobExecutions_; // job_id -> num job remaining executions (== 0, if job execution completed)
     std::function< void (int64_t, const JobPtr &, bool) > onRemoveCallback_;
+};
+
+
+class JobExecHistory
+{
+    typedef std::map< std::string, int > IPToNumExec;
+    struct JobHistory
+    {
+        IPToNumExec numExec_;
+    };
+
+    typedef std::map< int64_t, JobHistory > JobIdToHistory;
+public:
+    void IncrementNumExec( int64_t jobId, const std::string &hostIP )
+    {
+        JobHistory &jobHistory = history_[ jobId ];
+        ++jobHistory.numExec_[ hostIP ];
+    }
+
+    void RemoveJob( int jobId )
+    {
+        history_.erase( jobId );
+    }
+
+    int GetNumExec( int64_t jobId, const std::string &hostIP ) const
+    {
+        const auto it = history_.find( jobId );
+        if ( it != history_.end() )
+        {
+            const JobHistory &jobHistory = it->second;
+            const IPToNumExec &numExec = jobHistory.numExec_;
+            const auto e_it = numExec.find( hostIP );
+            if ( e_it != numExec.end() )
+                return e_it->second;
+        }
+        return 0;
+    }
+
+private:
+    JobIdToHistory history_;
 };
 
 } // namespace master

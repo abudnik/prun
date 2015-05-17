@@ -233,7 +233,7 @@ bool Scheduler::GetReschedJobForWorker( const WorkerPtr &worker, WorkerJob &plan
         const WorkerTask &workerTask = *it;
 
         if ( !jobs_.FindJobByJobId( workerTask.GetJobId(), job ) ||
-             !CanAddTaskToWorker( worker->GetJob(), plannedJob, workerTask.GetJobId(), job ) )
+             !CanAddTaskToWorker( worker, plannedJob, workerTask.GetJobId(), job ) )
         {
             ++it;
             continue;
@@ -259,6 +259,7 @@ bool Scheduler::GetReschedJobForWorker( const WorkerPtr &worker, WorkerJob &plan
                     foundReschedJob = true;
                     plannedJob.AddTask( jobId, workerTask.GetTaskId() );
                     plannedJob.SetExclusive( job->IsExclusive() );
+                    history_.IncrementNumExec( jobId, worker->GetIP() );
                     needReschedule_.erase( it++ );
                     continue;
                 }
@@ -292,7 +293,7 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
         if ( failedWorkers_.IsWorkerFailedJob( worker->GetIP(), j->GetJobId() ) )
             continue;
 
-        if ( !CanAddTaskToWorker( worker->GetJob(), plannedJob, j->GetJobId(), j ) )
+        if ( !CanAddTaskToWorker( worker, plannedJob, j->GetJobId(), j ) )
             continue;
 
         auto it = tasksToSend_.find( j->GetJobId() );
@@ -309,12 +310,13 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
             for( auto it_task = tasks.begin(); it_task != tasks.end(); )
             {
                 if ( plannedJob.GetTotalNumTasks() >= numFreeCPU ||
-                     !CanAddTaskToWorker( worker->GetJob(), plannedJob, j->GetJobId(), j ) )
+                     !CanAddTaskToWorker( worker, plannedJob, j->GetJobId(), j ) )
                     break;
 
                 int taskId = *it_task;
                 plannedJob.AddTask( j->GetJobId(), taskId );
                 plannedJob.SetExclusive( j->IsExclusive() );
+                history_.IncrementNumExec( jobId, worker->GetIP() );
 
                 tasks.erase( it_task++ );
                 if ( tasks.empty() )
@@ -442,7 +444,7 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
         if ( !workerJob.DeleteTask( workerTask.GetJobId(), workerTask.GetTaskId() ) )
         {
             // task already processed.
-            // it might be possible if a few threads simultaneously gets success errCode from the same task
+            // it happens when a few threads simultaneously get success errCode from the same task
             // or after timeout
             return;
         }
@@ -451,14 +453,14 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
         if ( it == nodeState_.end() )
             return;
 
-        PLOG( "Scheduler::OnTaskCompletion: jobId=" << workerTask.GetJobId() <<
-              ", taskId=" << workerTask.GetTaskId() << ", execTime=" << execTime << " ms" <<
-              ", ip=" << hostIP );
-
         NodeState &nodeState = it->second;
         nodeState.FreeCPU( 1 );
         UpdateNodePriority( hostIP, &nodeState );
         simultExecCnt_[ workerTask.GetJobId() ] -= 1;
+
+        PLOG( "Scheduler::OnTaskCompletion: jobId=" << workerTask.GetJobId() <<
+              ", taskId=" << workerTask.GetTaskId() << ", execTime=" << execTime << " ms" <<
+              ", ip=" << hostIP );
 
         jobs_.DecrementJobExecution( workerTask.GetJobId(), 1 );
     }
@@ -627,6 +629,7 @@ void Scheduler::StopPreviousJobs()
 void Scheduler::OnRemoveJob( int64_t jobId, const JobPtr &job, bool success )
 {
     simultExecCnt_.erase( jobId );
+    history_.RemoveJob( jobId );
     failedWorkers_.Delete( jobId );
 
     IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
@@ -738,9 +741,11 @@ bool Scheduler::CanTakeNewJob()
     return false;
 }
 
-bool Scheduler::CanAddTaskToWorker( const WorkerJob &workerJob, const WorkerJob &workerPlannedJob,
+bool Scheduler::CanAddTaskToWorker( const WorkerPtr &worker, const WorkerJob &workerPlannedJob,
                                     int64_t jobId, const JobPtr &job ) const
 {
+    const WorkerJob &workerJob = worker->GetJob();
+
     // job exclusive case
     if ( job->IsExclusive() || workerJob.IsExclusive() )
     {
@@ -771,6 +776,12 @@ bool Scheduler::CanAddTaskToWorker( const WorkerJob &workerJob, const WorkerJob 
             if ( numClusterInstances >= job->GetMaxClusterInstances() )
                 return false;
         }
+    }
+
+    if ( job->GetMaxExecAtWorker() > 0 )
+    {
+        if ( history_.GetNumExec( jobId, worker->GetIP() ) >= job->GetMaxExecAtWorker() )
+            return false;
     }
 
     return true;

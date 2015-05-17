@@ -127,7 +127,7 @@ private:
     void StopWorker( const std::string &hostIP ) const;
 
     bool CanTakeNewJob();
-    bool CanAddTaskToWorker( const WorkerJob &workerJob, const WorkerJob &workerPlannedJob,
+    bool CanAddTaskToWorker( const WorkerPtr &worker, const WorkerJob &workerPlannedJob,
                              int64_t jobId, const JobPtr &job ) const;
 
     int GetNumPlannedExec( const JobPtr &job ) const;
@@ -142,6 +142,7 @@ private:
     JobIdToTasks tasksToSend_;
     TaskList needReschedule_;
     JobIdToExecCnt simultExecCnt_;
+    JobExecHistory history_;
     std::mutex jobsMut_;
 };
 
