@@ -141,12 +141,6 @@ private:
     std::bitset< MaxValue + 1 > time_val_;
 };
 
-typedef CronField<0, 59> CronMinutes;
-typedef CronField<0, 23> CronHours;
-typedef CronField<1, 31> CronDays;
-typedef CronField<1, 12> CronMonths;
-typedef CronField<0, 6> CronDaysOfWeek;
-
 inline time_t CreateDateTime( int year, int month, int day, int hour, int minute )
 {
     tm current;
@@ -163,6 +157,12 @@ inline time_t CreateDateTime( int year, int month, int day, int hour, int minute
 
 class CronJob
 {
+    typedef CronField<0, 59> CronMinutes;
+    typedef CronField<0, 23> CronHours;
+    typedef CronField<1, 31> CronDays;
+    typedef CronField<1, 12> CronMonths;
+    typedef CronField<0, 6> CronDaysOfWeek;
+
 public:
     typedef std::string::const_iterator Iterator;
 
