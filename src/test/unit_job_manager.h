@@ -9,6 +9,7 @@ struct JobManagerEnvironment
         mgr.SetTimeoutManager( &timeoutManager );
         common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
         serviceLocator.Register( (master::IScheduler*)&sched );
+        serviceLocator.Register( (master::IJobManager*)&mgr );
         serviceLocator.Register( (master::IJobEventReceiver*)&jobHistory );
     }
 
@@ -299,6 +300,155 @@ BOOST_AUTO_TEST_CASE( job_priority )
         lastPriority = j->GetPriority();
         lastGroupId = j->GetGroupId();
     }
+}
+
+BOOST_AUTO_TEST_CASE( test_job_name_registry )
+{
+    std::string jobName1 = "jobName1";
+    std::string jobName2 = "jobName2";
+
+    BOOST_REQUIRE( mgr.RegisterJobName( jobName1 ) );
+    BOOST_REQUIRE( !mgr.RegisterJobName( jobName1 ) );
+    BOOST_REQUIRE( mgr.RegisterJobName( jobName2 ) );
+    BOOST_REQUIRE( !mgr.RegisterJobName( jobName2 ) );
+
+    BOOST_REQUIRE( mgr.ReleaseJobName( jobName2 ) );
+    BOOST_REQUIRE( !mgr.ReleaseJobName( jobName2 ) );
+
+    BOOST_REQUIRE( !mgr.RegisterJobName( "" ) );
+    BOOST_REQUIRE( !mgr.ReleaseJobName( "empty" ) );
+}
+
+BOOST_AUTO_TEST_CASE( test_named_job_uniqueness )
+{
+    const int numJobs = 10;
+
+    for( int i = 0; i < 2; ++i )
+    {
+        for( int j = 0; j < numJobs; ++j )
+        {
+            std::string jobDescr =
+                "{\"script\" : \"simple.py\","
+                "\"language\" : \"python\","
+                "\"send_script\" : false,"
+                "\"priority\" : 4,"
+                "\"job_timeout\" : 120,"
+                "\"queue_timeout\" : 60,"
+                "\"task_timeout\" : 15,"
+                "\"max_failed_nodes\" : 10,"
+                "\"num_execution\" : 1,"
+                "\"max_cluster_instances\" : -1,"
+                "\"max_worker_instances\" : 1,"
+                "\"exclusive\" : false,"
+                "\"no_reschedule\" : false,"
+                "\"name\" : \"";
+            jobDescr += "exclusive_name_" + std::to_string( j ) + "\"}";
+
+            JobPtr job( mgr.CreateJob( jobDescr, true ) );
+            if ( i == 0 )
+            {
+                BOOST_REQUIRE( job );
+                mgr.PushJob( job );
+            }
+            else
+            {
+                BOOST_REQUIRE( !job );
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE( test_cron_job_creation )
+{
+    std::string validJob =
+        "{\"script\" : \"simple.py\","
+        "\"language\" : \"python\","
+        "\"send_script\" : false,"
+        "\"priority\" : 4,"
+        "\"job_timeout\" : 120,"
+        "\"queue_timeout\" : 60,"
+        "\"task_timeout\" : 15,"
+        "\"max_failed_nodes\" : 10,"
+        "\"num_execution\" : 1,"
+        "\"max_cluster_instances\" : -1,"
+        "\"max_worker_instances\" : 1,"
+        "\"exclusive\" : false,"
+        "\"no_reschedule\" : false,"
+        "\"cron\" : \"*/5 * * * 0\","
+        "\"name\" : \"job_name\"}";
+
+    JobPtr j( mgr.CreateJob( validJob, true ) );
+    BOOST_REQUIRE( mgr.RegisterJobName( "job_name" ) );
+    BOOST_REQUIRE( j );
+
+    JobPtr j2( mgr.CreateJob( validJob, true ) );
+    BOOST_REQUIRE( !j2 );
+
+    const bool check_name_existance = false;
+    JobPtr j3( mgr.CreateJob( validJob, check_name_existance ) );
+    BOOST_REQUIRE( j3 );
+
+    std::string cronJobNoName =
+        "{\"script\" : \"simple.py\","
+        "\"language\" : \"python\","
+        "\"send_script\" : false,"
+        "\"priority\" : 4,"
+        "\"job_timeout\" : 120,"
+        "\"queue_timeout\" : 60,"
+        "\"task_timeout\" : 15,"
+        "\"max_failed_nodes\" : 10,"
+        "\"num_execution\" : 1,"
+        "\"max_cluster_instances\" : -1,"
+        "\"max_worker_instances\" : 1,"
+        "\"exclusive\" : false,"
+        "\"no_reschedule\" : false,"
+        "\"cron\" : \"*/5 * * * 0\"}";
+
+    JobPtr j4( mgr.CreateJob( cronJobNoName, true ) );
+    BOOST_REQUIRE( !j4 );
+}
+
+BOOST_AUTO_TEST_CASE( test_cron_job_removal )
+{
+    const int numJobs = 10;
+
+    for( int i = 0; i < 2; ++i )
+    {
+        for( int j = 0; j < numJobs; ++j )
+        {
+            std::string jobName = "exclusive_name_" + std::to_string( j );
+            std::string jobDescr =
+                "{\"script\" : \"simple.py\","
+                "\"language\" : \"python\","
+                "\"send_script\" : false,"
+                "\"priority\" : 4,"
+                "\"job_timeout\" : 120,"
+                "\"queue_timeout\" : 60,"
+                "\"task_timeout\" : 15,"
+                "\"max_failed_nodes\" : 10,"
+                "\"num_execution\" : 1,"
+                "\"max_cluster_instances\" : -1,"
+                "\"max_worker_instances\" : 1,"
+                "\"exclusive\" : false,"
+                "\"no_reschedule\" : false,"
+                "\"name\" : \"";
+            jobDescr += jobName + "\"}";
+
+            JobPtr job( mgr.CreateJob( jobDescr, true ) );
+            if ( i == 0 )
+            {
+                BOOST_REQUIRE( job );
+                mgr.PushJob( job );
+            }
+            else
+            {
+                BOOST_REQUIRE( mgr.DeleteNamedJob( jobName ) );
+            }
+        }
+    }
+
+    JobPtr j;
+    BOOST_REQUIRE( !mgr.PopJob( j ) );
 }
 
 BOOST_AUTO_TEST_SUITE_END()
