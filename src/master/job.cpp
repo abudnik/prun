@@ -48,8 +48,8 @@ bool JobGroup::OnJobCompletion( const JobVertex &vertex )
             if ( numDeps < 2 )
             {
                 eventReceiver_->OnJobDependenciesResolved( job );
-                ++numCompleted_;
             }
+            ++numCompleted_;
         }
     }
 

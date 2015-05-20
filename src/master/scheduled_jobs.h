@@ -219,7 +219,7 @@ private:
             const bool lastJobInGroup = job->ReleaseJobGroup();
             if ( lastJobInGroup )
             {
-                if ( success && job->GetCron() )
+                if ( success && job->GetJobGroup()->GetCron() )
                 {
                     ICronManager *cronManager = common::GetService< ICronManager >();
                     cronManager->PushMetaJob( job->GetJobGroup() );
