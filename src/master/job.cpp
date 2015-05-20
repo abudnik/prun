@@ -201,16 +201,17 @@ void JobQueue::OnJobDeletion( JobPtr &job )
 
     job->RunCallback( "on_job_deletion", params );
 
-    const bool lastJobInGroup = job->ReleaseJobGroup();
-    if ( lastJobInGroup )
+    if ( job->GetJobGroup() )
     {
         const std::string &metaJobName = job->GetJobGroup()->GetName();
-        if ( !metaJobName.empty() )
+        ReleaseMetaJobName( metaJobName, job->GetJobId() );
+
+        const bool lastJobInGroup = job->ReleaseJobGroup();
+        if ( lastJobInGroup )
         {
-            nameToJob_.erase( metaJobName );
+            IJobManager *jobManager = common::GetService< IJobManager >();
+            jobManager->ReleaseJobName( metaJobName );
         }
-        IJobManager *jobManager = common::GetService< IJobManager >();
-        jobManager->ReleaseJobName( metaJobName );
     }
 }
 
@@ -239,6 +240,22 @@ bool JobQueue::DeleteJobGroup( int64_t groupId )
     }
 
     return deleted;
+}
+
+void JobQueue::ReleaseMetaJobName( const std::string &metaJobName, int64_t jobId )
+{
+    auto it_low = nameToJob_.lower_bound( metaJobName );
+    auto it_high = nameToJob_.upper_bound( metaJobName );
+
+    for( auto it = it_low; it != it_high; ++it )
+    {
+        const auto &job = it->second;
+        if ( jobId == job->GetJobId() )
+        {
+            nameToJob_.erase( it );
+            break;
+        }
+    }
 }
 
 void JobQueue::Clear()

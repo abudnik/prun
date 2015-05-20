@@ -273,6 +273,7 @@ public:
 
 private:
     void OnJobDeletion( JobPtr &job );
+    void ReleaseMetaJobName( const std::string &metaJobName, int64_t jobId );
 
 private:
     JobList jobs_;

@@ -213,15 +213,12 @@ private:
 
         if ( job->GetJobGroup() )
         {
+            const std::string &metaJobName = job->GetJobGroup()->GetName();
+            ReleaseMetaJobName( metaJobName, job->GetJobId() );
+
             const bool lastJobInGroup = job->ReleaseJobGroup();
             if ( lastJobInGroup )
             {
-                const std::string &metaJobName = job->GetJobGroup()->GetName();
-                if ( !metaJobName.empty() )
-                {
-                    nameToJob_.erase( metaJobName );
-                }
-
                 if ( success && job->GetCron() )
                 {
                     ICronManager *cronManager = common::GetService< ICronManager >();
@@ -245,6 +242,21 @@ private:
             {
                 IJobManager *jobManager = common::GetService< IJobManager >();
                 jobManager->ReleaseJobName( job->GetName() );
+            }
+        }
+    }
+
+    void ReleaseMetaJobName( const std::string &metaJobName, int64_t jobId )
+    {
+        auto it_low = nameToJob_.lower_bound( metaJobName );
+        auto it_high = nameToJob_.upper_bound( metaJobName );
+
+        for( auto it = it_low; it != it_high; ++it )
+        {
+            if ( jobId == it->second )
+            {
+                nameToJob_.erase( it );
+                break;
             }
         }
     }
