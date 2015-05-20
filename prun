@@ -88,7 +88,7 @@ class Command_Run():
 class Command_Stop():
     def Prepare(self, cmd):
         try:
-            jobId = int( cmd.split()[1] )
+            jobId = cmd.split()[1]
         except Exception as e:
             print( "invalid jobId argument" )
             raise e
@@ -229,6 +229,7 @@ def PrintHelp():
     print( "Commands:" )
     print( "  run /path/to/file [<job_alias>] -- run job, which described in '.job' or '.meta' file" )
     print( "  stop <job_id>                   -- interrupt job execution" )
+    print( "  stop <job_name>                 -- interrupt job/group of jobs execution" )
     print( "  stopg <group_id>                -- interrupt group of jobs execution" )
     print( "  stopall                         -- interrupt all job execution on all hosts" )
     print( "  stoprev                         -- interrupt all job execution from previous master sessions" )

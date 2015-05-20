@@ -91,6 +91,14 @@ List of hosts that are allowed to execute job. Empty list means no limits.
 List of groups of hosts, that are allowed to execute job. Empty list means no
 limits.
 
+- cron (optional)
+String like "*/5 * * * 0", which means 'run this job every 5 minutes on Sunday'.
+Use 'man 5 crontab' for more inforamtion.
+NB: if this field is defined, then field 'name' should be also defined.
+
+- name (optional)
+Unique name of job or meta job that identifies definitely this job or meta job.
+
                                 Job requirements
 --------------------------------------------------------------------------------
 

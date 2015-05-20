@@ -62,6 +62,7 @@ struct IScheduler : virtual public common::IObservable
 
     virtual void StopJob( int64_t jobId ) = 0;
     virtual void StopJobGroup( int64_t groupId ) = 0;
+    virtual void StopNamedJob( const std::string &name ) = 0;
     virtual void StopAllJobs() = 0;
     virtual void StopPreviousJobs() = 0;
 
@@ -103,6 +104,7 @@ public:
 
     virtual void StopJob( int64_t jobId );
     virtual void StopJobGroup( int64_t groupId );
+    virtual void StopNamedJob( const std::string &name );
     virtual void StopAllJobs();
     virtual void StopPreviousJobs();
 
@@ -122,7 +124,7 @@ private:
     bool GetReschedJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob, JobPtr &job, int numFreeCPU );
     bool GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob, JobPtr &job, int numFreeCPU );
 
-    void OnRemoveJob( int64_t jobId, const JobPtr &job, bool success );
+    void OnRemoveJob( int64_t jobId, bool success );
     void StopWorkers( int64_t jobId );
     void StopWorker( const std::string &hostIP ) const;
 

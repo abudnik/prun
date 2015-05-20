@@ -75,7 +75,7 @@ JobManager::JobManager()
  jobId_( 0 )
 {}
 
-Job *JobManager::CreateJob( const std::string &job_description ) const
+Job *JobManager::CreateJob( const std::string &job_description, bool check_name_existance )
 {
     boost::property_tree::ptree ptree;
     JDLJason parser;
@@ -86,11 +86,17 @@ Job *JobManager::CreateJob( const std::string &job_description ) const
     if ( job )
     {
         job->SetDescription( job_description );
+
+        if ( check_name_existance && HasJobName( job->GetName() ) )
+        {
+            PLOG_ERR( "JobManager::CreateJob: job name already exists: " << job->GetName() );
+            return nullptr;
+        }
     }
     return job;
 }
 
-bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs )
+bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs, bool check_name_existance )
 {
     boost::property_tree::ptree ptree;
     JDLJason parser;
@@ -126,6 +132,14 @@ bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
             jobGroup->SetDescription( meta_description );
         }
 
+        if ( ptree.count( "name" ) > 0 )
+        {
+            std::string name = ptree.get<std::string>( "name" );
+            if ( check_name_existance && HasJobName( name ) )
+                throw std::logic_error( std::string( "job name already exists: " ) + name );
+            jobGroup->SetName( name );
+        }
+
         // parse job files 
         bool succeeded = true;
         for( auto it = jobFiles.cbegin(); it != jobFiles.cend(); ++it )
@@ -148,7 +162,7 @@ bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
             while( getline( file, line ) )
                 jobDescr += line;
 
-            Job *job = CreateJob( jobDescr );
+            Job *job = CreateJob( jobDescr, check_name_existance );
             if ( job )
             {
                 if ( jobs.empty() ) // first job must contain meta job description
@@ -192,6 +206,9 @@ bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
 void JobManager::PushJob( JobPtr &job )
 {
     PLOG( "push job" );
+
+    RegisterJobName( job->GetName() );
+
     job->SetJobId( jobId_++ );
     jobs_->PushJob( job, numJobGroups_++ );
 
@@ -211,6 +228,7 @@ void JobManager::PushJobs( std::list< JobPtr > &jobs )
     PLOG( "push jobs" );
     for( auto &job : jobs )
     {
+        RegisterJobName( job->GetName() );
         job->SetJobId( jobId_++ );
     }
     jobs_->PushJobs( jobs, numJobGroups_++ );
@@ -227,26 +245,41 @@ void JobManager::PushJobs( std::list< JobPtr > &jobs )
     }
 }
 
-void JobManager::PushJobFromHistory( int64_t jobId, const std::string &jobDescription )
+void JobManager::BuildAndPushJob( int64_t jobId, const std::string &jobDescription )
 {
     boost::property_tree::ptree ptree;
     JDLJason parser;
     if ( !parser.ParseJob( jobDescription, ptree ) )
         return;
 
+    const bool cron = jobId < 0;
+    const bool check_name_existance = !cron;
+
     if ( ptree.count( "graph" ) > 0 )
     {
         std::list< JobPtr > jobs;
-        if ( CreateMetaJob( jobDescription, jobs ) && !jobs.empty() )
+        if ( CreateMetaJob( jobDescription, jobs, check_name_existance ) && !jobs.empty() )
         {
             PLOG( "push jobs from history" );
+            if ( !cron )
+            {
+                RegisterJobName( jobs.front()->GetJobGroup()->GetName() );
+            }
             for( auto &job : jobs )
             {
-                if ( jobId >= jobId_ + 1 )
+                if ( cron )
                 {
-                    jobId_ = jobId + 1;
+                    job->SetJobId( jobId_++ );
                 }
-                job->SetJobId( jobId < 0 ? jobId_++ : jobId++ );
+                else
+                {
+                    RegisterJobName( job->GetName() );
+                    if ( jobId >= jobId_ + 1 )
+                    {
+                        jobId_ = jobId + 1;
+                    }
+                    job->SetJobId( jobId++ );
+                }
             }
             jobs_->PushJobs( jobs, numJobGroups_++ );
 
@@ -261,15 +294,23 @@ void JobManager::PushJobFromHistory( int64_t jobId, const std::string &jobDescri
     }
     else
     {
-        JobPtr job( CreateJob( jobDescription ) );
+        JobPtr job( CreateJob( jobDescription, check_name_existance ) );
         if ( job )
         {
             PLOG( "push job from history" );
-            if ( jobId >= jobId_ )
+            if ( cron )
             {
-                jobId_ = jobId + 1;
+                job->SetJobId( jobId_++ );
             }
-            job->SetJobId( jobId < 0 ? jobId_++ : jobId++ );
+            else
+            {
+                RegisterJobName( job->GetName() );
+                if ( jobId >= jobId_ )
+                {
+                    jobId_ = jobId + 1;
+                }
+                job->SetJobId( jobId++ );
+            }
             jobs_->PushJob( job, numJobGroups_++ );
 
             IScheduler *scheduler = common::GetService< IScheduler >();
@@ -294,6 +335,17 @@ bool JobManager::DeleteJobGroup( int64_t groupId )
     return jobs_->DeleteJobGroup( groupId );
 }
 
+bool JobManager::DeleteNamedJob( const std::string &name )
+{
+    std::set< JobPtr > jobs;
+    jobs_->GetJobsByName( name, jobs );
+    for( const auto &job : jobs )
+    {
+        jobs_->DeleteJob( job->GetJobId() );
+    }
+    return !jobs.empty();
+}
+
 void JobManager::DeleteAllJobs()
 {
     jobs_->Clear();
@@ -302,6 +354,38 @@ void JobManager::DeleteAllJobs()
 bool JobManager::PopJob( JobPtr &job )
 {
     return jobs_->PopJob( job );
+}
+
+bool JobManager::RegisterJobName( const std::string &name )
+{
+    if ( name.empty() )
+        return false;
+
+    std::unique_lock< std::mutex > lock( jobNamesMut_ );
+    if ( !jobNames_.insert( name ).second )
+    {
+        PLOG_ERR( "JobManager::RegisterJobName: couldn't register job name: " << name );
+        return false;
+    }
+    return true;
+}
+
+bool JobManager::ReleaseJobName( const std::string &name )
+{
+    if ( name.empty() )
+        return false;
+
+    std::unique_lock< std::mutex > lock( jobNamesMut_ );
+    return jobNames_.erase( name ) > 0;
+}
+
+bool JobManager::HasJobName( const std::string &name )
+{
+    if ( name.empty() )
+        return false;
+
+    std::unique_lock< std::mutex > lock( jobNamesMut_ );
+    return jobNames_.find( name ) != jobNames_.end();
 }
 
 void JobManager::OnJobDependenciesResolved( const JobPtr &job )
@@ -358,7 +442,7 @@ bool JobManager::ReadScript( const std::string &filePath, std::string &script ) 
     return common::EncodeBase64( data.c_str(), data.size(), script );
 }
 
-Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
+Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree )
 {
     Job *job = nullptr;
 
@@ -437,6 +521,17 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree ) const
             std::string cron_description = ptree.get<std::string>( "cron" );
             if ( !job->GetCron().Parse( cron_description ) )
                 throw std::logic_error( std::string( "cron parse failed: " ) + cron_description );
+        }
+
+        if ( ptree.count( "name" ) > 0 )
+        {
+            std::string name = ptree.get<std::string>( "name" );
+            job->SetName( name );
+        }
+        else
+        {
+            if ( job->GetCron() )
+                throw std::logic_error( std::string( "cron job must have exclusive name" ) );
         }
 
         return job;

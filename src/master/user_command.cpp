@@ -77,7 +77,7 @@ bool UserCommand::RunJob( std::ifstream &file, const std::string &jobAlias, std:
             jobDescr += line;
 
         IJobManager *jobManager = common::GetService< IJobManager >();
-        JobPtr job( jobManager->CreateJob( jobDescr ) );
+        JobPtr job( jobManager->CreateJob( jobDescr, true ) );
         if ( job )
         {
             job->SetAlias( jobAlias );
@@ -113,7 +113,7 @@ bool UserCommand::RunMetaJob( std::ifstream &file, std::string &result ) const
 
         std::list< JobPtr > jobs;
         IJobManager *jobManager = common::GetService< IJobManager >();
-        if ( !jobManager->CreateMetaJob( metaDescr, jobs ) )
+        if ( !jobManager->CreateMetaJob( metaDescr, jobs, true ) )
             return false;
 
         if ( !jobs.empty() )
@@ -121,6 +121,10 @@ bool UserCommand::RunMetaJob( std::ifstream &file, std::string &result ) const
             auto jobGroup = jobs.front()->GetJobGroup();
             if ( jobGroup->GetCron() )
             {
+                for( const auto &job : jobs )
+                {
+                    jobManager->RegisterJobName( job->GetName() );
+                }
                 ICronManager *cronManager = common::GetService< ICronManager >();
                 cronManager->PushMetaJob( jobGroup, false );
             }
@@ -186,6 +190,26 @@ bool UserCommand::StopGroup( int64_t groupId )
     catch( std::exception &e )
     {
         PLOG_ERR( "UserCommand::StopGroup: " << e.what() );
+        return false;
+    }
+    return true;
+}
+
+bool UserCommand::StopNamed( const std::string &name )
+{
+    try
+    {
+        ICronManager *cronManager = common::GetService< ICronManager >();
+        cronManager->StopJob( name );
+        IJobManager *jobManager = common::GetService< IJobManager >();
+        jobManager->DeleteNamedJob( name );
+        IScheduler *scheduler = common::GetService< IScheduler >();
+        scheduler->StopNamedJob( name );
+
+    }
+    catch( std::exception &e )
+    {
+        PLOG_ERR( "UserCommand::StopNamed: " << e.what() );
         return false;
     }
     return true;

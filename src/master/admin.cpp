@@ -68,10 +68,19 @@ int AdminCommand_Run::Execute( const boost::property_tree::ptree &params,
 int AdminCommand_Stop::Execute( const boost::property_tree::ptree &params,
                                 std::string &result )
 {
-    int64_t jobId;
+    std::string jobName;
+    int64_t jobId = -1;
     try
     {
-        jobId = params.get<int64_t>( "job_id" );
+        std::string value = params.get<std::string>( "job_id" );
+        if ( !value.empty() && isalpha( value[0] ) )
+        {
+            jobName = value;
+        }
+        else
+        {
+            jobId = params.get<int64_t>( "job_id" );
+        }
     }
     catch( std::exception &e )
     {
@@ -79,8 +88,16 @@ int AdminCommand_Stop::Execute( const boost::property_tree::ptree &params,
         return JSON_RPC_INVALID_PARAMS;
     }
 
-    if ( !UserCommand().Stop( jobId ) )
-        return JSON_RPC_INTERNAL_ERROR;
+    if ( jobName.empty() )
+    {
+        if ( !UserCommand().Stop( jobId ) )
+            return JSON_RPC_INTERNAL_ERROR;
+    }
+    else
+    {
+        if ( !UserCommand().StopNamed( jobName ) )
+            return JSON_RPC_INTERNAL_ERROR;
+    }
 
     return 0;
 }

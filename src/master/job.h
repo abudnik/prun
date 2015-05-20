@@ -77,6 +77,9 @@ public:
 
     std::vector< JobWeakPtr > &GetIndexToJob() { return indexToJob_; }
 
+    const std::string &GetName() const { return name_; }
+    void SetName( const std::string &name ) { name_ = name; }
+
     const std::string &GetDescription() const { return description_; }
     void SetDescription( const std::string &description ) { description_ = description; }
 
@@ -87,6 +90,7 @@ private:
     std::vector< JobWeakPtr > indexToJob_;
     IJobGroupEventReceiverPtr eventReceiver_;
     size_t numCompleted_;
+    std::string name_;
     std::string description_;
     common::CronJob cron_;
 };
@@ -121,6 +125,7 @@ public:
     unsigned int GetScriptLength() const { return scriptLength_; }
 
     const std::string &GetFilePath() const { return filePath_; }
+    const std::string &GetName() const { return name_; }
     const std::string &GetAlias() const { return alias_; }
     const std::string &GetDescription() const { return description_; }
     int GetPriority() const { return priority_; }
@@ -143,6 +148,7 @@ public:
     JobGroupPtr GetJobGroup() { return jobGroup_; }
 
     void SetFilePath( const std::string &filePath ) { filePath_ = filePath; }
+    void SetName( const std::string &name ) { name_ = name; }
     void SetAlias( const std::string &alias ) { alias_ = alias; }
     void SetDescription( const std::string &description ) { description_ = description; }
     void SetMaxExecAtWorker( int val ) { maxExecAtWorker_ = val; }
@@ -178,6 +184,7 @@ private:
     std::string scriptLanguage_;
     unsigned int scriptLength_;
     std::string filePath_;
+    std::string name_;
     std::string alias_;
     std::string description_;
 
@@ -234,6 +241,8 @@ public:
 
     virtual bool GetJobById( int64_t jobId, JobPtr &job ) = 0;
 
+    virtual void GetJobsByName( const std::string &name, std::set< JobPtr > &jobs ) = 0;
+
     virtual bool DeleteJob( int64_t jobId ) = 0;
     virtual bool DeleteJobGroup( int64_t groupId ) = 0;
     virtual void Clear() = 0;
@@ -244,6 +253,7 @@ class JobQueue : public IJobQueue
     typedef std::map< int64_t, JobPtr > IdToJob;
     typedef std::vector< JobPtr > JobList;
     typedef std::set< JobPtr > JobSet;
+    typedef std::multimap< std::string, JobPtr > JobNameToJob;
 
 public:
     virtual void PushJob( JobPtr &job, int64_t groupId );
@@ -255,17 +265,20 @@ public:
 
     virtual bool GetJobById( int64_t jobId, JobPtr &job );
 
+    virtual void GetJobsByName( const std::string &name, std::set< JobPtr > &jobs );
+
     virtual bool DeleteJob( int64_t jobId );
     virtual bool DeleteJobGroup( int64_t groupId );
     virtual void Clear();
 
 private:
-    void OnJobDeletion( JobPtr &job ) const;
+    void OnJobDeletion( JobPtr &job );
 
 private:
     JobList jobs_;
     JobSet delayedJobs_; // jobs with unresolved dependencies
     IdToJob idToJob_;
+    JobNameToJob nameToJob_;
     std::recursive_mutex jobsMut_;
 };
 

@@ -95,7 +95,7 @@ void JobHistory::OnGetCompleted( const std::string &response )
 
             int64_t id = boost::lexical_cast<int64_t>( jobId );
             IJobManager *jobManager = common::GetService< IJobManager >();
-            jobManager->PushJobFromHistory( id, jobDescription );
+            jobManager->BuildAndPushJob( id, jobDescription );
         }
         else
         {

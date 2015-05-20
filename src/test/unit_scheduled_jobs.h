@@ -2,7 +2,23 @@
 // ScheduledJobs
 ////////////////////////////////////////////////////////////////
 
-BOOST_FIXTURE_TEST_SUITE( ScheduledJobsSuite, ScheduledJobs )
+struct ScheduledJobsEnvironment : ScheduledJobs
+{
+    ScheduledJobsEnvironment()
+    {
+        common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
+        serviceLocator.Register( (master::IJobManager*)&jobMgr );
+    }
+
+    ~ScheduledJobsEnvironment()
+    {
+        common::ServiceLocator::Instance().UnregisterAll();
+    }
+
+    JobManager jobMgr;
+};
+
+BOOST_FIXTURE_TEST_SUITE( ScheduledJobsSuite, ScheduledJobsEnvironment )
 
 BOOST_AUTO_TEST_CASE( jobs_insertion )
 {

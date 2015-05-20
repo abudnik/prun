@@ -40,13 +40,13 @@ BOOST_AUTO_TEST_CASE( job_creation )
                      "\"max_cluster_instances\" : -1,"
                      "\"max_worker_instances\" : 1,"
                      "\"exclusive\" : false,"
-                     "\"no_reschedule\" : false}" ) );
+                     "\"no_reschedule\" : false}", true ) );
     BOOST_CHECK( (bool)job1 );
 
-    JobPtr job2( mgr.CreateJob( "_garbage_" ) );
+    JobPtr job2( mgr.CreateJob( "_garbage_", true ) );
     BOOST_CHECK_EQUAL( (bool)job2, false );
 
-    JobPtr job3( mgr.CreateJob( "{\"_random_field_\" : 1}" ) );
+    JobPtr job3( mgr.CreateJob( "{\"_random_field_\" : 1}", true ) );
     BOOST_CHECK_EQUAL( (bool)job3, false );
 }
 
@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE( job_queue )
                       "\"max_cluster_instances\" : -1,"
                       "\"max_worker_instances\" : 1,"
                       "\"exclusive\" : false,"
-                      "\"no_reschedule\" : false}" ) );
+                      "\"no_reschedule\" : false}", true ) );
         BOOST_REQUIRE( job );
         mgr.PushJob( job );
     }
@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE( job_queue2 )
                       "\"max_cluster_instances\" : -1,"
                       "\"max_worker_instances\" : 1,"
                       "\"exclusive\" : false,"
-                      "\"no_reschedule\" : false}" ) );
+                      "\"no_reschedule\" : false}", true ) );
         BOOST_REQUIRE( job );
         jobs.push_back( job );
     }
@@ -142,7 +142,7 @@ BOOST_AUTO_TEST_CASE( job_get_by_id )
                       "\"max_cluster_instances\" : -1,"
                       "\"max_worker_instances\" : 1,"
                       "\"exclusive\" : false,"
-                      "\"no_reschedule\" : false}" ) );
+                      "\"no_reschedule\" : false}", true ) );
         BOOST_REQUIRE( job );
         jobs.push_back( job );
     }
@@ -177,7 +177,7 @@ BOOST_AUTO_TEST_CASE( job_delete_by_id )
                       "\"max_cluster_instances\" : -1,"
                       "\"max_worker_instances\" : 1,"
                       "\"exclusive\" : false,"
-                      "\"no_reschedule\" : false}" ) );
+                      "\"no_reschedule\" : false}", true ) );
         BOOST_REQUIRE( job );
         jobs.push_back( job );
     }
@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE( job_group_delete )
                       "\"max_cluster_instances\" : -1,"
                       "\"max_worker_instances\" : 1,"
                       "\"exclusive\" : false,"
-                      "\"no_reschedule\" : false}" ) );
+                      "\"no_reschedule\" : false}", true ) );
         BOOST_REQUIRE( job );
         jobs.push_back( job );
     }
@@ -246,7 +246,7 @@ BOOST_AUTO_TEST_CASE( job_delete_all )
                       "\"max_cluster_instances\" : -1,"
                       "\"max_worker_instances\" : 1,"
                       "\"exclusive\" : false,"
-                      "\"no_reschedule\" : false}" ) );
+                      "\"no_reschedule\" : false}", true ) );
         BOOST_REQUIRE( job );
         mgr.PushJob( job );
     }

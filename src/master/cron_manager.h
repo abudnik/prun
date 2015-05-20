@@ -34,24 +34,35 @@ struct ICronManager
 {
     virtual void PushJob( const JobPtr &job, bool afterExecution ) = 0;
     virtual void PushMetaJob( const JobGroupPtr &metaJob, bool afterExecution ) = 0;
+    virtual void StopJob( const std::string &jobName ) = 0;
 };
 
 // TODO: deadlocks
 class CronManager : public ICronManager
 {
-    typedef std::function< void () > Callback;
-    typedef std::chrono::system_clock::time_point ptime;
-    typedef std::multimap< ptime, Callback > TimeToCallback;
+    struct TimeoutHandler;
 
-    struct JobTimeoutHandler
+    typedef std::chrono::system_clock::time_point ptime;
+    typedef std::shared_ptr< TimeoutHandler > CallbackPtr;
+    typedef std::multimap< ptime, CallbackPtr > TimeToCallback;
+    typedef std::map< std::string, CallbackPtr > JobNameToCallback;
+
+    struct TimeoutHandler
     {
-        void HandleTimeout();
+        TimeoutHandler();
+        virtual void HandleTimeout() = 0;
+
         std::string jobDescription_;
+        std::string jobName_;
+        bool removed_;
     };
-    struct MetaJobTimeoutHandler
+    struct JobTimeoutHandler : TimeoutHandler
     {
-        void HandleTimeout();
-        std::string metaJobDescription_;
+        virtual void HandleTimeout();
+    };
+    struct MetaJobTimeoutHandler : TimeoutHandler
+    {
+        virtual void HandleTimeout();
     };
 
 public:
@@ -68,6 +79,7 @@ public:
     // ICronManager
     virtual void PushJob( const JobPtr &job, bool afterExecution );
     virtual void PushMetaJob( const JobGroupPtr &metaJob, bool afterExecution );
+    virtual void StopJob( const std::string &jobName );
 
 private:
     void CheckTimeouts();
@@ -77,6 +89,7 @@ private:
     bool stopped_;
     common::SyncTimer timer_;
     TimeToCallback jobs_;
+    JobNameToCallback callbacks_;
     std::mutex jobsMut_;
 };
 

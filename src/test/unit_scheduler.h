@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE( on_new_job )
                       "\"max_cluster_instances\" : -1,"
                       "\"max_worker_instances\" : 1,"
                       "\"exclusive\" : false,"
-                      "\"no_reschedule\" : false}" ) );
+                      "\"no_reschedule\" : false}", true ) );
         BOOST_REQUIRE( job );
         jobMgr.PushJob( job ); // implicitly calls OnNewJob()
     }
@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE( get_task_to_send )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -169,7 +169,7 @@ BOOST_AUTO_TEST_CASE( get_task_to_send_multiple )
                       "\"max_cluster_instances\" : -1,"
                       "\"max_worker_instances\" : 1,"
                       "\"exclusive\" : false,"
-                      "\"no_reschedule\" : false}" ) );
+                      "\"no_reschedule\" : false}", true ) );
         BOOST_REQUIRE( job );
         jobMgr.PushJob( job );
     }
@@ -209,7 +209,7 @@ BOOST_AUTO_TEST_CASE( task_send_completion )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE( task_completion_failure )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -300,7 +300,7 @@ BOOST_AUTO_TEST_CASE( task_completion )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -355,7 +355,7 @@ BOOST_AUTO_TEST_CASE( task_completion_reschedule )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -414,7 +414,7 @@ BOOST_AUTO_TEST_CASE( task_completion_reschedule_exclusive )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : true,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -451,7 +451,7 @@ BOOST_AUTO_TEST_CASE( task_completion_reschedule_exclusive )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -496,7 +496,7 @@ BOOST_AUTO_TEST_CASE( task_completion_no_reschedule )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : true}" ) );
+                  "\"no_reschedule\" : true}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -549,7 +549,7 @@ BOOST_AUTO_TEST_CASE( task_completion_max_failed_nodes )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -604,7 +604,7 @@ BOOST_AUTO_TEST_CASE( task_completion_num_executions )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -664,7 +664,7 @@ BOOST_AUTO_TEST_CASE( task_completion_max_cluster_instances )
                   "\"max_cluster_instances\" : 5,"
                   "\"max_worker_instances\" : 4,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -717,7 +717,7 @@ BOOST_AUTO_TEST_CASE( task_completion_max_worker_instances )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 4,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -760,7 +760,7 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive ) // 1st job - exclusive, 2nd jo
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : true,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -784,7 +784,7 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive ) // 1st job - exclusive, 2nd jo
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -818,7 +818,7 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive2 ) // 1st job - not exclusive, 2
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -842,7 +842,7 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive2 ) // 1st job - not exclusive, 2
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : true,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -876,7 +876,7 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive3 ) // 1st _completed_ job - excl
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : true,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -910,7 +910,7 @@ BOOST_AUTO_TEST_CASE( task_completion_exclusive3 ) // 1st _completed_ job - excl
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : true,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -948,7 +948,7 @@ BOOST_AUTO_TEST_CASE( task_completion_delete_worker )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -993,7 +993,7 @@ BOOST_AUTO_TEST_CASE( on_task_timeout )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -1040,7 +1040,7 @@ BOOST_AUTO_TEST_CASE( on_task_timeout_after_completion )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -1092,7 +1092,7 @@ BOOST_AUTO_TEST_CASE( on_job_timeout )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -1132,7 +1132,7 @@ BOOST_AUTO_TEST_CASE( stop_job )
                   "\"max_cluster_instances\" : -1,"
                   "\"max_worker_instances\" : 1,"
                   "\"exclusive\" : false,"
-                  "\"no_reschedule\" : false}" ) );
+                  "\"no_reschedule\" : false}", true ) );
     BOOST_REQUIRE( job );
     jobMgr.PushJob( job );
 
@@ -1176,7 +1176,7 @@ BOOST_AUTO_TEST_CASE( stop_all_jobs )
                       "\"max_cluster_instances\" : -1,"
                       "\"max_worker_instances\" : 1,"
                       "\"exclusive\" : false,"
-                      "\"no_reschedule\" : false}" ) );
+                      "\"no_reschedule\" : false}", true ) );
         BOOST_REQUIRE( job );
         jobMgr.PushJob( job );
     }

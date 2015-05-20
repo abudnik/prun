@@ -26,16 +26,20 @@ the License.
 
 namespace master {
 
+CronManager::TimeoutHandler::TimeoutHandler()
+: removed_( false )
+{}
+
 void CronManager::JobTimeoutHandler::HandleTimeout()
 {
     IJobManager *jobManager = common::GetService< IJobManager >();
-    jobManager->PushJobFromHistory( -1, jobDescription_ );
+    jobManager->BuildAndPushJob( -1, jobDescription_ );
 }
 
 void CronManager::MetaJobTimeoutHandler::HandleTimeout()
 {
     IJobManager *jobManager = common::GetService< IJobManager >();
-    jobManager->PushJobFromHistory( -1, metaJobDescription_ );
+    jobManager->BuildAndPushJob( -1, jobDescription_ );
 }
 
 
@@ -70,8 +74,12 @@ void CronManager::CheckTimeouts()
         if ( now < jobPlannedTime ) // skip earlier planned jobs
             break;
 
-        Callback callback( it->second );
-        callback();
+        CallbackPtr &callback = it->second;
+        if ( !callback->removed_ )
+        {
+            callback->HandleTimeout();
+            callbacks_.erase( callback->jobName_ );
+        }
         jobs_.erase( it++ );
     }
 }
@@ -80,46 +88,83 @@ void CronManager::PushJob( const JobPtr &job, bool afterExecution )
 {
     const auto now = std::chrono::system_clock::now();
     auto deadline = job->GetCron().Next( now );
-    if ( deadline <= now && afterExecution )
+    if ( afterExecution )
     {
-        deadline += std::chrono::minutes( 1 );
+        if ( deadline <= now )
+        {
+            deadline += std::chrono::minutes( 1 );
+        }
+    }
+    else
+    {
+        IJobManager *jobManager = common::GetService< IJobManager >();
+        jobManager->RegisterJobName( job->GetName() );
     }
 
     auto handler = std::make_shared< JobTimeoutHandler >();
     handler->jobDescription_ = job->GetDescription();
-    Callback callback(
-        std::bind( &JobTimeoutHandler::HandleTimeout, handler )
-    );
+    handler->jobName_ = job->GetName();
 
     std::unique_lock< std::mutex > lock( jobsMut_ );
-    jobs_.insert( std::pair< ptime, Callback >(
+    jobs_.insert( std::pair< ptime, CallbackPtr >(
                       deadline,
-                      callback
+                      handler
                 )
     );
+
+    callbacks_[ job->GetName() ] = handler;
 }
 
 void CronManager::PushMetaJob( const JobGroupPtr &metaJob, bool afterExecution )
 {
     const auto now = std::chrono::system_clock::now();
     auto deadline = metaJob->GetCron().Next( now );
-    if (  deadline <= now && afterExecution )
+    if ( afterExecution )
     {
-        deadline += std::chrono::minutes( 1 );
+        if ( deadline <= now )
+        {
+            deadline += std::chrono::minutes( 1 );
+        }
+    }
+    else
+    {
+        IJobManager *jobManager = common::GetService< IJobManager >();
+        jobManager->RegisterJobName( metaJob->GetName() );
     }
 
     auto handler = std::make_shared< MetaJobTimeoutHandler >();
-    handler->metaJobDescription_ = metaJob->GetDescription();
-    Callback callback(
-        std::bind( &MetaJobTimeoutHandler::HandleTimeout, handler )
-    );
+    handler->jobDescription_ = metaJob->GetDescription();
+    handler->jobName_ = metaJob->GetName();
 
     std::unique_lock< std::mutex > lock( jobsMut_ );
-    jobs_.insert( std::pair< ptime, Callback >(
+    jobs_.insert( std::pair< ptime, CallbackPtr >(
                       deadline,
-                      callback
+                      handler
                 )
     );
+
+    callbacks_[ metaJob->GetName() ] = handler;
+}
+
+void CronManager::StopJob( const std::string &jobName )
+{
+    bool found = false;
+    {
+        std::unique_lock< std::mutex > lock( jobsMut_ );
+        auto it = callbacks_.find( jobName );
+        found = ( it != callbacks_.end() );
+        if ( found )
+        {
+            const CallbackPtr &handler = it->second;
+            handler->removed_ = true;
+            callbacks_.erase( it );
+        }
+    }
+    if ( found )
+    {
+        IJobManager *jobManager = common::GetService< IJobManager >();
+        jobManager->ReleaseJobName( jobName );
+    }
 }
 
 } // namespace master

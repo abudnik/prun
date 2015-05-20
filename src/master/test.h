@@ -21,7 +21,7 @@ void TestSingleJob( const std::string &filePath )
         jobDescr += line;
 
     IJobManager *jobManager = common::GetService< IJobManager >();
-    JobPtr job( jobManager->CreateJob( jobDescr ) );
+    JobPtr job( jobManager->CreateJob( jobDescr, true ) );
     if ( job )
     {
         // add job to job queue
@@ -44,7 +44,7 @@ void TestMetaJob( const std::string &filePath )
 
     std::list< JobPtr > jobs;
     IJobManager *jobManager = common::GetService< IJobManager >();
-    jobManager->CreateMetaJob( metaDescr, jobs );
+    jobManager->CreateMetaJob( metaDescr, jobs, true );
     jobManager->PushJobs( jobs );
 }
 

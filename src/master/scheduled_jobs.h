@@ -27,6 +27,7 @@ the License.
 #include <map>
 #include "job.h"
 #include "cron_manager.h"
+#include "job_manager.h"
 #include "common/service_locator.h"
 #include "common/log.h"
 
@@ -58,6 +59,7 @@ class ScheduledJobs
 {
 private:
     typedef std::map< int64_t, int > IdToJobExec;
+    typedef std::multimap< std::string, int64_t > JobNameToJob;
 
 public:
     typedef std::multiset< JobState > JobQueue;
@@ -66,6 +68,20 @@ public:
     void Add( JobPtr &job, int numExec )
     {
         jobExecutions_[ job->GetJobId() ] = numExec;
+
+        if ( !job->GetName().empty() )
+        {
+            nameToJob_.insert( std::make_pair( job->GetName(), job->GetJobId() ) );
+        }
+        if ( job->GetJobGroup() )
+        {
+            const std::string &metaJobName = job->GetJobGroup()->GetName();
+            if ( !metaJobName.empty() )
+            {
+                nameToJob_.insert( std::make_pair( metaJobName, job->GetJobId() ) );
+            }
+        }
+
         jobs_.insert( JobState( job ) );
     }
 
@@ -86,6 +102,7 @@ public:
     bool FindJobByJobId( int64_t jobId, JobPtr &job ) const
     {
         // TODO: use fixed-size array of rb-trees to handle both priorities & job lookup
+        // or boost::bimap
         for( auto it = jobs_.cbegin(); it != jobs_.cend(); ++it )
         {
             const JobPtr &j = (*it).GetJob();
@@ -108,6 +125,17 @@ public:
         }
     }
 
+    void GetJobsByName( const std::string &name, std::set< int64_t > &jobs )
+    {
+        auto it_low = nameToJob_.lower_bound( name );
+        auto it_high = nameToJob_.upper_bound( name );
+
+        for( auto it = it_low; it != it_high; ++it )
+        {
+            jobs.insert( it->second );
+        }
+    }
+
     int GetNumExec( int64_t jobId ) const
     {
         auto it = jobExecutions_.find( jobId );
@@ -122,13 +150,16 @@ public:
     const JobQueue &GetJobQueue() const { return jobs_; }
 
     template< typename T >
-    void SetOnRemoveCallback( T *obj, void (T::*f)( int64_t jobId, const JobPtr &job, bool success ) )
+    void SetOnRemoveCallback( T *obj, void (T::*f)( int64_t jobId, bool success ) )
     {
-        onRemoveCallback_ = std::bind( f, obj, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 );
+        onRemoveCallback_ = std::bind( f, obj, std::placeholders::_1, std::placeholders::_2 );
     }
 
     void RemoveJob( int64_t jobId, bool success, const char *completionStatus )
     {
+        if ( onRemoveCallback_ )
+            onRemoveCallback_( jobId, success );
+
         jobExecutions_.erase( jobId );
         for( auto it = jobs_.begin(); it != jobs_.end(); ++it )
         {
@@ -136,17 +167,11 @@ public:
             if ( job->GetJobId() == jobId )
             {
                 RunJobCallback( job, completionStatus );
-
-                if ( onRemoveCallback_ )
-                    onRemoveCallback_( jobId, job, success );
-
+                ReleaseJob( job, success );
                 jobs_.erase( it );
                 return;
             }
         }
-
-        if ( onRemoveCallback_ )
-            onRemoveCallback_( jobId, nullptr, success );
 
         PLOG( "ScheduledJobs::RemoveJob: job not found for jobId=" << jobId );
     }
@@ -179,10 +204,56 @@ private:
         job->RunCallback( "on_job_completion", params );
     }
 
+    void ReleaseJob( const JobPtr &job, bool success )
+    {
+        if ( !job->GetName().empty() )
+        {
+            nameToJob_.erase( job->GetName() );
+        }
+
+        if ( job->GetJobGroup() )
+        {
+            const bool lastJobInGroup = job->ReleaseJobGroup();
+            if ( lastJobInGroup )
+            {
+                const std::string &metaJobName = job->GetJobGroup()->GetName();
+                if ( !metaJobName.empty() )
+                {
+                    nameToJob_.erase( metaJobName );
+                }
+
+                if ( success && job->GetCron() )
+                {
+                    ICronManager *cronManager = common::GetService< ICronManager >();
+                    cronManager->PushMetaJob( job->GetJobGroup(), true );
+                }
+                else
+                {
+                    IJobManager *jobManager = common::GetService< IJobManager >();
+                    jobManager->ReleaseJobName( job->GetJobGroup()->GetName() );
+                }
+            }
+        }
+        else
+        {
+            if ( success && job->GetCron() )
+            {
+                ICronManager *cronManager = common::GetService< ICronManager >();
+                cronManager->PushJob( job, true );
+            }
+            else
+            {
+                IJobManager *jobManager = common::GetService< IJobManager >();
+                jobManager->ReleaseJobName( job->GetName() );
+            }
+        }
+    }
+
 private:
     JobQueue jobs_;
     IdToJobExec jobExecutions_; // job_id -> num job remaining executions (== 0, if job execution completed)
-    std::function< void (int64_t, const JobPtr &, bool) > onRemoveCallback_;
+    JobNameToJob nameToJob_;
+    std::function< void (int64_t, bool) > onRemoveCallback_;
 };
 
 

@@ -14,5 +14,6 @@
     "no_reschedule" : true,
     "max_exec_at_worker" : 1,
     "exec_unit_type" : "host",
-    "cron" : "* * * * *"
+    "cron" : "* * * * *",
+    "name" : "my_cron_job"
 }

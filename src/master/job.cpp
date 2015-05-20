@@ -21,7 +21,9 @@ the License.
 */
 
 #include "job.h"
+#include "job_manager.h"
 #include "common/log.h"
+#include "common/service_locator.h"
 
 namespace master {
 
@@ -86,17 +88,32 @@ void JobQueue::PushJob( JobPtr &job, int64_t groupId )
     std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
     job->SetGroupId( groupId );
     idToJob_[ job->GetJobId() ] = job;
+
+    if ( !job->GetName().empty() )
+        nameToJob_.insert( std::make_pair( job->GetName(), job ) );
+
     jobs_.push_back( job );
     std::push_heap( jobs_.begin(), jobs_.end(), JobComparatorPriority() );
 }
 
 void JobQueue::PushJobs( std::list< JobPtr > &jobs, int64_t groupId )
 {
+    std::string metaJobName;
+    const auto jobGroup = jobs.front()->GetJobGroup();
+    if ( jobGroup )
+        metaJobName = jobGroup->GetName();
+
     std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
     for( const auto &job : jobs )
     {
         job->SetGroupId( groupId );
         idToJob_[ job->GetJobId() ] = job;
+
+        if ( !metaJobName.empty() )
+            nameToJob_.insert( std::make_pair( metaJobName, job ) );
+        if ( !job->GetName().empty() )
+            nameToJob_.insert( std::make_pair( job->GetName(), job ) );
+
         if ( job->GetNumDepends() )
         {
             delayedJobs_.insert( job );
@@ -131,6 +148,13 @@ bool JobQueue::DeleteJob( int64_t jobId )
     JobPtr job( it->second );
     idToJob_.erase( it );
 
+    if ( !job->GetName().empty() )
+    {
+        nameToJob_.erase( job->GetName() );
+        IJobManager *jobManager = common::GetService< IJobManager >();
+        jobManager->ReleaseJobName( job->GetName() );
+    }
+
     OnJobDeletion( job );
 
     for( auto it = jobs_.begin(); it != jobs_.end(); ++it )
@@ -148,7 +172,20 @@ bool JobQueue::DeleteJob( int64_t jobId )
     return true;
 }
 
-void JobQueue::OnJobDeletion( JobPtr &job ) const
+void JobQueue::GetJobsByName( const std::string &name, std::set< JobPtr > &jobs )
+{
+    std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
+
+    auto it_low = nameToJob_.lower_bound( name );
+    auto it_high = nameToJob_.upper_bound( name );
+
+    for( auto it = it_low; it != it_high; ++it )
+    {
+        jobs.insert( it->second );
+    }
+}
+
+void JobQueue::OnJobDeletion( JobPtr &job )
 {
     std::ostringstream ss;
     ss << "================" << std::endl <<
@@ -163,13 +200,23 @@ void JobQueue::OnJobDeletion( JobPtr &job ) const
     params.put( "user_msg", ss.str() );
 
     job->RunCallback( "on_job_deletion", params );
-    job->ReleaseJobGroup();
+
+    const bool lastJobInGroup = job->ReleaseJobGroup();
+    if ( lastJobInGroup )
+    {
+        const std::string &metaJobName = job->GetJobGroup()->GetName();
+        if ( !metaJobName.empty() )
+        {
+            nameToJob_.erase( metaJobName );
+        }
+        IJobManager *jobManager = common::GetService< IJobManager >();
+        jobManager->ReleaseJobName( metaJobName );
+    }
 }
 
 bool JobQueue::DeleteJobGroup( int64_t groupId )
 {
     JobList jobs;
-    bool deleted = false;
     {
         std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
         for( const auto &job : jobs_ )
@@ -184,6 +231,7 @@ bool JobQueue::DeleteJobGroup( int64_t groupId )
         }
     }
 
+    bool deleted = false;
     for( const auto &job : jobs )
     {
         if ( job->GetGroupId() == groupId )

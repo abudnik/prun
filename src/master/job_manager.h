@@ -46,18 +46,22 @@ struct ITimeoutManager;
 
 struct IJobManager
 {
-    virtual Job *CreateJob( const std::string &job_description ) const = 0;
-    virtual bool CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs ) = 0;
+    virtual Job *CreateJob( const std::string &job_description, bool check_name_existance ) = 0;
+    virtual bool CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs, bool check_name_existance ) = 0;
     virtual void PushJob( JobPtr &job ) = 0;
     virtual void PushJobs( std::list< JobPtr > &jobs ) = 0;
-    virtual void PushJobFromHistory( int64_t jobId, const std::string &jobDescription ) = 0;
+    virtual void BuildAndPushJob( int64_t jobId, const std::string &jobDescription ) = 0;
 
     virtual bool GetJobById( int64_t jobId, JobPtr &job ) = 0;
     virtual bool DeleteJob( int64_t jobId ) = 0;
     virtual bool DeleteJobGroup( int64_t groupId ) = 0;
+    virtual bool DeleteNamedJob( const std::string &name ) = 0;
     virtual void DeleteAllJobs() = 0;
 
     virtual bool PopJob( JobPtr &job ) = 0;
+
+    virtual bool RegisterJobName( const std::string &name ) = 0;
+    virtual bool ReleaseJobName( const std::string &name ) = 0;
 
     virtual const std::string &GetMasterId() const = 0;
     virtual const std::string &GetJobsDir() const = 0;
@@ -65,22 +69,28 @@ struct IJobManager
 
 class JobManager : public IJobManager, public IJobGroupEventReceiver
 {
+    typedef std::set< std::string > JobNames;
+
 public:
     JobManager();
 
     // IJobManager
-    virtual Job *CreateJob( const std::string &job_description ) const;
-    virtual bool CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs );
+    virtual Job *CreateJob( const std::string &job_description, bool check_name_existance );
+    virtual bool CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs, bool check_name_existance );
     virtual void PushJob( JobPtr &job );
     virtual void PushJobs( std::list< JobPtr > &jobs );
-    virtual void PushJobFromHistory( int64_t jobId, const std::string &jobDescription );
+    virtual void BuildAndPushJob( int64_t jobId, const std::string &jobDescription );
 
     virtual bool GetJobById( int64_t jobId, JobPtr &job );
     virtual bool DeleteJob( int64_t jobId );
     virtual bool DeleteJobGroup( int64_t groupId );
+    virtual bool DeleteNamedJob( const std::string &name );
     virtual void DeleteAllJobs();
 
     virtual bool PopJob( JobPtr &job );
+
+    virtual bool RegisterJobName( const std::string &name );
+    virtual bool ReleaseJobName( const std::string &name );
 
     virtual const std::string &GetMasterId() const { return masterId_; }
     virtual const std::string &GetJobsDir() const { return jobsDir_; }
@@ -96,9 +106,11 @@ public:
 
 private:
     bool ReadScript( const std::string &filePath, std::string &script ) const;
-    Job *CreateJob( const boost::property_tree::ptree &ptree ) const;
+    Job *CreateJob( const boost::property_tree::ptree &ptree );
     void ReadHosts( Job *job, const boost::property_tree::ptree &ptree ) const;
     void ReadGroups( Job *job, const boost::property_tree::ptree &ptree ) const;
+
+    bool HasJobName( const std::string &name );
 
     bool PrepareJobGraph( const boost::property_tree::ptree &ptree,
                           std::map< std::string, int > &jobFileToIndex,
@@ -111,6 +123,9 @@ private:
     std::string masterId_;
     int64_t numJobGroups_;
     int64_t jobId_;
+
+    JobNames jobNames_;
+    std::mutex jobNamesMut_;
 };
 
 } // namespace master
