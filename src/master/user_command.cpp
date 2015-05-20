@@ -121,12 +121,8 @@ bool UserCommand::RunMetaJob( std::ifstream &file, std::string &result ) const
             auto jobGroup = jobs.front()->GetJobGroup();
             if ( jobGroup->GetCron() )
             {
-                for( const auto &job : jobs )
-                {
-                    jobManager->RegisterJobName( job->GetName() );
-                }
                 ICronManager *cronManager = common::GetService< ICronManager >();
-                cronManager->PushMetaJob( jobGroup, false );
+                cronManager->PushMetaJob( jobs );
             }
             else
             {

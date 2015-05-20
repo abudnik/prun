@@ -33,7 +33,8 @@ namespace master {
 struct ICronManager
 {
     virtual void PushJob( const JobPtr &job, bool afterExecution ) = 0;
-    virtual void PushMetaJob( const JobGroupPtr &metaJob, bool afterExecution ) = 0;
+    virtual void PushMetaJob( const JobGroupPtr &metaJob ) = 0;
+    virtual void PushMetaJob( std::list< JobPtr > &jobs ) = 0;
     virtual void StopJob( const std::string &jobName ) = 0;
 };
 
@@ -63,6 +64,8 @@ class CronManager : public ICronManager
     struct MetaJobTimeoutHandler : TimeoutHandler
     {
         virtual void HandleTimeout();
+
+        std::set< std::string > jobNames;
     };
 
 public:
@@ -78,7 +81,8 @@ public:
 
     // ICronManager
     virtual void PushJob( const JobPtr &job, bool afterExecution );
-    virtual void PushMetaJob( const JobGroupPtr &metaJob, bool afterExecution );
+    virtual void PushMetaJob( const JobGroupPtr &metaJob );
+    virtual void PushMetaJob( std::list< JobPtr > &jobs );
     virtual void StopJob( const std::string &jobName );
 
 private:

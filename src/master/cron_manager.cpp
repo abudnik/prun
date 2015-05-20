@@ -115,21 +115,13 @@ void CronManager::PushJob( const JobPtr &job, bool afterExecution )
     callbacks_[ job->GetName() ] = handler;
 }
 
-void CronManager::PushMetaJob( const JobGroupPtr &metaJob, bool afterExecution )
+void CronManager::PushMetaJob( const JobGroupPtr &metaJob )
 {
     const auto now = std::chrono::system_clock::now();
     auto deadline = metaJob->GetCron().Next( now );
-    if ( afterExecution )
+    if ( deadline <= now )
     {
-        if ( deadline <= now )
-        {
-            deadline += std::chrono::minutes( 1 );
-        }
-    }
-    else
-    {
-        IJobManager *jobManager = common::GetService< IJobManager >();
-        jobManager->RegisterJobName( metaJob->GetName() );
+        deadline += std::chrono::minutes( 1 );
     }
 
     auto handler = std::make_shared< MetaJobTimeoutHandler >();
@@ -146,24 +138,62 @@ void CronManager::PushMetaJob( const JobGroupPtr &metaJob, bool afterExecution )
     callbacks_[ metaJob->GetName() ] = handler;
 }
 
-void CronManager::StopJob( const std::string &jobName )
+void CronManager::PushMetaJob( std::list< JobPtr > &jobs )
 {
-    bool found = false;
+    IJobManager *jobManager = common::GetService< IJobManager >();
+    auto metaJob = jobs.front()->GetJobGroup();
+
+    const auto now = std::chrono::system_clock::now();
+    auto deadline = metaJob->GetCron().Next( now );
+
+    jobManager->RegisterJobName( metaJob->GetName() );
+
+    auto handler = std::make_shared< MetaJobTimeoutHandler >();
+    handler->jobDescription_ = metaJob->GetDescription();
+    handler->jobName_ = metaJob->GetName();
+
+    for( const auto &job : jobs )
     {
-        std::unique_lock< std::mutex > lock( jobsMut_ );
-        auto it = callbacks_.find( jobName );
-        found = ( it != callbacks_.end() );
-        if ( found )
+        if ( !job->GetName().empty() )
         {
-            const CallbackPtr &handler = it->second;
-            handler->removed_ = true;
-            callbacks_.erase( it );
+            handler->jobNames.insert( job->GetName() );
+            jobManager->RegisterJobName( job->GetName() );
         }
     }
-    if ( found )
+
+    std::unique_lock< std::mutex > lock( jobsMut_ );
+    jobs_.insert( std::pair< ptime, CallbackPtr >(
+                      deadline,
+                      handler
+                )
+    );
+
+    callbacks_[ metaJob->GetName() ] = handler;
+}
+
+void CronManager::StopJob( const std::string &jobName )
+{
+    std::unique_lock< std::mutex > lock( jobsMut_ );
+    auto it = callbacks_.find( jobName );
+    if ( it != callbacks_.end() )
     {
         IJobManager *jobManager = common::GetService< IJobManager >();
+        const CallbackPtr &handler = it->second;
+        handler->removed_ = true;
+
+        auto handler_meta = std::dynamic_pointer_cast< MetaJobTimeoutHandler >( handler );
+        if ( handler_meta )
+        {
+            auto it_j = handler_meta->jobNames.begin();
+            for( ; it_j != handler_meta->jobNames.end(); ++it )
+            {
+                const std::string &jobName = *it_j;
+                jobManager->ReleaseJobName( jobName );
+            }
+        }
+
         jobManager->ReleaseJobName( jobName );
+        callbacks_.erase( it );
     }
 }
 

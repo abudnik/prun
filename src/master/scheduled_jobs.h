@@ -225,7 +225,7 @@ private:
                 if ( success && job->GetCron() )
                 {
                     ICronManager *cronManager = common::GetService< ICronManager >();
-                    cronManager->PushMetaJob( job->GetJobGroup(), true );
+                    cronManager->PushMetaJob( job->GetJobGroup() );
                 }
                 else
                 {
