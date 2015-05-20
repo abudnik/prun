@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE( jobs_decrement_execution )
 
     for( int i = 0; i < numExec; ++i )
     {
-        DecrementJobExecution( job->GetJobId(), 1 );
+        DecrementJobExecution( job->GetJobId(), 1, true );
     }
     BOOST_CHECK_EQUAL( FindJobByJobId( job->GetJobId(), j ), false );
 }

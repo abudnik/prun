@@ -85,7 +85,7 @@ public:
         jobs_.insert( JobState( job ) );
     }
 
-    void DecrementJobExecution( int64_t jobId, int numTasks )
+    void DecrementJobExecution( int64_t jobId, int numTasks, bool success )
     {
         auto it = jobExecutions_.find( jobId );
         if ( it != jobExecutions_.end() )
@@ -94,7 +94,7 @@ public:
             it->second = numExecution;
             if ( numExecution < 1 )
             {
-                RemoveJob( jobId, true, "success" );
+                RemoveJob( jobId, success, success ? "success" : "failure" );
             }
         }
     }

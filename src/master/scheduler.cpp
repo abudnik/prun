@@ -174,7 +174,7 @@ void Scheduler::PlanJobExecution()
 
 bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
 {
-    bool found = true;
+    bool found = false;
     std::set<int64_t> jobs;
     workerJob.GetJobs( jobs );
 
@@ -200,7 +200,7 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
 
             if ( job->IsNoReschedule() )
             {
-                jobs_.DecrementJobExecution( jobId, workerJob.GetNumTasks( jobId ) );
+                jobs_.DecrementJobExecution( jobId, workerJob.GetNumTasks( jobId ), false );
                 continue;
             }
 
@@ -462,7 +462,7 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
               ", taskId=" << workerTask.GetTaskId() << ", execTime=" << execTime << " ms" <<
               ", ip=" << hostIP );
 
-        jobs_.DecrementJobExecution( workerTask.GetJobId(), 1 );
+        jobs_.DecrementJobExecution( workerTask.GetJobId(), 1, true );
     }
     else
     {
