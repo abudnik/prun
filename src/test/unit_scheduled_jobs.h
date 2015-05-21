@@ -135,4 +135,28 @@ BOOST_AUTO_TEST_CASE( jobs_priority )
     }
 }
 
+BOOST_AUTO_TEST_CASE( jobs_named )
+{
+    std::string jobName = "unique_name";
+    const size_t numJobs = 10;
+
+    for( size_t i = 0; i < numJobs; ++i )
+    {
+        JobPtr job( new Job( "", "python", 4, 1, 1, 1, 1,
+                             1, 1, 1, false, false ) );
+        job->SetJobId( i );
+        job->SetName( jobName );
+        Add( job, 1 );
+    }
+
+    std::set< int64_t > jobs;
+    GetJobsByName( jobName, jobs );
+    BOOST_CHECK_EQUAL( jobs.size(), numJobs );
+
+    DecrementJobExecution( 0, 1, true );
+    jobs.clear();
+    GetJobsByName( jobName, jobs );
+    BOOST_CHECK_EQUAL( jobs.size(), 0 );
+}
+
 BOOST_AUTO_TEST_SUITE_END()
