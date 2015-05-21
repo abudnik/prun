@@ -774,6 +774,10 @@ bool Scheduler::CanAddTaskToWorker( const WorkerPtr &worker, const WorkerJob &wo
     {
         if ( history_.GetNumExec( jobId, worker->GetIP() ) >= job->GetMaxExecAtWorker() )
             return false;
+
+        const int numTasks = workerJob.GetNumTasks( jobId ) + workerPlannedJob.GetNumTasks( jobId );
+        if ( numTasks >= job->GetMaxExecAtWorker() )
+            return false;
     }
 
     return true;
