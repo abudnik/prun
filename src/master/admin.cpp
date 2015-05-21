@@ -283,6 +283,15 @@ int AdminCommand_Ls::Execute( const boost::property_tree::ptree &params,
     return 0;
 }
 
+int AdminCommand_Cron::Execute( const boost::property_tree::ptree &params,
+                                std::string &result )
+{
+    if ( !UserCommand().GetCronInfo( result ) )
+        return JSON_RPC_INTERNAL_ERROR;
+
+    return 0;
+}
+
 
 void AdminSession::Start()
 {
@@ -392,6 +401,7 @@ void AdminConnection::InitializeRpcHandlers()
     rpc.RegisterHandler( "stat",         new AdminCommand_Stat );
     rpc.RegisterHandler( "jobs",         new AdminCommand_Jobs );
     rpc.RegisterHandler( "ls",           new AdminCommand_Ls );
+    rpc.RegisterHandler( "cron",         new AdminCommand_Cron );
 }
 
 void AdminConnection::StartAccept()

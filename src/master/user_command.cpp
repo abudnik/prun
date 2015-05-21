@@ -390,4 +390,21 @@ bool UserCommand::GetWorkersStatistics( std::string &result )
     return true;
 }
 
+bool UserCommand::GetCronInfo( std::string &result )
+{
+    try
+    {
+        CronStatistics stat;
+        ICronManager *cronManager = common::GetService< ICronManager >();
+        cronManager->Accept( &stat );
+        stat.GetInfo( result );
+    }
+    catch( std::exception &e )
+    {
+        PLOG_ERR( "UserCommand::GetCronInfo: " << e.what() );
+        return false;
+    }
+    return true;
+}
+
 } // namespace master

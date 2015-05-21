@@ -30,12 +30,22 @@ the License.
 
 namespace master {
 
+class ICronVisitor;
+
 struct ICronManager
 {
     virtual void PushJob( const JobPtr &job, bool afterExecution ) = 0;
     virtual void PushMetaJob( const JobGroupPtr &metaJob ) = 0;
     virtual void PushMetaJob( std::list< JobPtr > &jobs ) = 0;
     virtual void StopJob( const std::string &jobName ) = 0;
+
+    virtual void Accept( ICronVisitor *visitor ) = 0;
+};
+
+struct CronJobInfo
+{
+    std::string jobName_;
+    std::time_t deadline_;
 };
 
 // TODO: deadlocks
@@ -53,6 +63,7 @@ class CronManager : public ICronManager
         TimeoutHandler();
         virtual void HandleTimeout() = 0;
 
+        ptime deadline_;
         std::string jobDescription_;
         std::string jobName_;
         bool removed_;
@@ -85,6 +96,10 @@ public:
     virtual void PushMetaJob( std::list< JobPtr > &jobs );
     virtual void StopJob( const std::string &jobName );
 
+    virtual void Accept( ICronVisitor *visitor );
+
+    void GetJobsInfo( std::vector< CronJobInfo > &names );
+
 private:
     void CheckTimeouts();
 
@@ -93,7 +108,7 @@ private:
     bool stopped_;
     common::SyncTimer timer_;
     TimeToCallback jobs_;
-    JobNameToCallback callbacks_;
+    JobNameToCallback names_;
     std::mutex jobsMut_;
 };
 

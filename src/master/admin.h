@@ -126,6 +126,13 @@ public:
                          std::string &result );
 };
 
+class AdminCommand_Cron : public common::IJsonRpcHandler
+{
+public:
+    virtual int Execute( const boost::property_tree::ptree &params,
+                         std::string &result );
+};
+
 
 class AdminSession : public boost::enable_shared_from_this< AdminSession >
 {

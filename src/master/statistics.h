@@ -24,14 +24,20 @@ the License.
 #define __STATISTICS_H
 
 #include "scheduler.h"
+#include "cron_manager.h"
 
 namespace master {
 
-class ISchedulerVisitor
+struct ISchedulerVisitor
 {
-public:
     virtual ~ISchedulerVisitor() {}
     virtual void Visit( Scheduler &scheduler ) = 0;
+};
+
+struct ICronVisitor
+{
+    virtual ~ICronVisitor() {}
+    virtual void Visit( CronManager &cron ) = 0;
 };
 
 class InfoGetter
@@ -79,6 +85,12 @@ class WorkerStatistics : public ISchedulerVisitor, public InfoGetter
 {
 public:
     virtual void Visit( Scheduler &scheduler );
+};
+
+class CronStatistics : public ICronVisitor, public InfoGetter
+{
+public:
+    virtual void Visit( CronManager &cron );
 };
 
 } // namespace master

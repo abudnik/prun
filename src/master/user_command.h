@@ -46,6 +46,7 @@ public:
     bool GetStatistics( std::string &result );
     bool GetAllJobInfo( std::string &result );
     bool GetWorkersStatistics( std::string &result );
+    bool GetCronInfo( std::string &result );
 
 private:
     bool RunJob( std::ifstream &file, const std::string &jobAlias, std::string &result ) const;

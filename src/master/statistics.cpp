@@ -52,13 +52,27 @@ void JobInfo::PrintJobInfo( std::string &info, Scheduler &scheduler, int64_t job
         ss << "group id = " << job->GetGroupId() << std::endl;
     }
 
+    if ( job->GetJobGroup() )
+    {
+        const std::string &metaJobName = job->GetJobGroup()->GetName();
+        if ( !metaJobName.empty() )
+        {
+            ss << "meta job name = '" << metaJobName << '\'' << std::endl;
+        }
+    }
+
     if ( !job->GetAlias().empty() )
     {
-        ss << "job alias = '" << job->GetAlias() << "'" << std::endl;
+        ss << "job alias = '" << job->GetAlias() << '\'' << std::endl;
     }
     else
     {
-        ss << "job path = '" << job->GetFilePath() << "'" << std::endl;
+        ss << "job path = '" << job->GetFilePath() << '\'' << std::endl;
+    }
+
+    if ( !job->GetName().empty() )
+    {
+        ss << "job name = '" << job->GetName() << '\'' << std::endl;
     }
 
     ss << "----------------" << std::endl;
@@ -244,6 +258,30 @@ void WorkerStatistics::Visit( Scheduler &scheduler )
             ss << "(jobId=" << task.GetJobId() << ", taskId=" << task.GetTaskId() << ")";
         }
         ss << "}" << std::endl;
+    }
+
+    ss << "================";
+
+    info_ = ss.str();
+}
+
+void CronStatistics::Visit( CronManager &cron )
+{
+    std::ostringstream ss;
+    std::vector< CronJobInfo > jobs;
+    cron.GetJobsInfo( jobs );
+
+    ss << "================" << std::endl;
+
+    auto it_beg = jobs.cbegin();
+    for( auto it = it_beg; it != jobs.cend(); ++it )
+    {
+        if ( it != it_beg )
+            ss << "----------------" << std::endl;
+
+        const CronJobInfo &info = *it;
+        ss << "job name = '" << info.jobName_ << '\'' << std::endl;
+        ss << "next time = " << ctime( &info.deadline_ ) << std::endl;
     }
 
     ss << "================";

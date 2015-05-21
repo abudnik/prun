@@ -170,6 +170,10 @@ class Command_Ls():
     def Prepare(self, cmd):
         return {"method" : "ls", "params" : []}
 
+class Command_Cron():
+    def Prepare(self, cmd):
+        return {"method" : "cron", "params" : []}
+
 class Command_Sleep():
     def Execute(self, cmd):
         try:
@@ -194,7 +198,8 @@ class CommandDispatcher():
                      'info'    : Command_Info(),
                      'stat'    : Command_Stat(),
                      'jobs'    : Command_Jobs(),
-                     'ls'      : Command_Ls()}
+                     'ls'      : Command_Ls(),
+                     'cron'    : Command_Cron()}
 
     @classmethod
     def Instance(cls):
@@ -241,6 +246,7 @@ def PrintHelp():
     print( "  stat                            -- show master statistics" )
     print( "  jobs                            -- show queued jobs info" )
     print( "  ls                              -- show workers info" )
+    print( "  cron                            -- show cron jobs" )
     print( "  repeat, r                       -- repeat last entered command" )
     print( "  exit, e                         -- quit program" )
 
