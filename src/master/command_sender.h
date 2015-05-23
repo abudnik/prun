@@ -25,7 +25,6 @@ the License.
 
 #include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
-#include <array>
 #include <mutex>
 #include <condition_variable>
 #include "common/observer.h"
@@ -70,7 +69,7 @@ private:
 
 class RpcBoost : public boost::enable_shared_from_this< RpcBoost >
 {
-    typedef std::array< char, 32 * 1024 > BufferType;
+    typedef boost::array< char, 32 * 1024 > BufferType;
 
 public:
     typedef boost::shared_ptr< RpcBoost > sender_ptr;

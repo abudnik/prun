@@ -24,7 +24,6 @@ the License.
 
 #include <iostream>
 #include <thread>
-#include <array>
 #include <boost/program_options.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
@@ -112,7 +111,7 @@ class NoAction : public IAction
 
 class PrExecConnection
 {
-    typedef std::array< char, 2048 > BufferType;
+    typedef boost::array< char, 2048 > BufferType;
 
 public:
     typedef PrExecConnection *connection_ptr;
@@ -654,7 +653,7 @@ protected:
 class BoostSession : public Session, public boost::enable_shared_from_this< BoostSession >
 {
 public:
-    typedef std::array< char, 32 * 1024 > BufferType;
+    typedef boost::array< char, 32 * 1024 > BufferType;
 
 public:
     BoostSession( boost::asio::io_service &io_service,

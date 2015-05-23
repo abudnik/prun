@@ -24,7 +24,7 @@ the License.
 #define __DB_CONNECTION_H
 
 #include <boost/asio.hpp>
-#include <array>
+#include <boost/array.hpp>
 #include <mutex>
 #include "common/request.h"
 
@@ -42,7 +42,7 @@ struct IHistoryChannel
 
 class DbHistoryConnection: public IHistoryChannel
 {
-    typedef std::array< char, 2048 > BufferType;
+    typedef boost::array< char, 2048 > BufferType;
 
 public:
     DbHistoryConnection( boost::asio::io_service &io_service )
