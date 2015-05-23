@@ -28,14 +28,16 @@ the License.
 
 namespace master {
 
-struct ISchedulerVisitor
+class ISchedulerVisitor
 {
+public:
     virtual ~ISchedulerVisitor() {}
     virtual void Visit( Scheduler &scheduler ) = 0;
 };
 
-struct ICronVisitor
+class ICronVisitor
 {
+public:
     virtual ~ICronVisitor() {}
     virtual void Visit( CronManager &cron ) = 0;
 };
