@@ -90,6 +90,7 @@ Job *JobManager::CreateJob( const std::string &job_description, bool check_name_
         if ( check_name_existance && HasJobName( job->GetName() ) )
         {
             PLOG_ERR( "JobManager::CreateJob: job name already exists: " << job->GetName() );
+            delete job;
             return nullptr;
         }
     }
