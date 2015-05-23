@@ -24,6 +24,7 @@ the License.
 #define __RESULT_GETTER_H
 
 #include <boost/asio.hpp>
+#include <boost/array.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <mutex>
 #include <condition_variable>

@@ -30,6 +30,7 @@ the License.
 #include <boost/filesystem.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
+#include <boost/array.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>

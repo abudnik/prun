@@ -27,6 +27,7 @@ the License.
 #include <boost/program_options.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
+#include <boost/array.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/property_tree/json_parser.hpp>
