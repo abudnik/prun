@@ -66,22 +66,31 @@ void CronManager::Run()
 
 void CronManager::CheckTimeouts()
 {
-    std::unique_lock< std::mutex > lock( jobsMut_ );
-    auto it = jobs_.begin();
-    const auto now = std::chrono::system_clock::now();
-    for( ; it != jobs_.end(); )
-    {
-        const ptime &jobPlannedTime = it->first;
-        if ( now < jobPlannedTime ) // skip earlier planned jobs
-            break;
+    std::vector< CallbackPtr > ready;
 
-        CallbackPtr &handler = it->second;
-        if ( !handler->removed_ )
+    {
+        std::unique_lock< std::mutex > lock( jobsMut_ );
+        auto it = jobs_.cbegin();
+        const auto now = std::chrono::system_clock::now();
+        for( ; it != jobs_.cend(); )
         {
-            handler->HandleTimeout();
-            names_.erase( handler->jobName_ );
+            const ptime &jobPlannedTime = it->first;
+            if ( now < jobPlannedTime ) // skip earlier planned jobs
+                break;
+
+            const CallbackPtr &handler = it->second;
+            if ( !handler->removed_ )
+            {
+                ready.push_back( handler );
+                names_.erase( handler->jobName_ );
+            }
+            jobs_.erase( it++ );
         }
-        jobs_.erase( it++ );
+    }
+
+    for( const CallbackPtr &handler : ready )
+    {
+        handler->HandleTimeout();
     }
 }
 
@@ -181,24 +190,41 @@ void CronManager::StopJob( const std::string &jobName )
     auto it = names_.find( jobName );
     if ( it != names_.end() )
     {
-        IJobManager *jobManager = common::GetService< IJobManager >();
         const CallbackPtr &handler = it->second;
-        handler->removed_ = true;
-
-        auto handler_meta = std::dynamic_pointer_cast< MetaJobTimeoutHandler >( handler );
-        if ( handler_meta )
-        {
-            auto it_j = handler_meta->jobNames.begin();
-            for( ; it_j != handler_meta->jobNames.end(); ++it )
-            {
-                const std::string &jobName = *it_j;
-                jobManager->ReleaseJobName( jobName );
-            }
-        }
-
-        jobManager->ReleaseJobName( jobName );
+        ReleaseJob( handler );
         names_.erase( it );
     }
+}
+
+void CronManager::StopAllJobs()
+{
+    std::unique_lock< std::mutex > lock( jobsMut_ );
+
+    for( auto it = jobs_.cbegin(); it != jobs_.cend(); ++it )
+    {
+        const CallbackPtr &handler = it->second;
+        ReleaseJob( handler );
+    }
+
+    jobs_.clear();
+    names_.clear();
+}
+
+void CronManager::ReleaseJob( const CallbackPtr &handler ) const
+{
+    IJobManager *jobManager = common::GetService< IJobManager >();
+    handler->removed_ = true;
+
+    auto handler_meta = std::dynamic_pointer_cast< MetaJobTimeoutHandler >( handler );
+    if ( handler_meta )
+    {
+        for( const std::string &jobName : handler_meta->jobNames )
+        {
+            jobManager->ReleaseJobName( jobName );
+        }
+    }
+
+    jobManager->ReleaseJobName( handler->jobName_ );
 }
 
 void CronManager::Accept( ICronVisitor *visitor )

@@ -38,6 +38,7 @@ struct ICronManager
     virtual void PushMetaJob( const JobGroupPtr &metaJob ) = 0;
     virtual void PushMetaJob( std::list< JobPtr > &jobs ) = 0;
     virtual void StopJob( const std::string &jobName ) = 0;
+    virtual void StopAllJobs() = 0;
 
     virtual void Accept( ICronVisitor *visitor ) = 0;
 };
@@ -48,7 +49,6 @@ struct CronJobInfo
     std::time_t deadline_;
 };
 
-// TODO: deadlocks
 class CronManager : public ICronManager
 {
     struct TimeoutHandler;
@@ -95,6 +95,7 @@ public:
     virtual void PushMetaJob( const JobGroupPtr &metaJob );
     virtual void PushMetaJob( std::list< JobPtr > &jobs );
     virtual void StopJob( const std::string &jobName );
+    virtual void StopAllJobs();
 
     virtual void Accept( ICronVisitor *visitor );
 
@@ -102,6 +103,7 @@ public:
 
 private:
     void CheckTimeouts();
+    void ReleaseJob( const CallbackPtr &handler ) const;
 
 private:
     boost::asio::io_service &io_service_;

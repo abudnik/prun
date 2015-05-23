@@ -215,6 +215,8 @@ bool UserCommand::StopAll()
 {
     try
     {
+        ICronManager *cronManager = common::GetService< ICronManager >();
+        cronManager->StopAllJobs();
         IJobManager *jobManager = common::GetService< IJobManager >();
         jobManager->DeleteAllJobs();
         IScheduler *scheduler = common::GetService< IScheduler >();
