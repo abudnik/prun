@@ -23,7 +23,7 @@ the License.
 #ifndef __NODE_PING_H
 #define __NODE_PING_H
 
-#include <array>
+#include <boost/array.hpp>
 #include <boost/asio.hpp>
 #include "common/config.h"
 
@@ -44,6 +44,8 @@ using boost::asio::ip::udp;
 
 class PingReceiverBoost : public PingReceiver
 {
+    typedef boost::array< char, 32 * 1024 > BufferType;
+
 public:
     PingReceiverBoost( boost::asio::io_service &io_service )
     : socket_( io_service )
@@ -55,7 +57,7 @@ public:
         socket_.open( ipv6 ? udp::v6() : udp::v4() );
         socket_.bind( udp::endpoint( ipv6 ? udp::v6() : udp::v4(), master_ping_port ) );
 
-        buffer_.fill( 0 );
+        memset( buffer_.c_array(), 0, buffer_.size() );
     }
 
     virtual void Start();
@@ -65,7 +67,7 @@ private:
     void HandleRead( const boost::system::error_code& error, size_t bytes_transferred );
 
 private:
-    std::array< char, 32 * 1024 > buffer_;
+    BufferType buffer_;
     udp::socket socket_;
     udp::endpoint remote_endpoint_;
 };

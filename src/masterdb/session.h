@@ -23,7 +23,7 @@ the License.
 #ifndef __DB_SESSION_H
 #define __DB_SESSION_H
 
-#include <array>
+#include <boost/array.hpp>
 #include <boost/asio.hpp>
 #include "common/log.h"
 #include "common/request.h"
@@ -81,7 +81,7 @@ private:
 class BoostSession : public Session
 {
 public:
-    typedef std::array< char, 32 * 1024 > BufferType;
+    typedef boost::array< char, 32 * 1024 > BufferType;
 
 public:
     BoostSession( boost::asio::io_service &io_service )

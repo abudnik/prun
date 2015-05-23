@@ -23,7 +23,7 @@ the License.
 #ifndef __ADMIN_H
 #define __ADMIN_H
 
-#include <array>
+#include <boost/array.hpp>
 #include <boost/asio.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -136,7 +136,7 @@ public:
 
 class AdminSession : public boost::enable_shared_from_this< AdminSession >
 {
-    typedef std::array< char, 32 * 1024 > BufferType;
+    typedef boost::array< char, 32 * 1024 > BufferType;
 
 public:
     AdminSession( boost::asio::io_service &io_service,

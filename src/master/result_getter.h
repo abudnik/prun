@@ -24,8 +24,8 @@ the License.
 #define __RESULT_GETTER_H
 
 #include <boost/asio.hpp>
+#include <boost/array.hpp>
 #include <boost/enable_shared_from_this.hpp>
-#include <array>
 #include <mutex>
 #include <condition_variable>
 #include "common/observer.h"
@@ -68,7 +68,7 @@ private:
 
 class GetterBoost : public boost::enable_shared_from_this< GetterBoost >
 {
-    typedef std::array< char, 32 * 1024 > BufferType;
+    typedef boost::array< char, 32 * 1024 > BufferType;
 
 public:
     typedef boost::shared_ptr< GetterBoost > getter_ptr;

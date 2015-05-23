@@ -24,13 +24,13 @@ the License.
 
 #include <iostream>
 #include <thread>
-#include <array>
 #include <mutex>
 #include <condition_variable>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
+#include <boost/array.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
@@ -890,7 +890,7 @@ protected:
 
 class SessionBoost : public Session, public boost::enable_shared_from_this< SessionBoost >
 {
-    typedef std::array< char, 2048 > BufferType;
+    typedef boost::array< char, 2048 > BufferType;
 
 public:
     SessionBoost( boost::asio::io_service &io_service,

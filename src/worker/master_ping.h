@@ -23,7 +23,7 @@ the License.
 #ifndef __MASTER_PING_H
 #define __MASTER_PING_H
 
-#include <array>
+#include <boost/array.hpp>
 #include <boost/asio.hpp>
 #include "common/protocol.h"
 #include "common/config.h"
@@ -54,6 +54,8 @@ using boost::asio::ip::udp;
 
 class MasterPingBoost : public MasterPing
 {
+    typedef boost::array< char, 32 * 1024 > BufferType;
+
 public:
     MasterPingBoost( boost::asio::io_service &io_service )
     : socket_( io_service )
@@ -74,7 +76,7 @@ private:
     void HandleRead( const boost::system::error_code& error, size_t bytes_transferred );
 
 private:
-    std::array< char, 32 * 1024 > buffer_;
+    BufferType buffer_;
     udp::socket socket_;
     udp::endpoint remote_endpoint_;
     unsigned short master_ping_port_;
