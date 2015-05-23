@@ -338,14 +338,14 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, JobPtr
 {
     std::unique_lock< std::mutex > lock_w( workersMut_ );
 
-    auto it = nodePriority_.right.begin();
+    auto it = nodePriority_.right.rbegin();
 
     std::unique_lock< std::mutex > lock_j( jobsMut_ );
 
-    for( ; it != nodePriority_.right.end(); ++it )
+    for( ; it != nodePriority_.right.rend(); ++it )
     {
         NodeState &nodeState = *(it->first);
-        int numFreeCPU = nodeState.GetNumFreeCPU();
+        const int numFreeCPU = nodeState.GetNumFreeCPU();
         if ( numFreeCPU <= 0 )
             continue;
 
@@ -723,8 +723,8 @@ bool Scheduler::CanTakeNewJob()
 {
     std::unique_lock< std::mutex > lock_w( workersMut_ );
 
-    NodePriorityQueue::right_map::const_iterator it = nodePriority_.right.begin();
-    if ( it != nodePriority_.right.end() )
+    auto it = nodePriority_.right.rbegin();
+    if ( it != nodePriority_.right.rend() )
     {
         const NodeState &nodeState = *(it->first);
         return nodeState.GetNumFreeCPU() > 0;

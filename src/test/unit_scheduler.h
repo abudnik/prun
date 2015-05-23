@@ -1115,7 +1115,7 @@ BOOST_AUTO_TEST_CASE( task_completion_delete_worker )
     BOOST_REQUIRE_EQUAL( workers.size(), 2 );
 
     workerMgr.SetWorkerIP( workers[0], "127.0.0.1" );
-    workerMgr.OnNodePingResponse( "127.0.0.1", 2, 1024 );
+    workerMgr.OnNodePingResponse( "127.0.0.1", 4, 1024 );
     workerMgr.SetWorkerIP( workers[1], "127.0.0.2" );
     workerMgr.OnNodePingResponse( "127.0.0.2", 2, 1024 );
 
