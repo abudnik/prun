@@ -50,6 +50,11 @@ def RunManyJobs():
     cmd = './prun -c "' + task + '"'
     os.system( cmd )
 
+    # run cron jobs
+    task = 'run cron.job; run cron.meta'
+    cmd = './prun -c "' + task + '"'
+    os.system( cmd )
+
 def RunHeavyJobs():
     # run many heavy jobs
     jobPath = 'autotest/heavy.job'
@@ -77,11 +82,6 @@ def DeleteGroup():
 
 def AddGroup():
     task = 'addg hosts_group1'
-    cmd = './prun -c "' + task + '"'
-    os.system( cmd )
-
-def JobInfo(jobId):
-    task = 'info ' + str(jobId)
     cmd = './prun -c "' + task + '"'
     os.system( cmd )
 
