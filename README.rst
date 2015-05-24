@@ -188,8 +188,52 @@ jobs and job descriptions, shared directory containing the input file
 (data/input.txt). Lets submit job using command-line tool::
 
 > cd ~/prun                        # cd to the directory containing prun
-> ./prun master_hostname      # run admin tool, connect to Master host
+> ./prun master_hostname           # run admin tool, connect to Master host
 > run external_sort.meta           # submit a meta job
+
+Cron job submitting
+--------------
+
+Next example is dumping mysql database at muliple hosts simultaneously.
+Dumping planned at 3 a.m. at Sunday every week.
+
+Firstly, we should create shell script, which does database dumping::
+
+  mysqldump -uroot -pQWERTY -A > /home/nobody/dump/all-databases.sql
+
+And save this script to master's jobs directory, e.g. at jobs/myscripts/dump.sh
+
+Then we should create job description file for our cron job::
+
+  {
+    "script" : "myscripts/dump.sh",
+    "language" : "shell",
+    "send_script" : true,
+    "priority" : 8,
+    "job_timeout" : 3600,
+    "queue_timeout" : 60,
+    "task_timeout" : 3600,
+    "max_failed_nodes" : -1,
+    "num_execution" : -1,
+    "max_cluster_instances" : -1,
+    "max_worker_instances" : 1,
+    "exclusive" : true,
+    "no_reschedule" : true,
+    "max_exec_at_worker" : 1,
+    "exec_unit_type" : "host",
+    "cron" : "* 3 * * 0",
+    "name" : "weekly_dump"
+  }
+
+And save it to master's jobs directory, e.g. at jobs/dump.job
+This job will be started once at every available host at 3 a.m. every Sunday
+after you submit it to the master (here master is running at localhost)::
+
+  ./prun -c "run dump.job" localhost
+
+Stopping of any jobs by it's exclusive name performed by 'stop' command::
+
+  ./prun -c "stop weekly_dump"
 
 License
 -------
