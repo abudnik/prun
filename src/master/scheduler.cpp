@@ -276,10 +276,9 @@ bool Scheduler::GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob,
     bool foundReschedJob = GetReschedJobForWorker( worker, plannedJob, job, numFreeCPU );
     int64_t jobId = plannedJob.GetJobId();
 
-    const ScheduledJobs::JobQueue &jobs = jobs_.GetJobQueue();
-    for( auto j_it = jobs.cbegin(); j_it != jobs.cend(); ++j_it )
+    for( auto j_it = jobs_.GetJobQueueBegin(); j_it != jobs_.GetJobQueueEnd(); ++j_it )
     {
-        JobState &jobState = const_cast< JobState & >(*j_it);
+        JobState &jobState = const_cast< JobState & >(j_it->first);
         if ( jobState.IsSendedCompletely() )
             continue;
 
@@ -595,15 +594,19 @@ void Scheduler::StopNamedJob( const std::string &name )
 
 void Scheduler::StopAllJobs()
 {
-    ScheduledJobs::JobQueue jobs;
+    std::vector< int64_t > jobs;
     {
         std::unique_lock< std::mutex > lock_j( jobsMut_ );
-        jobs = jobs_.GetJobQueue();
+
+        for( auto it = jobs_.GetJobQueueBegin(); it != jobs_.GetJobQueueEnd(); ++it )
+        {
+            const int64_t jobId = it->second;
+            jobs.push_back( jobId );
+        }
     }
-    for( auto it = jobs.cbegin(); it != jobs.cend(); ++it )
+    for( int64_t jobId : jobs )
     {
-        const JobPtr &job = (*it).GetJob();
-        StopJob( job->GetJobId() );
+        StopJob( jobId );
     }
 
     // send stop all command

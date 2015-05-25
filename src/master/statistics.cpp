@@ -114,11 +114,11 @@ void JobInfo::PrintJobInfo( std::string &info, Scheduler &scheduler, int64_t job
 void AllJobInfo::Visit( Scheduler &scheduler )
 {
     const ScheduledJobs &schedJobs = scheduler.GetScheduledJobs();
-    const ScheduledJobs::JobQueue &jobs = schedJobs.GetJobQueue();
 
-    for( auto it = jobs.cbegin(); it != jobs.cend(); ++it )
+    for( auto it = schedJobs.GetJobQueueBegin(); it != schedJobs.GetJobQueueEnd(); ++it )
     {
-        const JobPtr &job = (*it).GetJob();
+        const JobState &jobState = it->first;
+        const JobPtr &job = jobState.GetJob();
         std::string jobInfo;
         JobInfo::PrintJobInfo( jobInfo, scheduler, job->GetJobId() );
         info_ += jobInfo + '\n';
@@ -147,12 +147,13 @@ void Statistics::Visit( Scheduler &scheduler )
         "need reschedule = " << needReschedule.size() << std::endl;
 
     ss << "executing jobs: {";
-    const ScheduledJobs::JobQueue &jobs = schedJobs.GetJobQueue();
-    for( auto it = jobs.cbegin(); it != jobs.cend(); ++it )
+    for( auto it = schedJobs.GetJobQueueBegin(); it != schedJobs.GetJobQueueEnd(); ++it )
     {
-        if ( it != jobs.begin() )
+        const JobState &jobState = it->first;
+        const JobPtr &job = jobState.GetJob();
+
+        if ( it != schedJobs.GetJobQueueBegin() )
             ss << ", ";
-        const JobPtr &job = (*it).GetJob();
         ss << job->GetJobId();
     }
     ss << "}" << std::endl;

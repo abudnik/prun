@@ -25,6 +25,8 @@ the License.
 
 #include <set>
 #include <map>
+#include <boost/bimap/bimap.hpp>
+#include <boost/bimap/multiset_of.hpp>
 #include "job.h"
 #include "cron_manager.h"
 #include "job_manager.h"
@@ -55,6 +57,8 @@ private:
     bool sendedCompletely_;
 };
 
+using namespace boost::bimaps;
+
 class ScheduledJobs
 {
 private:
@@ -62,7 +66,8 @@ private:
     typedef std::multimap< std::string, int64_t > JobNameToJob;
 
 public:
-    typedef std::multiset< JobState > JobQueue;
+    typedef bimap< set_of< int64_t >, multiset_of< JobState > > JobPriorityQueue; // job_id -> JobState
+    typedef JobPriorityQueue::right_map::const_iterator JobIterator;
 
 public:
     void Add( JobPtr &job, int numExec )
@@ -82,7 +87,8 @@ public:
             }
         }
 
-        jobs_.insert( JobState( job ) );
+        typedef JobPriorityQueue::value_type value_type;
+        jobs_.insert( value_type( job->GetJobId(), JobState( job ) ) );
     }
 
     void DecrementJobExecution( int64_t jobId, int numTasks, bool success )
@@ -101,25 +107,23 @@ public:
 
     bool FindJobByJobId( int64_t jobId, JobPtr &job ) const
     {
-        // TODO: use fixed-size array of rb-trees to handle both priorities & job lookup
-        // or boost::bimap
-        for( auto it = jobs_.cbegin(); it != jobs_.cend(); ++it )
+        auto it = jobs_.left.find( jobId );
+        if ( it != jobs_.left.end() )
         {
-            const JobPtr &j = (*it).GetJob();
-            if ( j->GetJobId() == jobId )
-            {
-                job = j;
-                return true;
-            }
+            const JobState &jobState = it->second;
+            job = jobState.GetJob();
+            return true;
         }
+
         return false;
     }
 
     void GetJobGroup( int64_t groupId, std::list< JobPtr > &jobs ) const
     {
-        for( auto it = jobs_.cbegin(); it != jobs_.cend(); ++it )
+        for( auto it = jobs_.left.begin(); it != jobs_.left.end(); ++it )
         {
-            const JobPtr &job = (*it).GetJob();
+            const JobState &jobState = it->second;
+            const JobPtr &job = jobState.GetJob();
             if ( job->GetGroupId() == groupId )
                 jobs.push_back( job );
         }
@@ -146,8 +150,10 @@ public:
         return -1;
     }
 
-    size_t GetNumJobs() const { return jobs_.size(); }
-    const JobQueue &GetJobQueue() const { return jobs_; }
+    size_t GetNumJobs() const { return jobs_.left.size(); }
+
+    JobIterator GetJobQueueBegin() const { return jobs_.right.begin(); }
+    JobIterator GetJobQueueEnd() const { return jobs_.right.end(); }
 
     template< typename T >
     void SetOnRemoveCallback( T *obj, void (T::*f)( int64_t jobId, bool success ) )
@@ -161,16 +167,16 @@ public:
             onRemoveCallback_( jobId, success );
 
         jobExecutions_.erase( jobId );
-        for( auto it = jobs_.begin(); it != jobs_.end(); ++it )
+
+        auto it = jobs_.left.find( jobId );
+        if ( it != jobs_.left.end() )
         {
-            const JobPtr &job = (*it).GetJob();
-            if ( job->GetJobId() == jobId )
-            {
-                RunJobCallback( job, completionStatus );
-                ReleaseJob( job, success );
-                jobs_.erase( it );
-                return;
-            }
+            const JobState &jobState = it->second;
+            const JobPtr &job = jobState.GetJob();
+            RunJobCallback( job, completionStatus );
+            ReleaseJob( job, success );
+            jobs_.left.erase( it );
+            return;
         }
 
         PLOG( "ScheduledJobs::RemoveJob: job not found for jobId=" << jobId );
@@ -178,11 +184,16 @@ public:
 
     void Clear()
     {
-        JobQueue jobs( jobs_ );
-        for( auto it = jobs_.cbegin(); it != jobs.cend(); ++it )
+        std::vector< int64_t > jobs;
+        for( auto it = jobs_.left.begin(); it != jobs_.left.end(); ++it )
         {
-            const JobPtr &job = (*it).GetJob();
-            RemoveJob( job->GetJobId(), false, "timeout" );
+            const int64_t jobId = it->first;
+            jobs.push_back( jobId );
+        }
+
+        for( int64_t jobId : jobs )
+        {
+            RemoveJob( jobId, false, "timeout" );
         }
     }
 
@@ -262,7 +273,7 @@ private:
     }
 
 private:
-    JobQueue jobs_;
+    JobPriorityQueue jobs_;
     IdToJobExec jobExecutions_; // job_id -> num job remaining executions (== 0, if job execution completed)
     JobNameToJob nameToJob_;
     std::function< void (int64_t, bool) > onRemoveCallback_;
