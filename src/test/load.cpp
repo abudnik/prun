@@ -74,6 +74,7 @@ BOOST_AUTO_TEST_CASE( get_task )
         JobPtr job( new Job( "", "python", priority, 10, 1, -1, 1,
                              1, 1, 1, false, false ) );
         BOOST_REQUIRE( job );
+        job->SetJobId( i );
         jobMgr.PushJob( job );
     }
 
