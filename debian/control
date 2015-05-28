@@ -1,0 +1,29 @@
+Source: prun
+Section: net
+Priority: optional
+Maintainer: Andrey Budnik <budnik27@gmail.com>
+Build-Depends:	cdbs,
+		cmake (>= 2.6),
+		debhelper (>= 7.0.50~),
+		libboost-dev,
+		libboost-system-dev,
+		libboost-thread-dev,
+		libboost-program-options-dev,
+		libboost-filesystem-dev
+Standards-Version: 3.8.0
+Homepage: https://github.com/abudnik/prun
+Vcs-Git: git://github.com/abudnik/prun.git
+Vcs-Browser: https://github.com/abudnik/prun
+
+Package: prun
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Distributed cron and job scheduler (client)
+ Prun is a distributed cron and job scheduler
+
+Package: prun-master
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Distributed cron and job scheduler (master)
+ Prun is a distributed cron and job scheduler
+

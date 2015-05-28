@@ -66,6 +66,12 @@ endforeach(cpp)
 add_executable( ${APP_NAME} ${SRC_MASTER} )
 target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
 
+install(FILES conf/master.cfg conf/hosts conf/hosts_group1 DESTINATION /etc/pmaster)
+install(FILES jobs/cron.job jobs/test.job DESTINATION /var/lib/pmaster)
+install(FILES jobs/example/date.sh jobs/example/hello.py DESTINATION /var/lib/pmaster/example)
+install(TARGETS
+        ${APP_NAME}
+    RUNTIME DESTINATION bin COMPONENT runtime)
 
 set(APP_NAME pmasterdb)
 
@@ -154,4 +160,6 @@ if (Test)
 endif()
 
 
-CONFIGURE_FILE(${COMMON_DIR}/configure.h.in ${COMMON_DIR}/configure.h)
+INSTALL(FILES prun DESTINATION bin)
+
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/${COMMON_DIR}/configure.h.in ${CMAKE_CURRENT_SOURCE_DIR}/${COMMON_DIR}/configure.h)
