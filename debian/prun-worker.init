@@ -1,0 +1,52 @@
+#!/bin/sh
+
+# REDHAT chkconfig header
+# chkconfig: - 58 74
+# description: pworker is the prun worker daemon.
+
+### BEGIN INIT INFO
+# Provides: pworker
+# Required-Start: $network $local_fs $remote_fs
+# Required-Stop: $network $local_fs $remote_fs
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Should-Start: $syslog $named
+# Should-Stop: $syslog $named
+# Short-Description: start and stop pworker
+# Description: Prun worker daemon
+### END INIT INFO
+
+EXEC="/usr/bin/pworker"
+CONF="/etc/pworker/worker.cfg"
+RESOURCES="/var/lib/pworker"
+
+case "$1" in
+    start)
+        if pgrep -x pworker
+        then
+                echo "worker is already running"
+        else
+                echo "Starting Worker server..."
+                WORKER_UID=`id -u prun-worker`
+                $EXEC --d --c $CONF --r $RESOURCES --u $WORKER_UID
+        fi
+        ;;
+    stop)
+        if pgrep -x pworker
+        then
+                echo "Stopping ..."
+                $EXEC --s
+                while [ `pgrep -x pworker` ]
+                do
+                    echo "Waiting for Worker to shutdown ..."
+                    sleep 1
+                done
+                echo "Worker stopped"
+        else
+                echo "worker is not running"
+        fi
+        ;;
+    *)
+        echo "Please use start or stop as first argument"
+        ;;
+esac

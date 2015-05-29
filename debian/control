@@ -15,15 +15,20 @@ Homepage: https://github.com/abudnik/prun
 Vcs-Git: git://github.com/abudnik/prun.git
 Vcs-Browser: https://github.com/abudnik/prun
 
-Package: prun
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Distributed cron and job scheduler (client)
- Prun is a distributed cron and job scheduler
-
 Package: prun-master
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Distributed cron and job scheduler (master)
  Prun is a distributed cron and job scheduler
 
+Package: prun-worker
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Distributed cron and job scheduler (worker)
+ Prun is a distributed cron and job scheduler
+
+Package: prun
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Distributed cron and job scheduler (client)
+ Prun is a distributed cron and job scheduler

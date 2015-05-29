@@ -43,6 +43,10 @@ endforeach(cpp)
 add_executable( ${APP_NAME} ${SRC_PWORKER} )
 target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
 
+install(TARGETS
+        ${APP_NAME}
+    RUNTIME DESTINATION bin COMPONENT runtime)
+
 set(APP_NAME prexec)
 
 set(SRC_PREXEC_CPP common.cpp exec.cpp)
@@ -52,6 +56,12 @@ endforeach(cpp)
 
 add_executable( ${APP_NAME} ${SRC_PREXEC} )
 target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
+
+install(FILES conf/worker.cfg DESTINATION /etc/pworker)
+install(FILES node/node.java node/node.js node/node.py node/node.rb node/node.sh DESTINATION /var/lib/pworker/node)
+install(TARGETS
+        ${APP_NAME}
+    RUNTIME DESTINATION bin COMPONENT runtime)
 
 
 set(APP_NAME pmaster)

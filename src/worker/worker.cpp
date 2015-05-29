@@ -954,6 +954,21 @@ void UserInteraction()
 }
 
 
+void Impersonate( uid_t uid )
+{
+    if ( uid )
+    {
+        int ret = setuid( uid );
+        if ( ret < 0 )
+        {
+            PLOG_ERR( "impersonate uid=" << uid << " failed : " << strerror(errno) );
+            exit( 1 );
+        }
+
+        PLOG( "successfully impersonated, uid=" << uid );
+    }
+}
+
 void AtExit()
 {
     namespace ipc = boost::interprocess;
@@ -1102,6 +1117,8 @@ public:
         common::Pidfile pidfile( pidfilePath.c_str() );
 
         UnblockSighandlerMask();
+
+        Impersonate( uid_ );
 
         if ( !isDaemon_ )
         {
