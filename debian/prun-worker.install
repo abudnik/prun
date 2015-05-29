@@ -1,0 +1,4 @@
+usr/bin/pworker
+usr/bin/prexec
+etc/pworker/worker.cfg
+var/lib/pworker/*

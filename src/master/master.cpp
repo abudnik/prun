@@ -143,6 +143,21 @@ void SetupSignalHandlers()
     sigaction( SIGXFSZ, &sigHandler, nullptr);
 }
 
+void Impersonate( uid_t uid )
+{
+    if ( uid )
+    {
+        int ret = setuid( uid );
+        if ( ret < 0 )
+        {
+            PLOG_ERR( "impersonate uid=" << uid << " failed : " << strerror(errno) );
+            exit( 1 );
+        }
+
+        PLOG( "successfully impersonated, uid=" << uid );
+    }
+}
+
 void AtExit()
 {
     common::logger::ShutdownLogger();
@@ -168,10 +183,11 @@ void ThreadFun( boost::asio::io_service *io_service )
 class MasterApplication
 {
 public:
-    MasterApplication( const std::string &exeDir, const std::string &cfgPath, bool isDaemon )
+    MasterApplication( const std::string &exeDir, const std::string &cfgPath, bool isDaemon, uid_t uid )
     : exeDir_( exeDir ),
      cfgPath_( cfgPath ),
-     isDaemon_( isDaemon )
+     isDaemon_( isDaemon ),
+     uid_( uid )
     {
         masterId_ = common::GenerateUUID();
     }
@@ -356,6 +372,11 @@ public:
 
         common::Pidfile pidfile( pidfilePath.c_str() );
 
+        if ( uid_ )
+        {
+            Impersonate( uid_ );
+        }
+
         if ( !isDaemon_ )
         {
             UserInteraction();
@@ -395,6 +416,7 @@ private:
     std::string exeDir_;
     std::string cfgPath_;
     bool isDaemon_;
+    uid_t uid_;
     std::string masterId_;
 
     std::vector<std::thread> worker_threads_;
@@ -433,6 +455,7 @@ int main( int argc, char* argv[] )
         bool isDaemon = false;
         std::string exeDir = boost::filesystem::system_complete( argv[0] ).branch_path().string();
         std::string cfgPath;
+        uid_t uid = 0;
 
         // parse input command line options
         namespace po = boost::program_options;
@@ -443,6 +466,7 @@ int main( int argc, char* argv[] )
             ("help", "Print help")
             ("d", "Run as a daemon")
             ("s", "Stop daemon")
+            ("u", po::value<uid_t>(), "Start as a specific non-root user")
             ("c", po::value<std::string>(), "Config file path");
 
         po::variables_map vm;
@@ -471,7 +495,12 @@ int main( int argc, char* argv[] )
             cfgPath = vm[ "c" ].as<std::string>();
         }
 
-        MasterApplication app( exeDir, cfgPath, isDaemon );
+        if ( vm.count( "u" ) )
+        {
+            uid = vm[ "u" ].as<uid_t>();
+        }
+
+        MasterApplication app( exeDir, cfgPath, isDaemon, uid );
         app.Initialize();
 
 #ifdef _DEBUG

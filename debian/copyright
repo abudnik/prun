@@ -1,0 +1,10 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: prun
+Upstream-Contact: Andrey Budnik <budnik27@gmail.com>
+Source: https://github.com/abudnik/prun
+
+Files: *
+Copyright: (C) 2013+ Andrey Budnik <budnik27@gmail.com>
+License: Apache License, Version 2.0
+  The full text of the License is distributed in
+ /usr/share/common-licenses/Apache-2.0 on Debian systems.

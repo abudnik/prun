@@ -43,6 +43,10 @@ endforeach(cpp)
 add_executable( ${APP_NAME} ${SRC_PWORKER} )
 target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
 
+install(TARGETS
+        ${APP_NAME}
+    RUNTIME DESTINATION bin COMPONENT runtime)
+
 set(APP_NAME prexec)
 
 set(SRC_PREXEC_CPP common.cpp exec.cpp)
@@ -52,6 +56,12 @@ endforeach(cpp)
 
 add_executable( ${APP_NAME} ${SRC_PREXEC} )
 target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
+
+install(FILES conf/worker.cfg DESTINATION /etc/pworker)
+install(FILES node/node.java node/node.js node/node.py node/node.rb node/node.sh DESTINATION /var/lib/pworker/node)
+install(TARGETS
+        ${APP_NAME}
+    RUNTIME DESTINATION bin COMPONENT runtime)
 
 
 set(APP_NAME pmaster)
@@ -66,6 +76,12 @@ endforeach(cpp)
 add_executable( ${APP_NAME} ${SRC_MASTER} )
 target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
 
+install(FILES conf/master.cfg conf/hosts conf/hosts_group1 DESTINATION /etc/pmaster)
+install(FILES jobs/cron.job jobs/test.job DESTINATION /var/lib/pmaster)
+install(FILES jobs/example/date.sh jobs/example/hello.py DESTINATION /var/lib/pmaster/example)
+install(TARGETS
+        ${APP_NAME}
+    RUNTIME DESTINATION bin COMPONENT runtime)
 
 set(APP_NAME pmasterdb)
 
@@ -154,4 +170,6 @@ if (Test)
 endif()
 
 
-CONFIGURE_FILE(${COMMON_DIR}/configure.h.in ${COMMON_DIR}/configure.h)
+INSTALL(FILES prun DESTINATION bin)
+
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/${COMMON_DIR}/configure.h.in ${CMAKE_CURRENT_SOURCE_DIR}/${COMMON_DIR}/configure.h)

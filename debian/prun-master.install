@@ -1,0 +1,5 @@
+usr/bin/pmaster
+etc/pmaster/master.cfg
+etc/pmaster/hosts
+etc/pmaster/hosts_group1
+var/lib/pmaster/*

@@ -4,6 +4,7 @@ db
 CMakeFiles
 Makefile
 *.a
+obj-x86_64-linux-gnu
 pmaster
 pmasterdb
 pworker
