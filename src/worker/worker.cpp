@@ -868,8 +868,8 @@ void VerifyCommandlineParams( uid_t uid )
     else
     if ( getuid() == 0 )
     {
-        std::cout << "Could not execute python code due to security issues" << std::endl <<
-            "Please use --u command line parameter for using uid of non-privileged user" << std::endl;
+        std::cout << "Could not execute scripts due to security issues\n"
+            "Please use --u command line parameter to specify uid of non-privileged user" << std::endl;
         exit( 1 );
     }
 }
