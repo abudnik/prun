@@ -39,6 +39,7 @@ the License.
 #include <csignal>
 #include <sys/wait.h>
 #include "common.h"
+#include "common/security.h"
 #include "common/request.h"
 #include "common/log.h"
 #include "common/config.h"
@@ -1217,20 +1218,6 @@ void SetupLanguageRuntime( const worker::ExecContextPtr &execContext )
     }
 }
 
-void Impersonate( uid_t uid )
-{
-    if ( uid )
-    {
-        int ret = setuid( uid );
-        if ( ret < 0 )
-        {
-            PLOG_ERR( "impersonate uid=" << uid << " failed : " << strerror(errno) );
-            exit( 1 );
-        }
-
-        PLOG( "successfully impersonated, uid=" << uid );
-    }
-}
 
 void AtExit()
 {
@@ -1313,7 +1300,7 @@ public:
         // signal parent process to say that PrExec has been initialized
         kill( getppid(), SIGUSR1 );
 
-        Impersonate( uid_ );
+        common::ImpersonateOrExit( uid_ );
     }
 
     void Shutdown()

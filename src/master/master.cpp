@@ -28,6 +28,7 @@ the License.
 #include <boost/program_options.hpp>
 #include <csignal>
 #include <sys/wait.h>
+#include "common/security.h"
 #include "common/log.h"
 #include "common/daemon.h"
 #include "common/config.h"
@@ -141,21 +142,6 @@ void SetupSignalHandlers()
     sigaction( SIGSYS,  &sigHandler, nullptr );
     sigaction( SIGXCPU, &sigHandler, nullptr );
     sigaction( SIGXFSZ, &sigHandler, nullptr);
-}
-
-void Impersonate( uid_t uid )
-{
-    if ( uid )
-    {
-        int ret = setuid( uid );
-        if ( ret < 0 )
-        {
-            PLOG_ERR( "impersonate uid=" << uid << " failed : " << strerror(errno) );
-            exit( 1 );
-        }
-
-        PLOG( "successfully impersonated, uid=" << uid );
-    }
 }
 
 void AtExit()
@@ -372,10 +358,7 @@ public:
 
         common::Pidfile pidfile( pidfilePath.c_str() );
 
-        if ( uid_ )
-        {
-            Impersonate( uid_ );
-        }
+        common::ImpersonateOrExit( uid_ );
 
         if ( !isDaemon_ )
         {

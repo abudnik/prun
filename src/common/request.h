@@ -24,7 +24,7 @@ the License.
 #define __REQUEST_H
 
 #include <boost/lexical_cast.hpp>
-#include "common/log.h"
+#include "log.h"
 
 
 namespace common {
