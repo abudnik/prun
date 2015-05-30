@@ -5,7 +5,7 @@ project( prun )
 
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
-find_package(Boost 1.47.0 COMPONENTS system thread program_options filesystem REQUIRED)
+find_package(Boost 1.46.0 COMPONENTS system thread program_options filesystem REQUIRED)
 include_directories( ${Boost_INCLUDE_DIR} )
 
 if (Release)
