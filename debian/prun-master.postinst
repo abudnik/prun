@@ -21,11 +21,10 @@ case "$1" in
             addgroup --system prun
         fi
 
-        if ! getent passwd prun >/dev/null; then
+        if ! getent passwd prun-master >/dev/null; then
             adduser --quiet \
                 --system \
                 --ingroup prun \
-                --quiet \
                 --disabled-login \
                 --disabled-password \
                 --home /var/lib/pmaster \
