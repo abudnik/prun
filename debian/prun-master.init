@@ -26,8 +26,7 @@ case "$1" in
                 echo "master is already running"
         else
                 echo "Starting Master server..."
-                MASTER_UID=`id -u prun-master`
-                $EXEC --d --c $CONF --u $MASTER_UID
+                $EXEC --d --c $CONF
         fi
         ;;
     stop)
