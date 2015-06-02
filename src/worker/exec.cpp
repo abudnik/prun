@@ -158,7 +158,7 @@ public:
 
             if ( execContext_->GetChildProcesses().Find( pid ) )
             {
-                int ret = kill( pid, SIGTERM );
+                int ret = kill( -pid, SIGTERM );
                 if ( ret != -1 )
                 {
                     PLOG( "StopTaskAction::StopTask: task stopped, pid=" << pid <<
@@ -166,7 +166,7 @@ public:
                 }
                 else
                 {
-                    PLOG( "StopTaskAction::StopTask: process killing failed: pid=" << pid << ", err=" << strerror(errno) );
+                    PLOG( "StopTaskAction::StopTask: process group killing failed: pgid=" << pid << ", err=" << strerror(errno) );
                     job.OnError( NODE_FATAL );
                 }
             }
@@ -322,10 +322,10 @@ public:
         if ( execTable.Delete( job_->GetJobId(), job_->GetTaskId(), job_->GetMasterId() ) &&
              execContext_->GetChildProcesses().Find( pid ) )
         {
-            int ret = kill( pid, SIGTERM );
+            int ret = kill( -pid, SIGTERM );
             if ( ret == -1 )
             {
-                PLOG( "process killing failed: pid=" << pid << ", err=" << strerror(errno) );
+                PLOG( "process group killing failed: pgid=" << pid << ", err=" << strerror(errno) );
             }
         }
         else
@@ -382,8 +382,8 @@ protected:
             }
 
             gettimeofday( &tvEnd, nullptr );
-            int64_t elapsed = static_cast<int64_t>( ( tvEnd.tv_sec - tvStart.tv_sec ) * 1000 +
-                                                    ( tvEnd.tv_usec - tvStart.tv_usec ) / 1000 );
+            const int64_t elapsed = static_cast<int64_t>( ( tvEnd.tv_sec - tvStart.tv_sec ) * 1000 +
+                                                          ( tvEnd.tv_usec - tvStart.tv_usec ) / 1000 );
             job_->SetExecTime( elapsed );
 
             if ( !succeded )
@@ -400,6 +400,11 @@ protected:
             sigemptyset( &sigset );
             sigaddset( &sigset, SIGTERM );
             pthread_sigmask( SIG_UNBLOCK, &sigset, nullptr );
+
+            if ( setpgid( getpid(), getpid() ) < 0 )
+            {
+                PLOG_ERR( "ScriptExec::DoFork: setpgid() failed: " << strerror(errno) );
+            }
 
             g_isFork = true;
             // linux-only. kill child process, if parent exits
