@@ -420,7 +420,7 @@ protected:
                 int ret = chdir( dir.string().c_str() );
                 if ( ret < 0 )
                 {
-                    PLOG_WRN( "ScriptExec::DoFork: chdir failed: " << strerror(errno) );
+                    PLOG_WRN( "ScriptExec::DoFork: chdir failed: dir='" << dir.string() << "', err=" << strerror(errno) );
                 }
 
                 job_->SetScriptLength( boost::filesystem::file_size( p ) );
@@ -1306,6 +1306,12 @@ public:
         kill( getppid(), SIGUSR1 );
 
         common::ImpersonateOrExit( uid_ );
+
+        const std::string &resourcesDir = execContext_->GetResourcesDir();
+        if ( !resourcesDir.empty() && ( chdir( resourcesDir.c_str() ) < 0 ) )
+        {
+            PLOG_WRN( "ExecApplication::Initialize: chdir failed: dir='" << resourcesDir <<"', err=" << strerror(errno) );
+        }
     }
 
     void Shutdown()
