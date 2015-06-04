@@ -1104,8 +1104,6 @@ public:
 
         UnblockSighandlerMask();
 
-        common::ImpersonateOrExit( uid_ );
-
         if ( !isDaemon_ )
         {
             UserInteraction();
