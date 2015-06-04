@@ -1089,7 +1089,13 @@ void SigHandler( int s )
                 int status;
                 pid_t pid = waitpid( -1, &status, WNOHANG );
                 if ( pid > 0 )
-                    write( worker::g_processCompletionPipe, &pid, sizeof( pid ) );
+                {
+                    int err = write( worker::g_processCompletionPipe, &pid, sizeof( pid ) );
+                    if ( err < 0 )
+                    {
+                        PLOG_WRN( "Signal " << strsignal( s ) << ", write() failed: " << errno );
+                    }
+                }
                 else
                     break;
             }
