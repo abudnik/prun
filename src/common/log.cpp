@@ -93,6 +93,18 @@ void Log( const char *msg )
     }
     else
     {
+        Print( 'I', msg );
+    }
+}
+
+void LogDebug( const char *msg )
+{
+    if ( isDaemon )
+    {
+        syslog( LOG_DEBUG, "%s", msg );
+    }
+    else
+    {
         Print( 'D', msg );
     }
 }
