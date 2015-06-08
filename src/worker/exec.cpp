@@ -39,6 +39,7 @@ the License.
 #include <csignal>
 #include <sys/wait.h>
 #include "common.h"
+#include "common/security.h"
 #include "common/request.h"
 #include "common/log.h"
 #include "common/config.h"
@@ -133,6 +134,16 @@ void FlushFifo( int fifo )
             ret = read( fifo, buf, sizeof( buf ) );
             if ( ret > 0 )
                 continue;
+            else
+            if ( ret < 0 )
+            {
+                PLOG_ERR( "FlushFifo: read failed: fd=" << fifo << ", err=" << strerror(errno) );
+            }
+        }
+        else
+        if ( ret < 0 )
+        {
+            PLOG_ERR( "FlushFifo: poll failed: fd=" << pfd << ", err=" << strerror(errno) );
         }
         break;
     }
@@ -147,6 +158,8 @@ public:
 
     void StopTask( JobStopTask &job )
     {
+        PLOG_DBG( "StopTaskAction::StopTask: jobId=" << job.GetJobId() << ", taskId=" << job.GetTaskId() );
+
         ExecTable &execTable = execContext_->GetExecTable();
 
         ExecInfo execInfo;
@@ -157,7 +170,7 @@ public:
 
             if ( execContext_->GetChildProcesses().Find( pid ) )
             {
-                int ret = kill( pid, SIGTERM );
+                int ret = kill( -pid, SIGTERM );
                 if ( ret != -1 )
                 {
                     PLOG( "StopTaskAction::StopTask: task stopped, pid=" << pid <<
@@ -165,7 +178,7 @@ public:
                 }
                 else
                 {
-                    PLOG( "StopTaskAction::StopTask: process killing failed: pid=" << pid << ", err=" << strerror(errno) );
+                    PLOG( "StopTaskAction::StopTask: process group killing failed: pgid=" << pid << ", err=" << strerror(errno) );
                     job.OnError( NODE_FATAL );
                 }
             }
@@ -232,6 +245,8 @@ public:
 
     void StopJobs( JobStopPreviousJobs &job )
     {
+        PLOG_DBG( "StopPreviousJobsAction::StopJobs" );
+
         ExecTable &execTable = execContext_->GetExecTable();
 
         std::list< ExecInfo > table;
@@ -260,6 +275,8 @@ public:
 
     void StopJobs()
     {
+        PLOG_DBG( "StopAllJobsAction::StopJobs" );
+
         ExecTable &execTable = execContext_->GetExecTable();
         execTable.Clear();
     }
@@ -280,6 +297,8 @@ public:
 
     virtual void Execute( JobExec *job )
     {
+        PLOG_DBG( "ScriptExec::Execute" );
+
         if ( !InitLanguageEnv() )
         {
             job->OnError( NODE_FATAL );
@@ -321,10 +340,10 @@ public:
         if ( execTable.Delete( job_->GetJobId(), job_->GetTaskId(), job_->GetMasterId() ) &&
              execContext_->GetChildProcesses().Find( pid ) )
         {
-            int ret = kill( pid, SIGTERM );
+            int ret = kill( -pid, SIGTERM );
             if ( ret == -1 )
             {
-                PLOG( "process killing failed: pid=" << pid << ", err=" << strerror(errno) );
+                PLOG( "process group killing failed: pgid=" << pid << ", err=" << strerror(errno) );
             }
         }
         else
@@ -356,6 +375,8 @@ protected:
 
         if ( pid > 0 )
         {
+            PLOG( "ScriptExec::DoFork: started process pid=" << pid );
+
             execContext_->GetChildProcesses().Add( pid );
 
             ThreadInfo &threadInfo = execContext_->GetThreadInfo();
@@ -381,11 +402,16 @@ protected:
             }
 
             gettimeofday( &tvEnd, nullptr );
-            int64_t elapsed = static_cast<int64_t>( ( tvEnd.tv_sec - tvStart.tv_sec ) * 1000 +
-                                                    ( tvEnd.tv_usec - tvStart.tv_usec ) / 1000 );
+            const int64_t elapsed = static_cast<int64_t>( ( tvEnd.tv_sec - tvStart.tv_sec ) * 1000 +
+                                                          ( tvEnd.tv_usec - tvStart.tv_usec ) / 1000 );
             job_->SetExecTime( elapsed );
 
-            if ( !succeded )
+            if ( succeded )
+            {
+                PLOG( "ScriptExec::DoFork: process returned error code: pid=" << pid <<
+                      ", jobId=" << job_->GetJobId() << ", taskId=" << job_->GetTaskId() << ", err=" << job_->GetError() );
+            }
+            else
             {
                 KillExec( pid );
             }
@@ -401,6 +427,12 @@ protected:
             pthread_sigmask( SIG_UNBLOCK, &sigset, nullptr );
 
             g_isFork = true;
+
+            if ( setpgid( getpid(), getpid() ) < 0 )
+            {
+                PLOG_ERR( "ScriptExec::DoFork: setpgid() failed: " << strerror(errno) );
+            }
+
             // linux-only. kill child process, if parent exits
 #ifdef HAVE_SYS_PRCTL_H
             prctl( PR_SET_PDEATHSIG, SIGHUP );
@@ -414,7 +446,7 @@ protected:
                 int ret = chdir( dir.string().c_str() );
                 if ( ret < 0 )
                 {
-                    PLOG_WRN( "ScriptExec::DoFork: chdir failed: " << strerror(errno) );
+                    PLOG_WRN( "ScriptExec::DoFork: chdir failed: dir='" << dir.string() << "', err=" << strerror(errno) );
                 }
 
                 job_->SetScriptLength( boost::filesystem::file_size( p ) );
@@ -492,7 +524,7 @@ protected:
                 {
                     if ( errno == EAGAIN )
                         continue;
-                    PLOG_WRN( "ScriptExec::WriteScript: write failed: " << strerror(errno) );
+                    PLOG_WRN( "ScriptExec::WriteScript: write failed: fd=" << fifo << ", err=" << strerror(errno) );
                     break;
                 }
             }
@@ -506,7 +538,7 @@ protected:
         else
         {
             errCode = NODE_FATAL;
-            PLOG_WRN( "ScriptExec::WriteScript: poll failed: " << strerror(errno) );
+            PLOG_WRN( "ScriptExec::WriteScript: poll failed: fd=" << pfd << ", err=" << strerror(errno) );
         }
 
         job_->OnError( errCode );
@@ -563,7 +595,7 @@ protected:
             }
             else
             {
-                PLOG_WRN( "ScriptExec::ReadCompletionStatus: read fifo failed: " << strerror(errno) );
+                PLOG_WRN( "ScriptExec::ReadCompletionStatus: read fifo failed: fd=" << fifo << ", err=" << strerror(errno) );
             }
         }
         else
@@ -574,7 +606,7 @@ protected:
         else
         {
             errCode = NODE_FATAL;
-            PLOG_WRN( "ScriptExec::ReadCompletionStatus: poll failed: " << strerror(errno) );
+            PLOG_WRN( "ScriptExec::ReadCompletionStatus: poll failed: fd=" << pfd << ", err=" << strerror(errno) );
         }
 
         job_->OnError( errCode );
@@ -796,6 +828,11 @@ protected:
     : execContext_( execContext )
     {}
 
+    virtual ~Session()
+    {
+        PLOG_DBG( "destroying session" );
+    }
+
     template< typename T >
     void HandleRequest( T &request )
     {
@@ -898,11 +935,6 @@ public:
     : Session( execContext ),
     socket_( io_service ), request_( true )
     {}
-
-    ~SessionBoost()
-    {
-        cout << "E: ~Session()" << endl;
-    }
 
     void Start()
     {
@@ -1017,7 +1049,11 @@ public:
     {
         try
         {
-            unlink( UDS_NAME );
+            int ret = unlink( UDS_NAME );
+            if ( ret < 0 && errno != ENOENT )
+            {
+                PLOG_ERR( "ConnectionAcceptor::ConnectionAcceptor: unlink failed: file=" << UDS_NAME << ", err=" << strerror(errno) );
+            }
             stream_protocol::endpoint endpoint( UDS_NAME );
             acceptor_ = acceptor_ptr( new stream_protocol::acceptor( io_service, endpoint ) );
 
@@ -1025,7 +1061,7 @@ public:
             {
                 int ret = chown( UDS_NAME, uid, static_cast<gid_t>( -1 ) );
                 if ( ret == -1 )
-                    PLOG_ERR( "ConnectionAcceptor: chown failed " << strerror(errno) );
+                    PLOG_ERR( "ConnectionAcceptor: chown failed: file=" << UDS_NAME << ", uid=" << uid << ", err=" << strerror(errno) );
             }
         }
         catch( std::exception &e )
@@ -1083,7 +1119,13 @@ void SigHandler( int s )
                 int status;
                 pid_t pid = waitpid( -1, &status, WNOHANG );
                 if ( pid > 0 )
-                    write( worker::g_processCompletionPipe, &pid, sizeof( pid ) );
+                {
+                    int err = write( worker::g_processCompletionPipe, &pid, sizeof( pid ) );
+                    if ( err < 0 )
+                    {
+                        PLOG_WRN( "Signal " << strsignal( s ) << ", write() failed: " << errno );
+                    }
+                }
                 else
                     break;
             }
@@ -1157,11 +1199,23 @@ void UnblockSighandlerMask()
 void ReadProcessCompletionPIDs( const worker::ExecContextPtr &spExecContext, int processCompletionPipe )
 {
     pid_t pid;
-    while( read( processCompletionPipe, &pid, sizeof( pid ) ) != -1 )
+    while( 1 )
     {
-        spExecContext->GetChildProcesses().Delete( pid );
-        std::unique_lock< std::mutex > lock( spExecContext->GetProcessCompletionMutex() );
-        spExecContext->GetProcessCompletionCondition().notify_all();
+        int ret = read( processCompletionPipe, &pid, sizeof( pid ) );
+        if ( ret > 0 )
+        {
+            PLOG( "ReadProcessCompletionPIDs: process terminated: pid=" << pid );
+
+            spExecContext->GetChildProcesses().Delete( pid );
+            std::unique_lock< std::mutex > lock( spExecContext->GetProcessCompletionMutex() );
+            spExecContext->GetProcessCompletionCondition().notify_all();
+        }
+        else
+        if ( ret == -1 )
+        {
+            PLOG_WRN( "ReadProcessCompletionPIDs: read failed: fd=" << processCompletionPipe << ", err=" << strerror(errno) );
+            break;
+        }
     }
 }
 
@@ -1217,20 +1271,6 @@ void SetupLanguageRuntime( const worker::ExecContextPtr &execContext )
     }
 }
 
-void Impersonate( uid_t uid )
-{
-    if ( uid )
-    {
-        int ret = setuid( uid );
-        if ( ret < 0 )
-        {
-            PLOG_ERR( "impersonate uid=" << uid << " failed : " << strerror(errno) );
-            exit( 1 );
-        }
-
-        PLOG( "successfully impersonated, uid=" << uid );
-    }
-}
 
 void AtExit()
 {
@@ -1277,6 +1317,8 @@ public:
 
     void Initialize()
     {
+        PLOG_DBG( "ExecApplication::Initialize" );
+
         common::logger::InitLogger( isDaemon_, "prexec" );
 
         common::Config &cfg = common::Config::Instance();
@@ -1313,11 +1355,19 @@ public:
         // signal parent process to say that PrExec has been initialized
         kill( getppid(), SIGUSR1 );
 
-        Impersonate( uid_ );
+        common::ImpersonateOrExit( uid_ );
+
+        const std::string &resourcesDir = execContext_->GetResourcesDir();
+        if ( !resourcesDir.empty() && ( chdir( resourcesDir.c_str() ) < 0 ) )
+        {
+            PLOG_WRN( "ExecApplication::Initialize: chdir failed: dir='" << resourcesDir <<"', err=" << strerror(errno) );
+        }
     }
 
     void Shutdown()
     {
+        PLOG_DBG( "ExecApplication::Shutdown" );
+
         io_service_.stop();
 
         ExecTable &execTable = execContext_->GetExecTable();
@@ -1333,6 +1383,8 @@ public:
 
     void Run()
     {
+        PLOG_DBG( "ExecApplication::Run" );
+
         UnblockSighandlerMask();
 
         if ( isDaemon_ )
@@ -1351,35 +1403,39 @@ public:
                 continue;
             if ( !ret )
                 break;
-            PLOG_ERR( "main(): sigwait failed: " << strerror(ret) );
+            PLOG_ERR( "ExecApplication::Run: sigwait failed: " << strerror(ret) );
         }
     }
 
 private:
     int CreateFifo( const std::string &fifoName )
     {
-        unlink( fifoName.c_str() );
+        int ret = unlink( fifoName.c_str() );
+        if ( ret < 0 && errno != ENOENT )
+        {
+            PLOG_ERR( "ExecApplication::CreateFifo: unlink failed: file=" << fifoName << ", err=" << strerror(errno) );
+        }
 
-        int ret = mkfifo( fifoName.c_str(), S_IRUSR | S_IWUSR );
+        ret = mkfifo( fifoName.c_str(), S_IRUSR | S_IWUSR );
         if ( !ret )
         {
             if ( uid_ )
             {
                 ret = chown( fifoName.c_str(), uid_, static_cast<gid_t>( -1 ) );
                 if ( ret == -1 )
-                    PLOG_ERR( "CreateFifo: chown failed " << strerror(errno) );
+                    PLOG_ERR( "ExecApplication::CreateFifo: chown failed: file=" << fifoName << ", uid=" << uid_ << ", err=" << strerror(errno) );
             }
 
             int fifofd = open( fifoName.c_str(), O_RDWR | O_NONBLOCK );
             if ( fifofd == -1 )
             {
-                PLOG_ERR( "open fifo " << fifoName << " failed: " << strerror(errno) );
+                PLOG_ERR( "ExecApplication::CreateFifo: open fifo " << fifoName << " failed: " << strerror(errno) );
             }
             return fifofd;
         }
         else
         {
-            PLOG_ERR( "CreateFifo: mkfifo failed " << strerror(errno) );
+            PLOG_ERR( "ExecApplication::CreateFifo: mkfifo failed: file=" << fifoName << ", err=" << strerror(errno) );
         }
         return -1;
     }
@@ -1466,7 +1522,7 @@ private:
         catch( std::exception &e )
         {
             PLOG_ERR( "SetupPrExecIPC failed: " << e.what() );
-            exit( 1 );
+            ::exit( 1 );
         }
     }
 

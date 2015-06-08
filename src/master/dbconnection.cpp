@@ -94,7 +94,7 @@ bool DbHistoryConnection::Connect( const std::string &host, unsigned short port 
             return false;
         }
 
-        boost::asio::connect( socket_, iterator, ec );
+        socket_.connect( *iterator, ec );
         if ( ec )
         {
             PLOG_WRN( "DbHistoryConnection::Connect: couldn't connect to '" << host << " : " << sPort << "': " << ec.message() );

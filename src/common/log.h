@@ -25,24 +25,31 @@ the License.
 
 #include <sstream>
 
+#define PLOG_PREPARE_MESSAGE( MSG ) \
+    std::ostringstream os;  \
+    os << MSG << "  (from " << __FILE__ << ':' << __LINE__ << ')';
+
 #define PLOG( MSG )\
 {\
-    std::ostringstream os;\
-    os << MSG << "  (from " << __FILE__ << ":" << __LINE__ << ")"; \
+    PLOG_PREPARE_MESSAGE( MSG ); \
     common::logger::Log( os.str().c_str() ); \
+}
+
+#define PLOG_DBG( MSG )\
+{\
+    PLOG_PREPARE_MESSAGE( MSG ); \
+    common::logger::LogDebug( os.str().c_str() ); \
 }
 
 #define PLOG_WRN( MSG )\
 {\
-    std::ostringstream os;\
-    os << MSG << "  (from " << __FILE__ << ":" << __LINE__ << ")"; \
+    PLOG_PREPARE_MESSAGE( MSG ); \
     common::logger::LogWarning( os.str().c_str() ); \
 }
 
 #define PLOG_ERR( MSG )\
 {\
-    std::ostringstream os;\
-    os << MSG << "  (from " << __FILE__ << ":" << __LINE__ << ")"; \
+    PLOG_PREPARE_MESSAGE( MSG ); \
     common::logger::LogError( os.str().c_str() ); \
 }
 
@@ -56,6 +63,8 @@ void InitLogger( bool isDaemon, const char *serviceName );
 void ShutdownLogger();
 
 void Log( const char *msg );
+
+void LogDebug( const char *msg );
 
 void LogWarning( const char *msg );
 

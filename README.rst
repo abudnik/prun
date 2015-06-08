@@ -26,7 +26,7 @@ Build requirements:
 
 - cmake 2.6 (or higher)
 - GCC 4.6 (or higher) or Clang
-- boost 1.47 (or higher)
+- boost 1.46 (or higher)
 
 Additional requirements:
 
