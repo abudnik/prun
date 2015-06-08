@@ -297,6 +297,8 @@ void AdminSession::Start()
 {
     remoteIP_ = socket_.remote_endpoint().address().to_string();
 
+    PLOG( "AdminSession::Start: ip=" << remoteIP_ );
+
     socket_.async_read_some( boost::asio::buffer( buffer_ ),
                              boost::bind( &AdminSession::HandleRead, shared_from_this(),
                                           boost::asio::placeholders::error,
@@ -416,7 +418,6 @@ void AdminConnection::HandleAccept( session_ptr session, const boost::system::er
 {
     if ( !error )
     {
-        PLOG( "admin connection accepted..." );
         io_service_.post( boost::bind( &AdminSession::Start, session ) );
         StartAccept();
     }

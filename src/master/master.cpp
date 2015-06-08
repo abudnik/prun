@@ -182,7 +182,7 @@ public:
     {
         common::logger::InitLogger( isDaemon_, "pmaster" );
 
-        //PLOG( "master_id= " << masterId_ );
+        PLOG_DBG( "MasterApplication::Initialize: master_id=" << masterId_ );
 
         SetupSignalHandlers();
         atexit( AtExit );
@@ -304,6 +304,8 @@ public:
 
     void Shutdown()
     {
+        PLOG_DBG( "MasterApplication::Shutdown" );
+
         // stop io services
         io_service_admin_.stop();
         io_service_command_send_.stop();
@@ -348,6 +350,8 @@ public:
 
     void Run()
     {
+        PLOG_DBG( "MasterApplication::Run" );
+
         common::Config &cfg = common::Config::Instance();
 
         string pidfilePath = cfg.Get<string>( "pidfile" );

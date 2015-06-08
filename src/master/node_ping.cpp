@@ -31,7 +31,7 @@ namespace master {
 
 void PingReceiver::OnNodePing( const std::string &nodeIP, const std::string &msg )
 {
-    //PLOG( nodeIP << " : " << msg );
+    //PLOG_DBG( nodeIP << " : " << msg );
 
     std::string protocol, header, body;
     int version;

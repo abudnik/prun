@@ -54,7 +54,8 @@ void ResultGetter::Run()
         getTask = workerManager->GetAchievedTask( workerTask, hostIP );
         if ( getTask )
         {
-            PLOG( "Get achieved work " << workerTask.GetJobId() << " : " << workerTask.GetTaskId() );
+            PLOG( "Get task result: jobId=" << workerTask.GetJobId() <<
+                  ", taskId=" << workerTask.GetTaskId() << ", host=" << hostIP );
             GetTaskResult( workerTask, hostIP );
         }
     }

@@ -34,6 +34,8 @@ namespace master {
 
 bool UserCommand::Run( const std::string &filePath, const std::string &jobAlias, std::string &result )
 {
+    PLOG( "UserCommand::Run: filePath=" << filePath << ", jobAlias='" << jobAlias << '\'' );
+
     try
     {
         // read job description from file
@@ -157,6 +159,8 @@ void UserCommand::PrintJobInfo( const JobPtr &job, std::string &result ) const
 
 bool UserCommand::Stop( int64_t jobId )
 {
+    PLOG( "UserCommand::Stop: jobId=" << jobId );
+
     try
     {
         IJobManager *jobManager = common::GetService< IJobManager >();
@@ -176,6 +180,8 @@ bool UserCommand::Stop( int64_t jobId )
 
 bool UserCommand::StopGroup( int64_t groupId )
 {
+    PLOG( "UserCommand::StopGroup: groupId=" << groupId );
+
     try
     {
         IJobManager *jobManager = common::GetService< IJobManager >();
@@ -193,6 +199,8 @@ bool UserCommand::StopGroup( int64_t groupId )
 
 bool UserCommand::StopNamed( const std::string &name )
 {
+    PLOG( "UserCommand::StopNamed: name=" << name );
+
     try
     {
         ICronManager *cronManager = common::GetService< ICronManager >();
@@ -213,6 +221,8 @@ bool UserCommand::StopNamed( const std::string &name )
 
 bool UserCommand::StopAll()
 {
+    PLOG( "UserCommand::StopAll" );
+
     try
     {
         ICronManager *cronManager = common::GetService< ICronManager >();
@@ -232,6 +242,8 @@ bool UserCommand::StopAll()
 
 bool UserCommand::StopPreviousJobs()
 {
+    PLOG( "UserCommand::StopPreviousJobs" );
+
     try
     {
         IScheduler *scheduler = common::GetService< IScheduler >();
@@ -247,6 +259,8 @@ bool UserCommand::StopPreviousJobs()
 
 bool UserCommand::AddWorkerHost( const std::string &groupName, const std::string &host )
 {
+    PLOG( "UserCommand::AddWorkerHost: groupName=" << groupName << ", host=" << host );
+
     try
     {
         IWorkerManager *workerManager = common::GetService< IWorkerManager >();
@@ -262,6 +276,8 @@ bool UserCommand::AddWorkerHost( const std::string &groupName, const std::string
 
 bool UserCommand::DeleteHost( const std::string &host )
 {
+    PLOG( "UserCommand::DeleteHost: host=" << host );
+
     try
     {
         IWorkerManager *workerManager = common::GetService< IWorkerManager >();
@@ -281,6 +297,8 @@ bool UserCommand::DeleteHost( const std::string &host )
 
 bool UserCommand::AddGroup( const std::string &filePath, const std::string &fileName )
 {
+    PLOG( "UserCommand::AddGroup: filePath=" << filePath << ", groupName=" << fileName );
+
     try
     {
         std::list< std::string > hosts;
@@ -302,6 +320,8 @@ bool UserCommand::AddGroup( const std::string &filePath, const std::string &file
 
 bool UserCommand::DeleteGroup( const std::string &group )
 {
+    PLOG( "UserCommand::DeleteGroup: group=" << group );
+
     try
     {
         std::vector< WorkerPtr > workers;
@@ -325,6 +345,8 @@ bool UserCommand::DeleteGroup( const std::string &group )
 
 bool UserCommand::Info( int64_t jobId, std::string &result )
 {
+    PLOG( "UserCommand::Info: jobId=" << jobId );
+
     try
     {
         JobInfo jobInfo( jobId );
@@ -343,6 +365,8 @@ bool UserCommand::Info( int64_t jobId, std::string &result )
 
 bool UserCommand::GetStatistics( std::string &result )
 {
+    PLOG( "UserCommand::GetStatistics" );
+
     try
     {
         Statistics stat;
@@ -360,6 +384,8 @@ bool UserCommand::GetStatistics( std::string &result )
 
 bool UserCommand::GetAllJobInfo( std::string &result )
 {
+    PLOG( "UserCommand::GetAllJobInfo" );
+
     try
     {
         AllJobInfo jobInfo;
@@ -377,6 +403,8 @@ bool UserCommand::GetAllJobInfo( std::string &result )
 
 bool UserCommand::GetWorkersStatistics( std::string &result )
 {
+    PLOG( "UserCommand::GetWorkersStatistics" );
+
     try
     {
         WorkerStatistics stat;
@@ -394,6 +422,8 @@ bool UserCommand::GetWorkersStatistics( std::string &result )
 
 bool UserCommand::GetCronInfo( std::string &result )
 {
+    PLOG( "UserCommand::GetCronInfo" );
+
     try
     {
         CronStatistics stat;

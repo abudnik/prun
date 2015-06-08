@@ -111,7 +111,7 @@ void WorkerManager::CheckDropedPingResponses()
                 {
                     worker->SetState( WORKER_STATE_NOT_AVAIL );
                     changedWorkers.push_back( worker );
-                    PLOG( "WorkerManager::CheckDropedPingResponses: node job isn't available, ip= " << worker->GetIP() );
+                    PLOG( "WorkerManager::CheckDropedPingResponses: node job is not available, ip= " << worker->GetIP() );
                 }
             }
             worker->SetNumPingResponse( 0 );

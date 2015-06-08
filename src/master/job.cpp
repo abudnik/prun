@@ -191,10 +191,8 @@ void JobQueue::GetJobsByName( const std::string &name, std::set< JobPtr > &jobs 
 void JobQueue::OnJobDeletion( JobPtr &job )
 {
     std::ostringstream ss;
-    ss << "================" << std::endl <<
-        "Job deleted from job queue, jobId = " << job->GetJobId() << std::endl <<
-        "completion status: failed" << std::endl <<
-        "================";
+    ss << "Job deleted from job queue, jobId=" << job->GetJobId() <<
+        ", completion status: failed";
 
     PLOG( ss.str() );
 
@@ -268,7 +266,7 @@ void JobQueue::Clear()
         std::unique_lock< std::recursive_mutex > lock( jobsMut_ );
         jobs = jobs_;
         jobs.insert( jobs.end(), delayedJobs_.begin(), delayedJobs_.end() );
-        // std::copy( delayedJobs.begin(), delayedJobs.end(), std::back_inserter( jobs ) ); // less effective
+        //std::copy( delayedJobs.begin(), delayedJobs.end(), std::back_inserter( jobs ) ); // less effective
     }
 
     for( const auto &job : jobs )

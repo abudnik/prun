@@ -206,12 +206,12 @@ bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
 
 void JobManager::PushJob( JobPtr &job )
 {
-    PLOG( "push job" );
-
     RegisterJobName( job->GetName() );
 
     job->SetJobId( jobId_++ );
     jobs_->PushJob( job, numJobGroups_++ );
+
+    PLOG( "JobManager::PushJob: jobId=" << job->GetJobId() );
 
     IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
     jobEventReceiver->OnJobAdd( job );
@@ -226,13 +226,15 @@ void JobManager::PushJobs( std::list< JobPtr > &jobs )
     if ( jobs.empty() )
         return;
 
-    PLOG( "push jobs" );
+    const int groupId = numJobGroups_++;
     for( auto &job : jobs )
     {
         RegisterJobName( job->GetName() );
         job->SetJobId( jobId_++ );
     }
-    jobs_->PushJobs( jobs, numJobGroups_++ );
+    jobs_->PushJobs( jobs, groupId );
+
+    PLOG( "JobManager::PushJobs: groupId=" << groupId );
 
     IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
     jobEventReceiver->OnJobAdd( *jobs.begin() ); // first job has meta job description
@@ -261,7 +263,6 @@ void JobManager::BuildAndPushJob( int64_t jobId, const std::string &jobDescripti
         std::list< JobPtr > jobs;
         if ( CreateMetaJob( jobDescription, jobs, check_name_existance ) && !jobs.empty() )
         {
-            PLOG( "push jobs from history" );
             if ( !cron )
             {
                 RegisterJobName( jobs.front()->GetJobGroup()->GetName() );
@@ -282,7 +283,10 @@ void JobManager::BuildAndPushJob( int64_t jobId, const std::string &jobDescripti
                     job->SetJobId( jobId++ );
                 }
             }
-            jobs_->PushJobs( jobs, numJobGroups_++ );
+            const int groupId = numJobGroups_++;
+            jobs_->PushJobs( jobs, groupId );
+
+            PLOG( "push jobs from history: groupId=" << groupId );
 
             IScheduler *scheduler = common::GetService< IScheduler >();
             scheduler->OnNewJob();
@@ -298,7 +302,6 @@ void JobManager::BuildAndPushJob( int64_t jobId, const std::string &jobDescripti
         JobPtr job( CreateJob( jobDescription, check_name_existance ) );
         if ( job )
         {
-            PLOG( "push job from history" );
             if ( cron )
             {
                 job->SetJobId( jobId_++ );
@@ -313,6 +316,8 @@ void JobManager::BuildAndPushJob( int64_t jobId, const std::string &jobDescripti
                 job->SetJobId( jobId++ );
             }
             jobs_->PushJob( job, numJobGroups_++ );
+
+            PLOG( "push job from history: jobId=" << job->GetJobId() );
 
             IScheduler *scheduler = common::GetService< IScheduler >();
             scheduler->OnNewJob();
