@@ -180,10 +180,6 @@ public:
 
     void Initialize()
     {
-        common::logger::InitLogger( isDaemon_, "pmaster" );
-
-        PLOG_DBG( "MasterApplication::Initialize: master_id=" << masterId_ );
-
         SetupSignalHandlers();
         atexit( AtExit );
 
@@ -198,6 +194,11 @@ public:
             cfg.ParseConfig( "", cfgPath_.c_str() );
         }
         ApplyDefaults( cfg );
+
+        std::string logLevel = cfg.Get<std::string>( "log_level" );
+        common::logger::InitLogger( isDaemon_, "pmaster", logLevel.c_str() );
+
+        PLOG_DBG( "MasterApplication::Initialize: master_id=" << masterId_ );
 
         unsigned int numHeartbeatThread = 1;
         unsigned int numPingReceiverThread = cfg.Get<unsigned int>( "num_ping_receiver_thread" );

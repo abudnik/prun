@@ -178,7 +178,7 @@ bool WorkerManager::GetAchievedTask( WorkerTask &worker, std::string &hostIP )
     if ( achievedWorkers_.empty() )
         return false;
 
-    PLOG( "GetAchievedWorker: num achieved workers=" << achievedWorkers_.size() );
+    PLOG_DBG( "GetAchievedWorker: num achieved workers=" << achievedWorkers_.size() );
 
     const PairTypeAW &w = achievedWorkers_.front();
     worker = w.first;

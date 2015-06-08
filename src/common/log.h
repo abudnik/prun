@@ -30,35 +30,43 @@ the License.
     os << MSG << "  (from " << __FILE__ << ':' << __LINE__ << ')';
 
 #define PLOG( MSG )\
-{\
-    PLOG_PREPARE_MESSAGE( MSG ); \
-    common::logger::Log( os.str().c_str() ); \
-}
+    if ( common::logger::CheckLogLevel( common::logger::LogLevel::INFO ) ) { \
+        PLOG_PREPARE_MESSAGE( MSG );                                    \
+        common::logger::Log( os.str().c_str() );                        \
+    }
 
 #define PLOG_DBG( MSG )\
-{\
-    PLOG_PREPARE_MESSAGE( MSG ); \
-    common::logger::LogDebug( os.str().c_str() ); \
-}
+    if ( common::logger::CheckLogLevel( common::logger::LogLevel::DEBUG ) ) { \
+        PLOG_PREPARE_MESSAGE( MSG );                                    \
+        common::logger::LogDebug( os.str().c_str() );                   \
+    }
 
 #define PLOG_WRN( MSG )\
-{\
-    PLOG_PREPARE_MESSAGE( MSG ); \
-    common::logger::LogWarning( os.str().c_str() ); \
-}
+    if ( common::logger::CheckLogLevel( common::logger::LogLevel::WARNING ) ) { \
+        PLOG_PREPARE_MESSAGE( MSG );                                    \
+        common::logger::LogWarning( os.str().c_str() );                 \
+    }
 
 #define PLOG_ERR( MSG )\
-{\
-    PLOG_PREPARE_MESSAGE( MSG ); \
-    common::logger::LogError( os.str().c_str() ); \
-}
+    if ( common::logger::CheckLogLevel( common::logger::LogLevel::ERROR ) ) { \
+        PLOG_PREPARE_MESSAGE( MSG );                                    \
+        common::logger::LogError( os.str().c_str() );                   \
+    }
 
 namespace common {
 
 namespace logger
 {
 
-void InitLogger( bool isDaemon, const char *serviceName );
+enum LogLevel
+{
+    DEBUG   = 0,
+    INFO    = 1,
+    WARNING = 2,
+    ERROR   = 3
+};
+
+void InitLogger( bool useSyslog, const char *serviceName, const char *level );
 
 void ShutdownLogger();
 
@@ -69,6 +77,8 @@ void LogDebug( const char *msg );
 void LogWarning( const char *msg );
 
 void LogError( const char *msg );
+
+bool CheckLogLevel( LogLevel want );
 
 } // namespace logger
 
