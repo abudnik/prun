@@ -94,7 +94,7 @@ public:
             if ( ec )
             {
                 PLOG_ERR( "CommDescrPool(): socket_.connect() failed " << ec.message() );
-                exit( 1 );
+                ::exit( 1 );
             }
 
             AddCommDescr( commDescr );

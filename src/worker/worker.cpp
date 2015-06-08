@@ -393,6 +393,8 @@ public:
     void DoSend( const std::shared_ptr< JobExec > &job, int taskId,
                  ExecContextPtr &execContext )
     {
+        PLOG( "ExecuteTask::DoSend: jobId=" << job->GetJobId() << ", taskId=" << taskId );
+
         PrExecConnection prExecConnection( execContext );
         PrExecConnectionHolder connectionHolder( &prExecConnection );
         if ( !prExecConnection.Init() )
@@ -447,6 +449,7 @@ public:
         }
         else
         {
+            PLOG_DBG( "ExecuteTask::DoSend: task already stopped: jobId=" << job->GetJobId() << ", taskId=" << taskId );
             errCode = NODE_JOB_TIMEOUT;
         }
         job->OnError( errCode );
@@ -481,15 +484,19 @@ class StopTask : public IAction
             std::dynamic_pointer_cast< JobStopTask >( j )
         );
 
+        PLOG( "StopTask::Execute: jobId=" << job->GetJobId() << ", taskId=" << job->GetTaskId() );
+
         ExecTable &pendingTable = execContext->GetPendingTable();
         if ( pendingTable.Delete( job->GetJobId(), job->GetTaskId(), job->GetMasterId() ) )
         {
+            PLOG_DBG( "StopTask::Execute: task removed from pending: jobId=" << job->GetJobId() << ", taskId=" << job->GetTaskId() );
             job->OnError( NODE_JOB_TIMEOUT );
         }
 
         ExecTable &execTable = execContext->GetExecTable();
         if ( !execTable.Contains( job->GetJobId(), job->GetTaskId(), job->GetMasterId() ) )
         {
+            PLOG_DBG( "StopTask::Execute: task is not exists: jobId=" << job->GetJobId() << ", taskId=" << job->GetTaskId() );
             job->OnError( NODE_TASK_NOT_FOUND );
             return;
         }
@@ -526,6 +533,8 @@ class StopPreviousJobs : public IAction
             std::dynamic_pointer_cast< JobStopPreviousTask >( j )
         );
 
+        PLOG( "StopPreviousJobs::Execute: masterId=" << job->GetMasterId() );
+
         PrExecConnection prExecConnection( execContext );
         PrExecConnectionHolder connectionHolder( &prExecConnection );
         if ( !prExecConnection.Init() )
@@ -555,6 +564,8 @@ class StopAllJobs : public IAction
         std::shared_ptr< JobStopAll > job(
             std::dynamic_pointer_cast< JobStopAll >( j )
         );
+
+        PLOG( "StopAllJobs::Execute" );
 
         ExecTable &pendingTable = execContext->GetPendingTable();
         pendingTable.Clear();
@@ -610,7 +621,7 @@ public:
     virtual ~Session()
     {
         requestSem_->Notify();
-        cout << "S: ~Session()" << endl;
+        PLOG_DBG( "destroying session" );
     }
 
 protected:
@@ -823,7 +834,7 @@ private:
     {
         if ( !error )
         {
-            cout << "connection accepted..." << endl;
+            PLOG_DBG( "ConnectionAcceptor::HandleAccept" );
             requestSem_->Wait();
             io_service_.post( boost::bind( &BoostSession::Start, session ) );
             StartAccept();
@@ -999,6 +1010,8 @@ public:
 
     void Initialize()
     {
+        PLOG_DBG( "WorkerApplication::Initialize" );
+
         ComputerInfo &compInfo = ComputerInfo::Instance();
         unsigned int numExecThread = compInfo.GetNumCPU();
         numRequestThread_ = 2 * numExecThread;
@@ -1075,6 +1088,8 @@ public:
 
     void Shutdown()
     {
+        PLOG_DBG( "WorkerApplication::Shutdown" );
+
         completionPing_->Stop();
 
         io_service_ping_.stop();
@@ -1095,6 +1110,8 @@ public:
 
     void Run()
     {
+        PLOG_DBG( "WorkerApplication::Run" );
+
         string pidfilePath = common::Config::Instance().Get<string>( "pidfile" );
         if ( pidfilePath[0] != '/' )
         {
@@ -1123,7 +1140,7 @@ public:
                     continue;
                 if ( !ret )
                     break;
-                PLOG_ERR( "main(): sigwait failed: " << strerror(ret) );
+                PLOG_ERR( "WorkerApplication::Run: sigwait failed: " << strerror(ret) );
             }
         }
     }
