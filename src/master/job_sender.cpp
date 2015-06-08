@@ -54,7 +54,7 @@ void JobSender::Run()
         getTask = scheduler->GetTaskToSend( workerJob, hostIP, job );
         if ( getTask )
         {
-            PLOG( "Get task " << workerJob.GetJobId() );
+            PLOG( "Send job " << workerJob.GetJobId() << " to " << hostIP );
             SendJob( workerJob, hostIP, job );
             workerJob.Reset();
         }
@@ -77,7 +77,7 @@ void JobSender::NotifyObserver( int event )
 
 void JobSender::OnJobSendCompletion( bool success, const WorkerJob &workerJob, const std::string &hostIP, const JobPtr &job )
 {
-    PLOG("JobSender::OnJobSendCompletion "<<success);
+    PLOG( "JobSender::OnJobSendCompletion: host=" << hostIP << ", result=" << success );
     IScheduler *scheduler = common::GetService< IScheduler >();
     scheduler->OnTaskSendCompletion( success, workerJob, hostIP );
     if ( success )

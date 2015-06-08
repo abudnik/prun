@@ -53,7 +53,7 @@ void CommandSender::Run()
         getCommand = workerManager->GetCommand( command, hostIP );
         if ( getCommand )
         {
-            PLOG( "Get command '" << command->GetCommand() << "' : " << hostIP );
+            PLOG( "Send command '" << command->GetCommand() << "' to " << hostIP );
             SendCommand( command, hostIP );
         }
     }

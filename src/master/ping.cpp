@@ -91,7 +91,7 @@ void PingerBoost::PingWorker( WorkerPtr &worker )
         udp::resolver::iterator iterator = resolver_.resolve( query, error ), end;
         if ( error || iterator == end )
         {
-            PLOG_WRN( "PingerBoost::PingWorker address not resolved: " << worker->GetHost() );
+            PLOG_DBG( "PingerBoost::PingWorker address not resolved: " << worker->GetHost() );
             return;
         }
 
@@ -112,8 +112,8 @@ void PingerBoost::PingWorker( WorkerPtr &worker )
 
     std::string msg;
     protocol_->Serialize( msg, "ping", marshaller );
-    //PLOG( msg );
-    //PLOG( node_ip );
+    //PLOG_DBG( msg );
+    //PLOG_DBG( node_ip );
 
     try
     {

@@ -1317,10 +1317,6 @@ public:
 
     void Initialize()
     {
-        PLOG_DBG( "ExecApplication::Initialize" );
-
-        common::logger::InitLogger( isDaemon_, "prexec" );
-
         common::Config &cfg = common::Config::Instance();
         if ( cfgDir_.empty() )
         {
@@ -1330,6 +1326,11 @@ public:
         {
             cfg.ParseConfig( "", cfgDir_.c_str() );
         }
+
+        std::string logLevel = cfg.Get<std::string>( "log_level" );
+        common::logger::InitLogger( isDaemon_, "prexec", logLevel.c_str() );
+
+        PLOG_DBG( "ExecApplication::Initialize" );
 
         SetupLanguageRuntime( execContext_ );
 

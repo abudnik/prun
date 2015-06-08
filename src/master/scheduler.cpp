@@ -101,8 +101,8 @@ void Scheduler::OnChangedWorkerState( std::vector< WorkerPtr > &workers )
 
                 const WorkerJob workerJob = worker->GetJob();
 
-                PLOG( "Scheduler::OnChangedWorkerState: worker isn't available, while executing job"
-                      "; nodeIP=" << worker->GetIP() << ", numTasks=" << workerJob.GetTotalNumTasks() );
+                PLOG( "Scheduler::OnChangedWorkerState: worker node is lost: nodeIP=" << worker->GetIP() <<
+                      ", numExecutingTasks=" << workerJob.GetTotalNumTasks() );
 
                 failedWorkers_.Add( workerJob, worker->GetIP() );
                 nodeState.Reset();
@@ -118,7 +118,7 @@ void Scheduler::OnChangedWorkerState( std::vector< WorkerPtr > &workers )
             }
             else
             {
-                PLOG( "Scheduler::OnChangedWorkerState: sheduler doesn't know about worker"
+                PLOG( "Scheduler::OnChangedWorkerState: scheduler doesn't know about worker"
                       " with ip = " << worker->GetIP() );
             }
         }
@@ -153,10 +153,10 @@ void Scheduler::PlanJobExecution()
     if ( !jobManager->PopJob( job ) )
         return;
 
-    int numExec = GetNumPlannedExec( job );
+    const int numExec = GetNumPlannedExec( job );
     job->SetNumPlannedExec( numExec );
 
-    int64_t jobId = job->GetJobId();
+    const int64_t jobId = job->GetJobId();
     {
         std::unique_lock< std::mutex > lock( jobsMut_ );
 
@@ -168,6 +168,8 @@ void Scheduler::PlanJobExecution()
 
         jobs_.Add( job, numExec );
     }
+
+    PLOG_DBG( "Scheduler::PlanJobExecution: JobId=" << jobId << ", numExec=" << numExec );
 
     NotifyAll();
 }
@@ -208,6 +210,7 @@ bool Scheduler::RescheduleJob( const WorkerJob &workerJob )
             workerJob.GetTasks( jobId, tasks );
             for( auto taskId : tasks )
             {
+                PLOG_DBG( "Scheduler::RescheduleJob: jobId=" << jobId << ", taskId=" << taskId );
                 needReschedule_.emplace_back( jobId, taskId );
                 found = true;
             }
@@ -360,6 +363,11 @@ bool Scheduler::GetTaskToSend( WorkerJob &workerJob, std::string &hostIP, JobPtr
             const int numTasks = workerJob.GetTotalNumTasks();
             nodeState.AllocCPU( numTasks );
             simultExecCnt_[ workerJob.GetJobId() ] += numTasks;
+
+            PLOG_DBG( "Scheduler::GetTaskToSend: jobId=" << workerJob.GetJobId() <<
+                      ", numTasks=" << numTasks << ", host=" << w->GetHost() << ", ip=" << hostIP <<
+                      ", freeCPU=" << numFreeCPU << ", totalCPU=" << w->GetNumCPU() <<
+                      ", memory=" << w->GetMemorySize() );
             return true;
         }
     }
@@ -383,7 +391,7 @@ void Scheduler::OnTaskSendCompletion( bool success, const WorkerJob &workerJob, 
             if ( !workerManager->GetWorkerByIP( hostIP, w ) )
                 return;
 
-            PLOG( "Scheduler::OnTaskSendCompletion: job sending failed."
+            PLOG( "Scheduler::OnTaskSendCompletion: job sending failed:"
                   " jobId=" << workerJob.GetJobId() << ", ip=" << hostIP );
 
             std::unique_lock< std::mutex > lock( workersMut_ );
@@ -458,7 +466,7 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
         simultExecCnt_[ workerTask.GetJobId() ] -= 1;
 
         PLOG( "Scheduler::OnTaskCompletion: jobId=" << workerTask.GetJobId() <<
-              ", taskId=" << workerTask.GetTaskId() << ", execTime=" << execTime << " ms" <<
+              ", taskId=" << workerTask.GetTaskId() << ", execTime=" << execTime << " ms"
               ", ip=" << hostIP );
 
         jobs_.DecrementJobExecution( workerTask.GetJobId(), 1, true );
@@ -531,7 +539,7 @@ void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &
 
     if ( hasTask )
     {
-        PLOG( "Scheduler::OnTaskTimeout " << workerTask.GetJobId() << ":" << workerTask.GetTaskId() << " " << hostIP );
+        PLOG( "Scheduler::OnTaskTimeout " << workerTask.GetJobId() << ':' << workerTask.GetTaskId() << ' ' << hostIP );
 
         // send stop command to worker
         StopTaskCommand *stopCommand = new StopTaskCommand();

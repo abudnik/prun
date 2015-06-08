@@ -31,7 +31,7 @@ extern unsigned short MASTER_UDP_PORT;
 extern unsigned short MASTER_ADMIN_PORT;
 extern unsigned short MASTERDB_PORT;
 
-extern const char HOSTS_FILE_NAME[];
+extern const char GROUPS_FILE_NAME[];
 
 } // namespace master
 

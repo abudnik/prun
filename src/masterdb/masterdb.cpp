@@ -129,8 +129,6 @@ public:
 
     void Initialize()
     {
-        common::logger::InitLogger( isDaemon_, "pmasterdb" );
-
         SetupSignalHandlers();
         atexit( AtExit );
 
@@ -145,6 +143,9 @@ public:
             cfg.ParseConfig( "", cfgPath_.c_str() );
         }
         ApplyDefaults( cfg );
+
+        std::string logLevel = cfg.Get<std::string>( "log_level" );
+        common::logger::InitLogger( isDaemon_, "pmasterdb", logLevel.c_str() );
 
         // initialize main components
         dbClient_.Initialize( exeDir_ );

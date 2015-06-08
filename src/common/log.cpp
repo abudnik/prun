@@ -33,17 +33,34 @@ namespace common {
 namespace logger
 {
 
-bool isDaemon = false;
+bool useSyslog = false;
 const char *serviceName = "";
 bool isTerminal = false;
+LogLevel logLevel;
 
-
-void InitLogger( bool isDaemon, const char *serviceName )
+void InitLogger( bool useSyslog, const char *serviceName, const char *level )
 {
-    logger::isDaemon = isDaemon;
+    logger::useSyslog = useSyslog;
     logger::serviceName = serviceName;
 
-    if ( isDaemon )
+    if ( !strcasecmp( level, "debug" ) )
+        logLevel = LogLevel::DEBUG;
+    else
+    if ( !strcasecmp( level, "info" ) )
+        logLevel = LogLevel::INFO;
+    else
+    if ( !strcasecmp( level, "warning" ) )
+        logLevel = LogLevel::WARNING;
+    else
+    if ( !strcasecmp( level, "error" ) )
+        logLevel = LogLevel::ERROR;
+    else
+    {
+        std::cout << "InitLogger: unknown log level '" << level << "', using 'debug' by default" << std::endl;
+        logLevel = LogLevel::DEBUG;
+    }
+
+    if ( useSyslog )
     {
         openlog( serviceName, LOG_CONS, LOG_DAEMON );
     }
@@ -53,7 +70,7 @@ void InitLogger( bool isDaemon, const char *serviceName )
 
 void ShutdownLogger()
 {
-    if ( isDaemon )
+    if ( useSyslog )
     {
         closelog();
     }
@@ -87,7 +104,7 @@ void Print( char level, const char *msg )
 
 void Log( const char *msg )
 {
-    if ( isDaemon )
+    if ( useSyslog )
     {
         syslog( LOG_INFO, "%s", msg );
     }
@@ -99,7 +116,7 @@ void Log( const char *msg )
 
 void LogDebug( const char *msg )
 {
-    if ( isDaemon )
+    if ( useSyslog )
     {
         syslog( LOG_DEBUG, "%s", msg );
     }
@@ -111,7 +128,7 @@ void LogDebug( const char *msg )
 
 void LogWarning( const char *msg )
 {
-    if ( isDaemon )
+    if ( useSyslog )
     {
         syslog( LOG_WARNING, "%s", msg );
     }
@@ -123,7 +140,7 @@ void LogWarning( const char *msg )
 
 void LogError( const char *msg )
 {
-    if ( isDaemon )
+    if ( useSyslog )
     {
         syslog( LOG_ERR, "%s", msg );
     }
@@ -131,6 +148,11 @@ void LogError( const char *msg )
     {
         Print( 'E', msg );
     }
+}
+
+bool CheckLogLevel( LogLevel want )
+{
+    return static_cast<int>(logLevel) <= static_cast<int>(want);
 }
 
 } // namespace logger

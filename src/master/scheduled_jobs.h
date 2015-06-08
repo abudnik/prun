@@ -201,10 +201,8 @@ private:
     void RunJobCallback( const JobPtr &job, const char *completionStatus )
     {
         std::ostringstream ss;
-        ss << std::endl << "================" << std::endl <<
-            "Job completed, jobId = " << job->GetJobId() << std::endl <<
-            "completion status: " << completionStatus << std::endl <<
-            "================" << std::endl;
+        ss << "Job completed, jobId=" << job->GetJobId() <<
+            ", completion status: " << completionStatus;
 
         PLOG( ss.str() );
 

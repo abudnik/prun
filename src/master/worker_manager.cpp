@@ -111,7 +111,7 @@ void WorkerManager::CheckDropedPingResponses()
                 {
                     worker->SetState( WORKER_STATE_NOT_AVAIL );
                     changedWorkers.push_back( worker );
-                    PLOG( "WorkerManager::CheckDropedPingResponses: node job isn't available, ip= " << worker->GetIP() );
+                    PLOG( "WorkerManager::CheckDropedPingResponses: node job is not available, ip= " << worker->GetIP() );
                 }
             }
             worker->SetNumPingResponse( 0 );
@@ -178,7 +178,7 @@ bool WorkerManager::GetAchievedTask( WorkerTask &worker, std::string &hostIP )
     if ( achievedWorkers_.empty() )
         return false;
 
-    PLOG( "GetAchievedWorker: num achieved workers=" << achievedWorkers_.size() );
+    PLOG_DBG( "GetAchievedWorker: num achieved workers=" << achievedWorkers_.size() );
 
     const PairTypeAW &w = achievedWorkers_.front();
     worker = w.first;

@@ -1010,14 +1010,10 @@ public:
 
     void Initialize()
     {
-        PLOG_DBG( "WorkerApplication::Initialize" );
-
         ComputerInfo &compInfo = ComputerInfo::Instance();
         unsigned int numExecThread = compInfo.GetNumCPU();
         numRequestThread_ = 2 * numExecThread;
         numThread_ = numRequestThread_ + 1; // +1 for accept thread
-
-        common::logger::InitLogger( isDaemon_, "pworker" );
 
         common::Config &cfg = common::Config::Instance();
         if ( cfgDir_.empty() )
@@ -1029,6 +1025,11 @@ public:
             cfg.ParseConfig( "", cfgDir_.c_str() );
         }
         ApplyDefaults( cfg );
+
+        std::string logLevel = cfg.Get<std::string>( "log_level" );
+        common::logger::InitLogger( isDaemon_, "pworker", logLevel.c_str() );
+
+        PLOG_DBG( "WorkerApplication::Initialize" );
 
         JobCompletionTable::Instance();
 
