@@ -102,7 +102,7 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %{_bindir}/pmaster
 %{_sysconfdir}/pmaster/master.cfg
-%{_sysconfdir}/pmaster/hosts
+%{_sysconfdir}/pmaster/groups
 %{_sysconfdir}/pmaster/hosts_group1
 %{_var}/lib/pmaster/*
 %config %{_sysconfdir}/init.d/prun-master

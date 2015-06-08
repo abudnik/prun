@@ -30,6 +30,6 @@ unsigned short MASTER_UDP_PORT = NODE_PORT - 2;
 unsigned short MASTER_ADMIN_PORT = NODE_PORT + 2;
 unsigned short MASTERDB_PORT = 5559;
 
-char const HOSTS_FILE_NAME[] = "hosts";
+char const GROUPS_FILE_NAME[] = "groups";
 
 } // namespace master

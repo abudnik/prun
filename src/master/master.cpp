@@ -62,35 +62,35 @@ namespace {
 void InitWorkerManager( std::shared_ptr< master::WorkerManager > &mgr,
                         const std::string &exeDir, const std::string &cfgPath )
 {
-    string hostsDir, hostsPath;
+    string groupsDir, groupsPath;
     if ( cfgPath.empty() )
     {
-        hostsDir = exeDir;
+        groupsDir = exeDir;
     }
     else
     {
         boost::filesystem::path p( cfgPath );
         boost::filesystem::path dir = p.parent_path();
-        hostsDir = dir.string();
+        groupsDir = dir.string();
     }
-    hostsPath = hostsDir + '/' + master::HOSTS_FILE_NAME;
+    groupsPath = groupsDir + '/' + master::GROUPS_FILE_NAME;
 
-    std::ifstream file( hostsPath.c_str() );
+    std::ifstream file( groupsPath.c_str() );
     if ( !file.is_open() )
     {
-        PLOG_ERR( "InitWorkerManager: couldn't open " << hostsPath );
+        PLOG_ERR( "InitWorkerManager: couldn't open " << groupsPath );
         return;
     }
 
-    mgr->Initialize( hostsDir );
+    mgr->Initialize( groupsDir );
 
     std::string line;
     list< std::string > hosts;
     while( getline( file, line ) )
     {
-        hostsPath = hostsDir + '/' + line;
+        groupsPath = groupsDir + '/' + line;
         hosts.clear();
-        if ( master::ReadHosts( hostsPath.c_str(), hosts ) )
+        if ( master::ReadHosts( groupsPath.c_str(), hosts ) )
         {
             mgr->AddWorkerGroup( line, hosts );
         }
@@ -380,7 +380,7 @@ public:
                     continue;
                 if ( !ret )
                     break;
-                PLOG_ERR( "main(): sigwait failed: " << strerror(ret) );
+                PLOG_ERR( "MasterApplication::Run: sigwait failed: " << strerror(ret) );
             }
         }
     }

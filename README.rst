@@ -203,7 +203,7 @@ Firstly, we should create shell script, which does database dumping::
 
 And save this script to master's jobs directory, e.g. at jobs/myscripts/dump.sh
 
-Then we should create job description file for our cron job::
+Then we should create job description file of our cron job::
 
   {
     "script" : "myscripts/dump.sh",
@@ -227,7 +227,7 @@ Then we should create job description file for our cron job::
 
 And save it to master's jobs directory, e.g. at jobs/dump.job
 This job will be started once at every available host at 3 a.m. every Sunday
-after you submit it to the master (here master is running at localhost)::
+after submitting it to the master (here master is running at localhost)::
 
   ./prun -c "run dump.job" localhost
 
