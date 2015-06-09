@@ -21,6 +21,8 @@ struct SchedulerEnvironment
 {
     SchedulerEnvironment()
     {
+        common::logger::InitLogger( false, "load_test", "info" );
+
         jobMgr.SetTimeoutManager( &timeoutMgr );
         common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
         serviceLocator.Register( (master::IScheduler*)&sched );
