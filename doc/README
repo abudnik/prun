@@ -87,9 +87,18 @@ If the value is "host" then cluster unit is a single cluster worker.
 - hosts (optional)
 List of hosts that are allowed to execute job. Empty list means no limits.
 
+- hosts_blacklist (optional)
+List of hosts that are not allowed to execute job. Empty list means no limits.
+NB: blacklist 'hosts_blacklist' has more priority than whitelist 'hosts'.
+
 - groups (optional)
 List of groups of hosts, that are allowed to execute job. Empty list means no
 limits.
+
+- groups_blacklist (optional)
+List of groups of hosts, that are not allowed to execute job. Empty list means
+no limits.
+NB: blacklist 'groups_blacklist' has more priority than whitelist 'groups'.
 
 - cron (optional)
 String like "*/5 * * * 0", which means 'run this job every 5 minutes on Sunday'.

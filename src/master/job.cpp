@@ -64,8 +64,35 @@ bool Job::ReleaseJobGroup()
     return jobGroup_ && jobGroup_->OnJobCompletion( graphVertex_ );
 }
 
+void Job::AddHost( const std::string &host )
+{
+    if ( blacklistHosts_.find( host ) == blacklistHosts_.end() )
+    {
+        hosts_.insert( host );
+    }
+    else
+    {
+        PLOG_WRN( "Job::AddHost: host already in black list: host=" << host );
+    }
+}
+
+void Job::AddHostToBlacklist( const std::string &host )
+{
+    // blacklist has more priority than white list
+    blacklistHosts_.insert( host );
+    auto it = hosts_.find( host );
+    if ( it != hosts_.end() )
+    {
+        hosts_.erase( it );
+        PLOG_WRN( "Job::AddHostToBlacklist: removing host from 'hosts' list: host=" << host );
+    }
+}
+
 bool Job::IsHostPermitted( const std::string &host ) const
 {
+    if ( blacklistHosts_.find( host ) != blacklistHosts_.end() )
+        return false;
+
     if ( !hosts_.size() )
         return true;
 
@@ -77,8 +104,35 @@ size_t Job::GetNumPermittedHosts() const
     return hosts_.size();
 }
 
+void Job::AddGroup( const std::string &group )
+{
+    if ( blacklistGroups_.find( group ) == blacklistGroups_.end() )
+    {
+        groups_.insert( group );
+    }
+    else
+    {
+        PLOG_WRN( "Job::AddGroup: group already in black list: group=" << group );
+    }
+}
+
+void Job::AddGroupToBlacklist( const std::string &group )
+{
+    // blacklist has more priority than white list
+    blacklistGroups_.insert( group );
+    auto it = groups_.find( group );
+    if ( it != groups_.end() )
+    {
+        groups_.erase( it );
+        PLOG_WRN( "Job::AddGroupToBlacklist: removing group from 'groups' list: group=" << group );
+    }
+}
+
 bool Job::IsGroupPermitted( const std::string &group ) const
 {
+    if ( blacklistGroups_.find( group ) != blacklistGroups_.end() )
+        return false;
+
     if ( !groups_.size() )
         return true;
 
