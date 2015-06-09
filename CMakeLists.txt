@@ -77,7 +77,7 @@ endforeach(cpp)
 add_executable( ${APP_NAME} ${SRC_MASTER} )
 target_link_libraries( ${APP_NAME} common ${Boost_LIBRARIES} -lrt -rdynamic )
 
-install(FILES conf/master.cfg conf/hosts conf/hosts_group1 DESTINATION /etc/pmaster)
+install(FILES conf/master.cfg conf/groups conf/hosts_group1 DESTINATION /etc/pmaster)
 install(FILES jobs/cron.job jobs/test.job DESTINATION /var/lib/pmaster)
 install(FILES jobs/example/date.sh jobs/example/hello.py DESTINATION /var/lib/pmaster/example)
 install(FILES debian/prun-master.init DESTINATION /etc/init.d) # used in rpm spec only
