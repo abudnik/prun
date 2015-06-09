@@ -108,9 +108,8 @@ private:
     bool ReadScript( const std::string &filePath, std::string &script ) const;
     Job *CreateJob( const boost::property_tree::ptree &ptree );
 
-    template< typename Callback >
     void ReadList( const boost::property_tree::ptree &ptree, const char *property,
-                   Callback callback) const;
+                   std::function< void (const std::string &) > callback ) const;
 
     bool HasJobName( const std::string &name );
 
