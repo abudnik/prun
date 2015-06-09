@@ -569,9 +569,8 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree )
     return nullptr;
 }
 
-template< typename Callback >
 void JobManager::ReadList( const boost::property_tree::ptree &ptree, const char *property,
-                           Callback callback) const
+                           std::function< void (const std::string &) > callback ) const
 {
     for( const auto &v : ptree.get_child( property ) )
     {
