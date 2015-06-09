@@ -193,6 +193,9 @@ connects to Worker to get job completion status.
 - ipv6
 Setting this parameter value to true leads to using of IPv6 protocol.
 
+- log_level
+Can be one of the following: "debug", "info", "warning", "error".
+
 - port (optional, default = 5555)
 
 - ping_port (optional, default = 5554)
@@ -257,6 +260,9 @@ files as the Master's "ipv6" value.
 
 - masterdb
 IP or hostname of masterdb service
+
+- log_level
+Can be one of the following: "debug", "info", "warning", "error".
 
 - node_port (optional, default = 5555)
 
