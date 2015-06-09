@@ -160,11 +160,13 @@ public:
     void SetJobVertex( const JobVertex &vertex ) { graphVertex_ = vertex; }
     void SetJobGroup( const JobGroupPtr &jobGroup ) { jobGroup_ = jobGroup; }
 
-    void AddHost( const std::string &host ) { hosts_.insert( host ); }
+    void AddHost( const std::string &host );
+    void AddHostToBlacklist( const std::string &host );
     bool IsHostPermitted( const std::string &host ) const;
     size_t GetNumPermittedHosts() const;
 
-    void AddGroup( const std::string &group ) { groups_.insert( group ); }
+    void AddGroup( const std::string &group );
+    void AddGroupToBlacklist( const std::string &group );
     bool IsGroupPermitted( const std::string &group ) const;
 
     template< typename T, typename U >
@@ -204,6 +206,8 @@ private:
 
     std::set< std::string > hosts_;
     std::set< std::string > groups_;
+    std::set< std::string > blacklistHosts_;
+    std::set< std::string > blacklistGroups_;
     common::CronJob cron_;
 
     JobVertex graphVertex_;

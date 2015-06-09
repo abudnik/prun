@@ -514,12 +514,30 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree )
 
         if ( ptree.count( "hosts" ) > 0 )
         {
-            ReadHosts( job, ptree );
+            auto lambda = [ job ]( const std::string &value ) -> void
+                { job->AddHost( value ); };
+            ReadList( ptree, "hosts", lambda );
+        }
+
+        if ( ptree.count( "hosts_blacklist" ) > 0 )
+        {
+            auto lambda = [ job ]( const std::string &value ) -> void
+                { job->AddHostToBlacklist( value ); };
+            ReadList( ptree, "hosts_blacklist", lambda );
         }
 
         if ( ptree.count( "groups" ) > 0 )
         {
-            ReadGroups( job, ptree );
+            auto lambda = [ job ]( const std::string &value ) -> void
+                { job->AddGroup( value ); };
+            ReadList( ptree, "groups", lambda );
+        }
+
+        if ( ptree.count( "groups_blacklist" ) > 0 )
+        {
+            auto lambda = [ job ]( const std::string &value ) -> void
+                { job->AddGroupToBlacklist( value ); };
+            ReadList( ptree, "groups_blacklist", lambda );
         }
 
         if ( ptree.count( "cron" ) > 0 )
@@ -551,19 +569,13 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree )
     return nullptr;
 }
 
-void JobManager::ReadHosts( Job *job, const boost::property_tree::ptree &ptree ) const
+template< typename Callback >
+void JobManager::ReadList( const boost::property_tree::ptree &ptree, const char *property,
+                           Callback callback) const
 {
-    for( const auto &v : ptree.get_child( "hosts" ) )
+    for( const auto &v : ptree.get_child( property ) )
     {
-        job->AddHost( v.second.get_value< std::string >() );
-    }
-}
-
-void JobManager::ReadGroups( Job *job, const boost::property_tree::ptree &ptree ) const
-{
-    for( const auto &v : ptree.get_child( "groups" ) )
-    {
-        job->AddGroup( v.second.get_value< std::string >() );
+        callback( v.second.get_value< std::string >() );
     }
 }
 
