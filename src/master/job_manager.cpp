@@ -53,7 +53,7 @@ private:
 
 namespace master {
 
-bool JDLJason::ParseJob( const std::string &job_description, boost::property_tree::ptree &ptree )
+bool JDLJson::ParseJob( const std::string &job_description, boost::property_tree::ptree &ptree )
 {
     std::istringstream ss( job_description );
     try
@@ -62,7 +62,7 @@ bool JDLJason::ParseJob( const std::string &job_description, boost::property_tre
     }
     catch( boost::property_tree::json_parser::json_parser_error &e )
     {
-        PLOG_ERR( "JDLJason::ParseJob read_json failed: " << e.what() );
+        PLOG_ERR( "JDLJson::ParseJob read_json failed: " << e.what() );
         return false;
     }
     return true;
@@ -78,7 +78,7 @@ JobManager::JobManager()
 Job *JobManager::CreateJob( const std::string &job_description, bool check_name_existance )
 {
     boost::property_tree::ptree ptree;
-    JDLJason parser;
+    JDLJson parser;
     if ( !parser.ParseJob( job_description, ptree ) )
         return nullptr;
 
@@ -100,7 +100,7 @@ Job *JobManager::CreateJob( const std::string &job_description, bool check_name_
 bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs, bool check_name_existance )
 {
     boost::property_tree::ptree ptree;
-    JDLJason parser;
+    JDLJson parser;
     if ( !parser.ParseJob( meta_description, ptree ) )
         return false;
 
@@ -251,7 +251,7 @@ void JobManager::PushJobs( std::list< JobPtr > &jobs )
 void JobManager::BuildAndPushJob( int64_t jobId, const std::string &jobDescription )
 {
     boost::property_tree::ptree ptree;
-    JDLJason parser;
+    JDLJson parser;
     if ( !parser.ParseJob( jobDescription, ptree ) )
         return;
 

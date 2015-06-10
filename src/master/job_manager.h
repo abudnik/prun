@@ -36,7 +36,7 @@ public:
     virtual bool ParseJob( const std::string &job_description, boost::property_tree::ptree &ptree ) = 0;
 };
 
-class JDLJason : public JobDescriptionLanguage
+class JDLJson : public JobDescriptionLanguage
 {
 public:
     bool ParseJob( const std::string &job_description, boost::property_tree::ptree &ptree );
