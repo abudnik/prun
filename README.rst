@@ -1,20 +1,15 @@
-PRUN: Parallel task executor and job scheduler in a high-availability computing clusters
-----------------------------------------------------------------------------------------
+Overview
+--------
 
-PRUN is a high-throughput computing (HTC) software framework for coarse-grained
-distributed parallelization of computationally intensive tasks.
-It provides a queueing mechanism, scheduling, priority scheme, execution and
-failover of short-term or long-term tasks on the computer cluster.
-Prun can be compiled and used on Unix-like operating systems, including Linux
-and *BSD.
-
-PRUN simplified architecture
-----------------------------
-
-.. image:: arch.png
+PRUN provides control over batch jobs and distributed computing resources.
+It consists of a single master daemon and worker daemons installed across the
+computer cluster. Master provides a queueing mechanism, scheduling, priority scheme,
+failover and planning of cron jobs. Worker is responsible for running of batch jobs
+and monitoring of their execution. Workers are fully controlled by a master node.
+Prun can be used on Unix-like operating systems, including Linux and *BSD.
 
 Where to find complete Prun documentation?
--------------------------------------------
+------------------------------------------
 
 This README is just a fast "quick start" document. You can find more detailed
 documentation at doc/README
@@ -30,53 +25,55 @@ Build requirements:
 
 Additional requirements:
 
-- python 2.6/3.x (for command-line admin tool & other purposes)
+- python 2.6/3.x (admin tool written in Python)
 - LevelDB (for serialization of submitted tasks)
 
-For running jobs written in Ruby, JavaScript or Java, requirements are as follows:
+Building debian packages::
 
-- ruby
-- node.js
-- java 1.6 (or higher)
+> git clone https://github.com/abudnik/prun.git
+> cd prun
+> debuild -sa -j8
+> ls ../prun*.deb
 
-Building runtime::
+Building runtime from sources::
 
-> cd ~/prun               # cd to the directory containing prun
+> git clone https://github.com/abudnik/prun.git
+> cd prun
 > cmake -DRelease=true .  # skipping Release var disables compiler optimizations
-> make                    # build executables
+> make -j8
 
 Running
 -------
 
 Running Worker in terminal::
 
+> cd prun
 > ./pworker
-
-Running Worker as a daemon with paths to config file and special node directory::
-
-> ./pworker --d --c /home/user/prun/worker.cfg --r /home/user/prun/node  # start
-> ./pworker --s  # stop daemon
 
 Use 'pworker --help' to display command line options.
 
 Running Master in terminal::
 
+> cd prun
 > ./pmaster
 
-Running Master as a daemon with path to config file::
-
-> ./pmaster --d --c /home/user/prun/worker.cfg  # start
-> ./pmaster --s  # stop daemon
-
 Use 'pmaster --help' to display command line options.
+
+Submitting 'Hello, World!' job::
+
+> ./prun -c "run test.job"
 
 Installation
 ------------
 
-If you are installing Prun the proper way for a production system, we have a script
-doing this for Ubuntu and Debian systems (upstart) or SysV-init compatible systems::
+From debian package::
 
-> cd ~/prun                  # cd to the directory containing prun
+> dpkg -i prun-worker_0.13_amd64.deb
+
+Also it is possible to install prun worker and master using installation scripts
+(like 'make install')::
+
+> cd prun                    # cd to the directory containing prun
 > utils/install_master.sh    # install Master
 > utils/install_masterdb.sh  # install Master's database server
 > utils/install_worker.sh    # install Worker
@@ -187,12 +184,12 @@ the big file: running Workers across cluster nodes, one running Master process,
 jobs and job descriptions, shared directory containing the input file
 (data/input.txt). Lets submit job using command-line tool::
 
-> cd ~/prun                        # cd to the directory containing prun
+> cd prun                          # cd to the directory containing prun
 > ./prun master_hostname           # run admin tool, connect to Master host
 > run external_sort.meta           # submit a meta job
 
 Cron job submitting
---------------
+-------------------
 
 Next example is dumping mysql database at muliple hosts simultaneously.
 Dumping planned at 3 a.m. at Sunday every week.
