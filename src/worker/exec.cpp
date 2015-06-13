@@ -547,15 +547,23 @@ protected:
 
     bool ReadCompletionStatus( int fifo, pid_t pid )
     {
-        int timeout = job_->GetTimeout();
+        int64_t timeout = job_->GetTimeout();
         if ( timeout > 0 )
         {
+            struct timeval tvStart, tvEnd;
             timeout *= 1000;
 
             std::unique_lock< std::mutex > lock( execContext_->GetProcessCompletionMutex() );
             while( execContext_->GetChildProcesses().Find( pid ) )
             {
-                if ( execContext_->GetProcessCompletionCondition().wait_for( lock, std::chrono::milliseconds( timeout ) ) == std::cv_status::timeout )
+                gettimeofday( &tvStart, nullptr );
+                execContext_->GetProcessCompletionCondition().wait_for( lock, std::chrono::milliseconds( timeout ) );
+                gettimeofday( &tvEnd, nullptr );
+
+                const int64_t elapsed = static_cast<int64_t>( ( tvEnd.tv_sec - tvStart.tv_sec ) * 1000 +
+                                                              ( tvEnd.tv_usec - tvStart.tv_usec ) / 1000 );
+                timeout -= elapsed;
+                if ( timeout <= 0 )
                     break; // deadline reached
             }
         }
@@ -564,7 +572,7 @@ protected:
             std::unique_lock< std::mutex > lock( execContext_->GetProcessCompletionMutex() );
             while( execContext_->GetChildProcesses().Find( pid ) )
             {
-                execContext_->GetProcessCompletionCondition().wait( lock );
+                execContext_->GetProcessCompletionCondition().wait_for( lock, std::chrono::seconds( 1 ) );
             }
         }
 
@@ -1351,7 +1359,7 @@ public:
             OnThreadCreate( &worker_threads_.back() );
         }
 
-        worker_threads_.push_back( std::thread( ReadProcessCompletionPIDs, execContext_, processCompletionPipe_ ) );
+        processCompletionThread_ = std::thread( ReadProcessCompletionPIDs, execContext_, processCompletionPipe_ );
 
         // signal parent process to say that PrExec has been initialized
         kill( getppid(), SIGUSR1 );
@@ -1376,10 +1384,11 @@ public:
 
         CleanupThreads();
 
-        CloseProcessCompletionPipe();
-
         for( auto &t : worker_threads_ )
             t.join();
+
+        CloseProcessCompletionPipe();
+        processCompletionThread_.join();
     }
 
     void Run()
@@ -1558,6 +1567,7 @@ private:
     int processCompletionPipe_;
 
     std::vector<std::thread> worker_threads_;
+    std::thread processCompletionThread_;
 
     boost::asio::io_service io_service_;
 
