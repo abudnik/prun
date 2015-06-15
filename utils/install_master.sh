@@ -27,11 +27,9 @@ MASTER_JOBS_DIR=$MASTER_JOBS_DIR"/jobs"
 cp -rf "jobs" $MASTER_JOBS_DIR || die "Could not copy jobs directory"
 
 #replace pidfile path in config file
-PIDFILE="/var/run/pmaster.pid"
 TMP_CONFIG=`mktemp`
 
-cp -f "master.cfg" $TMP_CONFIG || die "could not copy 'master.cfg' to $TMP_CONFIG"
-sed -i "s|master.pid|$PIDFILE|g" $TMP_CONFIG
+cp -f "conf/master.cfg" $TMP_CONFIG || die "could not copy 'master.cfg' to $TMP_CONFIG"
 sed -i "s|\"jobs\"|\"$MASTER_JOBS_DIR\"|g" $TMP_CONFIG
 
 #read master config file
@@ -45,8 +43,8 @@ fi
 MASTER_CONFIG_DIR=`dirname "$MASTER_CONFIG_FILE"`
 mkdir -p $MASTER_CONFIG_DIR || die "Could not create master config directory"
 cp -f $TMP_CONFIG $MASTER_CONFIG_FILE || die "Could not copy configuration file"
-cp -f "groups" $MASTER_CONFIG_DIR"/groups" || die "Could not copy 'groups' file"
-cp -f "hosts_group1" $MASTER_CONFIG_DIR"/hosts_group1" || die "Could not copy 'hosts_group1' file"
+cp -f "conf/groups" $MASTER_CONFIG_DIR"/groups" || die "Could not copy 'groups' file"
+cp -f "conf/hosts_group1" $MASTER_CONFIG_DIR"/hosts_group1" || die "Could not copy 'hosts_group1' file"
 
 #read master executable directory
 _MASTER_EXE_DIR="/usr/bin"

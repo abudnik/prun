@@ -16,11 +16,9 @@ if [ `id -u` != "0" ] ; then
 fi
 
 #replace pidfile path in config file
-PIDFILE="/var/run/pworker.pid"
 TMP_CONFIG=`mktemp`
 
-cp -f "worker.cfg" $TMP_CONFIG || die "could not copy 'worker.cfg' to $TMP_CONFIG"
-sed -i "s|worker.pid|$PIDFILE|g" $TMP_CONFIG
+cp -f "conf/worker.cfg" $TMP_CONFIG || die "could not copy 'worker.cfg' to $TMP_CONFIG"
 
 #read worker config file
 _WORKER_CONFIG_FILE="/etc/pworker/worker.cfg"
