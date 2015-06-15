@@ -35,6 +35,15 @@ Building debian packages::
 > debuild -sa -j8
 > ls ../prun*.deb
 
+Building RPMs::
+
+> git clone https://github.com/abudnik/prun.git
+> mv prun prun-0.14  # add '-version' postfix
+> mkdir -p rpmbuild/SOURCES
+> tar cjf rpmbuild/SOURCES/prun-0.14.tar.bz2 prun-0.14
+> rpmbuild -ba prun-0.14/prun-bf.spec
+> ls rpmbuild/RPMS/*/*.rpm
+
 Building runtime from sources::
 
 > git clone https://github.com/abudnik/prun.git
@@ -68,7 +77,10 @@ Installation
 
 From debian package::
 
-> dpkg -i prun-worker_0.13_amd64.deb
+> dpkg -i prun-worker_0.14_amd64.deb
+
+From RPM::
+> rpm -ivh prun-worker-0.14-1.el7.centos.1.x86_64.rpm
 
 Also it is possible to install prun worker and master using installation scripts
 (like 'make install')::
