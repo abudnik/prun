@@ -1,6 +1,6 @@
 Summary:    Distributed cron and job scheduler
 Name:		prun
-Version:	0.13
+Version:	0.14
 Release:	1%{?dist}.1
 
 License:	Apache License, Version 2.0
@@ -121,5 +121,5 @@ rm -rf %{buildroot}
 
 
 %changelog
-* Wed May 27 2015 Andrey Budnik <budnik27@gmail.com> - 0.13
+* Mon Jun 15 2015 Andrey Budnik <budnik27@gmail.com> - 0.14
 - Initial release.

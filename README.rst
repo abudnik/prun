@@ -80,6 +80,7 @@ From debian package::
 > dpkg -i prun-worker_0.14_amd64.deb
 
 From RPM::
+
 > rpm -ivh prun-worker-0.14-1.el7.centos.1.x86_64.rpm
 
 Also it is possible to install prun worker and master using installation scripts
