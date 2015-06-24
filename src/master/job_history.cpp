@@ -28,85 +28,61 @@ the License.
 
 namespace master {
 
-JobHistory::JobHistory( IHistoryChannel *channel )
-: channel_( channel )
-{
-    addCallback_ = std::bind( &JobHistory::OnAddCompleted, this, std::placeholders::_1 );
-    deleteCallback_ = std::bind( &JobHistory::OnDeleteCompleted, this, std::placeholders::_1 );
-    getCallback_ = std::bind( &JobHistory::OnGetCompleted, this, std::placeholders::_1 );
-}
+JobHistory::JobHistory( common::IHistory *history )
+: history_( history )
+{}
 
 void JobHistory::OnJobAdd( const JobPtr &job )
 {
-    std::string request( "PUT " );
-    request += std::to_string( job->GetJobId() );
-    request += '$';
-    request += job->GetDescription();
-    request.insert( 0, std::to_string( request.size() ) + '\n' );
-
-    channel_->Send( request, addCallback_ );
-}
-
-void JobHistory::OnAddCompleted( const std::string &response )
-{
-    //PLOG( "OnAddCompleted : " << response );
+    if ( history_ )
+    {
+        try
+        {
+            history_->Put( std::to_string( job->GetJobId() ), job->GetDescription() );
+        }
+        catch( const std::exception &e )
+        {
+            PLOG_ERR( "JobHistory::OnJobAdd: " << e.what() );
+        }
+    }
 }
 
 void JobHistory::OnJobDelete( int64_t jobId )
 {
-    std::string request( "DELETE " );
-    request += std::to_string( jobId );
-    request += '$';
-    request.insert( 0, std::to_string( request.size() ) + '\n' );
-
-    channel_->Send( request, deleteCallback_ );
+    if ( history_ )
+    {
+        try
+        {
+            history_->Delete( std::to_string( jobId ) );
+        }
+        catch( const std::exception &e )
+        {
+            PLOG_ERR( "JobHistory::OnJobDelete: " << e.what() );
+        }
+    }
 }
 
-void JobHistory::OnDeleteCompleted( const std::string &response )
+void OnGetCompleted( const std::string &key, const std::string &value )
 {
-    //PLOG( "OnDeleteCompleted : " << response );
+    //PLOG( "OnGetCompleted : key=" << key << ", value=" << value );
+    int64_t id = boost::lexical_cast<int64_t>( key );
+    IJobManager *jobManager = common::GetService< IJobManager >();
+    jobManager->BuildAndPushJob( id, value );
 }
 
 void JobHistory::GetJobs()
 {
-    std::string request( "GET $" );
-    request.insert( 0, std::to_string( request.size() ) + '\n' );
-
-    channel_->Send( request, getCallback_ );
-}
-
-void JobHistory::OnGetCompleted( const std::string &response )
-{
-    //PLOG( "OnGetCompleted : " << response );
-    size_t offset = 1; // skip newline after header
-    unsigned line = 0;
-    std::string jobId, jobDescription;
-    while( true )
+    if ( history_ )
     {
-        size_t pos = response.find( '\n', offset );
-        if ( pos == std::string::npos )
-            break;
-
-        if ( line % 2 )
+        try
         {
-            jobDescription = std::string( response, offset, pos - offset );
-            //PLOG( "jobId = " << jobId );
-            //PLOG( "jobDescr = " << jobDescription );
-
-            int64_t id = boost::lexical_cast<int64_t>( jobId );
-            IJobManager *jobManager = common::GetService< IJobManager >();
-            jobManager->BuildAndPushJob( id, jobDescription );
+            history_->GetAll( OnGetCompleted );
         }
-        else
+        catch( const std::exception &e )
         {
-            jobId = std::string( response, offset, pos - offset );
+            PLOG_ERR( "JobHistory::GetJobs: " << e.what() );
         }
-
-        offset = pos + 1;
-        ++line;
     }
-
-    PLOG( "JobHistory::OnGetCompleted: " << line / 2 << " jobs are loaded from history" );
 }
 
 } // namespace master

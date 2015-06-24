@@ -3,7 +3,7 @@
 
 This software is licensed under the Apache 2 license, quoted below.
 
-Copyright (C) 2013 Andrey Budnik <budnik27@gmail.com>
+Copyright (C) 2015 Andrey Budnik <budnik27@gmail.com>
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not
 use this file except in compliance with the License. You may obtain a copy of
@@ -20,32 +20,26 @@ the License.
 ===========================================================================
 */
 
-#ifndef __DB_MEMORY_H
-#define __DB_MEMORY_H
+#ifndef __SHARED_LIBRARY_H
+#define __SHARED_LIBRARY_H
 
-#include <map>
-#include <utility> // pair
-#include "dbaccess.h"
+namespace common {
 
-
-namespace masterdb {
-
-class DbInMemory : public IDAO
+class SharedLibrary
 {
-typedef std::map< std::string, std::string > SSTable;
-typedef std::pair< std::string, std::string > PairType;
-
 public:
-    // IDAO
-    virtual void Initialize( const std::string &exeDir );
-    virtual bool Put( const std::string &key, const std::string &value );
-    virtual bool Delete( const std::string &key );
-    virtual bool Get( std::string &jobs );
+    SharedLibrary();
+    ~SharedLibrary();
+
+    bool Load( const char *fileName );
+    void Close();
+
+    void *GetFunction( const char *function );
 
 private:
-    SSTable idToString_;
+    void *handle_;
 };
 
-} // namespace masterdb
+} // namespace common
 
 #endif

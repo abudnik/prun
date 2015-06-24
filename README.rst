@@ -26,7 +26,6 @@ Build requirements:
 Additional requirements:
 
 - python 2.6/3.x (admin tool written in Python)
-- LevelDB (for serialization of submitted tasks)
 
 Building debian packages::
 
@@ -88,7 +87,6 @@ Also it is possible to install prun worker and master using installation scripts
 
 > cd prun                    # cd to the directory containing prun
 > utils/install_master.sh    # install Master
-> utils/install_masterdb.sh  # install Master's database server
 > utils/install_worker.sh    # install Worker
 
 The script will ask you a few questions and will setup everything you need

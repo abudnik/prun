@@ -258,11 +258,15 @@ Setting this parameter value to true leads to using of IPv6 protocol. Note,
 that all Workers must have the same value of "ipv6" settings in their config
 files as the Master's "ipv6" value.
 
-- masterdb
-IP or hostname of masterdb service
-
 - log_level
 Can be one of the following: "debug", "info", "warning", "error".
+
+- history_library
+Name of a shared library which is used for serialization of submitted jobs
+(e.g. "libprun-leveldb.so").
+
+- history_config
+Path to config which is used by history library.
 
 - node_port (optional, default = 5555)
 
@@ -272,32 +276,10 @@ Can be one of the following: "debug", "info", "warning", "error".
 
 - master_admin_port (optional, default = 5557)
 
-- masterdb_port (optional, default = 5559)
-
-                             Masterdb configuration
---------------------------------------------------------------------------------
-
-Masterdb's configuration described in the "prun/masterdb.cfg" file. This file is
-a set of key-value pairs, written in JSON format. Settings description:
-
-- pidfile
-Name of a pidfile. Masterdb writes its PID into this file during initialization
-phase. It is necessary for recognition of silent Masterdb failures.
-
-- db_path
-Path to the jobs database directory. Used in configuration with LevelDB library.
-
-- ipv6
-Setting this parameter value to true leads to using of IPv6 protocol. Note, that
-Masterdb must have the same value of "ipv6" settings as the Master's "ipv6".
-
-- port (optional, default = 5559)
-
                              Network configuration
 --------------------------------------------------------------------------------
 
 Master default listen ports: 5557 (tcp), 5553(udp)
-Masterdb default listen ports: 5559 (tcp)
 Worker default listen ports: 5555 (tcp), 5554(udp)
 
                                  Logs

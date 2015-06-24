@@ -24,7 +24,7 @@ the License.
 #define __JOB_HISTORY_H
 
 #include "job.h"
-#include "dbconnection.h"
+#include "common/history.h"
 
 
 namespace master {
@@ -39,7 +39,7 @@ struct IJobEventReceiver
 class JobHistory: public IJobEventReceiver
 {
 public:
-    JobHistory( IHistoryChannel *channel );
+    JobHistory( common::IHistory *history );
 
     // IJobEventReceiver
     virtual void OnJobAdd( const JobPtr &job );
@@ -47,15 +47,8 @@ public:
 
     void GetJobs();
 
-    void OnAddCompleted( const std::string &response );
-    void OnDeleteCompleted( const std::string &response );
-    void OnGetCompleted( const std::string &response );
-
 private:
-    IHistoryChannel *channel_;
-    IHistoryChannel::Callback addCallback_;
-    IHistoryChannel::Callback deleteCallback_;
-    IHistoryChannel::Callback getCallback_;
+    common::IHistory *history_;
 };
 
 } // namespace master

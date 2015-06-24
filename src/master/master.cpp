@@ -35,11 +35,12 @@ the License.
 #include "common/pidfile.h"
 #include "common/uuid.h"
 #include "common/service_locator.h"
+#include "common/shared_library.h"
+#include "common/history.h"
 #include "ping.h"
 #include "node_ping.h"
 #include "job_manager.h"
 #include "job_history.h"
-#include "dbconnection.h"
 #include "worker_manager.h"
 #include "scheduler.h"
 #include "job_sender.h"
@@ -173,7 +174,8 @@ public:
     : exeDir_( exeDir ),
      cfgPath_( cfgPath ),
      isDaemon_( isDaemon ),
-     uid_( uid )
+     uid_( uid ),
+     history_( nullptr )
     {
         masterId_ = common::GenerateUUID();
     }
@@ -207,9 +209,6 @@ public:
         unsigned int numCommandSendThread = 1 + cfg.Get<unsigned int>( "num_command_send_thread" );
         unsigned int numPingThread = numHeartbeatThread + numPingReceiverThread;
 
-        std::string masterdb = cfg.Get<std::string>( "masterdb" );
-        const unsigned short masterdb_port = cfg.Get<unsigned short>( "masterdb_port" );
-
         // initialize main components
         common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
 
@@ -229,13 +228,11 @@ public:
         scheduler_.reset( new master::Scheduler );
         serviceLocator.Register( static_cast< master::IScheduler* >( scheduler_.get() ) );
 
-        dbConnection_.reset( new master::DbHistoryConnection( io_service_db_ ) );
-        jobHistory_.reset( new master::JobHistory( dbConnection_.get() ) );
+        InitHistory();
+
+        jobHistory_.reset( new master::JobHistory( history_ ) );
         serviceLocator.Register( static_cast< master::IJobEventReceiver* >( jobHistory_.get() ) );
-        if ( dbConnection_->Connect( masterdb, masterdb_port ) )
-        {
-            jobHistory_->GetJobs();
-        }
+        jobHistory_->GetJobs();
 
         timeoutManager_->Start();
         worker_threads_.push_back( std::thread( ThreadFun, &io_service_timeout_ ) );
@@ -332,8 +329,8 @@ public:
         if ( commandSender_ )
             commandSender_->Stop();
 
-        // disconnect from masterdb
-        dbConnection_->Shutdown();
+        if ( history_ )
+            history_->Shutdown();
 
         // stop thread pool
         for( auto &t : worker_threads_ )
@@ -345,6 +342,9 @@ public:
 
         if ( workerManager_ )
             workerManager_->Shutdown();
+
+        if ( history_ )
+            (*historyDestroy_)( history_ );
 
         common::ServiceLocator::Instance().UnregisterAll();
     }
@@ -397,7 +397,60 @@ private:
         cfg.Insert( "node_ping_port", master::NODE_UDP_PORT );
         cfg.Insert( "master_ping_port", master::MASTER_UDP_PORT );
         cfg.Insert( "master_admin_port", master::MASTER_ADMIN_PORT );
-        cfg.Insert( "masterdb_port", master::MASTERDB_PORT );
+    }
+
+    void InitHistory()
+    {
+        common::Config &cfg = common::Config::Instance();
+        try
+        {
+            std::string historyLibPath = cfg.Get<std::string>( "history_library" );
+            std::string historyConfigPath = cfg.Get<std::string>( "history_config" );
+
+            if ( historyLibPath.empty() )
+            {
+                PLOG_DBG( "MasterApplication::InitHistory: history shared library name is empty" );
+                return;
+            }
+
+            if ( historyLibrary_.Load( historyLibPath.c_str() ) )
+            {
+                typedef common::IHistory *HistoryCreateType( int interfaceVersion );
+                auto CreateHistory = reinterpret_cast<HistoryCreateType *>( historyLibrary_.GetFunction( "CreateHistory" ) );
+                if ( !CreateHistory )
+                {
+                    PLOG_ERR( "MasterApplication::InitHistory: couldn't resolve 'CreateHistory' function" );
+                    return;
+                }
+                historyDestroy_ = reinterpret_cast< void (*)(const common::IHistory *) >( historyLibrary_.GetFunction( "DestroyHistory" ) );
+                if ( !historyDestroy_ )
+                {
+                    PLOG_ERR( "MasterApplication::InitHistory: couldn't resolve 'DestroyHistory' function" );
+                    return;
+                }
+
+                history_ = (*CreateHistory)( common::HISTORY_VERSION );
+                if ( history_ )
+                {
+                    history_->Initialize( historyConfigPath.c_str() );
+
+                    common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
+                    serviceLocator.Register( history_ );
+                }
+                else
+                {
+                    PLOG_ERR( "MasterApplication::InitHistory: CreateHistory failed: interface version=" << common::HISTORY_VERSION );
+                }
+            }
+            else
+            {
+                PLOG_ERR( "MasterApplication::InitHistory: couldn't load history library '" << historyLibPath << '\'' );
+            }
+        }
+        catch( std::exception &e )
+        {
+            PLOG_ERR( "MasterApplication::InitHistory: " << e.what() );
+        }
     }
 
 private:
@@ -406,6 +459,8 @@ private:
     bool isDaemon_;
     uid_t uid_;
     std::string masterId_;
+
+    common::SharedLibrary historyLibrary_;
 
     std::vector<std::thread> worker_threads_;
 
@@ -416,15 +471,16 @@ private:
     boost::asio::io_service io_service_getters_;
     boost::asio::io_service io_service_command_send_;
     boost::asio::io_service io_service_admin_;
-    boost::asio::io_service io_service_db_;
 
     std::shared_ptr< master::JobManager > jobManager_;
     std::shared_ptr< master::JobHistory > jobHistory_;
-    std::shared_ptr< master::DbHistoryConnection > dbConnection_;
     std::shared_ptr< master::WorkerManager > workerManager_;
     std::shared_ptr< master::Scheduler > scheduler_;
     std::shared_ptr< master::TimeoutManager > timeoutManager_;
     std::shared_ptr< master::CronManager > cronManager_;
+
+    common::IHistory *history_;
+    void ( *historyDestroy_ )( const common::IHistory * );
 
     std::shared_ptr< master::PingReceiver > pingReceiver_;
     std::shared_ptr< master::Pinger > pinger_;

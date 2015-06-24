@@ -28,7 +28,6 @@ unsigned short NODE_PORT = 5555;
 unsigned short NODE_UDP_PORT = NODE_PORT - 1;
 unsigned short MASTER_UDP_PORT = NODE_PORT - 2;
 unsigned short MASTER_ADMIN_PORT = NODE_PORT + 2;
-unsigned short MASTERDB_PORT = 5559;
 
 char const GROUPS_FILE_NAME[] = "groups";
 

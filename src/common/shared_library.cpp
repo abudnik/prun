@@ -20,13 +20,41 @@ the License.
 ===========================================================================
 */
 
-#ifndef __DEFINES_H
-#define __DEFINES_H
+#include <dlfcn.h>
+#include "shared_library.h"
+#include "log.h"
 
-namespace masterdb {
+namespace common {
 
-extern unsigned short MASTERDB_PORT;
+SharedLibrary::SharedLibrary()
+: handle_( nullptr )
+{}
 
-} // namespace master
+SharedLibrary::~SharedLibrary()
+{
+    Close();
+}
 
-#endif
+bool SharedLibrary::Load( const char *fileName )
+{
+    handle_ = dlopen( fileName, RTLD_LAZY );
+    if ( !handle_ )
+    {
+        PLOG_ERR( "SharedLibrary: dlopen failed: " << dlerror() );
+        return false;
+    }
+    return true;
+}
+
+void SharedLibrary::Close()
+{
+    if ( handle_ )
+        dlclose( handle_ );
+}
+
+void *SharedLibrary::GetFunction( const char *function )
+{
+    return dlsym( handle_, function );
+}
+
+} // namespace common
