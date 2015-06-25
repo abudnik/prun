@@ -96,7 +96,7 @@ system reboots.
 You'll be able to stop and start Master/Worker using the script named
 /etc/init.d/pmaster and /etc/init.d/pworker, accordingly.
 
-Job submitting
+Job submission
 --------------
 
 Here's a simple example of external sort task. Let's assume that we have
@@ -199,7 +199,7 @@ jobs and job descriptions, shared directory containing the input file
 > ./prun master_hostname           # run admin tool, connect to Master host
 > run external_sort.meta           # submit a meta job
 
-Cron job submitting
+Cron job submission
 -------------------
 
 Next example is dumping mysql database at muliple hosts simultaneously.
