@@ -23,8 +23,9 @@ struct MockTimeoutManager : ITimeoutManager
 
 struct MockJobHistory : IJobEventReceiver
 {
-    virtual void OnJobAdd( const JobPtr &job ) {}
+    virtual void OnJobAdd( const std::string &jobId, const std::string &jobDescr ) {}
     virtual void OnJobDelete( int64_t jobId ) {}
+    virtual void OnJobDelete( const std::string &jobName ) {}
 };
 
 } // namespace master
