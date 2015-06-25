@@ -32,8 +32,8 @@ namespace master {
 struct IJobEventReceiver
 {
     virtual ~IJobEventReceiver() {}
-    virtual void OnJobAdd( const JobPtr &job ) = 0;
-    virtual void OnJobDelete( int64_t jobId ) = 0;
+    virtual void OnJobAdd( const std::string &jobId, const std::string &jobDescr ) = 0;
+    virtual void OnJobDelete( int64_t jobId, const std::string &jobName ) = 0;
 };
 
 class JobHistory: public IJobEventReceiver
@@ -42,8 +42,8 @@ public:
     JobHistory( common::IHistory *history );
 
     // IJobEventReceiver
-    virtual void OnJobAdd( const JobPtr &job );
-    virtual void OnJobDelete( int64_t jobId );
+    virtual void OnJobAdd( const std::string &jobId, const std::string &jobDescr );
+    virtual void OnJobDelete( int64_t jobId, const std::string &jobName );
 
     void GetJobs();
 

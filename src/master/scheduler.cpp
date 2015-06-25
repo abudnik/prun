@@ -650,14 +650,14 @@ void Scheduler::StopPreviousJobs()
     }
 }
 
-void Scheduler::OnRemoveJob( int64_t jobId, bool success )
+void Scheduler::OnRemoveJob( int64_t jobId, const std::string &jobName, bool success )
 {
     simultExecCnt_.erase( jobId );
     history_.RemoveJob( jobId );
     failedWorkers_.Delete( jobId );
 
     IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
-    jobEventReceiver->OnJobDelete( jobId );
+    jobEventReceiver->OnJobDelete( jobId, jobName );
 }
 
 void Scheduler::StopWorkers( int64_t jobId )

@@ -21,6 +21,7 @@ the License.
 */
 
 #include "cron_manager.h"
+#include "job_history.h"
 #include "job_manager.h"
 #include "common/service_locator.h"
 #include "statistics.h"
@@ -111,6 +112,9 @@ void CronManager::PushJob( const JobPtr &job, bool afterExecution )
         jobManager->RegisterJobName( job->GetName() );
     }
 
+    IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
+    jobEventReceiver->OnJobAdd( job->GetName(), job->GetDescription() );
+
     auto handler = std::make_shared< JobTimeoutHandler >();
     handler->jobDescription_ = job->GetDescription();
     handler->jobName_ = job->GetName();
@@ -134,6 +138,9 @@ void CronManager::PushMetaJob( const JobGroupPtr &metaJob )
     {
         deadline += std::chrono::minutes( 1 );
     }
+
+    IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
+    jobEventReceiver->OnJobAdd( metaJob->GetName(), metaJob->GetDescription() );
 
     auto handler = std::make_shared< MetaJobTimeoutHandler >();
     handler->jobDescription_ = metaJob->GetDescription();
@@ -159,6 +166,9 @@ void CronManager::PushMetaJob( std::list< JobPtr > &jobs )
     auto deadline = metaJob->GetCron().Next( now );
 
     jobManager->RegisterJobName( metaJob->GetName() );
+
+    IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
+    jobEventReceiver->OnJobAdd( metaJob->GetName(), metaJob->GetDescription() );
 
     auto handler = std::make_shared< MetaJobTimeoutHandler >();
     handler->jobDescription_ = metaJob->GetDescription();
@@ -225,6 +235,9 @@ void CronManager::ReleaseJob( const CallbackPtr &handler ) const
     }
 
     jobManager->ReleaseJobName( handler->jobName_ );
+
+    IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
+    jobEventReceiver->OnJobDelete( -1, handler->jobName_ );
 }
 
 void CronManager::Accept( ICronVisitor *visitor )

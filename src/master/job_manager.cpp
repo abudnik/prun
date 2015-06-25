@@ -214,7 +214,7 @@ void JobManager::PushJob( JobPtr &job )
     PLOG( "JobManager::PushJob: jobId=" << job->GetJobId() );
 
     IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
-    jobEventReceiver->OnJobAdd( job );
+    jobEventReceiver->OnJobAdd( std::to_string( job->GetJobId() ), job->GetDescription() );
 
     IScheduler *scheduler = common::GetService< IScheduler >();
     scheduler->OnNewJob();
@@ -237,7 +237,8 @@ void JobManager::PushJobs( std::list< JobPtr > &jobs )
     PLOG( "JobManager::PushJobs: groupId=" << groupId );
 
     IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
-    jobEventReceiver->OnJobAdd( *jobs.begin() ); // first job has meta job description
+    JobPtr firstJob = *jobs.begin(); // first job has meta job description
+    jobEventReceiver->OnJobAdd( std::to_string( firstJob->GetJobId() ), firstJob->GetDescription() );
 
     IScheduler *scheduler = common::GetService< IScheduler >();
     scheduler->OnNewJob();

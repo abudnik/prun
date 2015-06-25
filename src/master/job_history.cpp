@@ -32,13 +32,13 @@ JobHistory::JobHistory( common::IHistory *history )
 : history_( history )
 {}
 
-void JobHistory::OnJobAdd( const JobPtr &job )
+void JobHistory::OnJobAdd( const std::string &jobId, const std::string &jobDescr )
 {
     if ( history_ )
     {
         try
         {
-            history_->Put( std::to_string( job->GetJobId() ), job->GetDescription() );
+            history_->Put( jobId, jobDescr );
         }
         catch( const std::exception &e )
         {
@@ -47,13 +47,17 @@ void JobHistory::OnJobAdd( const JobPtr &job )
     }
 }
 
-void JobHistory::OnJobDelete( int64_t jobId )
+void JobHistory::OnJobDelete( int64_t jobId, const std::string &jobName )
 {
     if ( history_ )
     {
         try
         {
-            history_->Delete( std::to_string( jobId ) );
+            if ( jobId >= 0 )
+                history_->Delete( std::to_string( jobId ) );
+
+            if ( !jobName.empty() )
+                history_->Delete( jobName );
         }
         catch( const std::exception &e )
         {
@@ -62,10 +66,18 @@ void JobHistory::OnJobDelete( int64_t jobId )
     }
 }
 
-void OnGetCompleted( const std::string &key, const std::string &value )
+void OnGetJobCompleted( const std::string &key, const std::string &value )
 {
-    //PLOG( "OnGetCompleted : key=" << key << ", value=" << value );
-    int64_t id = boost::lexical_cast<int64_t>( key );
+    //PLOG( "OnGetJobCompleted : key=" << key << ", value=" << value );
+    int64_t id;
+    try
+    {
+        id = boost::lexical_cast<int64_t>( key );
+    }
+    catch( ... )
+    {
+        id = -1;
+    }
     IJobManager *jobManager = common::GetService< IJobManager >();
     jobManager->BuildAndPushJob( id, value );
 }
@@ -76,7 +88,7 @@ void JobHistory::GetJobs()
     {
         try
         {
-            history_->GetAll( OnGetCompleted );
+            history_->GetAll( OnGetJobCompleted );
         }
         catch( const std::exception &e )
         {

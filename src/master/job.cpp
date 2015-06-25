@@ -21,6 +21,7 @@ the License.
 */
 
 #include "job.h"
+#include "job_history.h"
 #include "job_manager.h"
 #include "common/log.h"
 #include "common/service_locator.h"
@@ -268,6 +269,9 @@ void JobQueue::OnJobDeletion( JobPtr &job )
             jobManager->ReleaseJobName( metaJobName );
         }
     }
+
+    IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
+    jobEventReceiver->OnJobDelete( job->GetJobId(), job->GetName() );
 }
 
 bool JobQueue::DeleteJobGroup( int64_t groupId )
