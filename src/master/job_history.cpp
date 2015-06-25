@@ -34,6 +34,7 @@ JobHistory::JobHistory( common::IHistory *history )
 
 void JobHistory::OnJobAdd( const std::string &jobId, const std::string &jobDescr )
 {
+    //PLOG( "OnJobAdd : " << jobId );
     if ( history_ )
     {
         try
@@ -47,17 +48,14 @@ void JobHistory::OnJobAdd( const std::string &jobId, const std::string &jobDescr
     }
 }
 
-void JobHistory::OnJobDelete( int64_t jobId, const std::string &jobName )
+void JobHistory::OnJobDelete( int64_t jobId )
 {
+    //PLOG( "OnJobDelete : " << jobId );
     if ( history_ )
     {
         try
         {
-            if ( jobId >= 0 )
-                history_->Delete( std::to_string( jobId ) );
-
-            if ( !jobName.empty() )
-                history_->Delete( jobName );
+            history_->Delete( std::to_string( jobId ) );
         }
         catch( const std::exception &e )
         {
@@ -66,9 +64,26 @@ void JobHistory::OnJobDelete( int64_t jobId, const std::string &jobName )
     }
 }
 
+void JobHistory::OnJobDelete( const std::string &jobName )
+{
+    //PLOG( "OnJobDelete : " << jobName );
+    if ( history_ )
+    {
+        try
+        {
+            history_->Delete( jobName );
+        }
+        catch( const std::exception &e )
+        {
+            PLOG_ERR( "JobHistory::OnJobDelete: " << e.what() );
+        }
+    }
+}
+
+
 void OnGetJobCompleted( const std::string &key, const std::string &value )
 {
-    //PLOG( "OnGetJobCompleted : key=" << key << ", value=" << value );
+    PLOG_DBG( "OnGetJobCompleted : jobId=" << key << ", jobDescription=" << value );
     int64_t id;
     try
     {
@@ -79,7 +94,7 @@ void OnGetJobCompleted( const std::string &key, const std::string &value )
         id = -1;
     }
     IJobManager *jobManager = common::GetService< IJobManager >();
-    jobManager->BuildAndPushJob( id, value );
+    jobManager->BuildAndPushJob( id, value, false );
 }
 
 void JobHistory::GetJobs()

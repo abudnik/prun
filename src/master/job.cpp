@@ -37,8 +37,6 @@ bool JobGroup::OnJobCompletion( const JobVertex &vertex )
 {
     using namespace boost;
 
-    bool lastJobInGroup = false;
-
     JobGraph::out_edge_iterator i, i_end;
     for( tie( i, i_end ) = out_edges( vertex, graph_ ); i != i_end; ++i )
     {
@@ -52,11 +50,11 @@ bool JobGroup::OnJobCompletion( const JobVertex &vertex )
             {
                 eventReceiver_->OnJobDependenciesResolved( job );
             }
-            ++numCompleted_;
-            lastJobInGroup = (numCompleted_ == indexToJob_.size());
         }
     }
 
+    ++numCompleted_;
+    const bool lastJobInGroup = (numCompleted_ == indexToJob_.size());
     return lastJobInGroup;
 }
 
@@ -271,7 +269,7 @@ void JobQueue::OnJobDeletion( JobPtr &job )
     }
 
     IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
-    jobEventReceiver->OnJobDelete( job->GetJobId(), job->GetName() );
+    jobEventReceiver->OnJobDelete( job->GetJobId() );
 }
 
 bool JobQueue::DeleteJobGroup( int64_t groupId )

@@ -35,13 +35,13 @@ CronManager::TimeoutHandler::TimeoutHandler()
 void CronManager::JobTimeoutHandler::HandleTimeout()
 {
     IJobManager *jobManager = common::GetService< IJobManager >();
-    jobManager->BuildAndPushJob( -1, jobDescription_ );
+    jobManager->BuildAndPushJob( -1, jobDescription_, true );
 }
 
 void CronManager::MetaJobTimeoutHandler::HandleTimeout()
 {
     IJobManager *jobManager = common::GetService< IJobManager >();
-    jobManager->BuildAndPushJob( -1, jobDescription_ );
+    jobManager->BuildAndPushJob( -1, jobDescription_, true );
 }
 
 
@@ -63,6 +63,11 @@ void CronManager::Run()
         timer_.Wait( 1000 );
         CheckTimeouts();
     }
+}
+
+void CronManager::Shutdown()
+{
+    StopAllJobs();
 }
 
 void CronManager::CheckTimeouts()
@@ -237,7 +242,7 @@ void CronManager::ReleaseJob( const CallbackPtr &handler ) const
     jobManager->ReleaseJobName( handler->jobName_ );
 
     IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
-    jobEventReceiver->OnJobDelete( -1, handler->jobName_ );
+    jobEventReceiver->OnJobDelete( handler->jobName_ );
 }
 
 void CronManager::Accept( ICronVisitor *visitor )

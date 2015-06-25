@@ -249,7 +249,7 @@ void JobManager::PushJobs( std::list< JobPtr > &jobs )
     }
 }
 
-void JobManager::BuildAndPushJob( int64_t jobId, const std::string &jobDescription )
+void JobManager::BuildAndPushJob( int64_t jobId, const std::string &jobDescription, bool plannedByCron )
 {
     boost::property_tree::ptree ptree;
     JDLJson parser;
@@ -264,7 +264,16 @@ void JobManager::BuildAndPushJob( int64_t jobId, const std::string &jobDescripti
         std::list< JobPtr > jobs;
         if ( CreateMetaJob( jobDescription, jobs, check_name_existance ) && !jobs.empty() )
         {
-            if ( !cron )
+            if ( cron )
+            {
+                if ( !plannedByCron )
+                {
+                    ICronManager *cronManager = common::GetService< ICronManager >();
+                    cronManager->PushMetaJob( jobs );
+                    return;
+                }
+            }
+            else
             {
                 RegisterJobName( jobs.front()->GetJobGroup()->GetName() );
             }
@@ -305,6 +314,13 @@ void JobManager::BuildAndPushJob( int64_t jobId, const std::string &jobDescripti
         {
             if ( cron )
             {
+                if ( !plannedByCron )
+                {
+                    ICronManager *cronManager = common::GetService< ICronManager >();
+                    cronManager->PushJob( job, false );
+                    return;
+                }
+
                 job->SetJobId( jobId_++ );
             }
             else
@@ -382,8 +398,18 @@ bool JobManager::ReleaseJobName( const std::string &name )
     if ( name.empty() )
         return false;
 
-    std::unique_lock< std::mutex > lock( jobNamesMut_ );
-    return jobNames_.erase( name ) > 0;
+    bool erased;
+    {
+        std::unique_lock< std::mutex > lock( jobNamesMut_ );
+        erased = jobNames_.erase( name ) > 0;
+    }
+
+    if ( erased )
+    {
+        IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
+        jobEventReceiver->OnJobDelete( name );
+    }
+    return erased;
 }
 
 bool JobManager::HasJobName( const std::string &name )

@@ -156,30 +156,23 @@ public:
     JobIterator GetJobQueueEnd() const { return jobs_.right.end(); }
 
     template< typename T >
-    void SetOnRemoveCallback( T *obj, void (T::*f)( int64_t jobId, const std::string &jobName, bool success ) )
+    void SetOnRemoveCallback( T *obj, void (T::*f)( int64_t jobId, bool success ) )
     {
-        onRemoveCallback_ = std::bind( f, obj, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 );
+        onRemoveCallback_ = std::bind( f, obj, std::placeholders::_1, std::placeholders::_2 );
     }
 
     void RemoveJob( int64_t jobId, bool success, const char *completionStatus )
     {
         jobExecutions_.erase( jobId );
 
-        JobPtr job;
-        std::string jobName;
+        if ( onRemoveCallback_ )
+            onRemoveCallback_( jobId, success );
+
         auto it = jobs_.left.find( jobId );
         if ( it != jobs_.left.end() )
         {
             const JobState &jobState = it->second;
-            job = jobState.GetJob();
-            jobName = job->GetName();
-        }
-
-        if ( onRemoveCallback_ )
-            onRemoveCallback_( jobId, jobName, success );
-
-        if ( job )
-        {
+            const JobPtr &job = jobState.GetJob();
             RunJobCallback( job, completionStatus );
             ReleaseJob( job, success );
             jobs_.left.erase( it );
@@ -282,7 +275,7 @@ private:
     JobPriorityQueue jobs_;
     IdToJobExec jobExecutions_; // job_id -> num job remaining executions (== 0, if job execution completed)
     JobNameToJob nameToJob_;
-    std::function< void (int64_t, const std::string &, bool) > onRemoveCallback_;
+    std::function< void (int64_t, bool) > onRemoveCallback_;
 };
 
 

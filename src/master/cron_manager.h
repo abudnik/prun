@@ -88,6 +88,8 @@ public:
 
     void Stop();
 
+    void Shutdown();
+
     void Run();
 
     // ICronManager

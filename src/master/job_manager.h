@@ -50,7 +50,7 @@ struct IJobManager
     virtual bool CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs, bool check_name_existance ) = 0;
     virtual void PushJob( JobPtr &job ) = 0;
     virtual void PushJobs( std::list< JobPtr > &jobs ) = 0;
-    virtual void BuildAndPushJob( int64_t jobId, const std::string &jobDescription ) = 0;
+    virtual void BuildAndPushJob( int64_t jobId, const std::string &jobDescription, bool plannedByCron ) = 0;
 
     virtual bool GetJobById( int64_t jobId, JobPtr &job ) = 0;
     virtual bool DeleteJob( int64_t jobId ) = 0;
@@ -79,7 +79,7 @@ public:
     virtual bool CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs, bool check_name_existance );
     virtual void PushJob( JobPtr &job );
     virtual void PushJobs( std::list< JobPtr > &jobs );
-    virtual void BuildAndPushJob( int64_t jobId, const std::string &jobDescription );
+    virtual void BuildAndPushJob( int64_t jobId, const std::string &jobDescription, bool plannedByCron );
 
     virtual bool GetJobById( int64_t jobId, JobPtr &job );
     virtual bool DeleteJob( int64_t jobId );

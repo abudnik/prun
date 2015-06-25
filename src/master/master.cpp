@@ -340,6 +340,9 @@ public:
         if ( jobManager_ )
             jobManager_->Shutdown();
 
+        if ( cronManager_ )
+            cronManager_->Shutdown();
+
         if ( workerManager_ )
             workerManager_->Shutdown();
 

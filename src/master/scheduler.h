@@ -124,7 +124,7 @@ private:
     bool GetReschedJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob, JobPtr &job, int numFreeCPU );
     bool GetJobForWorker( const WorkerPtr &worker, WorkerJob &plannedJob, JobPtr &job, int numFreeCPU );
 
-    void OnRemoveJob( int64_t jobId, const std::string &jobName, bool success );
+    void OnRemoveJob( int64_t jobId, bool success );
     void StopWorkers( int64_t jobId );
     void StopWorker( const std::string &hostIP ) const;
 
