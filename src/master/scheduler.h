@@ -64,7 +64,6 @@ struct IScheduler : virtual public common::IObservable
     virtual void StopJobGroup( int64_t groupId ) = 0;
     virtual void StopNamedJob( const std::string &name ) = 0;
     virtual void StopAllJobs() = 0;
-    virtual void StopPreviousJobs() = 0;
 
     virtual void Accept( ISchedulerVisitor *visitor ) = 0;
 };
@@ -106,7 +105,6 @@ public:
     virtual void StopJobGroup( int64_t groupId );
     virtual void StopNamedJob( const std::string &name );
     virtual void StopAllJobs();
-    virtual void StopPreviousJobs();
 
     virtual void Accept( ISchedulerVisitor *visitor );
 

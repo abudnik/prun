@@ -30,7 +30,7 @@ the License.
 #include "worker_command.h"
 #include "statistics.h"
 
-// hint: avoid deadlocks. always lock jobs mutex after workers mutex
+// NB: avoid deadlocks: always lock jobs mutex after workers mutex
 
 namespace master {
 
@@ -46,6 +46,10 @@ void Scheduler::OnHostAppearance( WorkerPtr &worker )
         nodeState_[ worker->GetIP() ].SetWorker( worker );
         typedef NodePriorityQueue::value_type value_type;
         nodePriority_.insert( value_type( worker->GetIP(), &nodeState_[ worker->GetIP() ] ) );
+
+        IWorkerManager *workerManager = common::GetService< IWorkerManager >();
+        CommandPtr commandPtr = std::make_shared< StopPreviousJobsCommand >();
+        workerManager->AddCommand( commandPtr, worker->GetIP() );
     }
     NotifyAll();
 }
@@ -629,21 +633,6 @@ void Scheduler::StopAllJobs()
             CommandPtr commandPtr = std::make_shared< StopAllJobsCommand >();
             workerManager->AddCommand( commandPtr, worker->GetIP() );
         }
-    }
-}
-
-void Scheduler::StopPreviousJobs()
-{
-    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
-
-    std::unique_lock< std::mutex > lock_w( workersMut_ );
-    for( auto it = nodeState_.cbegin(); it != nodeState_.cend(); ++it )
-    {
-        const NodeState &nodeState = it->second;
-        const WorkerPtr &worker = nodeState.GetWorker();
-
-        CommandPtr commandPtr = std::make_shared< StopPreviousJobsCommand >();
-        workerManager->AddCommand( commandPtr, worker->GetIP() );
     }
 }
 

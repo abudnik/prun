@@ -107,10 +107,6 @@ class Command_StopAll():
     def Prepare(self, cmd):
         return {"method" : "stop_all", "params" : []}
 
-class Command_StopPrevious():
-    def Prepare(self, cmd):
-        return {"method" : "stop_prev", "params" : []}
-
 class Command_AddHosts():
     def Prepare(self, cmd):
         try:
@@ -190,7 +186,6 @@ class CommandDispatcher():
                      'stop'    : Command_Stop(),
                      'stopg'   : Command_StopGroup(),
                      'stopall' : Command_StopAll(),
-                     'stoprev' : Command_StopPrevious(),
                      'add'     : Command_AddHosts(),
                      'delete'  : Command_DeleteHosts(),
                      'addg'    : Command_AddHostGroup(),
@@ -237,7 +232,6 @@ def PrintHelp():
     print( "  stop <job_name>                 -- interrupt job/group of jobs execution" )
     print( "  stopg <group_id>                -- interrupt group of jobs execution" )
     print( "  stopall                         -- interrupt all job execution on all hosts" )
-    print( "  stoprev                         -- interrupt all job execution from previous master sessions" )
     print( "  add [<hostname> <groupname>]*   -- add host(s) with given hostname and hosts group name" )
     print( "  delete <hostname>               -- delete host(s)" )
     print( "  addg /path/to/file              -- add group of hosts, which described in a file" )

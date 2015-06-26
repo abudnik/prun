@@ -131,15 +131,6 @@ int AdminCommand_StopAll::Execute( const boost::property_tree::ptree &params,
     return 0;
 }
 
-int AdminCommand_StopPrevious::Execute( const boost::property_tree::ptree &params,
-                                        std::string &result )
-{
-    if ( !UserCommand().StopPreviousJobs() )
-        return JSON_RPC_INTERNAL_ERROR;
-
-    return 0;
-}
-
 int AdminCommand_AddHosts::Execute( const boost::property_tree::ptree &params,
                                     std::string &result )
 {
@@ -394,7 +385,6 @@ void AdminConnection::InitializeRpcHandlers()
     rpc.RegisterHandler( "stop",         new AdminCommand_Stop );
     rpc.RegisterHandler( "stop_group",   new AdminCommand_StopGroup );
     rpc.RegisterHandler( "stop_all",     new AdminCommand_StopAll );
-    rpc.RegisterHandler( "stop_prev",    new AdminCommand_StopPrevious );
     rpc.RegisterHandler( "add_hosts",    new AdminCommand_AddHosts );
     rpc.RegisterHandler( "delete_hosts", new AdminCommand_DeleteHosts );
     rpc.RegisterHandler( "add_group",    new AdminCommand_AddGroup );

@@ -114,6 +114,7 @@ struct WorkerManagerEnvironment
     WorkerManagerEnvironment()
     {
         common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
+        serviceLocator.Register( (master::IWorkerManager*)&mgr );
         serviceLocator.Register( (master::IScheduler*)&sched );
     }
 

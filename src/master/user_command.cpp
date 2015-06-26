@@ -240,23 +240,6 @@ bool UserCommand::StopAll()
     return true;
 }
 
-bool UserCommand::StopPreviousJobs()
-{
-    PLOG( "UserCommand::StopPreviousJobs" );
-
-    try
-    {
-        IScheduler *scheduler = common::GetService< IScheduler >();
-        scheduler->StopPreviousJobs();
-    }
-    catch( std::exception &e )
-    {
-        PLOG_ERR( "UserCommand::StopPreviousJobs: " << e.what() );
-        return false;
-    }
-    return true;
-}
-
 bool UserCommand::AddWorkerHost( const std::string &groupName, const std::string &host )
 {
     PLOG( "UserCommand::AddWorkerHost: groupName=" << groupName << ", host=" << host );

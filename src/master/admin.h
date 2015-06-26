@@ -63,13 +63,6 @@ public:
                          std::string &result );
 };
 
-class AdminCommand_StopPrevious : public common::IJsonRpcHandler
-{
-public:
-    virtual int Execute( const boost::property_tree::ptree &params,
-                         std::string &result );
-};
-
 class AdminCommand_AddHosts : public common::IJsonRpcHandler
 {
 public:

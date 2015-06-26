@@ -37,7 +37,6 @@ public:
     bool StopGroup( int64_t groupId );
     bool StopNamed( const std::string &name );
     bool StopAll();
-    bool StopPreviousJobs();
     bool AddWorkerHost( const std::string &groupName, const std::string &host );
     bool DeleteHost( const std::string &host );
     bool AddGroup( const std::string &filePath, const std::string &fileName );
