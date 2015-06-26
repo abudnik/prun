@@ -542,10 +542,9 @@ void Scheduler::OnTaskTimeout( const WorkerTask &workerTask, const std::string &
         PLOG( "Scheduler::OnTaskTimeout " << workerTask.GetJobId() << ':' << workerTask.GetTaskId() << ' ' << hostIP );
 
         // send stop command to worker
-        StopTaskCommand *stopCommand = new StopTaskCommand();
-        stopCommand->SetParam( "job_id", workerTask.GetJobId() );
-        stopCommand->SetParam( "task_id", workerTask.GetTaskId() );
-        CommandPtr commandPtr( stopCommand );
+        CommandPtr commandPtr = std::make_shared< StopTaskCommand >();
+        commandPtr->SetParam( "job_id", workerTask.GetJobId() );
+        commandPtr->SetParam( "task_id", workerTask.GetTaskId() );
         workerManager->AddCommand( commandPtr, hostIP );
 
         OnTaskCompletion( NODE_JOB_TIMEOUT, 0, workerTask, hostIP );
@@ -627,8 +626,7 @@ void Scheduler::StopAllJobs()
             const NodeState &nodeState = it->second;
             const WorkerPtr &worker = nodeState.GetWorker();
 
-            Command *stopCommand = new StopAllJobsCommand();
-            CommandPtr commandPtr( stopCommand );
+            CommandPtr commandPtr = std::make_shared< StopAllJobsCommand >();
             workerManager->AddCommand( commandPtr, worker->GetIP() );
         }
     }
@@ -644,8 +642,7 @@ void Scheduler::StopPreviousJobs()
         const NodeState &nodeState = it->second;
         const WorkerPtr &worker = nodeState.GetWorker();
 
-        Command *stopCommand = new StopPreviousJobsCommand();
-        CommandPtr commandPtr( stopCommand );
+        CommandPtr commandPtr = std::make_shared< StopPreviousJobsCommand >();
         workerManager->AddCommand( commandPtr, worker->GetIP() );
     }
 }
@@ -678,10 +675,9 @@ void Scheduler::StopWorkers( int64_t jobId )
                 workerJob.GetTasks( jobId, tasks );
                 for( auto taskId : tasks )
                 {
-                    StopTaskCommand *stopCommand = new StopTaskCommand();
-                    stopCommand->SetParam( "job_id", jobId );
-                    stopCommand->SetParam( "task_id", taskId );
-                    CommandPtr commandPtr( stopCommand );
+                    CommandPtr commandPtr = std::make_shared< StopTaskCommand >();
+                    commandPtr->SetParam( "job_id", jobId );
+                    commandPtr->SetParam( "task_id", taskId );
                     workerManager->AddCommand( commandPtr, worker->GetIP() );
                 }
 
@@ -722,10 +718,9 @@ void Scheduler::StopWorker( const std::string &hostIP ) const
     workerJob.GetTasks( tasks );
     for( const auto &workerTask : tasks )
     {
-        StopTaskCommand *stopCommand = new StopTaskCommand();
-        stopCommand->SetParam( "job_id", workerTask.GetJobId() );
-        stopCommand->SetParam( "task_id", workerTask.GetTaskId() );
-        CommandPtr commandPtr( stopCommand );
+        CommandPtr commandPtr = std::make_shared< StopTaskCommand >();
+        commandPtr->SetParam( "job_id", workerTask.GetJobId() );
+        commandPtr->SetParam( "task_id", workerTask.GetTaskId() );
         workerManager->AddCommand( commandPtr, worker->GetIP() );
     }
 }
