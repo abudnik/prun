@@ -263,10 +263,11 @@ Can be one of the following: "debug", "info", "warning", "error".
 
 - history_library
 Name of a shared library which is used for serialization of submitted jobs
-(e.g. "libprun-leveldb.so").
+(e.g. "libprun-leveldb.so", "libprun-cassandra.so", "libprun-elliptics.so").
 
 - history_config
-Path to config which is used by history library.
+Path to config which is used by history library
+(e.g. "history-leveldb.cfg", "history-cassandra.cfg", "history-elliptics.cfg").
 
 - node_port (optional, default = 5555)
 
