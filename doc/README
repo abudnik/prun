@@ -175,10 +175,10 @@ free CPU's is more likely to get a job.
                              Worker configuration
 --------------------------------------------------------------------------------
 
-Worker's configuration described in the "prun/worker.cfg" file. This file is a
-set of key-value pairs, written in JSON format. It contains pathes to language
-interpreters ("python", "ruby", "shell", "js") and compilers ("javac"). Other
-config settings:
+Worker's configuration described in the "prun/worker.cfg" or "/etc/pworker/worker.cfg"
+file. This file is a set of key-value pairs, written in JSON format. It contains pathes
+to language interpreters ("python", "ruby", "shell", "js") and compilers ("javac").
+Other config settings:
 
 - pidfile
 Name of a pidfile. Worker writes its PID into this file during initialization
@@ -205,8 +205,9 @@ Can be one of the following: "debug", "info", "warning", "error".
                              Master configuration
 --------------------------------------------------------------------------------
 
-Master's configuration described in the "prun/master.cfg" file. This file is a
-set of key-value pairs, written in JSON format. Settings description:
+Master's configuration described in the "prun/master.cfg" or "/etc/pmaster/master.cfg"
+file. This file is a set of key-value pairs, written in JSON format.
+Settings description:
 
 - pidfile
 Name of a pidfile. Master writes its PID into this file during initialization
