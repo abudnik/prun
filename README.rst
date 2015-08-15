@@ -50,6 +50,20 @@ Building runtime from sources::
 > cmake -DRelease=true .  # skipping Release var disables compiler optimizations
 > make -j8
 
+External dependencies
+---------------------
+
+Master node can serialize its jobs state to external key-value database. After
+master's node restart, master restores all previously submitted and not yet executed
+jobs at node startup.
+There are multiple bindings to different databases: LevelDB_, Cassandra_, Elliptics_.
+
+.. _LevelDB: https://github.com/abudnik/prun-leveldb
+.. _Cassandra: https://github.com/abudnik/prun-cassandra
+.. _Elliptics: https://github.com/abudnik/prun-elliptics
+
+Path to shared library (binding) and its config is set in master.cfg.
+
 Running
 -------
 
