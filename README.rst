@@ -50,7 +50,7 @@ Building runtime from sources::
 > cmake -DRelease=true .  # skipping Release var disables compiler optimizations
 > make -j8
 
-External dependencies
+Optional external dependencies
 ---------------------
 
 Master node can serialize its jobs state to external key-value database. After
