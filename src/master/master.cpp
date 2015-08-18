@@ -347,7 +347,10 @@ public:
             workerManager_->Shutdown();
 
         if ( history_ )
+        {
             (*historyDestroy_)( history_ );
+            history_ = nullptr;
+        }
 
         common::ServiceLocator::Instance().UnregisterAll();
     }
@@ -453,6 +456,11 @@ private:
         catch( std::exception &e )
         {
             PLOG_ERR( "MasterApplication::InitHistory: " << e.what() );
+            if ( history_ )
+            {
+                (*historyDestroy_)( history_ );
+                history_ = nullptr;
+            }
         }
     }
 

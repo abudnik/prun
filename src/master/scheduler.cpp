@@ -497,7 +497,7 @@ void Scheduler::OnTaskCompletion( int errCode, int64_t execTime, const WorkerTas
         if ( it == nodeState_.end() )
             return;
 
-        PLOG( "Scheduler::OnTaskCompletion: errCode=" << errCode <<
+        PLOG( "Scheduler::OnTaskCompletion: errCode=" << common::GetErrorDescription( errCode ) <<
               ", jobId=" << workerTask.GetJobId() <<
               ", taskId=" << workerTask.GetTaskId() << ", ip=" << hostIP );
 
