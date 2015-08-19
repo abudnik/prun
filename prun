@@ -40,7 +40,6 @@ class Connection():
 
         msg = self.Receive()
         self.OnResponse( msg )
-        sys.stdout.write( '> ' )
         sys.stdout.flush()
 
     def Receive(self):
