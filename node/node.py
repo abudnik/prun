@@ -13,22 +13,22 @@ try:
     numTasks = int(sys.argv[5])
     jobId = sys.argv[6]
 
-    fifo = os.open( readFifo, os.O_RDONLY )
+    fifo = os.open(readFifo, os.O_RDONLY)
     bytes = bytearray()
     while len(bytes) < scriptLen:
-        bytes += os.read( fifo, scriptLen )
+        bytes += os.read(fifo, scriptLen)
 
-    s = bytes.decode( "utf-8" )
+    s = bytes.decode("utf-8")
 
-    exec( s, {"taskId":taskId, "numTasks":numTasks, "jobId":jobId} )
+    exec(s, {"taskId": taskId, "numTasks": numTasks, "jobId": jobId})
 except Exception as e:
     errCode = NODE_SCRIPT_EXEC_FAILED
-    print( e )
+    print(e)
 
 try:
     writeFifo = sys.argv[1]
-    fifo = os.open( writeFifo, os.O_WRONLY | os.O_NONBLOCK )
-    os.write( fifo, str(errCode).encode() )
-    os.close( fifo )
+    fifo = os.open(writeFifo, os.O_WRONLY | os.O_NONBLOCK)
+    os.write(fifo, str(errCode).encode())
+    os.close(fifo)
 except Exception as e:
-    print( e )
+    print(e)

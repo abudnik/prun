@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import sys
 import socket
 import json
@@ -10,279 +10,304 @@ MASTER_PORT = 5557
 ADMIN_VERSION = '0.1'
 COMMAND = ''
 
-def Exit(msg):
-    print( msg )
-    print( "exiting..." )
-    sys.exit( 1 )
+
+def exit(msg):
+    print(msg)
+    print("exiting...")
+    sys.exit(1)
+
 
 class Connection():
     def __init__(self):
-        print( "connecting to master %s:%d" % (MASTER_HOST, MASTER_PORT) )
+        print("connecting to master %s:%d" % (MASTER_HOST, MASTER_PORT))
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((MASTER_HOST, MASTER_PORT))
             self.rpc_id = 0
-            print( "connected" )
+            print("connected")
         except Exception as e:
-            Exit( "couldn't connect to master" )
+            Exit("couldn't connect to master")
 
-    def MakeJsonRpc(self, msg):
-        rpc = { "jsonrpc" : "2.0", "method" : msg["method"], "params" : msg["params"], "id" : str( self.rpc_id ) }
+    def _make_json_rpc(self, msg):
+        rpc = {"jsonrpc": "2.0", "method": msg["method"],
+               "params": msg["params"], "id": str(self.rpc_id)}
         self.rpc_id += 1
-        return json.JSONEncoder().encode( rpc )
+        return json.JSONEncoder().encode(rpc)
 
-    def Send(self, msg):
-        rpc = self.MakeJsonRpc( msg )
+    def send(self, msg):
+        rpc = self._make_json_rpc(msg)
         try:
-            self.socket.send( rpc.encode( "utf-8" ) )
+            self.socket.send(rpc.encode("utf-8"))
         except Exception as e:
-            Exit( "couldn't send command to master" )
+            Exit("couldn't send command to master")
 
-        msg = self.Receive()
-        self.OnResponse( msg )
+        msg = self._receive()
+        self._on_response(msg)
         sys.stdout.flush()
 
-    def Receive(self):
+    def _receive(self):
         try:
-            data = self.socket.recv( 32 * 1024 )
+            data = self.socket.recv(32 * 1024)
             return data
         except Exception as e:
-            print( e )
+            print(e)
 
-    def OnResponse(self, msg):
+    def _on_response(self, msg):
         if msg is None or len(msg) == 0:
             return
         try:
-            msg = msg.decode( "utf-8" )
-            rpc = json.JSONDecoder().decode( msg )
+            msg = msg.decode("utf-8")
+            rpc = json.JSONDecoder().decode(msg)
 
             if 'result' in rpc:
-                print( rpc['result'] )
+                print(rpc['result'])
             elif 'error' in rpc:
-                print( rpc['error'] )
+                print(rpc['error'])
         except Exception as e:
-            print( e )
+            print(e)
 
-    def Close(self):
+    def close(self):
         try:
             self.socket.shutdown(socket.SHUT_RDWR)
             self.socket.close()
         except Exception as e:
-            print( e )
+            print(e)
+
 
 class Command_Run():
-    def Prepare(self, cmd):
+    def prepare(self, cmd):
         try:
             params = cmd.split()[1:]
             path = params[0]
-            if len( params ) > 1:
+            if len(params) > 1:
                 alias = params[1]
             else:
                 alias = ''
         except Exception as e:
-            print( "no file path given" )
+            print("no file path given")
             raise e
-        return {"method" : "run", "params" : {"file" : path, "alias" : alias} }
+        return {"method": "run", "params": {"file": path, "alias": alias}}
+
 
 class Command_Stop():
-    def Prepare(self, cmd):
+    def prepare(self, cmd):
         try:
             jobId = cmd.split()[1]
         except Exception as e:
-            print( "invalid jobId argument" )
+            print("invalid jobId argument")
             raise e
-        return {"method" : "stop", "params" : {"job_id" : jobId} }
+        return {"method": "stop", "params": {"job_id": jobId}}
+
 
 class Command_StopGroup():
-    def Prepare(self, cmd):
+    def prepare(self, cmd):
         try:
-            groupId = int( cmd.split()[1] )
+            groupId = int(cmd.split()[1])
         except Exception as e:
-            print( "invalid groupId argument" )
+            print("invalid groupId argument")
             raise e
-        return {"method" : "stop_group", "params" : {"group_id" : groupId} }
+        return {"method": "stop_group", "params": {"group_id": groupId}}
+
 
 class Command_StopAll():
-    def Prepare(self, cmd):
-        return {"method" : "stop_all", "params" : []}
+    def prepare(self, cmd):
+        return {"method": "stop_all", "params": []}
+
 
 class Command_AddHosts():
-    def Prepare(self, cmd):
+    def prepare(self, cmd):
         try:
             hosts = cmd.split()[1:]
-            if len( hosts ) % 2 > 0:
-                raise Exception( "Odd number of args" )
+            if len(hosts) % 2 > 0:
+                raise Exception("Odd number of args")
         except Exception as e:
-            print( "invalid <host, group> arguments" )
+            print("invalid <host, group> arguments")
             raise e
-        return {"method" : "add_hosts", "params" : {"hosts" : hosts} }
+        return {"method": "add_hosts", "params": {"hosts": hosts}}
+
 
 class Command_DeleteHosts():
-    def Prepare(self, cmd):
+    def prepare(self, cmd):
         try:
             hosts = cmd.split()[1:]
         except Exception as e:
-            print( "invalid host argument" )
+            print("invalid host argument")
             raise e
-        return {"method" : "delete_hosts", "params" : {"hosts" : hosts} }
+        return {"method": "delete_hosts", "params": {"hosts": hosts}}
+
 
 class Command_AddHostGroup():
-    def Prepare(self, cmd):
+    def prepare(self, cmd):
         try:
             path = cmd.split()[1]
         except Exception as e:
-            print( "no file path given" )
+            print("no file path given")
             raise e
-        return {"method" : "add_group", "params" : {"file" : path} }
+        return {"method": "add_group", "params": {"file": path}}
+
 
 class Command_DeleteHostGroup():
-    def Prepare(self, cmd):
+    def prepare(self, cmd):
         try:
             group = cmd.split()[1]
         except Exception as e:
-            print( "invalid groupName argument" )
+            print("invalid groupName argument")
             raise e
-        return {"method" : "delete_group", "params" : {"group" : group} }
+        return {"method": "delete_group", "params": {"group": group}}
+
 
 class Command_Info():
-    def Prepare(self, cmd):
+    def prepare(self, cmd):
         try:
-            jobId = int( cmd.split()[1] )
+            jobId = int(cmd.split()[1])
         except Exception as e:
-            print( "invalid jobId argument" )
+            print("invalid jobId argument")
             raise e
-        return {"method" : "info", "params" : {"job_id" : jobId} }
+        return {"method": "info", "params": {"job_id": jobId}}
+
 
 class Command_Stat():
-    def Prepare(self, cmd):
-        return {"method" : "stat", "params" : []}
+    def prepare(self, cmd):
+        return {"method": "stat", "params": []}
+
 
 class Command_Jobs():
-    def Prepare(self, cmd):
-        return {"method" : "jobs", "params" : []}
+    def prepare(self, cmd):
+        return {"method": "jobs", "params": []}
+
 
 class Command_Ls():
-    def Prepare(self, cmd):
-        return {"method" : "ls", "params" : []}
+    def prepare(self, cmd):
+        return {"method": "ls", "params": []}
+
 
 class Command_Cron():
-    def Prepare(self, cmd):
-        return {"method" : "cron", "params" : []}
+    def prepare(self, cmd):
+        return {"method": "cron", "params": []}
+
 
 class Command_Sleep():
-    def Execute(self, cmd):
+    def execute(self, cmd):
         try:
-            s = int( cmd.split()[1] )
-            time.sleep( s )
+            s = int(cmd.split()[1])
+            time.sleep(s)
         except Exception as e:
-            print( "invalid sleep time argument" )
+            print("invalid sleep time argument")
             raise e
+
 
 class CommandDispatcher():
     _instance = None
+
     def __init__(self):
-        self.map_ = {'run'     : Command_Run(),
-                     'stop'    : Command_Stop(),
-                     'stopg'   : Command_StopGroup(),
-                     'stopall' : Command_StopAll(),
-                     'add'     : Command_AddHosts(),
-                     'delete'  : Command_DeleteHosts(),
-                     'addg'    : Command_AddHostGroup(),
-                     'deleteg' : Command_DeleteHostGroup(),
-                     'info'    : Command_Info(),
-                     'stat'    : Command_Stat(),
-                     'jobs'    : Command_Jobs(),
-                     'ls'      : Command_Ls(),
-                     'cron'    : Command_Cron()}
+        self.map_ = {'run': Command_Run(),
+                     'stop': Command_Stop(),
+                     'stopg': Command_StopGroup(),
+                     'stopall': Command_StopAll(),
+                     'add': Command_AddHosts(),
+                     'delete': Command_DeleteHosts(),
+                     'addg': Command_AddHostGroup(),
+                     'deleteg': Command_DeleteHostGroup(),
+                     'info': Command_Info(),
+                     'stat': Command_Stat(),
+                     'jobs': Command_Jobs(),
+                     'ls': Command_Ls(),
+                     'cron': Command_Cron()}
 
     @classmethod
-    def Instance(cls):
+    def instance(cls):
         if cls._instance is None:
             cls._instance = CommandDispatcher()
         return cls._instance
 
-    def Get(self, command):
-        cmd = command.split( None, 1 )[0]
+    def get(self, command):
+        cmd = command.split(None, 1)[0]
         if cmd not in self.map_:
             return None
-        return self.map_[ cmd ]
+        return self.map_[cmd]
+
 
 class Master():
     def __init__(self, connection):
         self.connection = connection
 
-    def DoCommand(self, cmd):
-        dispatcher = CommandDispatcher.Instance()
-        handler = dispatcher.Get( cmd )
+    def do_command(self, cmd):
+        dispatcher = CommandDispatcher.instance()
+        handler = dispatcher.get(cmd)
         if handler is not None:
             try:
-                msg = handler.Prepare( cmd )
-                self.connection.Send( msg )
+                msg = handler.prepare(cmd)
+                self.connection.send(msg)
             except Exception as e:
-                print( "error: couldn't execute command" )
-                print( e )
+                print("error: couldn't execute command")
+                print(e)
         else:
-            print( "unknown command: " + cmd )
+            print("unknown command: " + cmd)
 
-def PrintHelp():
-    print( "Commands:" )
-    print( "  run /path/to/file [<job_alias>] -- run job, which described in '.job' or '.meta' file" )
-    print( "  stop <job_id>                   -- interrupt job execution" )
-    print( "  stop <job_name>                 -- interrupt job/group of jobs execution" )
-    print( "  stopg <group_id>                -- interrupt group of jobs execution" )
-    print( "  stopall                         -- interrupt all job execution on all hosts" )
-    print( "  add [<hostname> <groupname>]*   -- add host(s) with given hostname and hosts group name" )
-    print( "  delete <hostname>               -- delete host(s)" )
-    print( "  addg /path/to/file              -- add group of hosts, which described in a file" )
-    print( "  deleteg <groupname>             -- delete group of hosts" )
-    print( "  info <job_id>                   -- show job execution statistics" )
-    print( "  stat                            -- show master statistics" )
-    print( "  jobs                            -- show queued jobs info" )
-    print( "  ls                              -- show workers info" )
-    print( "  cron                            -- show cron jobs" )
-    print( "  repeat, r                       -- repeat last entered command" )
-    print( "  exit, e                         -- quit program" )
 
-def UserPrompt():
-    print( "master admin v" + ADMIN_VERSION )
-    print( "print `help` for more information" )
+def print_help():
+    print("Commands:")
+    print("  run /path/to/file [<job_alias>] -- run job, which described in '.job' or '.meta' file")
+    print("  stop <job_id>                   -- interrupt job execution")
+    print("  stop <job_name>                 -- interrupt job/group of jobs execution")
+    print("  stopg <group_id>                -- interrupt group of jobs execution")
+    print("  stopall                         -- interrupt all job execution on all hosts")
+    print("  add [<hostname> <groupname>]*   -- add host(s) with given hostname and hosts group name")
+    print("  delete <hostname>               -- delete host(s)")
+    print("  addg /path/to/file              -- add group of hosts, which described in a file")
+    print("  deleteg <groupname>             -- delete group of hosts")
+    print("  info <job_id>                   -- show job execution statistics")
+    print("  stat                            -- show master statistics")
+    print("  jobs                            -- show queued jobs info")
+    print("  ls                              -- show workers info")
+    print("  cron                            -- show cron jobs")
+    print("  repeat, r                       -- repeat last entered command")
+    print("  exit, e                         -- quit program")
 
-def ParseOpt( argv ):
+
+def user_prompt():
+    print("master admin v" + ADMIN_VERSION)
+    print("print `help` for more information")
+
+
+def parse_opt(argv):
     global MASTER_HOST
     global COMMAND
     try:
-        opts, args = getopt.getopt( argv, "c:", ["command="] )
+        opts, args = getopt.getopt(argv, "c:", ["command="])
         for opt in opts:
             if opt[0] in ("-c", "--command"):
                 COMMAND = opt[1]
-                print( COMMAND )
+                print(COMMAND)
         for arg in args:
             MASTER_HOST = arg
             break
     except getopt.GetoptError:
-        print( 'usage: prun [-c|--command <command>] [<master_host>]' )
-        sys.exit( 1 )
+        print('usage: prun [-c|--command <command>] [<master_host>]')
+        sys.exit(1)
 
-def ExecCommand( master, cmd ):
+
+def exec_command(master, cmd):
     try:
-        commands = cmd.split( ';' )
+        commands = cmd.split(';')
         for c in commands:
             c = c.strip()
-            if len( c ) > 0:
-                commandName = c.split( None, 1 )[0]
+            if len(c) > 0:
+                commandName = c.split(None, 1)[0]
                 if commandName == 'sleep':
-                    print( c )
-                    Command_Sleep().Execute( c )
+                    print(c)
+                    Command_Sleep().execute(c)
                 else:
-                    master.DoCommand( c )
+                    master.do_command(c)
     except Exception as e:
-        print( e )
+        print(e)
 
-def UserInput( master ):
+
+def user_input(master):
     try:
         lastCmd = None
         while True:
-            sys.stdout.write( '> ' )
+            sys.stdout.write('> ')
             sys.stdout.flush()
 
             line = sys.stdin.readline().strip()
@@ -292,28 +317,29 @@ def UserInput( master ):
             if line in ("exit", "e", "quit", "q"):
                 break
             if line == "help":
-                PrintHelp()
+                print_help()
                 continue
             if line in ("repeat", "r") and lastCmd is not None:
                 line = lastCmd
 
-            master.DoCommand( line )
+            master.do_command(line)
             lastCmd = line
     except Exception as e:
-        print( e )
+        print(e)
 
-def Main(argv):
-    ParseOpt( argv )
-    UserPrompt()
+
+def main(argv):
+    parse_opt(argv)
+    user_prompt()
     con = Connection()
-    master = Master( con )
+    master = Master(con)
 
-    if len( COMMAND ) > 0:
-        ExecCommand( master, COMMAND )
+    if len(COMMAND) > 0:
+        exec_command(master, COMMAND)
     else:
-        UserInput( master )
+        user_input(master)
 
-    con.Close()
+    con.close()
 
 if __name__ == "__main__":
-   Main(sys.argv[1:])
+    main(sys.argv[1:])
