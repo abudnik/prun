@@ -84,8 +84,8 @@ void PingerBoost::PingWorker( WorkerPtr &worker )
     if ( it == endpoints_.end() )
     {
         common::Config &cfg = common::Config::Instance();
-        bool ipv6 = cfg.Get<bool>( "ipv6" );
-        udp::resolver::query query( ipv6 ? udp::v6() : udp::v4(), worker->GetHost(), port_ );
+        bool ipv6_only = cfg.Get<bool>( "ipv6_only" );
+        udp::resolver::query query( ipv6_only ? udp::v6() : udp::v4(), worker->GetHost(), port_ );
 
         boost::system::error_code error;
         udp::resolver::iterator iterator = resolver_.resolve( query, error ), end;

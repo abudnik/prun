@@ -86,10 +86,10 @@ public:
      resolver_( io_service )
     {
         const common::Config &cfg = common::Config::Instance();
-        const bool ipv6 = cfg.Get<bool>( "ipv6" );
+        const bool ipv6_only = cfg.Get<bool>( "ipv6_only" );
         const unsigned short node_ping_port = cfg.Get<unsigned short>( "node_ping_port" );
 
-        socket_.open( ipv6 ? udp::v6() : udp::v4() );
+        socket_.open( ipv6_only ? udp::v6() : udp::v4() );
 
         std::ostringstream ss;
         ss << node_ping_port;

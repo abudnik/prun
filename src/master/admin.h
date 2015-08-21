@@ -176,10 +176,10 @@ public:
         try
         {
             const common::Config &cfg = common::Config::Instance();
-            const bool ipv6 = cfg.Get<bool>( "ipv6" );
+            const bool ipv6_only = cfg.Get<bool>( "ipv6_only" );
             const unsigned short master_admin_port = cfg.Get<unsigned short>( "master_admin_port" );
 
-            tcp::endpoint endpoint( ipv6 ? tcp::v6() : tcp::v4(), master_admin_port );
+            tcp::endpoint endpoint( ipv6_only ? tcp::v6() : tcp::v4(), master_admin_port );
             acceptor_.open( endpoint.protocol() );
             acceptor_.set_option( tcp::acceptor::reuse_address( true ) );
             acceptor_.set_option( tcp::no_delay( true ) );

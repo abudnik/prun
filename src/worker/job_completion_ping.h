@@ -76,9 +76,9 @@ public:
      socket_( io_service )
     {
         const common::Config &cfg = common::Config::Instance();
-        const bool ipv6 = cfg.Get<bool>( "ipv6" );
+        const bool ipv6_only = cfg.Get<bool>( "ipv6_only" );
         master_ping_port_ = cfg.Get<unsigned short>( "master_ping_port" );
-        socket_.open( ipv6 ? udp::v6() : udp::v4() );
+        socket_.open( ipv6_only ? udp::v6() : udp::v4() );
     }
 
     virtual void StartPing();

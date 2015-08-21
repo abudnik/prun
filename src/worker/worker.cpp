@@ -803,10 +803,10 @@ public:
     {
         try
         {
-            common::Config &cfg = common::Config::Instance();
-            bool ipv6 = cfg.Get<bool>( "ipv6" );
+            const common::Config &cfg = common::Config::Instance();
+            const bool ipv6_only = cfg.Get<bool>( "ipv6_only" );
 
-            tcp::endpoint endpoint( ipv6 ? tcp::v6() : tcp::v4(), port );
+            tcp::endpoint endpoint( ipv6_only ? tcp::v6() : tcp::v4(), port );
             acceptor_.open( endpoint.protocol() );
             acceptor_.set_option( tcp::acceptor::reuse_address( true ) );
             acceptor_.set_option( tcp::no_delay( true ) );

@@ -190,8 +190,9 @@ table. If this table is not empty, then Worker periodically sends signals to
 Master. Worker sends signal every "completion_ping_delay" seconds, until Master
 connects to Worker to get job completion status.
 
-- ipv6
-Setting this parameter value to true leads to using of IPv6 protocol.
+- ipv6_only
+Setting this parameter value to true leads to using of IPv6 protocol only,
+otherwise IPv4 protocol only.
 
 - log_level
 Can be one of the following: "debug", "info", "warning", "error".
@@ -254,10 +255,11 @@ The maximum number of simultaneously job completion status getters.
 - max_simult_command_send
 The maximum number of simultaneously sending commands.
 
-- ipv6
-Setting this parameter value to true leads to using of IPv6 protocol. Note,
-that all Workers must have the same value of "ipv6" settings in their config
-files as the Master's "ipv6" value.
+- ipv6_only
+Setting this parameter value to true leads to using of IPv6 protocol only,
+otherwise IPv4 protocol only.
+Note, that all Workers must have the same value of "ipv6_only" settings in their
+config files as the Master's "ipv6_only" value.
 
 - log_level
 Can be one of the following: "debug", "info", "warning", "error".
