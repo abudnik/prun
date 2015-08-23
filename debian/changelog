@@ -1,3 +1,10 @@
+prun (0.15) unstable; urgency=low
+
+  * masterdb erased, history library added
+  * Minor bug fixes & code refactoring
+
+ -- Andrey Budnik <budnik27@gmail.com>  Sun, 23 Aug 2015 20:43:35 +0300
+
 prun (0.14) unstable; urgency=low
 
   * Initial release.

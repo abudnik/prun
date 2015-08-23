@@ -37,10 +37,10 @@ Building debian packages::
 Building RPMs::
 
 > git clone https://github.com/abudnik/prun.git
-> mv prun prun-0.14  # add '-version' postfix
+> mv prun prun-0.15  # add '-version' postfix
 > mkdir -p rpmbuild/SOURCES
-> tar cjf rpmbuild/SOURCES/prun-0.14.tar.bz2 prun-0.14
-> rpmbuild -ba prun-0.14/prun-bf.spec
+> tar cjf rpmbuild/SOURCES/prun-0.15.tar.bz2 prun-0.15
+> rpmbuild -ba prun-0.15/prun-bf.spec
 > ls rpmbuild/RPMS/*/*.rpm
 
 Building runtime from sources::
@@ -90,11 +90,11 @@ Installation
 
 From debian package::
 
-> dpkg -i prun-worker_0.14_amd64.deb
+> dpkg -i prun-worker_0.15_amd64.deb
 
 From RPM::
 
-> rpm -ivh prun-worker-0.14-1.el7.centos.1.x86_64.rpm
+> rpm -ivh prun-worker-0.15-1.el7.centos.1.x86_64.rpm
 
 Also it is possible to install prun worker and master using installation scripts
 (like 'make install')::
@@ -223,12 +223,12 @@ Firstly, we should create shell script, which does database dumping::
 
   mysqldump -uroot -pQWERTY -A > /home/nobody/dump/all-databases.sql
 
-And save this script to master's jobs directory, e.g. at jobs/myscripts/dump.sh
+And save this script to master's jobs directory, e.g. at /home/nobody/jobs/dump.sh
 
 Then we should create job description file of our cron job::
 
   {
-    "script" : "myscripts/dump.sh",
+    "script" : "/home/nobody/jobs/dump.sh",
     "language" : "shell",
     "send_script" : true,
     "priority" : 8,
@@ -247,11 +247,11 @@ Then we should create job description file of our cron job::
     "name" : "weekly_dump"
   }
 
-And save it to master's jobs directory, e.g. at jobs/dump.job
+And save it to master's jobs directory, e.g. at /home/nobody/jobs/dump.job
 This job will be started once at every available host at 3 a.m. every Sunday
 after submitting it to the master (here master is running at localhost)::
 
-  ./prun -c "run dump.job" localhost
+  ./prun -c "run /home/nobody/jobs/dump.job" localhost
 
 Stopping of any jobs by it's exclusive name performed by 'stop' command::
 
