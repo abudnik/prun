@@ -246,23 +246,23 @@ class Master():
 
 
 def print_help():
-    print("Commands:")
-    print("  run /path/to/file [<job_alias>] -- run job, which described in '.job' or '.meta' file")
-    print("  stop <job_id>                   -- interrupt job execution")
-    print("  stop <job_name>                 -- interrupt job/group of jobs execution")
-    print("  stopg <group_id>                -- interrupt group of jobs execution")
-    print("  stopall                         -- interrupt all job execution on all hosts")
-    print("  add [<hostname> <groupname>]*   -- add host(s) with given hostname and hosts group name")
-    print("  delete <hostname>               -- delete host(s)")
-    print("  addg /path/to/file              -- add group of hosts, which described in a file")
-    print("  deleteg <groupname>             -- delete group of hosts")
-    print("  info <job_id>                   -- show job execution statistics")
-    print("  stat                            -- show master statistics")
-    print("  jobs                            -- show queued jobs info")
-    print("  ls                              -- show workers info")
-    print("  cron                            -- show cron jobs")
-    print("  repeat, r                       -- repeat last entered command")
-    print("  exit, e                         -- quit program")
+    print("""Commands:
+  run /path/to/file [<job_alias>] -- run job, which described in '.job' or '.meta' file
+  stop <job_id>                   -- interrupt job execution
+  stop <job_name>                 -- interrupt job/group of jobs execution
+  stopg <group_id>                -- interrupt group of jobs execution
+  stopall                         -- interrupt all job execution on all hosts
+  add [<hostname> <groupname>]*   -- add host(s) with given hostname and hosts group name
+  delete <hostname>               -- delete host(s)
+  addg /path/to/file              -- add group of hosts, which described in a file
+  deleteg <groupname>             -- delete group of hosts
+  info <job_id>                   -- show job execution statistics
+  stat                            -- show master statistics
+  jobs                            -- show queued jobs info
+  ls                              -- show workers info
+  cron                            -- show cron jobs
+  repeat, r                       -- repeat last entered command
+  exit, e                         -- quit program""")
 
 
 def user_prompt():
