@@ -4,6 +4,10 @@ import socket
 import json
 import getopt
 import time
+try:
+    import readline
+except ImportError:
+    pass
 
 MASTER_HOST = 'localhost'
 MASTER_PORT = 5557
@@ -11,9 +15,8 @@ ADMIN_VERSION = '0.1'
 COMMAND = ''
 
 
-def exit(msg):
-    print(msg)
-    print("exiting...")
+def Fatal(msg):
+    print('fatal: {}'.format(msg))
     sys.exit(1)
 
 
@@ -26,7 +29,7 @@ class Connection():
             self.rpc_id = 0
             print("connected")
         except Exception as e:
-            Exit("couldn't connect to master")
+            Fatal("couldn't connect to master")
 
     def _make_json_rpc(self, msg):
         rpc = {"jsonrpc": "2.0", "method": msg["method"],
@@ -39,7 +42,7 @@ class Connection():
         try:
             self.socket.send(rpc.encode("utf-8"))
         except Exception as e:
-            Exit("couldn't send command to master")
+            Fatal("couldn't send command to master")
 
         msg = self._receive()
         self._on_response(msg)
@@ -234,7 +237,7 @@ class Master():
     def do_command(self, cmd):
         dispatcher = CommandDispatcher.instance()
         handler = dispatcher.get(cmd)
-        if handler is not None:
+        if handler:
             try:
                 msg = handler.prepare(cmd)
                 self.connection.send(msg)
@@ -261,8 +264,7 @@ def print_help():
   jobs                            -- show queued jobs info
   ls                              -- show workers info
   cron                            -- show cron jobs
-  repeat, r                       -- repeat last entered command
-  exit, e                         -- quit program""")
+  exit, quit                      -- quit program""")
 
 
 def user_prompt():
@@ -305,25 +307,29 @@ def exec_command(master, cmd):
 
 def user_input(master):
     try:
-        lastCmd = None
-        while True:
-            sys.stdout.write('> ')
-            sys.stdout.flush()
+        # python 2
+        read_input = raw_input
+    except NameError:
+        # python 3
+        read_input = input
 
-            line = sys.stdin.readline().strip()
-            if len(line) == 0:
+    try:
+        while True:
+            line = read_input('> ').strip()
+            if not line:
                 continue
 
-            if line in ("exit", "e", "quit", "q"):
+            if line in ("exit", "quit"):
                 break
             if line == "help":
                 print_help()
                 continue
-            if line in ("repeat", "r") and lastCmd is not None:
-                line = lastCmd
 
             master.do_command(line)
-            lastCmd = line
+    except EOFError:
+        print('\nEOF')
+    except KeyboardInterrupt:
+        print('\nKeyboard interrupt')
     except Exception as e:
         print(e)
 

@@ -26,6 +26,7 @@ Build requirements:
 Additional requirements:
 
 - python 2.6/3.x (admin tool written in Python)
+- Readline library
 
 Building debian packages::
 
