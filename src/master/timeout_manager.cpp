@@ -30,25 +30,25 @@ namespace master {
 
 void TimeoutManager::TaskTimeoutHandler::HandleTimeout()
 {
-    IScheduler *scheduler = common::GetService< IScheduler >();
+    auto scheduler = common::GetService< IScheduler >();
     scheduler->OnTaskTimeout( workerTask_, hostIP_ );
 }
 
 void TimeoutManager::JobTimeoutHandler::HandleTimeout()
 {
-    IScheduler *scheduler = common::GetService< IScheduler >();
+    auto scheduler = common::GetService< IScheduler >();
     scheduler->OnJobTimeout( jobId_ );
 }
 
 void TimeoutManager::JobQueueTimeoutHandler::HandleTimeout()
 {
-    IJobManager *jobManager = common::GetService< IJobManager >();
+    auto jobManager = common::GetService< IJobManager >();
     jobManager->DeleteJob( jobId_ );
 }
 
 void TimeoutManager::StopTaskTimeoutHandler::HandleTimeout()
 {
-    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
+    auto workerManager = common::GetService< IWorkerManager >();
     workerManager->AddCommand( command_, hostIP_ );
 }
 
@@ -105,11 +105,7 @@ void TimeoutManager::PushJobQueue( int64_t jobId, int queueTimeout )
     );
 
     std::unique_lock< std::mutex > lock( jobsMut_ );
-    jobs_.insert( std::pair< ptime, Callback >(
-                      deadlineQueue,
-                      callbackQueue
-                )
-    );
+    jobs_.emplace( deadlineQueue, callbackQueue );
 }
 
 void TimeoutManager::PushJob( int64_t jobId, int jobTimeout )
@@ -127,11 +123,7 @@ void TimeoutManager::PushJob( int64_t jobId, int jobTimeout )
     );
 
     std::unique_lock< std::mutex >lock( jobsMut_ );
-    jobs_.insert( std::pair< ptime, Callback >(
-                      deadline,
-                      callback
-                )
-    );
+    jobs_.emplace( deadline, callback );
 }
 
 void TimeoutManager::PushTask( const WorkerTask &task, const std::string &hostIP, int timeout )
@@ -150,11 +142,7 @@ void TimeoutManager::PushTask( const WorkerTask &task, const std::string &hostIP
     );
 
     std::unique_lock< std::mutex > lock( jobsMut_ );
-    jobs_.insert( std::pair< ptime, Callback >(
-                      deadline,
-                      callback
-                )
-    );
+    jobs_.emplace( deadline, callback );
 }
 
 void TimeoutManager::PushCommand( CommandPtr &command, const std::string &hostIP, int delay )
@@ -173,11 +161,7 @@ void TimeoutManager::PushCommand( CommandPtr &command, const std::string &hostIP
     );
 
     std::unique_lock< std::mutex > lock( jobsMut_ );
-    jobs_.insert( std::pair< ptime, Callback >(
-                      deadline,
-                      callback
-                )
-    );
+    jobs_.emplace( deadline, callback );
 }
 
 } // namespace master

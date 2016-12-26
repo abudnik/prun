@@ -34,13 +34,13 @@ CronManager::TimeoutHandler::TimeoutHandler()
 
 void CronManager::JobTimeoutHandler::HandleTimeout()
 {
-    IJobManager *jobManager = common::GetService< IJobManager >();
+    auto jobManager = common::GetService< IJobManager >();
     jobManager->BuildAndPushJob( -1, jobDescription_, true );
 }
 
 void CronManager::MetaJobTimeoutHandler::HandleTimeout()
 {
-    IJobManager *jobManager = common::GetService< IJobManager >();
+    auto jobManager = common::GetService< IJobManager >();
     jobManager->BuildAndPushJob( -1, jobDescription_, true );
 }
 
@@ -113,11 +113,11 @@ void CronManager::PushJob( const JobPtr &job, bool afterExecution )
     }
     else
     {
-        IJobManager *jobManager = common::GetService< IJobManager >();
+        auto jobManager = common::GetService< IJobManager >();
         jobManager->RegisterJobName( job->GetName() );
     }
 
-    IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
+    auto jobEventReceiver = common::GetService< IJobEventReceiver >();
     jobEventReceiver->OnJobAdd( job->GetName(), job->GetDescription() );
 
     auto handler = std::make_shared< JobTimeoutHandler >();
@@ -126,11 +126,7 @@ void CronManager::PushJob( const JobPtr &job, bool afterExecution )
     handler->deadline_ = deadline;
 
     std::unique_lock< std::mutex > lock( jobsMut_ );
-    jobs_.insert( std::pair< ptime, CallbackPtr >(
-                      deadline,
-                      handler
-                )
-    );
+    jobs_.emplace( deadline, handler );
 
     names_[ job->GetName() ] = handler;
 }
@@ -144,7 +140,7 @@ void CronManager::PushMetaJob( const JobGroupPtr &metaJob )
         deadline += std::chrono::minutes( 1 );
     }
 
-    IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
+    auto jobEventReceiver = common::GetService< IJobEventReceiver >();
     jobEventReceiver->OnJobAdd( metaJob->GetName(), metaJob->GetDescription() );
 
     auto handler = std::make_shared< MetaJobTimeoutHandler >();
@@ -153,18 +149,14 @@ void CronManager::PushMetaJob( const JobGroupPtr &metaJob )
     handler->deadline_ = deadline;
 
     std::unique_lock< std::mutex > lock( jobsMut_ );
-    jobs_.insert( std::pair< ptime, CallbackPtr >(
-                      deadline,
-                      handler
-                )
-    );
+    jobs_.emplace( deadline, handler );
 
     names_[ metaJob->GetName() ] = handler;
 }
 
 void CronManager::PushMetaJob( std::list< JobPtr > &jobs )
 {
-    IJobManager *jobManager = common::GetService< IJobManager >();
+    auto jobManager = common::GetService< IJobManager >();
     auto metaJob = jobs.front()->GetJobGroup();
 
     const auto now = std::chrono::system_clock::now();
@@ -172,7 +164,7 @@ void CronManager::PushMetaJob( std::list< JobPtr > &jobs )
 
     jobManager->RegisterJobName( metaJob->GetName() );
 
-    IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
+    auto jobEventReceiver = common::GetService< IJobEventReceiver >();
     jobEventReceiver->OnJobAdd( metaJob->GetName(), metaJob->GetDescription() );
 
     auto handler = std::make_shared< MetaJobTimeoutHandler >();
@@ -190,11 +182,7 @@ void CronManager::PushMetaJob( std::list< JobPtr > &jobs )
     }
 
     std::unique_lock< std::mutex > lock( jobsMut_ );
-    jobs_.insert( std::pair< ptime, CallbackPtr >(
-                      deadline,
-                      handler
-                )
-    );
+    jobs_.emplace( deadline, handler );
 
     names_[ metaJob->GetName() ] = handler;
 }
@@ -227,7 +215,7 @@ void CronManager::StopAllJobs()
 
 void CronManager::ReleaseJob( const CallbackPtr &handler ) const
 {
-    IJobManager *jobManager = common::GetService< IJobManager >();
+    auto jobManager = common::GetService< IJobManager >();
     handler->removed_ = true;
 
     auto handler_meta = std::dynamic_pointer_cast< MetaJobTimeoutHandler >( handler );
@@ -241,7 +229,7 @@ void CronManager::ReleaseJob( const CallbackPtr &handler ) const
 
     jobManager->ReleaseJobName( handler->jobName_ );
 
-    IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
+    auto jobEventReceiver = common::GetService< IJobEventReceiver >();
     jobEventReceiver->OnJobDelete( handler->jobName_ );
 }
 

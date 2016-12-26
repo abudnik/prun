@@ -38,7 +38,7 @@ void Pinger::Stop()
 void Pinger::PingWorkers()
 {
     std::vector< WorkerPtr > workers;
-    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
+    auto workerManager = common::GetService< IWorkerManager >();
     workerManager->GetWorkers( workers );
     for( auto &worker : workers )
     {
@@ -62,14 +62,14 @@ void Pinger::CheckDropedPingResponses()
     if ( numPings_ < maxDroped_ + 1 )
         return;
 
-    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
+    auto workerManager = common::GetService< IWorkerManager >();
     workerManager->CheckDropedPingResponses();
     numPings_ = 0;
 }
 
 void Pinger::OnWorkerIPResolve( WorkerPtr &worker, const std::string &ip )
 {
-    IWorkerManager *workerManager = common::GetService< IWorkerManager >();
+    auto workerManager = common::GetService< IWorkerManager >();
     workerManager->SetWorkerIP( worker, ip );
 }
 
@@ -95,8 +95,7 @@ void PingerBoost::PingWorker( WorkerPtr &worker )
             return;
         }
 
-        std::pair< EndpointMap::iterator, bool > p = endpoints_.insert(
-            std::make_pair( worker->GetHost(), *iterator ) );
+        auto p = endpoints_.emplace( worker->GetHost(), *iterator );
         it = p.first;
     }
 

@@ -38,10 +38,9 @@ public:
     Pinger( int pingDelay, int maxDroped )
     : stopped_( false ),
      pingDelay_( pingDelay ), maxDroped_( maxDroped ),
-     numPings_( 0 )
-    {
-        protocol_ = new common::ProtocolJson;
-    }
+     numPings_( 0 ),
+     protocol_( new common::ProtocolJson )
+    {}
 
     virtual ~Pinger()
     {

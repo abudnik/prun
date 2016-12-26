@@ -76,14 +76,14 @@ public:
 
         if ( !job->GetName().empty() )
         {
-            nameToJob_.insert( std::make_pair( job->GetName(), job->GetJobId() ) );
+            nameToJob_.emplace( job->GetName(), job->GetJobId() );
         }
         if ( job->GetJobGroup() )
         {
             const std::string &metaJobName = job->GetJobGroup()->GetName();
             if ( !metaJobName.empty() )
             {
-                nameToJob_.insert( std::make_pair( metaJobName, job->GetJobId() ) );
+                nameToJob_.emplace( metaJobName, job->GetJobId() );
             }
         }
 

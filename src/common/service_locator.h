@@ -43,7 +43,7 @@ public:
             const std::type_info &type = typeid( T );
             void *pService = reinterpret_cast<void *>( service );
 
-            if ( !services_.insert( std::make_pair( &type, pService ) ).second )
+            if ( !services_.emplace( &type, pService ).second )
             {
                 PLOG_WRN( "ServiceLocator::Register: service with type=" << type.name() <<
                           " already registered" );

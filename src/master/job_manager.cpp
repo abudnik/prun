@@ -69,7 +69,7 @@ bool JDLJson::ParseJob( const std::string &job_description, boost::property_tree
 }
 
 JobManager::JobManager()
-: jobs_( new JobQueue ),
+: jobs_( std::make_shared<JobQueue>() ),
  timeoutManager_( nullptr ),
  numJobGroups_( 0 ),
  jobId_( 0 )

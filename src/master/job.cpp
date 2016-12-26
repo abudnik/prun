@@ -146,7 +146,7 @@ void JobQueue::PushJob( JobPtr &job, int64_t groupId )
     idToJob_[ job->GetJobId() ] = job;
 
     if ( !job->GetName().empty() )
-        nameToJob_.insert( std::make_pair( job->GetName(), job ) );
+        nameToJob_.emplace( job->GetName(), job );
 
     jobs_.push_back( job );
     std::push_heap( jobs_.begin(), jobs_.end(), JobComparatorPriority() );
@@ -166,9 +166,9 @@ void JobQueue::PushJobs( std::list< JobPtr > &jobs, int64_t groupId )
         idToJob_[ job->GetJobId() ] = job;
 
         if ( !metaJobName.empty() )
-            nameToJob_.insert( std::make_pair( metaJobName, job ) );
+            nameToJob_.emplace( metaJobName, job );
         if ( !job->GetName().empty() )
-            nameToJob_.insert( std::make_pair( job->GetName(), job ) );
+            nameToJob_.emplace( job->GetName(), job );
 
         if ( job->GetNumDepends() )
         {
@@ -207,7 +207,7 @@ bool JobQueue::DeleteJob( int64_t jobId )
     if ( !job->GetName().empty() )
     {
         nameToJob_.erase( job->GetName() );
-        IJobManager *jobManager = common::GetService< IJobManager >();
+        auto jobManager = common::GetService< IJobManager >();
         jobManager->ReleaseJobName( job->GetName() );
     }
 
@@ -263,12 +263,12 @@ void JobQueue::OnJobDeletion( JobPtr &job )
         const bool lastJobInGroup = job->ReleaseJobGroup();
         if ( lastJobInGroup )
         {
-            IJobManager *jobManager = common::GetService< IJobManager >();
+            auto jobManager = common::GetService< IJobManager >();
             jobManager->ReleaseJobName( metaJobName );
         }
     }
 
-    IJobEventReceiver *jobEventReceiver = common::GetService< IJobEventReceiver >();
+    auto jobEventReceiver = common::GetService< IJobEventReceiver >();
     jobEventReceiver->OnJobDelete( job->GetJobId() );
 }
 

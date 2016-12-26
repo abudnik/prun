@@ -197,7 +197,7 @@ public:
         }
         ApplyDefaults( cfg );
 
-        std::string logLevel = cfg.Get<std::string>( "log_level" );
+        auto logLevel = cfg.Get<std::string>( "log_level" );
         common::logger::InitLogger( isDaemon_, "pmaster", logLevel.c_str() );
 
         PLOG_DBG( "MasterApplication::Initialize: master_id=" << masterId_ );
@@ -212,92 +212,90 @@ public:
         // initialize main components
         common::ServiceLocator &serviceLocator = common::ServiceLocator::Instance();
 
-        workerManager_.reset( new master::WorkerManager );
+        workerManager_ = make_shared<master::WorkerManager>();
         serviceLocator.Register( static_cast< master::IWorkerManager* >( workerManager_.get() ) );
         InitWorkerManager( workerManager_, exeDir_, cfgPath_ );
 
-        timeoutManager_.reset( new master::TimeoutManager( io_service_timeout_ ) );
+        timeoutManager_ = make_shared<master::TimeoutManager>( io_service_timeout_ );
 
-        cronManager_.reset( new master::CronManager( io_service_cron_ ) );
+        cronManager_ = make_shared<master::CronManager>( io_service_cron_ );
         serviceLocator.Register( static_cast< master::ICronManager* >( cronManager_.get() ) );
 
-        jobManager_.reset( new master::JobManager );
+        jobManager_ = make_shared<master::JobManager>();
         jobManager_->SetMasterId( masterId_ ).SetExeDir( exeDir_ ).SetTimeoutManager( timeoutManager_.get() );
         serviceLocator.Register( static_cast< master::IJobManager* >( jobManager_.get() ) );
 
-        scheduler_.reset( new master::Scheduler );
+        scheduler_ = make_shared<master::Scheduler>();
         serviceLocator.Register( static_cast< master::IScheduler* >( scheduler_.get() ) );
 
         InitHistory();
 
-        jobHistory_.reset( new master::JobHistory( history_ ) );
+        jobHistory_ = make_shared<master::JobHistory>( history_ );
         serviceLocator.Register( static_cast< master::IJobEventReceiver* >( jobHistory_.get() ) );
         jobHistory_->GetJobs();
 
         timeoutManager_->Start();
-        worker_threads_.push_back( std::thread( ThreadFun, &io_service_timeout_ ) );
+        worker_threads_.emplace_back( ThreadFun, &io_service_timeout_ );
 
         cronManager_->Start();
-        worker_threads_.push_back( std::thread( ThreadFun, &io_service_cron_ ) );
+        worker_threads_.emplace_back( ThreadFun, &io_service_cron_ );
 
         // start ping from nodes receiver threads
-        pingReceiver_.reset( new master::PingReceiverBoost( io_service_ping_ ) );
+        pingReceiver_ = make_shared<master::PingReceiverBoost>( io_service_ping_ );
         pingReceiver_->Start();
 
         // start node pinger
         int heartbeatDelay = cfg.Get<int>( "heartbeat_delay" );
         int maxDroped = cfg.Get<int>( "heartbeat_max_droped" );
-        pinger_.reset( new master::PingerBoost( io_service_ping_, heartbeatDelay, maxDroped ) );
+        pinger_ = make_shared<master::PingerBoost>( io_service_ping_, heartbeatDelay, maxDroped );
         pinger_->StartPing();
 
         // create thread pool for pingers
         for( unsigned int i = 0; i < numPingThread; ++i )
         {
-            worker_threads_.push_back( std::thread( ThreadFun, &io_service_ping_ ) );
+            worker_threads_.emplace_back( ThreadFun, &io_service_ping_ );
         }
 
         // start job sender thread
         int maxSimultSendingJobs = cfg.Get<int>( "max_simult_sending_jobs" );
-        jobSender_.reset(
-            new master::JobSenderBoost( io_service_senders_, timeoutManager_.get(),
-                                        maxSimultSendingJobs )
+        jobSender_ = make_shared<master::JobSenderBoost>( io_service_senders_, timeoutManager_.get(),
+                                                          maxSimultSendingJobs
         );
         jobSender_->Start();
 
         // create thread pool for job senders
         for( unsigned int i = 0; i < numJobSendThread; ++i )
         {
-            worker_threads_.push_back( std::thread( ThreadFun, &io_service_senders_ ) );
+            worker_threads_.emplace_back( ThreadFun, &io_service_senders_ );
         }
 
         // start result getter
         int maxSimultResultGetters = cfg.Get<int>( "max_simult_result_getters" );
-        resultGetter_.reset( new master::ResultGetterBoost( io_service_getters_, maxSimultResultGetters ) );
+        resultGetter_ = make_shared<master::ResultGetterBoost>( io_service_getters_, maxSimultResultGetters );
         resultGetter_->Start();
 
         // create thread pool for job result getters
         for( unsigned int i = 0; i < numResultGetterThread; ++i )
         {
-            worker_threads_.push_back( std::thread( ThreadFun, &io_service_getters_ ) );
+            worker_threads_.emplace_back( ThreadFun, &io_service_getters_ );
         }
 
         // start command sender
         int maxSimultCommandSend = cfg.Get<int>( "max_simult_command_send" );
-        commandSender_.reset(
-            new master::CommandSenderBoost( io_service_command_send_, timeoutManager_.get(),
-                                            maxSimultCommandSend )
+        commandSender_ = make_shared<master::CommandSenderBoost>( io_service_command_send_, timeoutManager_.get(),
+                                                                  maxSimultCommandSend
         );
         commandSender_->Start();
 
         // create thread pool for command senders
         for( unsigned int i = 0; i < numCommandSendThread; ++i )
         {
-            worker_threads_.push_back( std::thread( ThreadFun, &io_service_command_send_ ) );
+            worker_threads_.emplace_back( ThreadFun, &io_service_command_send_ );
         }
 
         // create thread for admin connections
-        adminConnection_.reset( new master::AdminConnection( io_service_admin_ ) );
-        worker_threads_.push_back( std::thread( ThreadFun, &io_service_admin_ ) );
+        adminConnection_ = make_shared<master::AdminConnection>( io_service_admin_ );
+        worker_threads_.emplace_back( ThreadFun, &io_service_admin_ );
     }
 
     void Shutdown()
@@ -410,8 +408,8 @@ private:
         common::Config &cfg = common::Config::Instance();
         try
         {
-            std::string historyLibPath = cfg.Get<std::string>( "history_library" );
-            std::string historyConfigPath = cfg.Get<std::string>( "history_config" );
+            auto historyLibPath = cfg.Get<std::string>( "history_library" );
+            auto historyConfigPath = cfg.Get<std::string>( "history_config" );
 
             if ( historyLibPath.empty() )
             {
@@ -559,7 +557,7 @@ int main( int argc, char* argv[] )
         app.Initialize();
 
 #ifdef _DEBUG
-        master::IJobManager *jobManager = common::GetService< master::IJobManager >();
+        auto jobManager = common::GetService< master::IJobManager >();
         const std::string &jobsDir = jobManager->GetJobsDir();
         master::RunTests( jobsDir );
 #endif

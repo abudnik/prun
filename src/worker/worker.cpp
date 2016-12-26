@@ -1005,7 +1005,7 @@ public:
      cfgDir_( cfgDir ),
      resourcesDir_( resourcesDir ),
      isDaemon_( isDaemon ), uid_( uid ),
-     execContext_( new ExecContext )
+     execContext_( make_shared<ExecContext>() )
     {}
 
     void Initialize()
@@ -1041,40 +1041,38 @@ public:
         RunPrExecProcess();
 
         // create master request handlers
-        work_.reset( new boost::asio::io_service::work( io_service_ ) );
+        work_ = make_shared<boost::asio::io_service::work>( io_service_ );
 
         // create thread pool
         for( unsigned int i = 0; i < numThread_; ++i )
         {
-            worker_threads_.push_back( std::thread( ThreadFun, &io_service_ ) );
+            worker_threads_.emplace_back( ThreadFun, &io_service_ );
         }
 
         // create pool for execute task actions
-        work_exec_.reset( new boost::asio::io_service::work( io_service_exec_ ) );
+        work_exec_ = make_shared<boost::asio::io_service::work>( io_service_exec_ );
 
-        commDescrPool_.reset( new CommDescrPool( numRequestThread_, &io_service_exec_,
-                                                 static_cast<char*>( mappedRegion_->get_address() ) )
+        commDescrPool_= make_shared<CommDescrPool>( numRequestThread_, &io_service_exec_,
+                                                    static_cast<char*>( mappedRegion_->get_address() )
         );
         execContext_->SetCommDescrPool( commDescrPool_ );
 
         for( unsigned int i = 0; i < numExecThread; ++i )
         {
-            worker_threads_.push_back( std::thread( ThreadFun, &io_service_exec_ ) );
+            worker_threads_.emplace_back( ThreadFun, &io_service_exec_ );
         }
 
         // start acceptor
-        requestSem_.reset( new common::Semaphore( numRequestThread_ ) );
+        requestSem_= make_shared<common::Semaphore>( numRequestThread_ );
         const unsigned short port = cfg.Get<unsigned short>( "port" );
-        acceptor_.reset(
-            new ConnectionAcceptor( io_service_, port, requestSem_, execContext_ )
-        );
+        acceptor_ = make_shared<ConnectionAcceptor>( io_service_, port, requestSem_, execContext_ );
 
         // create master ping handlers
         const int completionPingDelay = cfg.Get<int>( "completion_ping_delay" );
-        completionPing_.reset( new JobCompletionPingerBoost( io_service_ping_, completionPingDelay ) );
+        completionPing_ = make_shared<JobCompletionPingerBoost>( io_service_ping_, completionPingDelay );
         completionPing_->StartPing();
 
-        masterPing_.reset( new MasterPingBoost( io_service_ping_ ) );
+        masterPing_ = make_shared<MasterPingBoost>( io_service_ping_ );
         masterPing_->Start();
 
         // create thread pool for pingers
@@ -1083,7 +1081,7 @@ public:
         unsigned int numPingThread = 2;
         for( unsigned int i = 0; i < numPingThread; ++i )
         {
-            worker_threads_.push_back( std::thread( ThreadFun, &io_service_ping_ ) );
+            worker_threads_.emplace_back( ThreadFun, &io_service_ping_ );
         }
     }
 
@@ -1210,12 +1208,12 @@ private:
 
         try
         {
-            sharedMemPool_.reset( new ipc::shared_memory_object( ipc::create_only, SHMEM_NAME, ipc::read_write ) );
+            sharedMemPool_ = make_shared<ipc::shared_memory_object>( ipc::create_only, SHMEM_NAME, ipc::read_write );
 
             size_t shmemSize = numRequestThread_ * SHMEM_BLOCK_SIZE;
             sharedMemPool_->truncate( shmemSize );
 
-            mappedRegion_.reset( new ipc::mapped_region( *sharedMemPool_.get(), ipc::read_write ) );
+            mappedRegion_ = make_shared<ipc::mapped_region>( *sharedMemPool_.get(), ipc::read_write );
         }
         catch( std::exception &e )
         {

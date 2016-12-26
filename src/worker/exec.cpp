@@ -1063,7 +1063,7 @@ public:
                 PLOG_ERR( "ConnectionAcceptor::ConnectionAcceptor: unlink failed: file=" << UDS_NAME << ", err=" << strerror(errno) );
             }
             stream_protocol::endpoint endpoint( UDS_NAME );
-            acceptor_ = acceptor_ptr( new stream_protocol::acceptor( io_service, endpoint ) );
+            acceptor_ = make_shared<stream_protocol::acceptor>( io_service, endpoint );
 
             if ( uid )
             {
@@ -1316,7 +1316,7 @@ public:
      uid_( uid ),
      numThread_( numThread ),
      processCompletionPipe_( -1 ),
-     execContext_( new ExecContext )
+     execContext_( make_shared<ExecContext>() )
     {
         execContext_->SetExeDir( exeDir );
         execContext_->SetResourcesDir( resourcesDir );
@@ -1347,15 +1347,13 @@ public:
         InitProcessCompletionPipe();
 
         // start accepting connections
-        acceptor_.reset(
-            new ConnectionAcceptor( io_service_, uid_, execContext_ )
-        );
+        acceptor_ = make_shared<ConnectionAcceptor>( io_service_, uid_, execContext_ );
 
         // create thread pool
 
         for( unsigned int i = 0; i < numThread_; ++i )
         {
-            worker_threads_.push_back( std::thread( ThreadFun, &io_service_ ) );
+            worker_threads_.emplace_back( ThreadFun, &io_service_ );
             OnThreadCreate( &worker_threads_.back() );
         }
 
@@ -1525,8 +1523,8 @@ private:
 
         try
         {
-            sharedMemPool_.reset( new ipc::shared_memory_object( ipc::open_only, SHMEM_NAME, ipc::read_only ) );
-            mappedRegion_.reset( new ipc::mapped_region( *sharedMemPool_.get(), ipc::read_only ) );
+            sharedMemPool_ = make_shared<ipc::shared_memory_object>( ipc::open_only, SHMEM_NAME, ipc::read_only );
+            mappedRegion_ = make_shared<ipc::mapped_region>( *sharedMemPool_.get(), ipc::read_only );
             execContext_->SetMappedRegion( mappedRegion_ );
         }
         catch( std::exception &e )
