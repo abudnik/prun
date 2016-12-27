@@ -1,6 +1,6 @@
-import os
-import time
-import random
+from os import system
+from time import sleep
+from random import randrange
 
 def RunManyJobs():
     # run many simple jobs
@@ -9,14 +9,14 @@ def RunManyJobs():
     for i in range(0, 500):
         task += 'run ' + jobPath + ';'
     cmd = './prun -c "' + task + '"'
-    os.system( cmd )
+    system(cmd)
 
     jobPath = 'autotest/simple_many_cpu.job'
     task = ''
     for i in range(0, 500):
         task += 'run ' + jobPath + ';'
     cmd = './prun -c "' + task + '"'
-    os.system( cmd )
+    system(cmd)
     
     # send many large source code files
     jobPath = 'autotest/many_code.job'
@@ -24,7 +24,7 @@ def RunManyJobs():
     for i in range(0, 1):
         task += 'run ' + jobPath + ';'
     cmd = './prun -c "' + task + '"'
-    os.system( cmd )
+    system(cmd)
 
     # run many medium jobs
     jobPath = 'autotest/medium.job'
@@ -32,7 +32,7 @@ def RunManyJobs():
     for i in range(0, 50):
         task += 'run ' + jobPath + ';'
     cmd = './prun -c "' + task + '"'
-    os.system( cmd )
+    system(cmd)
 
     # run many heavy jobs
     jobPath = 'autotest/heavy.job'
@@ -40,7 +40,7 @@ def RunManyJobs():
     for i in range(0, 10):
         task += 'run ' + jobPath + ';'
     cmd = './prun -c "' + task + '"'
-    os.system( cmd )
+    system(cmd)
 
     # run many meta jobs
     jobPath = 'test.meta'
@@ -48,12 +48,12 @@ def RunManyJobs():
     for i in range(0, 50):
         task += 'run ' + jobPath + ';'
     cmd = './prun -c "' + task + '"'
-    os.system( cmd )
+    system(cmd)
 
     # run cron jobs
     task = 'run cron.job; run cron.meta'
     cmd = './prun -c "' + task + '"'
-    os.system( cmd )
+    system(cmd)
 
 def RunHeavyJobs():
     # run many heavy jobs
@@ -62,43 +62,43 @@ def RunHeavyJobs():
     for i in range(0, 10):
         task += 'run ' + jobPath + ';'
     cmd = './prun -c "' + task + '"'
-    os.system( cmd )
+    system(cmd)
 
 def AddExistingUser():
     task = ''
     for i in range(0, 100):
         task += 'add localhost groupx;'
     cmd = './prun -c "' + task + '"'
-    os.system( cmd )
+    system(cmd)
 
 def StopAll():
     cmd = './prun -c "stopall"'
-    os.system( cmd )
+    system(cmd)
 
 def DeleteGroup():
     task = 'deleteg groupx; deleteg hosts_group1'
     cmd = './prun -c "' + task + '"'
-    os.system( cmd )
+    system(cmd)
 
 def AddGroup():
     task = 'addg hosts_group1'
     cmd = './prun -c "' + task + '"'
-    os.system( cmd )
+    system(cmd)
 
 def JobInfo(jobId):
     task = 'info ' + str(jobId)
     cmd = './prun -c "' + task + '"'
-    os.system( cmd )
+    system(cmd)
 
 def StopJob(jobId):
     task = 'stop ' + str(jobId)
     cmd = './prun -c "' + task + '"'
-    os.system( cmd )
+    system(cmd)
 
 def Stat():
     task = 'stat; jobs; ls;'
     cmd = './prun -c "' + task + '"'
-    os.system( cmd )
+    system(cmd)
 
 
 # check job stopping
@@ -109,20 +109,20 @@ StopAll()
 for i in range(0, 10):
     RunManyJobs()
     StopAll()
-time.sleep(2)
+sleep(2)
 StopAll()
 
 for i in range(0, 5):
     RunHeavyJobs()
-    time.sleep(1)
+    sleep(1)
     StopAll()
 
 # check group removal
 for i in range(0, 5):
     RunManyJobs()
-    time.sleep(1)
+    sleep(1)
     DeleteGroup()
-    time.sleep(1)
+    sleep(1)
     AddGroup()
     StopAll()
 
@@ -130,10 +130,10 @@ for i in range(0, 5):
 RunManyJobs()
 
 for i in range(0, 100):
-    jobId = random.randrange(0, 1000)
-    JobInfo( jobId )
-    jobId = random.randrange(0, 1000)
-    StopJob( jobId )
+    jobId = randrange(0, 1000)
+    JobInfo(jobId)
+    jobId = randrange(0, 1000)
+    StopJob(jobId)
 
 StopAll()
 
@@ -143,4 +143,4 @@ RunManyJobs()
 for i in range(0, 1000):
     Stat()
 
-print( 'done' )
+print('done')

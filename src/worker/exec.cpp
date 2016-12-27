@@ -307,29 +307,31 @@ public:
 
         job_ = job;
 
-        pid_t pid = DoFork();
-        if ( pid != 0 )
-            return;
+        std::string job_file_dir;
+        if ( job_->IsFromFile() )
+        {
+            const std::string &scriptPath = job_->GetFilePath();
+            boost::filesystem::path p( scriptPath );
+            job_file_dir = p.parent_path().string();
+            auto job_file_size = boost::filesystem::file_size( p );
+            job_->SetScriptLength( job_file_size );
+        }
 
-        string scriptLength = std::to_string( job->GetScriptLength() );
+        auto scriptLength = std::to_string( job->GetScriptLength() );
 
-        string taskId = std::to_string( job->GetTaskId() );
-        string numTasks = std::to_string( job->GetNumTasks() );
-        string jobId = std::to_string( job->GetJobId() );
+        auto taskId = std::to_string( job->GetTaskId() );
+        auto numTasks = std::to_string( job->GetNumTasks() );
+        auto jobId = std::to_string( job->GetJobId() );
 
         ThreadInfo &threadInfo = execContext_->GetThreadInfo();
         const ThreadParams &threadParams = threadInfo[ std::this_thread::get_id() ];
 
-        int ret = execl( exePath_.c_str(), job->GetScriptLanguage().c_str(),
-                         nodePath_.c_str(),
-                         threadParams.readFifo.c_str(), threadParams.writeFifo.c_str(),
-                         scriptLength.c_str(),
-                         taskId.c_str(), numTasks.c_str(), jobId.c_str(), nullptr );
-        if ( ret < 0 )
-        {
-            PLOG_ERR( "ScriptExec::Execute: execl failed: " << strerror(errno) );
-        }
-        ::exit( 1 );
+        // NB: avoid unsafe calls between fork() and exec() (e.g. malloc)
+        pid_t pid = DoFork( job_file_dir );
+        if ( pid != 0 )
+            return;
+
+        DoExec( threadParams, scriptLength, taskId, numTasks, jobId );
     }
 
     virtual void KillExec( pid_t pid )
@@ -362,7 +364,7 @@ public:
 protected:
     virtual bool InitLanguageEnv() = 0;
 
-    virtual pid_t DoFork()
+    pid_t DoFork( const std::string &job_file_dir )
     {
         // flush fifo before fork, because after forking completion status of a
         // forked process may be lost
@@ -438,18 +440,13 @@ protected:
             prctl( PR_SET_PDEATHSIG, SIGHUP );
 #endif
 
-            if ( job_->IsFromFile() )
+            if ( !job_file_dir.empty() )
             {
-                const std::string &scriptPath = job_->GetFilePath();
-                boost::filesystem::path p( scriptPath );
-                boost::filesystem::path dir = p.parent_path();
-                int ret = chdir( dir.string().c_str() );
+                int ret = chdir( job_file_dir.c_str() );
                 if ( ret < 0 )
                 {
-                    PLOG_WRN( "ScriptExec::DoFork: chdir failed: dir='" << dir.string() << "', err=" << strerror(errno) );
+                    PLOG_WRN( "ScriptExec::DoFork: chdir failed: dir='" << job_file_dir << "', err=" << strerror(errno) );
                 }
-
-                job_->SetScriptLength( boost::filesystem::file_size( p ) );
             }
         }
         else
@@ -459,6 +456,21 @@ protected:
         }
 
         return pid;
+    }
+
+    virtual void DoExec( const ThreadParams &threadParams, const std::string &scriptLength,
+                         const std::string &taskId, const std::string &numTasks, const std::string &jobId )
+    {
+        int ret = execl( exePath_.c_str(), job_->GetScriptLanguage().c_str(),
+                         nodePath_.c_str(),
+                         threadParams.readFifo.c_str(), threadParams.writeFifo.c_str(),
+                         scriptLength.c_str(),
+                         taskId.c_str(), numTasks.c_str(), jobId.c_str(), nullptr );
+        if ( ret < 0 )
+        {
+            PLOG_ERR( "ScriptExec::DoExec: execl failed: " << strerror(errno) );
+        }
+        ::exit( 1 );
     }
 
     bool WriteScript( int fifo )
@@ -666,31 +678,11 @@ protected:
 
 class JavaExec : public ScriptExec
 {
-public:
-    virtual void Execute( JobExec *job )
+protected:
+    virtual void DoExec( const ThreadParams &threadParams, const std::string &scriptLength,
+                         const std::string &taskId, const std::string &numTasks, const std::string &jobId )
     {
-        if ( !InitLanguageEnv() )
-        {
-            job->OnError( NODE_FATAL );
-            return;
-        }
-
-        job_ = job;
-
-        pid_t pid = DoFork();
-        if ( pid != 0 )
-            return;
-
-        string scriptLength = std::to_string( job->GetScriptLength() );
-
-        string taskId = std::to_string( job->GetTaskId() );
-        string numTasks = std::to_string( job->GetNumTasks() );
-        string jobId = std::to_string( job->GetJobId() );
-
-        ThreadInfo &threadInfo = execContext_->GetThreadInfo();
-        const ThreadParams &threadParams = threadInfo[ std::this_thread::get_id() ];
-
-        int ret = execl( exePath_.c_str(), job->GetScriptLanguage().c_str(),
+        int ret = execl( exePath_.c_str(), job_->GetScriptLanguage().c_str(),
                          "-cp", nodePath_.c_str(),
                          "node",
                          threadParams.readFifo.c_str(), threadParams.writeFifo.c_str(),
@@ -698,12 +690,11 @@ public:
                          taskId.c_str(), numTasks.c_str(), jobId.c_str(), nullptr );
         if ( ret < 0 )
         {
-            PLOG_ERR( "JavaExec::Execute: execl failed: " << strerror(errno) );
+            PLOG_ERR( "JavaExec::DoExec: execl failed: " << strerror(errno) );
         }
         ::exit( 1 );
     }
 
-protected:
     virtual bool InitLanguageEnv()
     {
         try

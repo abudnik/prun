@@ -1,7 +1,5 @@
 import sys
 import os
-import mmap
-import struct
 
 NODE_SCRIPT_EXEC_FAILED = -5
 errCode = 0
