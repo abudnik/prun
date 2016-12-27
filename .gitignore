@@ -2,6 +2,8 @@
 src/common/configure.h
 db
 CMakeFiles
+CMakeCache.*
+cmake_install.*
 Makefile
 *.a
 obj-x86_64-linux-gnu
