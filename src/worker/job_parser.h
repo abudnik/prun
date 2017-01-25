@@ -30,7 +30,7 @@ namespace worker {
 class JobCreator
 {
 public:
-    virtual Job *Create( const std::string &taskType )
+    Job *Create( const std::string &taskType )
     {
         if ( taskType == "exec" )
             return new JobExec();

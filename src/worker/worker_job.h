@@ -27,8 +27,6 @@ the License.
 
 #include <boost/property_tree/json_parser.hpp>
 #include "common/protocol.h"
-#include "common/helper.h"
-#include "common/request.h"
 #include "common/error_code.h"
 #include "job_completion_table.h"
 

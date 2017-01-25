@@ -32,12 +32,13 @@ namespace common {
 
 struct IObserver
 {
-    virtual void NotifyObserver( int event ) = 0;
     virtual ~IObserver() {}
+    virtual void NotifyObserver( int event ) = 0;
 };
 
 struct IObservable
 {
+    virtual ~IObservable() {}
     virtual void Subscribe( IObserver *observer, int event = 0 ) = 0;
     virtual void Unsubscribe( IObserver *observer, int event = 0 ) = 0;
     virtual void NotifyAll( int event = 0 ) = 0;

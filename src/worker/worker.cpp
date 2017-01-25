@@ -593,7 +593,7 @@ class StopAllJobs : public IAction
 class ActionCreator
 {
 public:
-    virtual IAction *Create( const std::string &taskType )
+    IAction *Create( const std::string &taskType )
     {
         if ( taskType == "exec" )
             return new ExecuteTask();

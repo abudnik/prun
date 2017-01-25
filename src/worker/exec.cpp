@@ -803,7 +803,7 @@ protected:
 class ExecCreator
 {
 public:
-    virtual ScriptExec *Create( const std::string &language )
+    ScriptExec *Create( const std::string &language )
     {
         if ( language == "python" )
             return new PythonExec();

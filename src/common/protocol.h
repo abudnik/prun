@@ -162,7 +162,7 @@ private:
 class ProtocolCreator
 {
 public:
-    virtual Protocol *Create( const std::string &protocol, int version )
+    Protocol *Create( const std::string &protocol, int version )
     {
         if ( protocol == "json" )
             return new ProtocolJson();

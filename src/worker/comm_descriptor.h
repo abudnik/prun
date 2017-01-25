@@ -29,7 +29,6 @@ the License.
 #include "common/log.h"
 #include "common/helper.h"
 #include "common/config.h"
-#include "common.h"
 
 using boost::asio::local::stream_protocol;
 

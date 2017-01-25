@@ -27,7 +27,6 @@ the License.
 #include <boost/asio.hpp>
 #include "common/protocol.h"
 #include "common/config.h"
-#include "common.h"
 
 namespace worker {
 

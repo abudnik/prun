@@ -33,6 +33,7 @@ namespace master {
 
 struct ITimeoutManager
 {
+    virtual ~ITimeoutManager() {}
     virtual void PushJobQueue( int64_t jobId, int queueTimeout ) = 0;
     virtual void PushJob( int64_t jobId, int jobTimeout ) = 0;
     virtual void PushTask( const WorkerTask &task, const std::string &hostIP, int timeout ) = 0;

@@ -28,7 +28,6 @@ the License.
 #include "common/helper.h"
 #include "common/protocol.h"
 #include "common/config.h"
-#include "common.h"
 #include "job_completion_table.h"
 
 namespace worker {

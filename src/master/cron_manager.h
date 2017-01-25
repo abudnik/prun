@@ -34,6 +34,7 @@ class ICronVisitor;
 
 struct ICronManager
 {
+    virtual ~ICronManager() {}
     virtual void PushJob( const JobPtr &job, bool afterExecution ) = 0;
     virtual void PushMetaJob( const JobGroupPtr &metaJob ) = 0;
     virtual void PushMetaJob( std::list< JobPtr > &jobs ) = 0;
@@ -61,6 +62,7 @@ class CronManager : public ICronManager
     struct TimeoutHandler
     {
         TimeoutHandler();
+        virtual ~TimeoutHandler() {}
         virtual void HandleTimeout() = 0;
 
         ptime deadline_;

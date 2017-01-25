@@ -46,6 +46,7 @@ struct ITimeoutManager;
 
 struct IJobManager
 {
+    virtual ~IJobManager() {}
     virtual Job *CreateJob( const std::string &job_description, bool check_name_existance ) = 0;
     virtual bool CreateMetaJob( const std::string &meta_description, std::list< JobPtr > &jobs, bool check_name_existance ) = 0;
     virtual void PushJob( JobPtr &job ) = 0;

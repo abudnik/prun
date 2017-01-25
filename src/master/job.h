@@ -59,6 +59,7 @@ typedef std::shared_ptr< JobGroup > JobGroupPtr;
 
 struct IJobGroupEventReceiver
 {
+    virtual ~IJobGroupEventReceiver() {}
     virtual void OnJobDependenciesResolved( const JobPtr &job ) = 0;
 };
 typedef IJobGroupEventReceiver *IJobGroupEventReceiverPtr;
