@@ -129,7 +129,7 @@ bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
         {
             std::string cron_description = ptree.get<std::string>( "cron" );
             if ( !jobGroup->GetCron().Parse( cron_description ) )
-                throw std::logic_error( std::string( "cron parse failed: " ) + cron_description );
+                throw std::runtime_error( std::string( "cron parse failed: " ) + cron_description );
             jobGroup->SetDescription( meta_description );
         }
 
@@ -137,7 +137,7 @@ bool JobManager::CreateMetaJob( const std::string &meta_description, std::list< 
         {
             std::string name = ptree.get<std::string>( "name" );
             if ( check_name_existance && HasJobName( name ) )
-                throw std::logic_error( std::string( "job name already exists: " ) + name );
+                throw std::runtime_error( std::string( "job name already exists: " ) + name );
             jobGroup->SetName( name );
         }
 
@@ -536,7 +536,7 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree )
             if ( value == "host" )
                 job->SetExecUnitType( ExecUnitType::HOST );
             else
-                throw std::logic_error( std::string( "unknown exec_unit_type: " ) + value );
+                throw std::runtime_error( std::string( "unknown exec_unit_type: " ) + value );
         }
 
         if ( ptree.count( "hosts" ) > 0 )
@@ -571,7 +571,7 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree )
         {
             std::string cron_description = ptree.get<std::string>( "cron" );
             if ( !job->GetCron().Parse( cron_description ) )
-                throw std::logic_error( std::string( "cron parse failed: " ) + cron_description );
+                throw std::runtime_error( std::string( "cron parse failed: " ) + cron_description );
         }
 
         if ( ptree.count( "name" ) > 0 )
@@ -582,7 +582,7 @@ Job *JobManager::CreateJob( const boost::property_tree::ptree &ptree )
         else
         {
             if ( job->GetCron() )
-                throw std::logic_error( std::string( "cron job must have exclusive name" ) );
+                throw std::runtime_error( std::string( "cron job must have exclusive name" ) );
         }
 
         return job;
